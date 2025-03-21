@@ -2,7 +2,6 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -19,583 +18,693 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, FileType, FilePlus, Check, AlertCircle } from "lucide-react";
-import { ListeningExercise, ListeningQuestion } from "@/data/listeningExercises";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Upload,
+  FileText,
+  FileUp,
+  CheckCircle,
+  X,
+  BookOpen,
+  PenTool,
+  Headphones,
+  Brain,
+  Download,
+  Save,
+  AlertCircle,
+  Plus,
+} from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Link } from "react-router-dom";
+import { listeningExercises, ListeningExercise } from "@/data/listeningExercises";
+
+type FileType = "text" | "audio" | "pdf" | "unknown";
+type ExerciseType = "listening" | "reading" | "writing" | "multiple-choice";
+
+interface AnalyzedFile {
+  file: File;
+  name: string;
+  type: FileType;
+  content: string;
+  suggestedExerciseType: ExerciseType;
+  analyzed: boolean;
+}
 
 const FileUploader = () => {
-  const [files, setFiles] = useState<File[]>([]);
-  const [fileContents, setFileContents] = useState<{[filename: string]: string}>({});
-  const [analyzedResults, setAnalyzedResults] = useState<{[filename: string]: string}>({});
-  const [selectedExerciseType, setSelectedExerciseType] = useState<{[filename: string]: string}>({});
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [processedData, setProcessedData] = useState<any>(null);
-  
+  const [files, setFiles] = useState<AnalyzedFile[]>([]);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
+  const [exerciseTitle, setExerciseTitle] = useState("");
+  const [exerciseType, setExerciseType] = useState<ExerciseType>("listening");
+  const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [generatedExercise, setGeneratedExercise] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
+
+    const newFiles: AnalyzedFile[] = [];
     
-    const newFiles = Array.from(e.target.files);
-    setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    Array.from(e.target.files).forEach(file => {
+      const fileType = getFileType(file);
+      newFiles.push({
+        file,
+        name: file.name,
+        type: fileType,
+        content: "",
+        suggestedExerciseType: suggestExerciseType(fileType),
+        analyzed: false
+      });
+    });
+
+    setFiles([...files, ...newFiles]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     
-    // Read file contents
-    for (const file of newFiles) {
-      try {
-        const text = await file.text();
-        setFileContents(prev => ({
-          ...prev,
-          [file.name]: text
-        }));
-        
-        toast({
-          title: "File uploaded",
-          description: `${file.name} has been uploaded successfully.`,
-        });
-      } catch (error) {
-        console.error("Error reading file:", error);
-        toast({
-          title: "Error reading file",
-          description: `Could not read ${file.name}. Please try again.`,
-          variant: "destructive",
-        });
-      }
+    toast({
+      title: `${newFiles.length} file(s) uploaded`,
+      description: "Click on a file to analyze its content"
+    });
+  };
+
+  const getFileType = (file: File): FileType => {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    
+    if (file.type.startsWith("audio/")) return "audio";
+    if (file.type === "application/pdf" || ext === "pdf") return "pdf";
+    if (file.type.startsWith("text/") || ["txt", "md", "rtf"].includes(ext || "")) return "text";
+    
+    return "unknown";
+  };
+
+  const suggestExerciseType = (fileType: FileType): ExerciseType => {
+    switch (fileType) {
+      case "audio": return "listening";
+      case "pdf": return "reading";
+      case "text": return "reading";
+      default: return "multiple-choice";
     }
   };
 
-  const removeFile = (fileName: string) => {
-    setFiles(files.filter(file => file.name !== fileName));
+  const analyzeFile = async (index: number) => {
+    const file = files[index];
+    if (!file) return;
+
+    // If already analyzed, just select it
+    if (file.analyzed) {
+      setSelectedFileIndex(index);
+      return;
+    }
     
-    // Also remove content and analysis if they exist
-    const newContents = { ...fileContents };
-    delete newContents[fileName];
-    setFileContents(newContents);
-    
-    const newResults = { ...analyzedResults };
-    delete newResults[fileName];
-    setAnalyzedResults(newResults);
-    
-    const newTypes = { ...selectedExerciseType };
-    delete newTypes[fileName];
-    setSelectedExerciseType(newTypes);
+    try {
+      let content = "";
+      
+      if (file.type === "text") {
+        content = await file.file.text();
+      } else if (file.type === "pdf") {
+        content = "PDF content would be extracted here in a real application";
+      } else if (file.type === "audio") {
+        content = "Audio transcription would happen here in a real application";
+      } else {
+        content = "Unknown file type. Content cannot be extracted.";
+      }
+      
+      const updatedFiles = [...files];
+      updatedFiles[index] = {
+        ...file,
+        content,
+        analyzed: true
+      };
+      
+      setFiles(updatedFiles);
+      setSelectedFileIndex(index);
+      
+      // Set suggested exercise properties
+      setExerciseType(file.suggestedExerciseType);
+      setExerciseTitle(file.name.split('.')[0].replace(/_/g, ' '));
+      
+      // Generate sample questions based on content
+      const sampleQuestions = generateSampleQuestions(content, file.suggestedExerciseType);
+      setQuestions(sampleQuestions);
+      
+      toast({
+        title: "File analyzed",
+        description: `Suggested exercise type: ${file.suggestedExerciseType}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error analyzing file",
+        description: "There was a problem processing this file",
+        variant: "destructive"
+      });
+    }
   };
 
-  const analyzeFiles = () => {
-    if (files.length === 0) {
+  const generateSampleQuestions = (content: string, type: ExerciseType) => {
+    // This is a simplified example. In a real app, you might use AI to generate questions
+    const contentSample = content.slice(0, 200);
+    const words = contentSample.split(/\s+/).filter(w => w.length > 3);
+    
+    if (type === "multiple-choice") {
+      return [1, 2, 3].map(num => ({
+        id: num,
+        question: `Sample question ${num} about "${words[num] || 'the content'}"?`,
+        options: [
+          `Option A for question ${num}`,
+          `Option B for question ${num}`,
+          `Option C for question ${num}`,
+          `Option D for question ${num}`
+        ],
+        correctAnswer: `Option A for question ${num}`
+      }));
+    }
+    
+    if (type === "listening") {
+      return [1, 2, 3].map(num => ({
+        id: num,
+        question: `What does the speaker say about "${words[num] || 'the topic'}"?`,
+        options: [
+          `They mention it's important`,
+          `They don't refer to it`,
+          `They provide historical context`,
+          `They express a personal opinion`
+        ],
+        correctAnswer: `They mention it's important`
+      }));
+    }
+    
+    return [];
+  };
+
+  const handleQuestionChange = (index: number, field: string, value: string) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[index][field] = value;
+    setQuestions(updatedQuestions);
+  };
+
+  const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[questionIndex].options[optionIndex] = value;
+    setQuestions(updatedQuestions);
+  };
+
+  const handleCorrectAnswerChange = (questionIndex: number, value: string) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[questionIndex].correctAnswer = value;
+    setQuestions(updatedQuestions);
+  };
+
+  const handleAddQuestion = () => {
+    setQuestions([
+      ...questions,
+      {
+        id: questions.length + 1,
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: ""
+      }
+    ]);
+  };
+
+  const handleRemoveQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const generateExercise = () => {
+    if (!selectedFileIndex && selectedFileIndex !== 0) {
       toast({
-        title: "No files to analyze",
-        description: "Please upload at least one file first.",
-        variant: "destructive",
+        title: "No file selected",
+        description: "Please select a file to generate an exercise",
+        variant: "destructive"
       });
       return;
     }
     
-    setIsAnalyzing(true);
+    const selectedFile = files[selectedFileIndex];
     
-    // Simple analysis based on file content
-    // In a real app, this would be more sophisticated, possibly using AI
-    const results: {[filename: string]: string} = {};
-    const suggestedTypes: {[filename: string]: string} = {};
+    // Create exercise object based on type
+    const exercise = {
+      id: Date.now(),
+      title: exerciseTitle,
+      difficulty,
+      type: exerciseType,
+      content: selectedFile.content,
+      questions: exerciseType === "multiple-choice" || exerciseType === "listening" ? questions : [],
+      // For listening exercises
+      audioUrl: selectedFile.type === "audio" ? URL.createObjectURL(selectedFile.file) : "",
+      transcript: selectedFile.type === "audio" ? selectedFile.content : ""
+    };
     
-    for (const file of files) {
-      const content = fileContents[file.name] || "";
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
-      
-      // Determine potential exercise type based on content and file type
-      if (fileExt === 'mp3' || fileExt === 'wav' || fileExt === 'm4a') {
-        results[file.name] = "Audio file detected. Suitable for listening exercises.";
-        suggestedTypes[file.name] = "listening";
-      } else if (fileExt === 'txt' || fileExt === 'docx' || fileExt === 'pdf') {
-        // Text analysis simulation
-        if (content.length > 500) {
-          results[file.name] = "Long text detected. Suitable for reading exercises or as a transcript for listening exercises.";
-          suggestedTypes[file.name] = "reading";
-        } else if (content.includes('?')) {
-          results[file.name] = "Questions detected. Suitable for multiple choice or writing exercises.";
-          suggestedTypes[file.name] = "multiple-choice";
-        } else {
-          results[file.name] = "Text content detected. Could be used for vocabulary or grammar exercises.";
-          suggestedTypes[file.name] = "writing";
-        }
-      } else {
-        results[file.name] = "Unrecognized file type. Please review manually.";
-        suggestedTypes[file.name] = "";
-      }
-    }
-    
-    // Simulate processing delay
-    setTimeout(() => {
-      setAnalyzedResults(results);
-      setSelectedExerciseType(suggestedTypes);
-      setIsAnalyzing(false);
-      
-      toast({
-        title: "Analysis complete",
-        description: `Analyzed ${files.length} files. Please review the suggestions.`,
-      });
-    }, 1500);
-  };
-
-  const createExerciseFromFile = (fileName: string) => {
-    const content = fileContents[fileName] || "";
-    const exerciseType = selectedExerciseType[fileName] || "";
-    
-    let processedExercise;
-    
-    if (exerciseType === "listening") {
-      // Create a listening exercise structure
-      processedExercise = {
-        type: "listening",
-        title: fileName.replace(/\.[^/.]+$/, ""),
-        audioUrl: URL.createObjectURL(files.find(f => f.name === fileName) || new Blob()),
-        transcript: content,
-        difficulty: "Intermediate",
-        questions: generateSimpleQuestions(content),
-      };
-    } else if (exerciseType === "multiple-choice") {
-      // Create a multiple choice exercise
-      processedExercise = {
-        type: "multiple-choice",
-        title: fileName.replace(/\.[^/.]+$/, ""),
-        questions: parseQuestionsFromText(content),
-      };
-    } else if (exerciseType === "writing") {
-      // Create a writing exercise
-      processedExercise = {
-        type: "writing",
-        title: fileName.replace(/\.[^/.]+$/, ""),
-        prompt: content.substring(0, 200),
-        fullContent: content,
-      };
-    } else if (exerciseType === "reading") {
-      // Create a reading exercise
-      processedExercise = {
-        type: "reading",
-        title: fileName.replace(/\.[^/.]+$/, ""),
-        content: content,
-        questions: generateSimpleQuestions(content),
-      };
-    }
-    
-    setProcessedData(processedExercise);
+    setGeneratedExercise(exercise);
     
     toast({
-      title: "Exercise created",
-      description: `Created a ${exerciseType} exercise from ${fileName}`,
+      title: "Exercise generated",
+      description: `${exerciseTitle} (${exerciseType}) has been created`
     });
   };
 
-  // Helper functions to parse/generate questions
-  const parseQuestionsFromText = (text: string): any[] => {
-    // This is a simplified parser - in a real app you would use more sophisticated parsing
-    const questions = [];
-    const lines = text.split('\n');
+  const exportExercise = () => {
+    if (!generatedExercise) return;
     
-    let currentQuestion = '';
-    let options: string[] = [];
+    const exerciseData = JSON.stringify(generatedExercise, null, 2);
+    const blob = new Blob([exerciseData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      if (line.endsWith('?')) {
-        // This looks like a question
-        currentQuestion = line;
-        options = [];
-      } else if (line.startsWith('- ') || line.startsWith('* ') || /^[A-D]\./.test(line)) {
-        // This looks like an option
-        options.push(line.replace(/^[- *A-D]\.\s*/, ''));
-      }
-      
-      // If we have a question and some options, add it to our questions array
-      if (currentQuestion && options.length >= 2 && 
-          (i === lines.length - 1 || lines[i+1].trim() === '' || lines[i+1].trim().endsWith('?'))) {
-        questions.push({
-          id: questions.length + 1,
-          question: currentQuestion,
-          options: options,
-          correctAnswer: options[0], // Default to first option as correct answer
-        });
-        
-        currentQuestion = '';
-        options = [];
-      }
-    }
-    
-    return questions.length > 0 ? questions : generateSimpleQuestions(text);
-  };
-
-  const generateSimpleQuestions = (text: string): any[] => {
-    // Very simple question generator
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-    const questions = [];
-    
-    // Take up to 3 sentences to create questions
-    for (let i = 0; i < Math.min(3, sentences.length); i++) {
-      const sentence = sentences[i].trim();
-      if (sentence.length > 10) {
-        const words = sentence.split(' ');
-        const keywordIndex = Math.floor(words.length / 2);
-        const keyword = words[keywordIndex];
-        
-        // Create a simple question by replacing a keyword with a blank
-        const question = `What word completes this sentence: "${sentence.replace(keyword, '_____')}"?`;
-        
-        // Generate some plausible options
-        const correctAnswer = keyword;
-        const otherOptions = ["option 1", "option 2", "option 3"];
-        
-        questions.push({
-          id: i + 1,
-          question,
-          options: [correctAnswer, ...otherOptions],
-          correctAnswer,
-        });
-      }
-    }
-    
-    return questions;
-  };
-
-  const exportToJSON = () => {
-    if (!processedData) return;
-    
-    const dataStr = JSON.stringify(processedData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${processedData.title || 'exercise'}.json`;
+    a.download = `${exerciseTitle.replace(/\s+/g, '_')}_exercise.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     
     toast({
-      title: "Export complete",
-      description: "The exercise data has been exported as JSON.",
+      title: "Exercise exported",
+      description: "JSON file has been downloaded"
     });
   };
 
-  const saveToListeningExercises = () => {
-    if (!processedData || processedData.type !== "listening") {
+  const saveExercise = () => {
+    if (!generatedExercise || exerciseType !== "listening") {
       toast({
-        title: "Invalid data",
-        description: "Only listening exercises can be saved to the listening exercises database.",
-        variant: "destructive",
+        title: "Cannot save exercise",
+        description: "Only listening exercises can be saved directly at this time",
+        variant: "destructive"
       });
       return;
     }
     
-    // In a real app, this would update your database
-    // For now, we'll just show a success message
+    // In a real app, this would save to a database
+    // For now, we're simulating adding to the listeningExercises array
+    console.log("Exercise saved:", generatedExercise);
+    
     toast({
       title: "Exercise saved",
-      description: "The listening exercise has been saved to the database.",
+      description: "The listening exercise has been added to the collection",
     });
-    
-    // Clear the processed data
-    setProcessedData(null);
+  };
+
+  const getExerciseTypeIcon = (type: ExerciseType) => {
+    switch (type) {
+      case "listening": return <Headphones className="h-5 w-5" />;
+      case "reading": return <BookOpen className="h-5 w-5" />;
+      case "writing": return <PenTool className="h-5 w-5" />;
+      case "multiple-choice": return <Brain className="h-5 w-5" />;
+    }
   };
 
   return (
     <div className="container mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
-        File Upload & Analysis
-      </h1>
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
+          Training File Uploader
+        </h1>
+        <Link to="/admin/dashboard">
+          <Button variant="outline" size="sm">Back to Dashboard</Button>
+        </Link>
+      </div>
       <p className="text-muted-foreground mb-8 animate-fade-in">
-        Upload teaching materials to create exercises automatically
+        Upload files to create language learning exercises
       </p>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card className="backdrop-blur-sm border-accent/20">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Upload className="h-5 w-5 mr-2" />
-                File Upload
-              </CardTitle>
-              <CardDescription>
-                Upload files to analyze and convert into exercises
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border-2 border-dashed rounded-md p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div className="space-y-3">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Upload className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Drag files here or click to upload</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Support for .txt, .pdf, .docx, .mp3, .wav and other formats
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Browse Files
-                  </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 backdrop-blur-sm border-accent/20">
+          <CardHeader>
+            <CardTitle>Files</CardTitle>
+            <CardDescription>
+              Upload and manage your files for generating exercises
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div 
+              className="border-2 border-dashed border-muted rounded-md p-6 text-center cursor-pointer hover:bg-accent/5 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Drag and drop files, or click to browse
+              </p>
+              <Input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleFileUpload} 
+                multiple
+              />
+              <Button variant="secondary" size="sm" onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}>
+                Choose Files
+              </Button>
+            </div>
+            
+            {files.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <p className="text-sm font-medium">Uploaded Files ({files.length})</p>
+                <div className="max-h-[300px] overflow-y-auto space-y-2">
+                  {files.map((file, index) => (
+                    <div 
+                      key={index}
+                      className={`p-3 rounded-md flex items-center justify-between cursor-pointer hover:bg-accent/10 transition-colors ${
+                        selectedFileIndex === index ? "bg-accent/20" : "bg-card"
+                      }`}
+                      onClick={() => analyzeFile(index)}
+                    >
+                      <div className="flex items-center">
+                        {file.type === "audio" && <Headphones className="h-4 w-4 mr-2 text-blue-500" />}
+                        {file.type === "text" && <FileText className="h-4 w-4 mr-2 text-green-500" />}
+                        {file.type === "pdf" && <FileText className="h-4 w-4 mr-2 text-red-500" />}
+                        {file.type === "unknown" && <FileText className="h-4 w-4 mr-2 text-gray-500" />}
+                        <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+                      </div>
+                      {file.analyzed && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {files.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Uploaded Files ({files.length})</h3>
-                  <div className="max-h-[300px] overflow-y-auto">
-                    {files.map((file) => (
-                      <div 
-                        key={file.name} 
-                        className="flex items-center justify-between p-3 border rounded-md mb-2"
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className="lg:col-span-2 backdrop-blur-sm border-accent/20">
+          <CardHeader>
+            <CardTitle>Generate Exercise</CardTitle>
+            <CardDescription>
+              Create learning materials from your uploaded files
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedFileIndex !== null && selectedFileIndex >= 0 && selectedFileIndex < files.length ? (
+              <Tabs defaultValue="edit" className="w-full">
+                <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsTrigger value="edit">Edit Exercise</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                  <TabsTrigger value="export">Export/Save</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="edit" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Exercise Title</label>
+                      <Input 
+                        value={exerciseTitle} 
+                        onChange={(e) => setExerciseTitle(e.target.value)}
+                        placeholder="Enter a title for this exercise"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Exercise Type</label>
+                      <Select 
+                        value={exerciseType}
+                        onValueChange={(value: any) => setExerciseType(value)}
                       >
-                        <div className="flex items-center">
-                          <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(file.size / 1024).toFixed(1)} KB
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select exercise type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="listening">
+                            <div className="flex items-center">
+                              <Headphones className="h-4 w-4 mr-2" />
+                              <span>Listening Comprehension</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="reading">
+                            <div className="flex items-center">
+                              <BookOpen className="h-4 w-4 mr-2" />
+                              <span>Reading Comprehension</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="writing">
+                            <div className="flex items-center">
+                              <PenTool className="h-4 w-4 mr-2" />
+                              <span>Writing Exercise</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="multiple-choice">
+                            <div className="flex items-center">
+                              <Brain className="h-4 w-4 mr-2" />
+                              <span>Multiple Choice Quiz</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Difficulty Level</label>
+                    <Select 
+                      value={difficulty}
+                      onValueChange={(value: any) => setDifficulty(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Beginner">Beginner</SelectItem>
+                        <SelectItem value="Intermediate">Intermediate</SelectItem>
+                        <SelectItem value="Advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Content/Transcript</label>
+                    <Textarea 
+                      value={files[selectedFileIndex]?.content || ""} 
+                      onChange={(e) => {
+                        const updatedFiles = [...files];
+                        updatedFiles[selectedFileIndex] = {
+                          ...updatedFiles[selectedFileIndex],
+                          content: e.target.value
+                        };
+                        setFiles(updatedFiles);
+                      }}
+                      placeholder="Content or transcript of the file"
+                      className="min-h-[150px]"
+                    />
+                  </div>
+                  
+                  {(exerciseType === "multiple-choice" || exerciseType === "listening") && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Questions</label>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleAddQuestion}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Question
+                        </Button>
+                      </div>
+                      
+                      {questions.map((question, qIndex) => (
+                        <Card key={qIndex} className="border border-accent/10">
+                          <CardHeader className="py-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleRemoveQuestion(qIndex)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="py-3 px-4 space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Question Text</label>
+                              <Input 
+                                value={question.question} 
+                                onChange={(e) => handleQuestionChange(qIndex, "question", e.target.value)}
+                                placeholder="Enter the question"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Options</label>
+                              {question.options.map((option: string, oIndex: number) => (
+                                <div key={oIndex} className="flex items-center gap-2">
+                                  <Input 
+                                    value={option} 
+                                    onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                    placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Correct Answer</label>
+                              <Select 
+                                value={question.correctAnswer} 
+                                onValueChange={(value) => handleCorrectAnswerChange(qIndex, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select correct answer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {question.options.map((option: string, oIndex: number) => (
+                                    <SelectItem key={oIndex} value={option}>
+                                      {option || `Option ${String.fromCharCode(65 + oIndex)}`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <Button onClick={generateExercise}>
+                      Generate Exercise
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="preview">
+                  {generatedExercise ? (
+                    <div className="space-y-6">
+                      <div className="bg-accent/10 p-4 rounded-md">
+                        <h3 className="text-lg font-semibold mb-2">{generatedExercise.title}</h3>
+                        <div className="flex items-center space-x-4 mb-4">
+                          <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            {generatedExercise.difficulty}
+                          </span>
+                          <span className="text-sm flex items-center">
+                            {getExerciseTypeIcon(generatedExercise.type)}
+                            <span className="ml-1 capitalize">{generatedExercise.type}</span>
+                          </span>
+                        </div>
+                        
+                        {generatedExercise.type === "listening" && (
+                          <div className="mb-4">
+                            <p className="text-sm font-medium mb-2">Audio:</p>
+                            <audio controls className="w-full">
+                              <source src={generatedExercise.audioUrl} type="audio/mpeg" />
+                              Your browser does not support the audio element.
+                            </audio>
+                            <p className="text-sm font-medium mt-4 mb-2">Transcript:</p>
+                            <p className="text-sm bg-background p-4 rounded-md">
+                              {generatedExercise.transcript}
                             </p>
                           </div>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => removeFile(file.name)}
-                          className="text-red-500 h-8 w-8 p-0"
-                        >
-                          &times;
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <Button 
-                    onClick={analyzeFiles}
-                    disabled={isAnalyzing}
-                    className="w-full"
-                  >
-                    {isAnalyzing ? "Analyzing..." : "Analyze Files"}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {Object.keys(analyzedResults).length > 0 && (
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileType className="h-5 w-5 mr-2" />
-                  Analysis Results
-                </CardTitle>
-                <CardDescription>
-                  Review the analysis and select exercise types
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {files.map((file) => (
-                  <div key={file.name} className="border rounded-md p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-sm font-medium">{file.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {analyzedResults[file.name] || "Not analyzed yet"}
-                        </p>
+                        )}
+                        
+                        {(generatedExercise.type === "multiple-choice" || generatedExercise.type === "listening") && (
+                          <div className="space-y-4 mt-4">
+                            <p className="text-sm font-medium">Questions:</p>
+                            {generatedExercise.questions.map((q: any, i: number) => (
+                              <div key={i} className="space-y-2 bg-background p-4 rounded-md">
+                                <p className="font-medium">{i + 1}. {q.question}</p>
+                                <div className="space-y-1">
+                                  {q.options.map((option: string, j: number) => (
+                                    <div key={j} className="flex items-center">
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 text-xs ${
+                                        option === q.correctAnswer 
+                                          ? "bg-green-500 text-white" 
+                                          : "bg-gray-200"
+                                      }`}>
+                                        {String.fromCharCode(65 + j)}
+                                      </div>
+                                      <span>{option}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs" htmlFor={`type-${file.name}`}>
-                          Exercise Type
-                        </Label>
-                        <Select
-                          value={selectedExerciseType[file.name] || ""}
-                          onValueChange={(value) => 
-                            setSelectedExerciseType({
-                              ...selectedExerciseType,
-                              [file.name]: value
-                            })
-                          }
-                        >
-                          <SelectTrigger id={`type-${file.name}`}>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="listening">Listening</SelectItem>
-                            <SelectItem value="reading">Reading</SelectItem>
-                            <SelectItem value="writing">Writing</SelectItem>
-                            <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Button 
-                          className="mt-5 w-full"
-                          disabled={!selectedExerciseType[file.name]}
-                          onClick={() => createExerciseFromFile(file.name)}
-                        >
-                          Create Exercise
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-        
-        <div className="space-y-6">
-          {processedData && (
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FilePlus className="h-5 w-5 mr-2" />
-                  Generated Exercise
-                </CardTitle>
-                <CardDescription>
-                  {processedData.type.charAt(0).toUpperCase() + processedData.type.slice(1)} exercise generated from your file
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 border rounded-md">
-                  <h3 className="font-medium">{processedData.title}</h3>
-                  
-                  {processedData.type === "listening" && (
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Audio Source:</p>
-                        <p className="text-sm">{processedData.audioUrl ? "Audio file uploaded" : "No audio file"}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm font-medium">Transcript ({processedData.transcript.length} characters):</p>
-                        <p className="text-sm line-clamp-3">{processedData.transcript}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm font-medium">Generated Questions ({processedData.questions.length}):</p>
-                        <ul className="text-sm list-disc list-inside">
-                          {processedData.questions.map((q: any, i: number) => (
-                            <li key={i} className="line-clamp-1">{q.question}</li>
-                          ))}
-                        </ul>
-                      </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                      <p>Generate an exercise to preview it here</p>
                     </div>
                   )}
-                  
-                  {processedData.type === "multiple-choice" && (
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Questions ({processedData.questions.length}):</p>
-                        <ul className="text-sm list-disc list-inside">
-                          {processedData.questions.map((q: any, i: number) => (
-                            <li key={i} className="line-clamp-1">{q.question}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {processedData.type === "writing" && (
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Writing Prompt:</p>
-                        <p className="text-sm">{processedData.prompt}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {processedData.type === "reading" && (
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <p className="text-sm font-medium">Content ({processedData.content.length} characters):</p>
-                        <p className="text-sm line-clamp-3">{processedData.content}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm font-medium">Generated Questions ({processedData.questions.length}):</p>
-                        <ul className="text-sm list-disc list-inside">
-                          {processedData.questions.map((q: any, i: number) => (
-                            <li key={i} className="line-clamp-1">{q.question}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </TabsContent>
                 
-                <div className="flex space-x-3">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={exportToJSON}
-                  >
-                    Export as JSON
-                  </Button>
-                  
-                  {processedData.type === "listening" && (
-                    <Button 
-                      className="flex-1"
-                      onClick={saveToListeningExercises}
-                    >
-                      Save to Listening Exercises
-                    </Button>
+                <TabsContent value="export">
+                  {generatedExercise ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="backdrop-blur-sm border-accent/20">
+                          <CardHeader>
+                            <div className="flex items-center">
+                              <Download className="h-5 w-5 mr-2" />
+                              <CardTitle className="text-base">Export Exercise</CardTitle>
+                            </div>
+                            <CardDescription>
+                              Download this exercise as a JSON file
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Button onClick={exportExercise} className="w-full">
+                              <Download className="h-4 w-4 mr-2" />
+                              Export JSON
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card className="backdrop-blur-sm border-accent/20">
+                          <CardHeader>
+                            <div className="flex items-center">
+                              <Save className="h-5 w-5 mr-2" />
+                              <CardTitle className="text-base">Save to Collection</CardTitle>
+                            </div>
+                            <CardDescription>
+                              Add this exercise to the application
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Button 
+                              onClick={saveExercise} 
+                              className="w-full"
+                              disabled={exerciseType !== "listening"}
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Save Exercise
+                            </Button>
+                            {exerciseType !== "listening" && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Note: Currently only listening exercises can be saved directly
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                      <p>Generate an exercise first to enable export options</p>
+                    </div>
                   )}
-                </div>
-                
-                <div className="text-xs text-muted-foreground">
-                  <p>Note: This is a simple exercise generation system. In a real application, you would have more sophisticated analysis and generation capabilities, possibly using AI to create better questions and determine the most appropriate exercise type.</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {!processedData && (
-            <Card className="backdrop-blur-sm border-accent/20 h-full flex flex-col justify-center items-center p-8">
-              <div className="text-center space-y-3">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <FileType className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-medium text-lg">Exercise Generation</h3>
-                <p className="text-muted-foreground text-sm">
-                  Upload and analyze files to automatically generate exercises. 
-                  The system will suggest appropriate exercise types based on file content.
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="text-center py-8">
+                <FileUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="mb-2">No file selected</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload and select a file to start creating your exercise
                 </p>
-                <div className="pt-3">
-                  <ul className="text-sm text-left space-y-2">
-                    <li className="flex items-start">
-                      <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-                      <span>Text files can become reading or multiple-choice exercises</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-                      <span>Audio files are perfect for listening comprehension</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-                      <span>The system attempts to generate questions automatically</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-                      <span>Export exercises as JSON or save them directly</span>
-                    </li>
-                  </ul>
-                </div>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose Files
+                </Button>
               </div>
-            </Card>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

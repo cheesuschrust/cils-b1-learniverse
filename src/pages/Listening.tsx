@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { Link } from "react-router-dom";
 import {
   Play,
   Pause,
@@ -26,6 +27,7 @@ import {
   Clock,
   BarChart,
   CheckCircle,
+  Upload,
 } from "lucide-react";
 import { listeningExercises, ListeningExercise } from "@/data/listeningExercises";
 
@@ -448,9 +450,17 @@ const Listening = () => {
   
   return (
     <div className="container mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
-        Listening Practice
-      </h1>
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
+          Listening Practice
+        </h1>
+        <Link to="/admin/file-uploader">
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Upload size={16} />
+            Upload Training Files
+          </Button>
+        </Link>
+      </div>
       <p className="text-muted-foreground mb-8 animate-fade-in">
         Improve your Italian listening comprehension skills
       </p>
