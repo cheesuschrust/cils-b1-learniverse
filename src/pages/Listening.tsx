@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,17 +25,17 @@ import {
   Info,
   Clock,
   BarChart,
+  CheckCircle,
 } from "lucide-react";
 
-// Sample audio exercise
 const listeningExercise = {
   id: 1,
   title: "Notizie del Giorno",
-  audioUrl: "https://static.openaudio.ai/2023/06/sample-audio-in-italian.mp3", // Replace with actual audio URL
+  audioUrl: "https://static.openaudio.ai/2023/06/sample-audio-in-italian.mp3",
   transcript:
     "Benvenuti alle notizie del giorno. Oggi a Roma, il Presidente della Repubblica ha incontrato i rappresentanti delle regioni per discutere delle nuove misure economiche. Il governo ha annunciato un nuovo piano per il sostegno alle piccole imprese. Secondo il Ministro dell'Economia, questo piano aiuterà migliaia di aziende in difficoltà. In altre notizie, la squadra nazionale di calcio si prepara per la prossima partita di qualificazione al campionato europeo.",
   difficulty: "Intermediate",
-  type: "multiple-choice", // or "transcript"
+  type: "multiple-choice",
   questions: [
     {
       id: 1,
@@ -92,18 +91,15 @@ const Listening = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Create audio element
     const audio = new Audio(listeningExercise.audioUrl);
     audioRef.current = audio;
     
-    // Event listeners
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("loadedmetadata", () => {
       setDuration(audio.duration);
     });
     audio.addEventListener("ended", handleAudioEnd);
     
-    // Cleanup
     return () => {
       audio.pause();
       audio.removeEventListener("timeupdate", updateProgress);
@@ -112,14 +108,12 @@ const Listening = () => {
     };
   }, []);
   
-  // Update progress bar
   const updateProgress = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
     }
   };
   
-  // Handle audio end
   const handleAudioEnd = () => {
     setIsPlaying(false);
     if (audioRef.current) {
@@ -129,7 +123,6 @@ const Listening = () => {
     setPlayCount(playCount + 1);
   };
   
-  // Toggle play/pause
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -144,7 +137,6 @@ const Listening = () => {
     }
   };
   
-  // Toggle mute
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !isMuted;
@@ -152,7 +144,6 @@ const Listening = () => {
     }
   };
   
-  // Reset audio
   const resetAudio = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
@@ -164,7 +155,6 @@ const Listening = () => {
     }
   };
   
-  // Seek to position
   const seek = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (progressBarRef.current && audioRef.current) {
       const rect = progressBarRef.current.getBoundingClientRect();
@@ -174,14 +164,12 @@ const Listening = () => {
     }
   };
   
-  // Format time (seconds to mm:ss)
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
   
-  // Handle option selection
   const handleOptionSelect = (questionIndex: number, option: string) => {
     if (isSubmitted) return;
     
@@ -190,7 +178,6 @@ const Listening = () => {
     setSelectedAnswers(newAnswers);
   };
   
-  // Submit answers
   const handleSubmit = () => {
     if (selectedAnswers.some((answer) => answer === null)) {
       toast({
@@ -219,12 +206,10 @@ const Listening = () => {
     });
   };
   
-  // Finish quiz
   const handleFinish = () => {
     setQuizFinished(true);
   };
   
-  // Try again
   const handleTryAgain = () => {
     setSelectedAnswers([null, null, null]);
     setIsSubmitted(false);
@@ -239,7 +224,6 @@ const Listening = () => {
     }
   };
   
-  // Render audio player
   const renderAudioPlayer = () => (
     <div className="bg-secondary/30 p-4 rounded-lg">
       <div className="flex items-center justify-between mb-2">
@@ -282,7 +266,6 @@ const Listening = () => {
         </div>
       </div>
       
-      {/* Progress bar */}
       <div
         ref={progressBarRef}
         className="h-2 bg-secondary rounded-full overflow-hidden cursor-pointer"
@@ -318,7 +301,6 @@ const Listening = () => {
     </div>
   );
   
-  // Render questions
   const renderQuestions = () => (
     <div className="space-y-6 mt-6">
       {listeningExercise.questions.map((question, index) => (
@@ -372,7 +354,7 @@ const Listening = () => {
                 
                 {isSubmitted && option === question.correctAnswer && (
                   <div className="text-green-500">
-                    <CheckCircle2 className="h-5 w-5" />
+                    <CheckCircle className="h-5 w-5" />
                   </div>
                 )}
                 
@@ -391,7 +373,6 @@ const Listening = () => {
     </div>
   );
   
-  // Render quiz results
   const renderResults = () => (
     <Card className="w-full max-w-3xl mx-auto backdrop-blur-sm border-accent/20 animate-fade-up">
       <CardHeader>
