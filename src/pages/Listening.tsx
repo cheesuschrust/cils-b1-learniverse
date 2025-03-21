@@ -27,48 +27,12 @@ import {
   BarChart,
   CheckCircle,
 } from "lucide-react";
-
-const listeningExercise = {
-  id: 1,
-  title: "Notizie del Giorno",
-  audioUrl: "https://static.openaudio.ai/2023/06/sample-audio-in-italian.mp3",
-  transcript:
-    "Benvenuti alle notizie del giorno. Oggi a Roma, il Presidente della Repubblica ha incontrato i rappresentanti delle regioni per discutere delle nuove misure economiche. Il governo ha annunciato un nuovo piano per il sostegno alle piccole imprese. Secondo il Ministro dell'Economia, questo piano aiuterà migliaia di aziende in difficoltà. In altre notizie, la squadra nazionale di calcio si prepara per la prossima partita di qualificazione al campionato europeo.",
-  difficulty: "Intermediate",
-  type: "multiple-choice",
-  questions: [
-    {
-      id: 1,
-      question: "Dove si è svolto l'incontro menzionato nel notiziario?",
-      options: ["Milano", "Roma", "Napoli", "Firenze"],
-      correctAnswer: "Roma",
-    },
-    {
-      id: 2,
-      question: "Chi ha incontrato i rappresentanti delle regioni?",
-      options: [
-        "Il Primo Ministro",
-        "Il Ministro dell'Economia",
-        "Il Presidente della Repubblica",
-        "Il Ministro degli Esteri",
-      ],
-      correctAnswer: "Il Presidente della Repubblica",
-    },
-    {
-      id: 3,
-      question: "Qual è lo scopo del nuovo piano annunciato dal governo?",
-      options: [
-        "Sostegno alle piccole imprese",
-        "Miglioramento delle infrastrutture",
-        "Riforma del sistema educativo",
-        "Aumento delle pensioni",
-      ],
-      correctAnswer: "Sostegno alle piccole imprese",
-    },
-  ],
-};
+import { listeningExercises, ListeningExercise } from "@/data/listeningExercises";
 
 const Listening = () => {
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const listeningExercise = listeningExercises[currentExerciseIndex];
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -76,11 +40,9 @@ const Listening = () => {
   const [volume, setVolume] = useState(1);
   const [showTranscript, setShowTranscript] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([
-    null,
-    null,
-    null,
-  ]);
+  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>(
+    Array(listeningExercise.questions.length).fill(null)
+  );
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -211,7 +173,7 @@ const Listening = () => {
   };
   
   const handleTryAgain = () => {
-    setSelectedAnswers([null, null, null]);
+    setSelectedAnswers(Array(listeningExercise.questions.length).fill(null));
     setIsSubmitted(false);
     setQuizFinished(false);
     setCurrentQuestion(0);
