@@ -56,5 +56,39 @@ export const listeningExercises: ListeningExercise[] = [
       },
     ],
   },
-  // You can add more exercises here
+  {
+    id: 2,
+    title: "Conversazione al Ristorante",
+    audioUrl: "https://static.openaudio.ai/2024/03/italian-restaurant-conversation.mp3",
+    transcript:
+      "Cameriere: Buonasera signori, benvenuti al Ristorante Bella Italia. Avete prenotato?\nCliente: Buonasera, sì, ho prenotato un tavolo per due a nome di Rossi.\nCameriere: Perfetto, signor Rossi. Vi accompagno subito al vostro tavolo. Ecco i menu, vi lascio qualche minuto per decidere.\nCliente: Grazie. Cosa mi consiglia come primo piatto?\nCameriere: Il nostro chef oggi consiglia le tagliatelle ai funghi porcini, sono fresche e molto buone.\nCliente: Ottimo, prenderò quelle. E come secondo?\nCameriere: L'ossobuco alla milanese è una nostra specialità.\nCliente: Perfetto, allora per me tagliatelle e ossobuco. E da bere una bottiglia di vino rosso della casa.\nCameriere: Ottima scelta. Torno subito con il vostro ordine.",
+    difficulty: "Beginner",
+    type: "multiple-choice",
+    questions: [
+      {
+        id: 1,
+        question: "Dove si svolge questa conversazione?",
+        options: ["In un bar", "In un ristorante", "In un hotel", "In un negozio"],
+        correctAnswer: "In un ristorante",
+      },
+      {
+        id: 2,
+        question: "Quale primo piatto consiglia il cameriere?",
+        options: ["Spaghetti alla carbonara", "Risotto allo zafferano", "Tagliatelle ai funghi porcini", "Lasagne alla bolognese"],
+        correctAnswer: "Tagliatelle ai funghi porcini",
+      },
+      {
+        id: 3,
+        question: "Cosa ordina il cliente come secondo piatto?",
+        options: ["Bistecca alla fiorentina", "Ossobuco alla milanese", "Pesce del giorno", "Pollo arrosto"],
+        correctAnswer: "Ossobuco alla milanese",
+      },
+      {
+        id: 4,
+        question: "Il cliente ha prenotato un tavolo?",
+        options: ["Sì", "No", "Non è chiaro dal dialogo", "Ha provato ma non c'era disponibilità"],
+        correctAnswer: "Sì",
+      }
+    ],
+  }
 ];
