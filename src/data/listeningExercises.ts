@@ -16,6 +16,117 @@ export interface ListeningExercise {
   questions: ListeningQuestion[];
 }
 
+// Function to extract text content from various file types
+export const extractContentFromFile = async (file: File): Promise<string> => {
+  const fileType = file.type;
+  
+  // Text files
+  if (fileType.startsWith("text/") || 
+      fileType === "application/rtf" || 
+      file.name.endsWith(".txt") || 
+      file.name.endsWith(".md")) {
+    return await file.text();
+  }
+  
+  // PDF files - in a real app, would use PDF.js or similar
+  if (fileType === "application/pdf" || file.name.endsWith(".pdf")) {
+    return "PDF content extraction would occur here with an actual PDF processing library";
+  }
+  
+  // Audio files - in a real app, would use a speech-to-text service
+  if (fileType.startsWith("audio/")) {
+    return "Audio transcription would occur here with a speech recognition service";
+  }
+  
+  // Word documents - in a real app, would use a docx parser
+  if (fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      fileType === "application/msword" ||
+      file.name.endsWith(".docx") ||
+      file.name.endsWith(".doc")) {
+    return "Word document content extraction would occur here";
+  }
+  
+  // Image files - in a real app, would use OCR
+  if (fileType.startsWith("image/")) {
+    return "Image text extraction via OCR would occur here";
+  }
+  
+  // Unknown type
+  return "Content extraction for this file type is not supported";
+};
+
+// Generate questions based on text content
+export const generateQuestions = (content: string, count: number = 4): ListeningQuestion[] => {
+  // This is a simplified version - in a real app, this would use NLP or an AI service
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  const questions: ListeningQuestion[] = [];
+  
+  // Generate questions based on the content
+  for (let i = 0; i < Math.min(count, sentences.length); i++) {
+    const sentence = sentences[i].trim();
+    const words = sentence.split(' ').filter(w => w.length > 3);
+    
+    if (words.length < 3) continue;
+    
+    // Key word for the question
+    const keyWord = words[Math.floor(Math.random() * words.length)];
+    
+    // Create a question about the sentence
+    const question = `What is mentioned about "${keyWord}" in the content?`;
+    
+    // Generate options with one correct answer
+    const correctAnswer = `It's described in relation to "${sentence.substring(0, 50)}..."`;
+    const incorrectOptions = [
+      "It's not mentioned in this context",
+      `It's described as unimportant`,
+      `It's only mentioned in passing`
+    ];
+    
+    // Shuffle options
+    const options = [correctAnswer, ...incorrectOptions]
+      .sort(() => Math.random() - 0.5);
+    
+    questions.push({
+      id: i + 1,
+      question,
+      options,
+      correctAnswer
+    });
+  }
+  
+  return questions;
+};
+
+// Function to add a new listening exercise
+export const addListeningExercise = (
+  title: string, 
+  audioUrl: string, 
+  transcript: string,
+  difficulty: "Beginner" | "Intermediate" | "Advanced",
+  customQuestions?: ListeningQuestion[]
+): ListeningExercise => {
+  const newId = Math.max(...listeningExercises.map(ex => ex.id), 0) + 1;
+  
+  // Generate questions if not provided
+  const questions = customQuestions || generateQuestions(transcript);
+  
+  const newExercise: ListeningExercise = {
+    id: newId,
+    title,
+    audioUrl,
+    transcript,
+    difficulty,
+    type: "multiple-choice",
+    questions
+  };
+  
+  // Add to the array
+  listeningExercises.push(newExercise);
+  
+  return newExercise;
+};
+
+// Current listening exercises
 export const listeningExercises: ListeningExercise[] = [
   {
     id: 1,

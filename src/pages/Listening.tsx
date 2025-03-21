@@ -8,7 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,12 +35,26 @@ import {
   BarChart,
   CheckCircle,
   Upload,
+  Plus,
 } from "lucide-react";
 import { listeningExercises, ListeningExercise } from "@/data/listeningExercises";
+import FileProcessor from "@/components/learning/FileProcessor";
 
 const Listening = () => {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const listeningExercise = listeningExercises[currentExerciseIndex];
+  const [exercises, setExercises] = useState<ListeningExercise[]>(listeningExercises);
+  const [isFileUploaderOpen, setIsFileUploaderOpen] = useState(false);
+  
+  useEffect(() => {
+    setExercises([...listeningExercises]);
+  }, [listeningExercises]);
+  
+  const handleExerciseAdded = () => {
+    setExercises([...listeningExercises]);
+    setIsFileUploaderOpen(false);
+  };
+  
+  const listeningExercise = exercises[currentExerciseIndex];
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -70,7 +91,20 @@ const Listening = () => {
       audio.removeEventListener("loadedmetadata", () => {});
       audio.removeEventListener("ended", handleAudioEnd);
     };
-  }, []);
+  }, [currentExerciseIndex, exercises]);
+  
+  useEffect(() => {
+    if (listeningExercise) {
+      setSelectedAnswers(Array(listeningExercise.questions.length).fill(null));
+      setIsSubmitted(false);
+      setQuizFinished(false);
+      setCurrentQuestion(0);
+      setShowTranscript(false);
+      setPlayCount(0);
+      setCurrentTime(0);
+      setIsPlaying(false);
+    }
+  }, [currentExerciseIndex, exercises]);
   
   const updateProgress = () => {
     if (audioRef.current) {
@@ -186,6 +220,16 @@ const Listening = () => {
       setCurrentTime(0);
       setIsPlaying(false);
     }
+  };
+  
+  const handleNextExercise = () => {
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+    } else {
+      setCurrentExerciseIndex(0);
+    }
+    
+    setQuizFinished(false);
   };
   
   const renderAudioPlayer = () => (
@@ -443,7 +487,7 @@ const Listening = () => {
         <Button variant="outline" onClick={handleTryAgain}>
           Try Again
         </Button>
-        <Button>Next Exercise</Button>
+        <Button onClick={handleNextExercise}>Next Exercise</Button>
       </CardFooter>
     </Card>
   );
@@ -454,16 +498,54 @@ const Listening = () => {
         <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
           Listening Practice
         </h1>
-        <Link to="/admin/file-uploader">
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <Upload size={16} />
-            Upload Training Files
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Dialog open={isFileUploaderOpen} onOpenChange={setIsFileUploaderOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Plus size={16} />
+                Add New Material
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Upload Learning Material</DialogTitle>
+                <DialogDescription>
+                  Upload audio files, text documents, or other materials to create new exercises
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4">
+                <FileProcessor onExerciseAdded={handleExerciseAdded} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
-      <p className="text-muted-foreground mb-8 animate-fade-in">
+      <p className="text-muted-foreground mb-4 animate-fade-in">
         Improve your Italian listening comprehension skills
       </p>
+      
+      {exercises.length > 1 && (
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+          {exercises.map((exercise, index) => (
+            <Button
+              key={exercise.id}
+              variant={index === currentExerciseIndex ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (!isSubmitted || window.confirm("Switch to a different exercise? Your progress will be lost.")) {
+                  setCurrentExerciseIndex(index);
+                }
+              }}
+              className="flex items-center gap-1 whitespace-nowrap"
+            >
+              <span>{exercise.title}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10">
+                {exercise.difficulty}
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
       
       {quizFinished ? (
         renderResults()
