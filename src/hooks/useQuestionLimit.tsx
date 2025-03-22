@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -13,31 +13,32 @@ interface UseQuestionLimitResult {
   trackQuestionUsage: () => Promise<boolean>;
 }
 
+/**
+ * Hook to manage question usage limits based on subscription status
+ */
 export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => {
   const { user, incrementDailyQuestionCount, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
   // Convert type to match the keys in dailyQuestionCounts
-  const mapTypeToKey = (questionType: QuestionType): string => {
-    switch (questionType) {
-      case "multipleChoice":
-        return "multipleChoice";
-      default:
-        return questionType;
-    }
+  const countKey = type === "multipleChoice" ? "multipleChoice" : type;
+  
+  // Get the current count for this question type (safely)
+  const getCurrentCount = (): number => {
+    if (!user || !user.dailyQuestionCounts) return 0;
+    return user.dailyQuestionCounts[countKey] || 0;
   };
   
-  const countKey = mapTypeToKey(type) as keyof typeof user?.dailyQuestionCounts;
-  
-  // Check if user is premium and can access content
+  // Check if user can access content
   const canAccessContent = (): boolean => {
-    if (!isAuthenticated || !user) {
-      return false;
-    }
+    if (!isAuthenticated || !user) return false;
     
-    return user.subscription === "premium" || 
-           (user.dailyQuestionCounts && user.dailyQuestionCounts[countKey] < 1);
+    // Premium users can always access content
+    if (user.subscription === "premium") return true;
+    
+    // Free users can access if they haven't used their daily limit
+    return getCurrentCount() < 1;
   };
   
   // Get remaining questions
@@ -48,13 +49,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
       return "unlimited";
     }
     
-    return Math.max(0, 1 - (user.dailyQuestionCounts[countKey] || 0));
-  };
-  
-  // Get used questions today
-  const getUsedQuestions = (): number => {
-    if (!user) return 0;
-    return user.dailyQuestionCounts[countKey] || 0;
+    return Math.max(0, 1 - getCurrentCount());
   };
   
   // Track question usage
@@ -95,7 +90,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     canAccessContent: canAccessContent(),
     isLoading,
     remainingQuestions: getRemainingQuestions(),
-    usedQuestions: getUsedQuestions(),
+    usedQuestions: getCurrentCount(),
     trackQuestionUsage
   };
 };
