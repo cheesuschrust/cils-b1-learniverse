@@ -1,7 +1,6 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { LucideIcon } from "lucide-react";
 
 type AdminSidebarProps = {
   links: {
@@ -9,11 +8,12 @@ type AdminSidebarProps = {
     label: string;
     icon: React.ReactNode;
   }[];
+  isOpen: boolean;
 };
 
-export const AdminSidebar = ({ links }: AdminSidebarProps) => {
+export const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
   return (
-    <aside className="fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-56 border-r bg-background overflow-y-auto hidden md:block">
+    <aside className={`fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-56 border-r bg-background overflow-y-auto ${isOpen ? 'block' : 'hidden'} md:block`}>
       <div className="py-4">
         <ul className="space-y-1 px-2">
           {links.map((link, index) => (

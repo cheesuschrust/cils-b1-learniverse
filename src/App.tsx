@@ -41,10 +41,10 @@ import {
 
 function App() {
   return (
-    <AuthProvider>
-      <UserPreferencesProvider>
-        <HelmetProvider>
-          <BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <UserPreferencesProvider>
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
@@ -81,12 +81,12 @@ function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-          <Toaster />
-          <ShadcnToaster />
-        </HelmetProvider>
-      </UserPreferencesProvider>
-    </AuthProvider>
+            <Toaster />
+            <ShadcnToaster />
+          </UserPreferencesProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 
