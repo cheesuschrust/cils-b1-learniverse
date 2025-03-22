@@ -44,7 +44,6 @@ export interface User {
   displayName?: string;
   phoneNumber?: string;
   address?: string;
-  lastActive?: Date;
   metrics: {
     totalQuestions: number;
     correctAnswers: number;
@@ -57,16 +56,17 @@ export interface UserPreferences {
   emailNotifications: boolean;
   language: 'en' | 'it';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
-}
-
-interface LogEntry {
-  id: string;
-  timestamp: Date;
-  category: LogCategory;
-  action: string;
-  userId?: string;
-  details?: string;
-  level: 'info' | 'warning' | 'error';
+  fontSize?: number;
+  notificationsEnabled?: boolean;
+  animationsEnabled?: boolean;
+  preferredLanguage?: string;
+  voiceSpeed?: number;
+  autoPlayAudio?: boolean;
+  showProgressMetrics?: boolean;
+  aiEnabled?: boolean;
+  aiModelSize?: string;
+  aiProcessingOnDevice?: boolean;
+  confidenceScoreVisible?: boolean;
 }
 
 // Mock database
@@ -1585,4 +1585,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

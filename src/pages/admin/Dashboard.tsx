@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +52,7 @@ const AdminDashboard = () => {
     subscription: "free" as "free" | "premium",
   });
   
-  const { getAllUsers, updateUserStatus, updateUserSubscription, addAdmin } = useAuth();
+  const { getAllUsers, updateUserStatus, updateUserSubscription, addAdmin, addSystemLog } = useAuth();
   const { toast } = useToast();
   
   const [users, setUsers] = useState<Array<any>>([]);
@@ -193,13 +192,28 @@ const AdminDashboard = () => {
     setNewUserData(prev => ({ ...prev, [name]: value }));
   };
   
-  // Stats calculation
+  const handleUserStatusChange = async (userId: string, newStatus: string) => {
+    const success = await updateUserStatus(userId, newStatus);
+    if (success) {
+      addSystemLog('user', `User status updated to ${newStatus}`);
+      setUsers(getAllUsers());
+    }
+  };
+  
+  const handleUserSubscriptionChange = async (userId: string, newSubscription: string) => {
+    await updateUserSubscription(userId, newSubscription);
+    loadUsers();
+    toast({
+      title: "Subscription Updated",
+      description: `User has been upgraded to ${newSubscription}`,
+    });
+  };
+  
   const totalUsers = users.length;
   const activeUsers = users.filter(user => user.status === "active").length;
   const premiumUsers = users.filter(user => user.subscription === "premium").length;
   const totalQuestions = users.reduce((sum, user) => sum + user.metrics.totalQuestions, 0);
   
-  // Last 30 days new users
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const newUsers = users.filter(user => new Date(user.created) >= thirtyDaysAgo).length;

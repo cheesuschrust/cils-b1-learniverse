@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -56,9 +55,10 @@ const UserProfile = () => {
   });
   
   // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return "N/A";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
@@ -284,11 +284,11 @@ const UserProfile = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Member since:</span>
-                <span>{user.created ? formatDate(user.created) : "N/A"}</span>
+                <span>{formatDate(user.createdAt)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Last active:</span>
-                <span>{user.lastActive ? formatDate(user.lastActive) : "N/A"}</span>
+                <span>{formatDate(user.lastActive)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Role:</span>

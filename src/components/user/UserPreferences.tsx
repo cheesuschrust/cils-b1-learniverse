@@ -39,6 +39,11 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
     aiModelSize: "small", // small, medium, large
     aiProcessingOnDevice: true,
     confidenceScoreVisible: true,
+    
+    // Required fields from the User interface
+    emailNotifications: true,
+    language: "en" as "en" | "it",
+    difficulty: "intermediate" as "beginner" | "intermediate" | "advanced"
   });
   
   // Initialize preferences from user data
