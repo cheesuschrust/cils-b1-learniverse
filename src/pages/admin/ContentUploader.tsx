@@ -26,6 +26,7 @@ const ContentUploader = () => {
   const [language, setLanguage] = useState<'english' | 'italian' | 'unknown'>('italian');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingTimeoutId, setProcessingTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
   const { isProcessing: aiIsProcessing } = useAI();
@@ -39,8 +40,11 @@ const ContentUploader = () => {
       if (processingTimeoutId) {
         clearTimeout(processingTimeoutId);
       }
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     };
-  }, [processingTimeoutId]);
+  }, [processingTimeoutId, progressInterval]);
   
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -79,21 +83,23 @@ const ContentUploader = () => {
     setProcessingTimeoutId(timeoutId);
     
     try {
-      let content = '';
-      let extractedType = null;
-      let detectedLanguage: 'english' | 'italian' | 'unknown' = 'unknown';
-      let confidenceScore = 0;
-      const fileId = uuidv4();
-      
-      let progressInterval = setInterval(() => {
+      const interval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 95) {
-            clearInterval(progressInterval);
+            clearInterval(interval);
             return 95;
           }
           return prev + 5;
         });
       }, 100);
+      
+      setProgressInterval(interval);
+      
+      let content = '';
+      let extractedType = null;
+      let detectedLanguage: 'english' | 'italian' | 'unknown' = 'unknown';
+      let confidenceScore = 0;
+      const fileId = uuidv4();
       
       if (selectedFile.type.startsWith('text/') || 
           selectedFile.type === 'application/json' ||
@@ -133,7 +139,8 @@ const ContentUploader = () => {
       setLanguage(detectedLanguage);
       
       setUploadProgress(100);
-      clearInterval(progressInterval);
+      clearInterval(interval);
+      setProgressInterval(null);
       
       if (processingTimeoutId) {
         clearTimeout(processingTimeoutId);
@@ -177,10 +184,9 @@ const ContentUploader = () => {
     } catch (error) {
       console.error("Error processing file:", error);
       
-      const currentProgressInterval = progressInterval;
-      
-      if (currentProgressInterval) {
-        clearInterval(currentProgressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        setProgressInterval(null);
       }
       
       if (processingTimeoutId) {
