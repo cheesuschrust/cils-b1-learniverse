@@ -2,8 +2,9 @@
 import React from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speak } from '@/utils/textToSpeech';
+import { speak, getCurrentVoicePreference } from '@/utils/textToSpeech';
 import { useToast } from '@/components/ui/use-toast';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
 interface SpeakableWordProps {
   word: string;
@@ -21,6 +22,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   disabled = false
 }) => {
   const { toast } = useToast();
+  const { voicePreference } = useUserPreferences();
   const [isSpeaking, setIsSpeaking] = React.useState(false);
 
   const handleSpeak = async (e: React.MouseEvent) => {
@@ -29,7 +31,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
     setIsSpeaking(true);
     
     try {
-      await speak(word, language);
+      await speak(word, language, voicePreference);
     } catch (error) {
       console.error('Error speaking word:', error);
       toast({

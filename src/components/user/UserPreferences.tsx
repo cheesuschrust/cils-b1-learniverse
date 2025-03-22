@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Volume2, Monitor, BellRing, Languages, Moon, Sun, Cpu } from "lucide-react";
+import VoicePreferences from "./VoicePreferences";
 
 interface UserPreferencesProps {
   onClose?: () => void;
@@ -122,7 +123,7 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
       
       <Tabs defaultValue="display">
         <div className="px-6">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-4 mb-4">
             <TabsTrigger value="display" className="flex items-center gap-1">
               <Monitor className="h-4 w-4" />
               <span className="hidden sm:inline">Display</span>
@@ -130,6 +131,10 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
             <TabsTrigger value="learning" className="flex items-center gap-1">
               <Languages className="h-4 w-4" />
               <span className="hidden sm:inline">Learning</span>
+            </TabsTrigger>
+            <TabsTrigger value="voice" className="flex items-center gap-1">
+              <Volume2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Voice</span>
             </TabsTrigger>
             <TabsTrigger value="ai" className="flex items-center gap-1">
               <Cpu className="h-4 w-4" />
@@ -234,24 +239,6 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
                 </Select>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="voice-speed" className="text-base">Voice Speed</Label>
-                    <span className="text-sm font-medium">{preferences.voiceSpeed}x</span>
-                  </div>
-                  <Slider 
-                    id="voice-speed"
-                    defaultValue={[preferences.voiceSpeed]} 
-                    max={2} 
-                    min={0.5} 
-                    step={0.1} 
-                    onValueChange={handleSliderChange("voiceSpeed")}
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-              
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-base">Auto-Play Audio</Label>
@@ -274,6 +261,10 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
                 />
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="voice" className="mt-0">
+            <VoicePreferences />
           </TabsContent>
           
           <TabsContent value="ai" className="space-y-4 mt-0">

@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { getCurrentVoicePreference, saveVoicePreference, VoicePreference } from '@/utils/textToSpeech';
 
 type Theme = 'light' | 'dark' | 'system';
 type FontSize = 'small' | 'medium' | 'large';
@@ -21,7 +22,11 @@ interface UserPreferencesContextType {
   setPreferredLanguage: (language: PreferredLanguage) => void;
   showTranslations: boolean;
   setShowTranslations: (show: boolean) => void;
+  voicePreference: VoicePreference;
+  setVoicePreference: (preference: VoicePreference) => void;
 }
+
+const defaultVoicePreference = getCurrentVoicePreference();
 
 const defaultPreferences: UserPreferencesContextType = {
   theme: 'system',
@@ -38,6 +43,8 @@ const defaultPreferences: UserPreferencesContextType = {
   setPreferredLanguage: () => {},
   showTranslations: true,
   setShowTranslations: () => {},
+  voicePreference: defaultVoicePreference,
+  setVoicePreference: () => {},
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
@@ -72,8 +79,12 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         autoPlayAudio: preferences.autoPlayAudio,
         preferredLanguage: preferences.preferredLanguage,
         showTranslations: preferences.showTranslations,
+        voicePreference: preferences.voicePreference,
       };
       localStorage.setItem(`userPreferences_${user.id}`, JSON.stringify(prefsToSave));
+      
+      // Also save voice preferences to the global storage for easy access
+      saveVoicePreference(preferences.voicePreference);
     }
   }, [preferences, user]);
 
@@ -94,6 +105,8 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         setPreferredLanguage: (preferredLanguage) => setPreferences(prev => ({ ...prev, preferredLanguage })),
         showTranslations: preferences.showTranslations,
         setShowTranslations: (showTranslations) => setPreferences(prev => ({ ...prev, showTranslations })),
+        voicePreference: preferences.voicePreference || defaultVoicePreference,
+        setVoicePreference: (voicePreference) => setPreferences(prev => ({ ...prev, voicePreference })),
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -19,11 +19,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { toast } = useToast();
   const [hasShownToast, setHasShownToast] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const refreshAttempted = useRef(false);
 
-  // Try to refresh the session when the component mounts
+  // Try to refresh the session when the component mounts, but only once
   useEffect(() => {
     const checkAuthentication = async () => {
+      if (refreshAttempted.current) return;
+      
       setIsRefreshing(true);
+      refreshAttempted.current = true;
+      
       if (!isAuthenticated && !isLoading) {
         try {
           await refreshSession();
@@ -35,6 +40,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
     
     checkAuthentication();
+    
+    // Clean up function
+    return () => {
+      refreshAttempted.current = true;
+    };
   }, [isAuthenticated, isLoading, refreshSession]);
 
   // Handle toast notifications in useEffect, not during render
