@@ -195,7 +195,10 @@ const AdminDashboard = () => {
   const handleUserStatusChange = async (userId: string, newStatus: string) => {
     const success = await updateUserStatus(userId, newStatus);
     if (success) {
-      addSystemLog('user', 'Updated user status', `User ${user.email} status updated to ${newStatus}`);
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser) {
+        addSystemLog('user', `Updated user status to ${newStatus} for ${targetUser.email}`);
+      }
       setUsers(getAllUsers());
     }
   };
@@ -216,7 +219,7 @@ const AdminDashboard = () => {
   
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const newUsers = users.filter(user => new Date(user.created) >= thirtyDaysAgo).length;
+  const newUsers = users.filter(user => new Date(user.createdAt) >= thirtyDaysAgo).length;
   
   return (
     <div className="container mx-auto px-6 py-8">
