@@ -32,7 +32,9 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
   
   // Check if user is premium and can access content
   const canAccessContent = (): boolean => {
-    if (!isAuthenticated || !user) return false;
+    if (!isAuthenticated || !user) {
+      return false;
+    }
     
     return user.subscription === "premium" || 
            (user.dailyQuestionCounts && user.dailyQuestionCounts[countKey] < 1);
