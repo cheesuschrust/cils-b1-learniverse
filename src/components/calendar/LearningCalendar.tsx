@@ -144,7 +144,7 @@ const LearningCalendar: React.FC<LearningCalendarProps> = ({ onClose }) => {
               {selectedActivity ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <Badge variant={selectedActivity.completed ? "success" : "outline"}>
+                    <Badge variant={selectedActivity.completed ? "secondary" : "outline"}>
                       {selectedActivity.completed ? "Completed" : "Pending"}
                     </Badge>
                     <Badge variant="secondary">
