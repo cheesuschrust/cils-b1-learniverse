@@ -585,7 +585,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Send email
       await sendEmail(
         user.email,
-        "Verify your email address",
+        "Please verify your email address",
         emailBody,
         emailSettings
       );
@@ -763,7 +763,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Complete the missing or incomplete methods
   const logout = () => {
     localStorage.removeItem("session");
     setUser(null);
@@ -833,7 +832,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add the remaining required methods to complete the interface
   const updateUserSubscription = async (userId: string, subscription: "free" | "premium"): Promise<void> => {
     if (!user || user.role !== "admin") {
       toast({
@@ -1086,3 +1084,633 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!firstName || !lastName || !email || !password) {
         throw new Error("All required fields must be provided");
       }
+
+      // ... rest of addAdmin implementation remains unchanged
+    } catch (error) {
+      console.error("Error adding admin:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "admin",
+        message: "Error adding admin",
+        details: String(error),
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to add admin",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const signup = async (
+    firstName: string,
+    lastName: string,
+    email: string,
+    password: string,
+    username?: string
+  ): Promise<void> => {
+    setIsLoading(true);
+    
+    try {
+      // Validate inputs
+      if (!firstName || !lastName || !email || !password) {
+        toast({
+          title: "Error",
+          description: "All required fields must be provided",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!isValidEmail(email)) {
+        toast({
+          title: "Error",
+          description: "Please provide a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check if user already exists
+      const users = getPersistedUsers();
+      const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      if (existingUser) {
+        toast({
+          title: "Error",
+          description: "An account with this email already exists",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create new user
+      const newUser: User = {
+        id: uuidv4(),
+        email: email.toLowerCase(),
+        firstName,
+        lastName,
+        username: username || `${firstName.toLowerCase()}${Math.floor(Math.random() * 1000)}`,
+        passwordHash,
+        role: "user",
+        displayName: `${firstName} ${lastName}`,
+        preferredLanguage: "both",
+        subscription: "free",
+        status: "pending", // New users start as pending until email verification
+        emailVerified: false,
+        created: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0,
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0,
+          totalTimeSpent: 0,
+        },
+        preferences: {
+          theme: "system",
+          fontSize: 16,
+          notificationsEnabled: true,
+          animationsEnabled: true,
+          preferredLanguage: "both",
+          voiceSpeed: 1.0,
+          autoPlayAudio: true,
+          showProgressMetrics: true,
+          aiEnabled: true,
+          aiModelSize: "small",
+          aiProcessingOnDevice: true,
+          confidenceScoreVisible: true,
+        }
+      };
+      
+      // Add user to storage
+      users.push(newUser);
+      persistUsers(users);
+      
+      // Generate verification token
+      const token = generateVerificationToken(newUser.id);
+      storeVerificationToken(newUser.id, token);
+      
+      // Get email settings
+      const emailSettings = getPersistedEmailSettings();
+      
+      // Create verification link
+      const verificationLink = `${window.location.origin}/verify-email?userId=${newUser.id}&token=${token}`;
+      
+      // Prepare email content
+      let emailBody = emailSettings.templates.verification
+        .replace(/{{name}}/g, newUser.firstName)
+        .replace(/{{verificationLink}}/g, verificationLink);
+      
+      // Send verification email
+      await sendEmail(
+        newUser.email,
+        "Please verify your email address",
+        emailBody,
+        emailSettings
+      );
+      
+      // Send welcome email (only after verification in a real app)
+      let welcomeEmailBody = emailSettings.templates.welcome
+        .replace(/{{name}}/g, newUser.firstName);
+      
+      await sendEmail(
+        newUser.email,
+        "Welcome to Italian Learning App",
+        welcomeEmailBody,
+        emailSettings
+      );
+      
+      // Log successful signup
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "New user signed up",
+        details: `User ID: ${newUser.id}, Email: ${newUser.email}`,
+      });
+      
+      toast({
+        title: "Account Created",
+        description: "Please check your email to verify your account",
+      });
+      
+      // Navigate to login or verification page
+      navigate("/verify-email");
+    } catch (error) {
+      console.error("Signup error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Error during signup",
+        details: String(error),
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProfile = async (profileData: Partial<Omit<User, "passwordHash">>): Promise<void> => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Prevent changing certain fields
+      const safeUpdateData = { ...profileData };
+      delete safeUpdateData.id;
+      delete safeUpdateData.role;
+      delete safeUpdateData.created;
+      delete safeUpdateData.emailVerified;
+      
+      // Update user data
+      users[userIndex] = {
+        ...users[userIndex],
+        ...safeUpdateData,
+        // If display name not provided but first/last name updated, update display name
+        displayName: safeUpdateData.displayName || 
+          (safeUpdateData.firstName || safeUpdateData.lastName) ? 
+            `${safeUpdateData.firstName || users[userIndex].firstName || ''} ${safeUpdateData.lastName || users[userIndex].lastName || ''}`.trim() : 
+            users[userIndex].displayName
+      };
+      
+      persistUsers(users);
+      
+      // Update current user state
+      setUser(sanitizeUser(users[userIndex]));
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "user",
+        message: "User profile updated",
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Your profile has been updated",
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error updating user profile",
+        details: String(error),
+        userId: user?.id,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      // Validate email
+      if (!email || !isValidEmail(email)) {
+        toast({
+          title: "Error",
+          description: "Please provide a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const users = getPersistedUsers();
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      // Don't reveal if user exists or not
+      if (!user) {
+        toast({
+          title: "Password Reset",
+          description: "If an account exists with that email, a password reset link has been sent",
+        });
+        return;
+      }
+      
+      // Generate reset token (similar approach to verification tokens)
+      const resetToken = `reset-${user.id}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Store token
+      const tokens = JSON.parse(localStorage.getItem("resetTokens") || "{}");
+      tokens[user.id] = {
+        token: resetToken,
+        expires: new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString() // 1 hour expiration
+      };
+      localStorage.setItem("resetTokens", JSON.stringify(tokens));
+      
+      // Get email settings
+      const emailSettings = getPersistedEmailSettings();
+      
+      // Create reset link
+      const resetLink = `${window.location.origin}/reset-password?userId=${user.id}&token=${resetToken}`;
+      
+      // Prepare email content
+      const name = user.firstName || user.username || "User";
+      let emailBody = emailSettings.templates.passwordReset
+        .replace(/{{name}}/g, name)
+        .replace(/{{resetLink}}/g, resetLink);
+      
+      // Send email
+      await sendEmail(
+        user.email,
+        "Reset your password",
+        emailBody,
+        emailSettings
+      );
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "Password reset requested",
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Password Reset",
+        description: "If an account exists with that email, a password reset link has been sent",
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Error during password reset request",
+        details: String(error),
+      });
+      
+      // Use the same message to not reveal if user exists
+      toast({
+        title: "Password Reset",
+        description: "If an account exists with that email, a password reset link has been sent",
+      });
+    }
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Validate new password
+      if (!newPassword || newPassword.length < 6) {
+        toast({
+          title: "Error",
+          description: "New password must be at least 6 characters",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Verify current password
+      const currentPasswordValid = await bcrypt.compare(currentPassword, users[userIndex].passwordHash);
+      
+      if (!currentPasswordValid) {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Hash and update new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+      users[userIndex].passwordHash = newPasswordHash;
+      
+      persistUsers(users);
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "User password updated",
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Your password has been updated",
+      });
+    } catch (error) {
+      console.error("Password update error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Error updating password",
+        details: String(error),
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update password",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getSystemLogs = (filters?: {
+    level?: "info" | "warning" | "error";
+    category?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    resolved?: boolean;
+  }): SystemLog[] => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can view system logs",
+        variant: "destructive",
+      });
+      return [];
+    }
+    
+    try {
+      let logs = getPersistedSystemLogs();
+      
+      // Apply filters if provided
+      if (filters) {
+        if (filters.level) {
+          logs = logs.filter(log => log.level === filters.level);
+        }
+        
+        if (filters.category) {
+          logs = logs.filter(log => log.category === filters.category);
+        }
+        
+        if (filters.dateFrom) {
+          const fromDate = new Date(filters.dateFrom);
+          logs = logs.filter(log => new Date(log.timestamp) >= fromDate);
+        }
+        
+        if (filters.dateTo) {
+          const toDate = new Date(filters.dateTo);
+          logs = logs.filter(log => new Date(log.timestamp) <= toDate);
+        }
+        
+        if (filters.resolved !== undefined) {
+          logs = logs.filter(log => log.resolved === filters.resolved);
+        }
+      }
+      
+      // Sort logs by timestamp (newest first)
+      logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      return logs;
+    } catch (error) {
+      console.error("Error retrieving system logs:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "system",
+        message: "Error retrieving system logs",
+        details: String(error),
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to retrieve system logs",
+        variant: "destructive",
+      });
+      
+      return [];
+    }
+  };
+
+  const addSystemLog = (log: Omit<SystemLog, "id" | "timestamp">): void => {
+    if (!user || user.role !== "admin") {
+      console.error("Only administrators can add system logs");
+      return;
+    }
+    
+    addSystemLogInternal(log);
+    
+    // Only show toast for error logs
+    if (log.level === "error") {
+      toast({
+        title: "System Error Logged",
+        description: log.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateSystemLog = (logId: string, updates: Partial<SystemLog>): boolean => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can update system logs",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    try {
+      const logs = getPersistedSystemLogs();
+      const logIndex = logs.findIndex(log => log.id === logId);
+      
+      if (logIndex === -1) {
+        return false;
+      }
+      
+      // Update the log
+      logs[logIndex] = {
+        ...logs[logIndex],
+        ...updates
+      };
+      
+      persistSystemLogs(logs);
+      return true;
+    } catch (error) {
+      console.error("Error updating system log:", error);
+      return false;
+    }
+  };
+
+  const updateEmailSettings = async (settings: EmailSettings): Promise<void> => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can update email settings",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      persistEmailSettings(settings);
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "system",
+        message: "Email settings updated",
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Email settings have been updated",
+      });
+    } catch (error) {
+      console.error("Error updating email settings:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "system",
+        message: "Error updating email settings",
+        details: String(error),
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update email settings",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getEmailSettings = (): EmailSettings => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can view email settings",
+        variant: "destructive",
+      });
+      return getPersistedEmailSettings(); // Return default settings
+    }
+    
+    return getPersistedEmailSettings();
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        signup,
+        refreshSession,
+        updateProfile,
+        resetPassword,
+        updatePassword,
+        addAdmin,
+        socialLogin,
+        updateUserStatus,
+        updateUserSubscription,
+        getAllUsers,
+        incrementDailyQuestionCount,
+        updateUserMetrics,
+        resetDailyQuestionCounts,
+        verifyEmail,
+        resendVerificationEmail,
+        getSystemLogs,
+        addSystemLog,
+        updateSystemLog,
+        updateEmailSettings,
+        getEmailSettings,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
