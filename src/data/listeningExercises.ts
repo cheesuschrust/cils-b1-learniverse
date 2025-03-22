@@ -108,27 +108,27 @@ export const generateBilingualFeedback = (
   const feedbackTemplates = {
     high: {
       english: detailed 
-        ? "Excellent work! Your answer demonstrates a strong understanding of the content. Your comprehension is very good, and you've correctly identified the main points."
-        : "Excellent work! Your comprehension is very good.",
+        ? "Excellent work! Your answer demonstrates a strong understanding of the content. Your comprehension is very good, and you've correctly identified the main points. You're making great progress with Italian listening skills."
+        : "Excellent work! Your comprehension is very good. You're showing real progress with Italian.",
       italian: detailed
-        ? "Ottimo lavoro! La tua risposta dimostra una forte comprensione del contenuto. La tua comprensione è molto buona e hai identificato correttamente i punti principali."
-        : "Ottimo lavoro! La tua comprensione è molto buona."
+        ? "Ottimo lavoro! La tua risposta dimostra una forte comprensione del contenuto. La tua comprensione è molto buona e hai identificato correttamente i punti principali. Stai facendo grandi progressi con le tue capacità di ascolto in italiano."
+        : "Ottimo lavoro! La tua comprensione è molto buona. Stai mostrando veri progressi con l'italiano."
     },
     medium: {
       english: detailed
-        ? "Good effort! You've understood most of the content, but there are a few details that could be improved. Try to focus on the specific context next time."
-        : "Good effort! You've understood most of the content.",
+        ? "Good effort! You've understood most of the content, but there are a few details that could be improved. Try to focus on the specific context next time. With practice, your Italian listening skills will continue to develop."
+        : "Good effort! You've understood most of the content. Keep practicing to improve further.",
       italian: detailed
-        ? "Buon impegno! Hai compreso la maggior parte del contenuto, ma ci sono alcuni dettagli che potrebbero essere migliorati. Prova a concentrarti sul contesto specifico la prossima volta."
-        : "Buon impegno! Hai compreso la maggior parte del contenuto."
+        ? "Buon impegno! Hai compreso la maggior parte del contenuto, ma ci sono alcuni dettagli che potrebbero essere migliorati. Prova a concentrarti sul contesto specifico la prossima volta. Con la pratica, le tue capacità di ascolto in italiano continueranno a svilupparsi."
+        : "Buon impegno! Hai compreso la maggior parte del contenuto. Continua a esercitarti per migliorare ulteriormente."
     },
     low: {
       english: detailed
-        ? "Keep practicing! You're making progress, but this answer shows some misunderstanding of the content. Try listening to the audio again and focus on key words and phrases."
-        : "Keep practicing! You're making progress.",
+        ? "Keep practicing! You're making progress, but this answer shows some misunderstanding of the content. Try listening to the audio again and focus on key words and phrases. Don't be discouraged - Italian listening comprehension takes time to develop."
+        : "Keep practicing! You're making progress. Italian listening skills take time to develop.",
       italian: detailed
-        ? "Continua a esercitarti! Stai facendo progressi, ma questa risposta mostra alcune incomprensioni del contenuto. Prova ad ascoltare nuovamente l'audio e concentrati sulle parole e frasi chiave."
-        : "Continua a esercitarti! Stai facendo progressi."
+        ? "Continua a esercitarti! Stai facendo progressi, ma questa risposta mostra alcune incomprensioni del contenuto. Prova ad ascoltare nuovamente l'audio e concentrati sulle parole e frasi chiave. Non scoraggiarti - la comprensione dell'ascolto in italiano richiede tempo per svilupparsi."
+        : "Continua a esercitarti! Stai facendo progressi. Le capacità di ascolto in italiano richiedono tempo per svilupparsi."
     }
   };
   

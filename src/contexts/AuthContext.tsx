@@ -8,6 +8,10 @@ interface User {
   email: string;
   name: string;
   role: "user" | "admin";
+  displayName?: string;
+  preferredLanguage?: "english" | "italian" | "both";
+  phoneNumber?: string;
+  address?: string;
 }
 
 interface AuthContextType {
@@ -17,7 +21,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  refreshSession: () => void; // Added refreshSession function type
+  refreshSession: () => void;
+  updateProfile: (profileData: Partial<User>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         name: email.split('@')[0],
         role: email.includes('admin') ? 'admin' : 'user',
+        preferredLanguage: "both", // Default to both languages
       };
       
       // Store user data and token securely
@@ -108,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         name,
         role: 'user',
+        preferredLanguage: "both", // Default to both languages
       };
       
       // Store user data and token securely
@@ -127,6 +136,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: "Error",
         description: "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProfile = async (profileData: Partial<User>) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // In a real app, this would be an API call to update the user profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update user data
+      const updatedUser = { ...user, ...profileData };
+      
+      // Update localStorage
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      // Update state
+      setUser(updatedUser);
+      
+      toast({
+        title: "Success",
+        description: "Your profile has been updated",
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      // In a real app, this would be an API call to send a password reset email
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Success",
+        description: "If an account with that email exists, a password reset link has been sent",
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to request password reset. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to change your password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // In a real app, this would be an API call to update the password
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Here we'd validate the current password and update with the new one
+      
+      toast({
+        title: "Success",
+        description: "Your password has been updated",
+      });
+    } catch (error) {
+      console.error("Password update error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -154,7 +258,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         signup,
-        refreshSession, // Added refreshSession to context value
+        refreshSession,
+        updateProfile,
+        resetPassword,
+        updatePassword,
       }}
     >
       {children}
