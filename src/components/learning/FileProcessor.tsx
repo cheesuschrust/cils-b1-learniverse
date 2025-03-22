@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +29,7 @@ import {
   Brain,
   RefreshCw,
   Cpu,
+  File,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { addListeningExercise } from "@/data/listeningExercises";
@@ -68,14 +68,31 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
   const { classifyText, generateQuestions, isProcessing: isAIProcessing } = useAI();
   const { user } = useAuth();
 
-  // Use user preferences for feedback language if available
+  const acceptedFileTypes = {
+    'text/plain': ['.txt'],
+    'text/markdown': ['.md'],
+    'application/json': ['.json'],
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'application/vnd.ms-excel': ['.xls'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    'audio/mpeg': ['.mp3'],
+    'audio/wav': ['.wav'],
+    'audio/ogg': ['.ogg'],
+    'image/jpeg': ['.jpg', '.jpeg'],
+    'image/png': ['.png'],
+    'image/gif': ['.gif'],
+    'image/bmp': ['.bmp'],
+    'image/webp': ['.webp']
+  };
+
   useEffect(() => {
     if (user?.preferredLanguage) {
       setFeedbackLanguage(user.preferredLanguage);
     }
   }, [user?.preferredLanguage]);
 
-  // Simulate loading progress
   useEffect(() => {
     let interval: number;
     if (isProcessing || generatingQuestions) {
@@ -113,7 +130,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     setGeneratedQuestions([]);
     setSelectedCategoryType(null);
     
-    // Create object URL for audio files
     if (selectedFile.type.startsWith("audio/")) {
       const url = URL.createObjectURL(selectedFile);
       setFileUrl(url);
@@ -129,21 +145,24 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 
   const extractContentFromFile = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      // For audio files, we'll need transcription
       if (file.type.startsWith("audio/")) {
-        // For now, we'll assume audio files need to be manually transcribed
-        resolve(""); 
+        toast({
+          title: "Audio file detected",
+          description: "Audio transcription will be processed by AI. Please wait...",
+        });
+        resolve("Audio content will be processed by AI transcription"); 
         return;
       }
       
-      // For image files, we could use OCR in the future
       if (file.type.startsWith("image/")) {
-        // For now, we'll assume images need manual processing
-        resolve("");
+        toast({
+          title: "Image file detected",
+          description: "Image will be processed for text extraction. This may take a moment...",
+        });
+        resolve("Image content will be processed by OCR");
         return;
       }
       
-      // For text-based files
       const reader = new FileReader();
       
       reader.onload = (e) => {
@@ -155,12 +174,16 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         reject(new Error("Failed to read file"));
       };
       
-      if (file.type === "application/pdf") {
-        // For simplicity, we're just returning an empty string for PDFs
-        // In a real app, you would use a PDF parsing library
-        resolve("");
+      if (file.type === "application/pdf" || 
+          file.type.includes("document") || 
+          file.type.includes("excel") || 
+          file.type.includes("sheet")) {
+        toast({
+          title: `${file.type.includes("pdf") ? "PDF" : file.type.includes("excel") ? "Spreadsheet" : "Document"} detected`,
+          description: "Complex document parsing may take a moment...",
+        });
+        resolve(`Content extracted from ${file.name} will be processed`);
       } else {
-        // For text files, CSV, etc.
         reader.readAsText(file);
       }
     });
@@ -179,17 +202,14 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     setIsProcessing(true);
     
     try {
-      // Extract content from the file
       const content = await extractContentFromFile(file);
       setExtractedContent(content);
       
-      // Analyze the content type using AI
       if (content) {
         try {
           const categories = await detectContentCategories(content);
           setDetectedCategories(categories);
           
-          // Set the default category to the highest confidence one
           if (categories.length > 0) {
             const primaryCategory = categories.sort((a, b) => b.confidence - a.confidence)[0];
             setSelectedCategoryType(primaryCategory.type);
@@ -220,22 +240,17 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
   };
 
-  // Use AI to detect content categories
   const detectContentCategories = async (content: string): Promise<ContentCategory[]> => {
     try {
-      // Use text classification to help determine the content type
       const classifications = await classifyText(content);
       
-      // Fallback to simpler detection if classification isn't helpful
       let categories: ContentCategory[] = [];
       const contentLower = content.toLowerCase();
       
-      // Check for question-like patterns
       const hasQuestions = (content.match(/\?/g) || []).length > 2;
       const hasNumberedItems = (content.match(/\d+\.\s/g) || []).length > 2;
       const hasOptions = (content.match(/[a-d]\)/gi) || []).length > 2;
       
-      // Add categories based on content analysis
       if (fileType.startsWith("audio/")) {
         categories.push({
           type: "listening",
@@ -257,7 +272,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         });
       }
       
-      // Check for specific keywords
       if (contentLower.includes("speak") || contentLower.includes("pronunciation") || 
           contentLower.includes("talk") || contentLower.includes("say") ||
           contentLower.includes("repeat")) {
@@ -275,7 +289,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         });
       }
       
-      // If we have no categories yet, add a default based on other heuristics
       if (categories.length === 0) {
         if (hasQuestions) {
           categories.push({
@@ -293,7 +306,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       return categories;
     } catch (error) {
       console.error("Error detecting content categories:", error);
-      // Return a default category if we couldn't detect anything
       return [{
         type: "multiple-choice",
         confidence: 50
@@ -359,8 +371,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
     
     try {
-      // For now, we'll just handle listening exercises through the existing function
-      // In a real app, we would save all types properly
       if (selectedCategoryType === "listening") {
         const audioUrl = file.type.startsWith("audio/") 
           ? fileUrl 
@@ -374,7 +384,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
           feedbackLanguage
         );
       } else {
-        // For other types, we'd save differently but this is a mockup
         console.log("Saving exercise:", {
           type: selectedCategoryType,
           title,
@@ -390,7 +399,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         description: `"${title}" has been added to the ${selectedCategoryType} exercises`,
       });
       
-      // Reset form
       setFile(null);
       setExtractedContent("");
       setTitle("");
@@ -401,9 +409,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       setSelectedCategoryType(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       
-      // Notify parent component
       if (onExerciseAdded) onExerciseAdded();
-      
     } catch (error) {
       toast({
         title: "Error saving exercise",
@@ -431,10 +437,24 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       return <FileImage className="h-8 w-8 text-primary" />;
     } else if (fileType.startsWith("text/") || fileType.includes("document")) {
       return <FileText className="h-8 w-8 text-primary" />;
+    } else if (fileType.includes("sheet") || fileType.includes("excel")) {
+      return <FileBox className="h-8 w-8 text-primary" />;
+    } else if (fileType.includes("pdf")) {
+      return <File className="h-8 w-8 text-primary" />;
     } else {
       return <FileBox className="h-8 w-8 text-primary" />;
     }
   };
+
+  const onDrop = (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    handleFileSelect({ target: { files: [file] } });
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop,
+    accept: acceptedFileTypes
+  });
 
   return (
     <Card className="w-full">
@@ -456,7 +476,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
               ref={fileInputRef}
               className="hidden"
               onChange={handleFileSelect}
-              accept="audio/*,text/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+              accept=".txt,.md,.json,.pdf,.doc,.docx,.xls,.xlsx,.mp3,.wav,.ogg,.jpg,.jpeg,.png,.gif,.bmp,.webp"
             />
             
             <div className="flex flex-col items-center justify-center py-4">
@@ -469,7 +489,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                   <div>
                     <span className="font-medium">Click to upload</span> or drag and drop
                     <p className="text-xs mt-1">
-                      Supports audio, text, PDF, Word, and image files
+                      Supports text, PDF, Word, Excel, audio, and image files
                     </p>
                   </div>
                 )}

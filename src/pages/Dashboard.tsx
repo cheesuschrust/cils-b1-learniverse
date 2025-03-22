@@ -39,212 +39,256 @@ interface WordOfTheDay {
   exampleTranslation: string;
 }
 
+// User progress interface
+interface UserProgress {
+  flashcards: { value: number, maxValue: number },
+  multipleChoice: { value: number, maxValue: number },
+  listening: { value: number, maxValue: number },
+  writing: { value: number, maxValue: number },
+}
+
 const Dashboard = () => {
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState("");
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [upcomingLessons, setUpcomingLessons] = useState<any[]>([]);
+  const [userProgress, setUserProgress] = useState<UserProgress>({
+    flashcards: { value: 0, maxValue: 200 },
+    multipleChoice: { value: 0, maxValue: 50 },
+    listening: { value: 0, maxValue: 30 },
+    writing: { value: 0, maxValue: 20 },
+  });
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Simulate fetching user data on component mount
+  // Fetch user data and progress on component mount
   useEffect(() => {
-    // If we have a real user from auth context, use their name
     if (user) {
-      setUserName(user.firstName);
+      setUserName(user.firstName || user.email.split('@')[0]);
+      
+      // Fetch user progress from API or local storage
+      // In a real app, this would be an API call
+      const fetchUserProgress = async () => {
+        try {
+          // Mock API call - in a real app this would fetch from backend
+          // Here we're just simulating with localStorage for demo purposes
+          const storedProgress = localStorage.getItem('userProgress');
+          
+          if (storedProgress) {
+            setUserProgress(JSON.parse(storedProgress));
+          } else {
+            // Initialize with default progress for new users
+            const initialProgress = {
+              flashcards: { value: 5, maxValue: 200 },
+              multipleChoice: { value: 3, maxValue: 50 },
+              listening: { value: 1, maxValue: 30 },
+              writing: { value: 0, maxValue: 20 },
+            };
+            
+            setUserProgress(initialProgress);
+            localStorage.setItem('userProgress', JSON.stringify(initialProgress));
+          }
+        } catch (error) {
+          console.error("Error fetching user progress:", error);
+        }
+      };
+      
+      fetchUserProgress();
+      
+      // Fetch recent activities
+      const fetchRecentActivities = async () => {
+        try {
+          // Mock API call
+          const storedActivities = localStorage.getItem('recentActivities');
+          
+          if (storedActivities) {
+            setRecentActivities(JSON.parse(storedActivities));
+          } else {
+            // Default activities for new users
+            const initialActivities = [
+              {
+                id: 1,
+                type: "multiple-choice",
+                title: "Citizenship Rights Question",
+                date: "Today",
+                result: "correct",
+              }
+            ];
+            
+            setRecentActivities(initialActivities);
+            localStorage.setItem('recentActivities', JSON.stringify(initialActivities));
+          }
+        } catch (error) {
+          console.error("Error fetching recent activities:", error);
+        }
+      };
+      
+      fetchRecentActivities();
+    } else {
+      // Fallback for users who aren't logged in - this shouldn't happen with ProtectedRoute
+      setUserName("User");
     }
     
-    // This would be an API call in a real application
-    setTimeout(() => {
-      if (!user) {
-        setUserName("Marco");
+    // Set word of the day - this would typically come from a backend API
+    setWordOfTheDay({
+      word: "libertà",
+      translation: "freedom",
+      partOfSpeech: "noun",
+      example: "La libertà è un diritto fondamentale.",
+      exampleTranslation: "Freedom is a fundamental right."
+    });
+
+    // Set upcoming lessons - these would typically come from a calendar API
+    setUpcomingLessons([
+      {
+        id: 1,
+        title: "Italian Grammar Basics",
+        date: new Date(Date.now() + 86400000),
+        duration: 30,
+        type: "Grammar"
+      },
+      {
+        id: 2,
+        title: "Conversation Practice",
+        date: new Date(Date.now() + 86400000 * 2),
+        duration: 45,
+        type: "Speaking"
       }
-      
-      setRecentActivities([
-        {
-          id: 1,
-          type: "multiple-choice",
-          title: "Citizenship Rights Question",
-          date: "Today",
-          result: "correct",
-        },
-        {
-          id: 2,
-          type: "writing",
-          title: "Short Essay on Italian Culture",
-          date: "Yesterday",
-          result: "completed",
-        },
-        {
-          id: 3,
-          type: "flashcards",
-          title: "Government Vocabulary",
-          date: "Yesterday",
-          result: "completed",
-        },
-        {
-          id: 4,
-          type: "listening",
-          title: "News Report Comprehension",
-          date: "2 days ago",
-          result: "incorrect",
-        },
-      ]);
-
-      // Set word of the day
-      setWordOfTheDay({
-        word: "libertà",
-        translation: "freedom",
-        partOfSpeech: "noun",
-        example: "La libertà è un diritto fondamentale.",
-        exampleTranslation: "Freedom is a fundamental right."
-      });
-
-      // Set upcoming lessons
-      setUpcomingLessons([
-        {
-          id: 1,
-          title: "Italian Grammar Basics",
-          date: new Date(Date.now() + 86400000),
-          duration: 30,
-          type: "Grammar"
-        },
-        {
-          id: 2,
-          title: "Conversation Practice",
-          date: new Date(Date.now() + 86400000 * 2),
-          duration: 45,
-          type: "Speaking"
-        },
-        {
-          id: 3,
-          title: "Italian Culture: Food",
-          date: new Date(Date.now() + 86400000 * 3),
-          duration: 60,
-          type: "Culture"
-        }
-      ]);
-    }, 500);
+    ]);
   }, [user]);
   
+  // Update progress stats based on user progress state
   const progressStats = [
     {
       title: "Flashcards Mastered",
-      value: 85,
-      maxValue: 200,
+      value: userProgress.flashcards.value,
+      maxValue: userProgress.flashcards.maxValue,
       icon: <Book className="h-5 w-5 text-primary" />,
     },
     {
       title: "Multiple Choice Accuracy",
-      value: 42,
-      maxValue: 50,
+      value: userProgress.multipleChoice.value,
+      maxValue: userProgress.multipleChoice.maxValue,
       icon: <CheckSquare className="h-5 w-5 text-primary" />,
     },
     {
       title: "Listening Comprehension",
-      value: 18,
-      maxValue: 30,
+      value: userProgress.listening.value,
+      maxValue: userProgress.listening.maxValue,
       icon: <Headphones className="h-5 w-5 text-primary" />,
     },
     {
       title: "Writing Exercises",
-      value: 12,
-      maxValue: 20,
+      value: userProgress.writing.value,
+      maxValue: userProgress.writing.maxValue,
       icon: <Pen className="h-5 w-5 text-primary" />,
     },
   ];
   
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "flashcards":
-        return <Book className="h-5 w-5" />;
-      case "multiple-choice":
-        return <CheckSquare className="h-5 w-5" />;
-      case "listening":
-        return <Headphones className="h-5 w-5" />;
-      case "writing":
-        return <Pen className="h-5 w-5" />;
-      default:
-        return <Calendar className="h-5 w-5" />;
+  // Function to record user activity and progress
+  const recordActivity = (activityType: string, title: string, result: "correct" | "incorrect" | "completed") => {
+    // Create new activity
+    const newActivity = {
+      id: Date.now(),
+      type: activityType,
+      title,
+      date: "Today",
+      result,
+    };
+    
+    // Update recent activities
+    const updatedActivities = [newActivity, ...recentActivities].slice(0, 10);
+    setRecentActivities(updatedActivities);
+    localStorage.setItem('recentActivities', JSON.stringify(updatedActivities));
+    
+    // Update progress based on activity type and result
+    if (result === "correct" || result === "completed") {
+      const updatedProgress = {...userProgress};
+      
+      switch (activityType) {
+        case "flashcards":
+          updatedProgress.flashcards.value = Math.min(
+            updatedProgress.flashcards.value + 1,
+            updatedProgress.flashcards.maxValue
+          );
+          break;
+        case "multiple-choice":
+          updatedProgress.multipleChoice.value = Math.min(
+            updatedProgress.multipleChoice.value + 1,
+            updatedProgress.multipleChoice.maxValue
+          );
+          break;
+        case "listening":
+          updatedProgress.listening.value = Math.min(
+            updatedProgress.listening.value + 1,
+            updatedProgress.listening.maxValue
+          );
+          break;
+        case "writing":
+          updatedProgress.writing.value = Math.min(
+            updatedProgress.writing.value + 1,
+            updatedProgress.writing.maxValue
+          );
+          break;
+      }
+      
+      setUserProgress(updatedProgress);
+      localStorage.setItem('userProgress', JSON.stringify(updatedProgress));
     }
   };
   
-  const getResultIcon = (result: string) => {
-    switch (result) {
-      case "correct":
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "incorrect":
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case "completed":
-        return <Clock className="h-5 w-5 text-primary" />;
-      default:
-        return null;
-    }
-  };
-  
-  // Calculate overall progress based on all categories
+  // Calculate overall progress based on user progress data
   const overallProgress = Math.round(
-    ((85 / 200) + (42 / 50) + (18 / 30) + (12 / 20)) / 4 * 100
+    (
+      (userProgress.flashcards.value / userProgress.flashcards.maxValue) +
+      (userProgress.multipleChoice.value / userProgress.multipleChoice.maxValue) +
+      (userProgress.listening.value / userProgress.listening.maxValue) +
+      (userProgress.writing.value / userProgress.writing.maxValue)
+    ) / 4 * 100
   );
 
-  // Handle click on "Start Today's Lesson" button
+  // Handle click on "Start Today's Lesson" button with progress tracking
   const handleStartTodaysLesson = () => {
     toast({
       title: "Starting today's lesson",
       description: "Preparing your personalized learning content...",
     });
-    // Navigate to the first lesson type based on user's progress
+    
+    // Find the category with lowest progress to focus on
     const lowestProgressCategory = [...progressStats].sort((a, b) => 
       (a.value / a.maxValue) - (b.value / b.maxValue)
     )[0];
 
     // Determine which page to navigate to based on the category
     let targetPage = "/flashcards";
+    let activityType = "flashcards";
+    
     if (lowestProgressCategory.title.includes("Multiple Choice")) {
       targetPage = "/multiple-choice";
+      activityType = "multiple-choice";
     } else if (lowestProgressCategory.title.includes("Listening")) {
       targetPage = "/listening";
+      activityType = "listening";
     } else if (lowestProgressCategory.title.includes("Writing")) {
       targetPage = "/writing";
+      activityType = "writing";
     }
+
+    // Record that user started a lesson
+    recordActivity(
+      activityType,
+      `${lowestProgressCategory.title} Exercise`,
+      "completed"
+    );
 
     setTimeout(() => {
       navigate(targetPage);
     }, 1500);
   };
 
-  // Handle click on "View Calendar" button
-  const handleViewCalendar = () => {
-    if (upcomingLessons.length === 0) {
-      toast({
-        title: "No scheduled lessons",
-        description: "You don't have any upcoming lessons scheduled yet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Display upcoming lessons in a toast notification
-    toast({
-      title: "Upcoming Lessons",
-      description: (
-        <div className="space-y-2 mt-2">
-          {upcomingLessons.map((lesson) => (
-            <div key={lesson.id} className="text-sm bg-background p-2 rounded-md border">
-              <div className="font-medium">{lesson.title}</div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(lesson.date).toLocaleDateString()} - {lesson.duration} minutes
-              </div>
-            </div>
-          ))}
-        </div>
-      ),
-      duration: 5000,
-    });
-  };
-
-  // Handle click on activity items
+  // Handle click on activity items with progress tracking
   const handleActivityClick = (activity: Activity) => {
     let targetPage = "/flashcards";
     
@@ -645,3 +689,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
