@@ -9,23 +9,65 @@ import * as bcrypt from "bcryptjs";
 const DEFAULT_ADMIN = {
   id: "admin-1",
   email: "admin@italianlearning.app",
-  name: "System Administrator",
+  firstName: "System",
+  lastName: "Administrator",
+  username: "admin",
   role: "admin" as const,
   passwordHash: "$2a$10$1BmQvkd8kRwas.mRXKtWGuglDvs5YAyh9iIBPEKR9aGWYGDwIwDjW", // "Admin123!"
   displayName: "Admin",
   preferredLanguage: "both" as const,
+  subscription: "premium" as const,
+  status: "active" as const,
+  created: new Date().toISOString(),
+  lastActive: new Date().toISOString(),
+  dailyQuestionCounts: {
+    flashcards: 0,
+    multipleChoice: 0,
+    listening: 0,
+    writing: 0,
+    speaking: 0,
+  },
+  metrics: {
+    totalQuestions: 0,
+    correctAnswers: 0,
+    streak: 0,
+    totalTimeSpent: 0,
+  }
 };
+
+interface UserMetrics {
+  totalQuestions: number;
+  correctAnswers: number;
+  streak: number;
+  totalTimeSpent: number;
+}
+
+interface DailyQuestionCounts {
+  flashcards: number;
+  multipleChoice: number;
+  listening: number;
+  writing: number;
+  speaking: number;
+}
 
 interface User {
   id: string;
   email: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
   role: "user" | "admin";
   passwordHash: string;
   displayName?: string;
   preferredLanguage?: "english" | "italian" | "both";
+  subscription: "free" | "premium";
+  status: "active" | "pending" | "inactive";
   phoneNumber?: string;
   address?: string;
+  created: string;
+  lastActive: string;
+  dailyQuestionCounts: DailyQuestionCounts;
+  metrics: UserMetrics;
 }
 
 interface AuthContextType {
@@ -34,12 +76,19 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (firstName: string, lastName: string, email: string, password: string, username?: string) => Promise<void>;
   refreshSession: () => void;
   updateProfile: (profileData: Partial<Omit<User, "passwordHash">>) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  addAdmin: (email: string, name: string, password: string) => Promise<void>;
+  addAdmin: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
+  socialLogin: (provider: "google" | "apple") => Promise<void>;
+  updateUserStatus: (userId: string, status: "active" | "inactive" | "pending") => Promise<void>;
+  updateUserSubscription: (userId: string, subscription: "free" | "premium") => Promise<void>;
+  getAllUsers: () => Omit<User, "passwordHash">[];
+  incrementDailyQuestionCount: (type: keyof DailyQuestionCounts) => Promise<boolean>;
+  updateUserMetrics: (metrics: Partial<UserMetrics>) => Promise<void>;
+  resetDailyQuestionCounts: () => void;
 }
 
 // Helper function to remove the passwordHash before returning user data
@@ -63,6 +112,32 @@ const getPersistedUsers = (): User[] => {
     return initialUsers;
   }
   return JSON.parse(users);
+};
+
+// Helper to reset daily question counts at midnight
+const checkAndResetDailyCounts = (users: User[]): User[] => {
+  const today = new Date().toDateString();
+  const lastReset = localStorage.getItem("lastDailyReset");
+  
+  if (lastReset !== today) {
+    // Reset all user daily counts
+    const updatedUsers = users.map(user => ({
+      ...user,
+      dailyQuestionCounts: {
+        flashcards: 0,
+        multipleChoice: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0
+      }
+    }));
+    
+    localStorage.setItem("lastDailyReset", today);
+    persistUsers(updatedUsers);
+    return updatedUsers;
+  }
+  
+  return users;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,10 +165,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         // Find user by ID
-        const users = getPersistedUsers();
+        let users = getPersistedUsers();
+        
+        // Check if we need to reset daily question counts
+        users = checkAndResetDailyCounts(users);
+        
         const currentUser = users.find(u => u.id === userId);
         
         if (currentUser) {
+          // Update last active time
+          const updatedUsers = users.map(u => 
+            u.id === userId ? { ...u, lastActive: new Date().toISOString() } : u
+          );
+          persistUsers(updatedUsers);
+          
           setUser(sanitizeUser(currentUser));
         } else {
           localStorage.removeItem("session");
@@ -115,6 +200,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     checkUserLoggedIn();
+    
+    // Set up daily reset check
+    const interval = setInterval(() => {
+      if (user) {
+        const users = getPersistedUsers();
+        checkAndResetDailyCounts(users);
+      }
+    }, 3600000); // Check every hour
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Function to refresh the user session
@@ -145,8 +240,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Invalid email or password");
       }
       
+      if (foundUser.status === "inactive") {
+        throw new Error("Your account has been deactivated. Please contact support.");
+      }
+      
       // Create session
       createSession(foundUser.id);
+      
+      // Update last active time
+      const updatedUsers = users.map(u => 
+        u.id === foundUser.id ? { ...u, lastActive: new Date().toISOString() } : u
+      );
+      persistUsers(updatedUsers);
       
       // Set user without passwordHash
       setUser(sanitizeUser(foundUser));
@@ -161,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Login error:", error);
       toast({
         title: "Error",
-        description: "Invalid email or password. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -169,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (firstName: string, lastName: string, email: string, password: string, username?: string) => {
     setIsLoading(true);
     try {
       const users = getPersistedUsers();
@@ -179,6 +284,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Email already exists");
       }
       
+      // Check if username already exists (if provided)
+      if (username && users.some(u => u.username?.toLowerCase() === username.toLowerCase())) {
+        throw new Error("Username already exists");
+      }
+      
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
       
@@ -186,10 +296,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUser: User = {
         id: `user-${uuidv4()}`,
         email,
-        name,
+        firstName,
+        lastName,
+        username: username || `user${Math.floor(Math.random() * 10000)}`,
         role: 'user',
         passwordHash,
         preferredLanguage: "both",
+        subscription: "free",
+        status: "active",
+        created: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0,
+          totalTimeSpent: 0
+        }
       };
       
       // Add user to the list and persist
@@ -240,7 +369,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Update user data (without changing role or passwordHash)
-      const { role, ...updatableFields } = profileData;
+      const { role, subscription, ...updatableFields } = profileData;
       users[userIndex] = {
         ...users[userIndex],
         ...updatableFields,
@@ -357,7 +486,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addAdmin = async (email: string, name: string, password: string) => {
+  const addAdmin = async (email: string, firstName: string, lastName: string, password: string) => {
     if (!user || user.role !== "admin") {
       toast({
         title: "Error",
@@ -383,10 +512,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newAdmin: User = {
         id: `admin-${uuidv4()}`,
         email,
-        name,
+        firstName,
+        lastName,
+        username: `admin${Math.floor(Math.random() * 10000)}`,
         role: 'admin',
         passwordHash,
         preferredLanguage: "both",
+        subscription: "premium",
+        status: "active",
+        created: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0,
+          totalTimeSpent: 0
+        }
       };
       
       // Add user to the list and persist
@@ -402,6 +550,288 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create admin account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const updateUserStatus = async (userId: string, status: "active" | "inactive" | "pending") => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "You must be an admin to update user status",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Update user status
+      users[userIndex].status = status;
+      
+      // Persist updated users
+      persistUsers(users);
+      
+      toast({
+        title: "Success",
+        description: `User status updated to ${status}`,
+      });
+      
+      // If current user is updated, refresh state
+      if (user.id === userId) {
+        setUser(sanitizeUser(users[userIndex]));
+      }
+      
+      return;
+    } catch (error) {
+      console.error("Update user status error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user status.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const updateUserSubscription = async (userId: string, subscription: "free" | "premium") => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "You must be an admin to update user subscription",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Update user subscription
+      users[userIndex].subscription = subscription;
+      
+      // Persist updated users
+      persistUsers(users);
+      
+      toast({
+        title: "Success",
+        description: `User subscription updated to ${subscription}`,
+      });
+      
+      // If current user is updated, refresh state
+      if (user.id === userId) {
+        setUser(sanitizeUser(users[userIndex]));
+      }
+      
+      return;
+    } catch (error) {
+      console.error("Update user subscription error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user subscription.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const getAllUsers = () => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "You must be an admin to view all users",
+        variant: "destructive",
+      });
+      return [];
+    }
+    
+    const users = getPersistedUsers();
+    return users.map(u => sanitizeUser(u));
+  };
+  
+  const incrementDailyQuestionCount = async (type: keyof DailyQuestionCounts): Promise<boolean> => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to use this feature",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Check if free user has reached limit
+      if (users[userIndex].subscription === "free" && users[userIndex].dailyQuestionCounts[type] >= 1) {
+        toast({
+          title: "Daily Limit Reached",
+          description: "Upgrade to premium for unlimited questions",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Increment question count
+      users[userIndex].dailyQuestionCounts[type]++;
+      
+      // Update metrics
+      users[userIndex].metrics.totalQuestions++;
+      
+      // Persist updated users
+      persistUsers(users);
+      
+      // Update state
+      setUser(sanitizeUser(users[userIndex]));
+      
+      return true;
+    } catch (error) {
+      console.error("Increment question count error:", error);
+      return false;
+    }
+  };
+  
+  const updateUserMetrics = async (metrics: Partial<UserMetrics>) => {
+    if (!user) {
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
+        return;
+      }
+      
+      // Update metrics
+      users[userIndex].metrics = {
+        ...users[userIndex].metrics,
+        ...metrics
+      };
+      
+      // Persist updated users
+      persistUsers(users);
+      
+      // Update state
+      setUser(sanitizeUser(users[userIndex]));
+    } catch (error) {
+      console.error("Update metrics error:", error);
+    }
+  };
+  
+  const resetDailyQuestionCounts = () => {
+    if (!user) {
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
+        return;
+      }
+      
+      // Reset daily counts
+      users[userIndex].dailyQuestionCounts = {
+        flashcards: 0,
+        multipleChoice: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0
+      };
+      
+      // Persist updated users
+      persistUsers(users);
+      
+      // Update state
+      setUser(sanitizeUser(users[userIndex]));
+    } catch (error) {
+      console.error("Reset daily counts error:", error);
+    }
+  };
+  
+  const socialLogin = async (provider: "google" | "apple") => {
+    setIsLoading(true);
+    try {
+      // In a real app, we would integrate with Google/Apple OAuth here
+      // For this demo, we'll create a temporary user
+      
+      const email = `${provider}_user_${Math.floor(Math.random() * 10000)}@example.com`;
+      const username = `${provider}User${Math.floor(Math.random() * 10000)}`;
+      const firstName = provider === "google" ? "Google" : "Apple";
+      const lastName = "User";
+      
+      const users = getPersistedUsers();
+      
+      // Create new user with generated credentials
+      const newUser: User = {
+        id: `user-${uuidv4()}`,
+        email,
+        firstName,
+        lastName,
+        username,
+        role: 'user',
+        passwordHash: await bcrypt.hash(uuidv4(), 10), // Random password hash
+        preferredLanguage: "both",
+        subscription: "free",
+        status: "active",
+        created: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0,
+          totalTimeSpent: 0
+        }
+      };
+      
+      // Add user to the list and persist
+      users.push(newUser);
+      persistUsers(users);
+      
+      // Create session
+      createSession(newUser.id);
+      
+      // Set user without passwordHash
+      setUser(sanitizeUser(newUser));
+      
+      toast({
+        title: "Success",
+        description: `Logged in with ${provider}`,
+      });
+      
+      navigate("/dashboard");
+    } catch (error) {
+      console.error(`${provider} login error:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to login with ${provider}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -433,6 +863,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetPassword,
         updatePassword,
         addAdmin,
+        socialLogin,
+        updateUserStatus,
+        updateUserSubscription,
+        getAllUsers,
+        incrementDailyQuestionCount,
+        updateUserMetrics,
+        resetDailyQuestionCounts
       }}
     >
       {children}

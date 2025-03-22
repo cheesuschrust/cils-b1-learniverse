@@ -15,6 +15,7 @@ import MultipleChoice from "./pages/MultipleChoice";
 import Listening from "./pages/Listening";
 import Writing from "./pages/Writing";
 import Speaking from "./pages/Speaking";
+import UserProfile from "./pages/UserProfile";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ContentUploader from "./pages/admin/ContentUploader";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
                     </ProtectedRoute>
                   } 
                 />

@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Shield, Key, Languages } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { User, Shield, Key, Languages, CreditCard, Calendar, CheckCircle } from "lucide-react";
 
 const UserProfile = () => {
   const { user, updateProfile, updatePassword } = useAuth();
@@ -17,7 +19,9 @@ const UserProfile = () => {
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
-    name: user?.name || "",
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    username: user?.username || "",
     displayName: user?.displayName || "",
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
@@ -31,6 +35,16 @@ const UserProfile = () => {
     newPassword: "",
     confirmPassword: "",
   });
+  
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
   
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,7 +69,9 @@ const UserProfile = () => {
     
     try {
       await updateProfile({
-        name: profileForm.name,
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        username: profileForm.username,
         displayName: profileForm.displayName,
         phoneNumber: profileForm.phoneNumber,
         address: profileForm.address,
@@ -124,6 +140,125 @@ const UserProfile = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
       
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Questions Today</CardTitle>
+            <CardDescription>Your daily practice</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span>Flashcards</span>
+                <Badge variant={user.subscription === "premium" ? "default" : user.dailyQuestionCounts.flashcards >= 1 ? "destructive" : "outline"}>
+                  {user.dailyQuestionCounts.flashcards} / {user.subscription === "premium" ? "∞" : "1"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Multiple Choice</span>
+                <Badge variant={user.subscription === "premium" ? "default" : user.dailyQuestionCounts.multipleChoice >= 1 ? "destructive" : "outline"}>
+                  {user.dailyQuestionCounts.multipleChoice} / {user.subscription === "premium" ? "∞" : "1"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Listening</span>
+                <Badge variant={user.subscription === "premium" ? "default" : user.dailyQuestionCounts.listening >= 1 ? "destructive" : "outline"}>
+                  {user.dailyQuestionCounts.listening} / {user.subscription === "premium" ? "∞" : "1"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Writing</span>
+                <Badge variant={user.subscription === "premium" ? "default" : user.dailyQuestionCounts.writing >= 1 ? "destructive" : "outline"}>
+                  {user.dailyQuestionCounts.writing} / {user.subscription === "premium" ? "∞" : "1"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Speaking</span>
+                <Badge variant={user.subscription === "premium" ? "default" : user.dailyQuestionCounts.speaking >= 1 ? "destructive" : "outline"}>
+                  {user.dailyQuestionCounts.speaking} / {user.subscription === "premium" ? "∞" : "1"}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Subscription</CardTitle>
+            <CardDescription>Your current plan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Badge className={user.subscription === "premium" ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-0" : ""}>
+                {user.subscription === "premium" ? "Premium" : "Free"}
+              </Badge>
+              
+              {user.subscription === "premium" ? (
+                <div className="text-sm space-y-1 mt-4">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span>Unlimited questions</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span>No advertisements</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span>Advanced analytics</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Button size="sm" variant="default" className="w-full">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Unlock unlimited questions and remove ads
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Account Info</CardTitle>
+            <CardDescription>Your account details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={user.status === "active" ? "outline" : "destructive"}>
+                  {user.status}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Member since:</span>
+                <span>{user.created ? formatDate(user.created) : "N/A"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last active:</span>
+                <span>{user.lastActive ? formatDate(user.lastActive) : "N/A"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <Badge variant={user.role === "admin" ? "default" : "outline"}>
+                  {user.role}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Completed:</span>
+                <span>{user.metrics.totalQuestions} questions</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8">
           <TabsTrigger value="profile" className="flex items-center gap-2">
@@ -148,12 +283,36 @@ const UserProfile = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="firstName">First Name</Label>
                     <Input
-                      id="name"
-                      name="name"
-                      placeholder="John Doe"
-                      value={profileForm.name}
+                      id="firstName"
+                      name="firstName"
+                      placeholder="John"
+                      value={profileForm.firstName}
+                      onChange={handleProfileChange}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      placeholder="Doe"
+                      value={profileForm.lastName}
+                      onChange={handleProfileChange}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      name="username"
+                      placeholder="johndoe"
+                      value={profileForm.username}
                       onChange={handleProfileChange}
                     />
                   </div>
@@ -244,6 +403,15 @@ const UserProfile = () => {
             </CardHeader>
             <form onSubmit={handlePasswordSubmit}>
               <CardContent className="space-y-4">
+                {user.subscription === "free" && (
+                  <Alert>
+                    <AlertDescription className="flex items-center">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      <span>Upgrade to Premium to remove advertisements and get unlimited questions.</span>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Current Password</Label>
                   <Input
@@ -280,10 +448,17 @@ const UserProfile = () => {
                   />
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex-col items-start space-y-4 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Updating..." : "Update Password"}
                 </Button>
+                
+                {user.subscription === "free" && (
+                  <Button type="button" variant="outline">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </Button>
+                )}
               </CardFooter>
             </form>
           </Card>
