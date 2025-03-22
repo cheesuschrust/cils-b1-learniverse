@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ProgressCard from "@/components/ui/ProgressCard";
+import { useToast } from "@/hooks/use-toast";
 
 interface Activity {
   id: number;
@@ -27,9 +28,22 @@ interface Activity {
   result: "correct" | "incorrect" | "completed";
 }
 
+// Data for word of the day
+interface WordOfTheDay {
+  word: string;
+  translation: string;
+  partOfSpeech: string;
+  example: string;
+  exampleTranslation: string;
+}
+
 const Dashboard = () => {
   const [userName, setUserName] = useState("User");
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+  const [upcomingLessons, setUpcomingLessons] = useState<any[]>([]);
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Simulate fetching user data on component mount
   useEffect(() => {
@@ -66,6 +80,40 @@ const Dashboard = () => {
           date: "2 days ago",
           result: "incorrect",
         },
+      ]);
+
+      // Set word of the day
+      setWordOfTheDay({
+        word: "libertà",
+        translation: "freedom",
+        partOfSpeech: "noun",
+        example: "La libertà è un diritto fondamentale.",
+        exampleTranslation: "Freedom is a fundamental right."
+      });
+
+      // Set upcoming lessons
+      setUpcomingLessons([
+        {
+          id: 1,
+          title: "Italian Grammar Basics",
+          date: new Date(Date.now() + 86400000),
+          duration: 30,
+          type: "Grammar"
+        },
+        {
+          id: 2,
+          title: "Conversation Practice",
+          date: new Date(Date.now() + 86400000 * 2),
+          duration: 45,
+          type: "Speaking"
+        },
+        {
+          id: 3,
+          title: "Italian Culture: Food",
+          date: new Date(Date.now() + 86400000 * 3),
+          duration: 60,
+          type: "Culture"
+        }
       ]);
     }, 500);
   }, []);
@@ -129,6 +177,90 @@ const Dashboard = () => {
   const overallProgress = Math.round(
     ((85 / 200) + (42 / 50) + (18 / 30) + (12 / 20)) / 4 * 100
   );
+
+  // Handle click on "Start Today's Lesson" button
+  const handleStartTodaysLesson = () => {
+    toast({
+      title: "Starting today's lesson",
+      description: "Preparing your personalized learning content...",
+    });
+    // Navigate to the first lesson type based on user's progress
+    const lowestProgressCategory = [...progressStats].sort((a, b) => 
+      (a.value / a.maxValue) - (b.value / b.maxValue)
+    )[0];
+
+    // Determine which page to navigate to based on the category
+    let targetPage = "/flashcards";
+    if (lowestProgressCategory.title.includes("Multiple Choice")) {
+      targetPage = "/multiple-choice";
+    } else if (lowestProgressCategory.title.includes("Listening")) {
+      targetPage = "/listening";
+    } else if (lowestProgressCategory.title.includes("Writing")) {
+      targetPage = "/writing";
+    }
+
+    setTimeout(() => {
+      navigate(targetPage);
+    }, 1500);
+  };
+
+  // Handle click on "View Calendar" button
+  const handleViewCalendar = () => {
+    if (upcomingLessons.length === 0) {
+      toast({
+        title: "No scheduled lessons",
+        description: "You don't have any upcoming lessons scheduled yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Display upcoming lessons in a toast notification
+    toast({
+      title: "Upcoming Lessons",
+      description: (
+        <div className="space-y-2 mt-2">
+          {upcomingLessons.map((lesson) => (
+            <div key={lesson.id} className="text-sm bg-background p-2 rounded-md border">
+              <div className="font-medium">{lesson.title}</div>
+              <div className="text-xs text-muted-foreground">
+                {new Date(lesson.date).toLocaleDateString()} - {lesson.duration} minutes
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+      duration: 5000,
+    });
+  };
+
+  // Handle click on activity items
+  const handleActivityClick = (activity: Activity) => {
+    let targetPage = "/flashcards";
+    
+    switch (activity.type) {
+      case "multiple-choice":
+        targetPage = "/multiple-choice";
+        break;
+      case "writing":
+        targetPage = "/writing";
+        break;
+      case "listening":
+        targetPage = "/listening";
+        break;
+      default:
+        targetPage = "/flashcards";
+    }
+
+    toast({
+      title: "Opening activity",
+      description: `Loading ${activity.title}...`,
+    });
+
+    setTimeout(() => {
+      navigate(targetPage);
+    }, 1000);
+  };
   
   return (
     <div className="container mx-auto px-6 py-8">
@@ -142,11 +274,11 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleViewCalendar}>
             <Calendar className="mr-2 h-4 w-4" />
             View Calendar
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleStartTodaysLesson}>
             <Zap className="mr-2 h-4 w-4" />
             Start Today's Lesson
           </Button>
@@ -235,6 +367,34 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {wordOfTheDay && (
+                  <div className="p-3 bg-primary/10 rounded-lg mb-6">
+                    <h4 className="text-sm font-medium mb-2">Word of the Day</h4>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-lg font-bold">{wordOfTheDay.word}</span>
+                        <span className="text-xs text-muted-foreground ml-2">({wordOfTheDay.partOfSpeech})</span>
+                        <p className="text-sm">{wordOfTheDay.translation}</p>
+                        <p className="text-xs mt-2 italic">{wordOfTheDay.example}</p>
+                        <p className="text-xs text-muted-foreground">{wordOfTheDay.exampleTranslation}</p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="rounded-full w-8 h-8 p-0" 
+                        onClick={() => {
+                          toast({
+                            title: "Word saved to your vocabulary list",
+                            description: `"${wordOfTheDay.word}" has been added to your collection.`,
+                          });
+                        }}
+                      >
+                        <Book className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div className="flex items-center">
                     <div className="p-2 rounded-full bg-accent/30 mr-3">
@@ -247,7 +407,17 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      toast({
+                        title: "Loading flashcards",
+                        description: "Preparing your vocabulary practice...",
+                      });
+                      setTimeout(() => navigate("/flashcards"), 1000);
+                    }}
+                  >
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -264,7 +434,17 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      toast({
+                        title: "Loading quiz",
+                        description: "Preparing your citizenship quiz...",
+                      });
+                      setTimeout(() => navigate("/multiple-choice"), 1000);
+                    }}
+                  >
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -281,7 +461,17 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      toast({
+                        title: "Loading listening exercise",
+                        description: "Preparing your audio comprehension practice...",
+                      });
+                      setTimeout(() => navigate("/listening"), 1000);
+                    }}
+                  >
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -298,7 +488,17 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      toast({
+                        title: "Loading writing exercise",
+                        description: "Preparing your writing assignment...",
+                      });
+                      setTimeout(() => navigate("/writing"), 1000);
+                    }}
+                  >
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -323,7 +523,8 @@ const Dashboard = () => {
                   {recentActivities.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors"
+                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer"
+                      onClick={() => handleActivityClick(activity)}
                     >
                       <div className="flex items-center">
                         <div className="p-2 rounded-full bg-accent/30 mr-3">
