@@ -58,7 +58,7 @@ const Login = () => {
       if (success) {
         toast({
           title: "Login successful",
-          description: "Welcome back!",
+          description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
         });
         navigate(from);
       }
@@ -75,9 +75,18 @@ const Login = () => {
   const handleSocialLogin = async (provider: "google" | "apple") => {
     try {
       await socialLogin(provider);
+      toast({
+        title: "Login successful",
+        description: `Welcome to CILS B2 Cittadinanza Question of the Day!`,
+      });
       navigate(from);
     } catch (error) {
       console.error(`${provider} login error:`, error);
+      toast({
+        title: "Login failed",
+        description: `Could not log in with ${provider}. Please try again.`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -87,7 +96,7 @@ const Login = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Enter your credentials to access your CILS B2 Cittadinanza account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -200,7 +209,12 @@ const Login = () => {
       </Card>
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
-        <p>Admin login: admin@italianlearning.app / Admin123!</p>
+        <p>Demo credentials: admin@italianlearning.app / Admin123!</p>
+        <p className="mt-1">
+          <Link to="/privacy-policy" className="hover:underline">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );
