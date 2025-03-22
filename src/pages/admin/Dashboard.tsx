@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,8 +197,11 @@ const AdminDashboard = () => {
     if (success) {
       const targetUser = users.find(u => u.id === userId);
       if (targetUser) {
-        // Looking at the AuthContext, we need to call addSystemLog correctly
-        addSystemLog('user', `User status updated to ${newStatus}`, `Updated user status to ${newStatus} for ${targetUser.email}`);
+        setUsers(getAllUsers());
+        toast({
+          title: "Status Updated",
+          description: `User status changed to ${newStatus} successfully`,
+        });
       }
       setUsers(getAllUsers());
     }
