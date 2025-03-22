@@ -5,6 +5,9 @@ import bcrypt from 'bcryptjs';
 
 let dbInstance: MockDatabase;
 
+// Create a password hash map to store user passwords
+export const passwordHash = new Map<string, string>();
+
 export const getDatabase = async (): Promise<MockDatabase> => {
   if (dbInstance) {
     return dbInstance;
@@ -119,13 +122,9 @@ export const getDatabase = async (): Promise<MockDatabase> => {
     verificationTokens: new Map()
   };
   
-  // Hash the passwords and store them
-  const passwordMap = new Map();
-  passwordMap.set(admin.email, adminPasswordHash);
-  passwordMap.set(regularUser.email, userPasswordHash);
-  
-  // Attach the passwords to the db instance for authentication
-  (dbInstance as any).passwords = passwordMap;
+  // Store the passwords in the exported passwordHash map
+  passwordHash.set(admin.email, adminPasswordHash);
+  passwordHash.set(regularUser.email, userPasswordHash);
   
   return dbInstance;
 };
