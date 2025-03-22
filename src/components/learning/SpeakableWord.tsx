@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speak, getCurrentVoicePreference, getAvailableVoices } from '@/utils/textToSpeech';
+import { speak, getCurrentVoicePreference, getAllVoices } from '@/utils/textToSpeech';
 import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 

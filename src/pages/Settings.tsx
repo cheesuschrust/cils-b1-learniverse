@@ -13,46 +13,46 @@ import { Volume2, Settings as SettingsIcon, Save, User, Bell, Moon, RotateCcw } 
 import UserPreferences from "@/components/user/UserPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
-import { getAvailableVoices, speak } from "@/utils/textToSpeech";
+import { getAllVoices, speak } from "@/utils/textToSpeech";
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("preferences");
-  const { voicePreference, updateVoicePreference } = useUserPreferences();
+  const { voicePreference, setVoicePreference } = useUserPreferences();
   
   // User profile state
   const [userProfile, setUserProfile] = useState({
-    name: user?.name || "",
+    name: user?.firstName || "",
     email: user?.email || "",
-    bio: user?.bio || "",
+    bio: user?.preferences?.bio || "",
     theme: user?.preferences?.theme || "system",
-    notifications: user?.preferences?.notifications || false
+    notifications: user?.preferences?.emailNotifications || false
   });
   
   // Voice settings state
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedItalianVoice, setSelectedItalianVoice] = useState(voicePreference?.it || "");
-  const [selectedEnglishVoice, setSelectedEnglishVoice] = useState(voicePreference?.en || "");
-  const [voiceSpeed, setVoiceSpeed] = useState(voicePreference?.rate || 1);
-  const [voicePitch, setVoicePitch] = useState(voicePreference?.pitch || 1);
+  const [selectedItalianVoice, setSelectedItalianVoice] = useState(voicePreference?.italianVoiceURI || "");
+  const [selectedEnglishVoice, setSelectedEnglishVoice] = useState(voicePreference?.englishVoiceURI || "");
+  const [voiceSpeed, setVoiceSpeed] = useState(voicePreference?.voiceRate || 1);
+  const [voicePitch, setVoicePitch] = useState(voicePreference?.voicePitch || 1);
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     // Update form when user data changes
     if (user) {
       setUserProfile({
-        name: user.name || "",
+        name: user.firstName || "",
         email: user.email || "",
-        bio: user.bio || "",
+        bio: user.preferences?.bio || "",
         theme: user.preferences?.theme || "system",
-        notifications: user.preferences?.notifications || false
+        notifications: user.preferences?.emailNotifications || false
       });
     }
     
     // Get available voices for speech synthesis
     const loadVoices = async () => {
-      const voices = await getAvailableVoices();
+      const voices = await getAllVoices();
       setAvailableVoices(voices);
       
       // Set default voices if none selected
@@ -76,12 +76,12 @@ const Settings = () => {
       
       await updateUser({
         ...user,
-        name: userProfile.name,
-        bio: userProfile.bio,
+        firstName: userProfile.name,
         preferences: {
           ...user.preferences,
-          theme: userProfile.theme,
-          notifications: userProfile.notifications
+          bio: userProfile.bio,
+          theme: userProfile.theme as "light" | "dark" | "system",
+          emailNotifications: userProfile.notifications
         }
       });
       
@@ -100,11 +100,11 @@ const Settings = () => {
   };
   
   const handleVoiceUpdate = () => {
-    updateVoicePreference({
-      it: selectedItalianVoice,
-      en: selectedEnglishVoice,
-      rate: voiceSpeed,
-      pitch: voicePitch
+    setVoicePreference({
+      italianVoiceURI: selectedItalianVoice,
+      englishVoiceURI: selectedEnglishVoice,
+      voiceRate: voiceSpeed,
+      voicePitch: voicePitch
     });
     
     toast({
@@ -122,10 +122,10 @@ const Settings = () => {
         : "Hello, this is an example of how the English voice will sound.";
       
       await speak(text, language, {
-        it: selectedItalianVoice,
-        en: selectedEnglishVoice,
-        rate: voiceSpeed,
-        pitch: voicePitch
+        italianVoiceURI: selectedItalianVoice,
+        englishVoiceURI: selectedEnglishVoice,
+        voiceRate: voiceSpeed,
+        voicePitch: voicePitch
       });
     } catch (error) {
       console.error("Error testing voice:", error);
