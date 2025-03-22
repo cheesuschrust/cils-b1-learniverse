@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 interface ContentAnalysisProps {
   fileContent: string;
@@ -66,7 +66,7 @@ const ContentAnalysis = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                    <Info className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="max-w-xs">{getContentTypeInfo(fileContentType)}</p>
@@ -84,7 +84,7 @@ const ContentAnalysis = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                    <Info className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>How confident the system is about the content type detection</p>
@@ -102,7 +102,7 @@ const ContentAnalysis = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                    <Info className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{getLanguageInfo(language)}</p>
@@ -122,7 +122,7 @@ const ContentAnalysis = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                  <Info className="h-4 w-4 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Preview of the content being analyzed. For large files, only a portion is shown.</p>
