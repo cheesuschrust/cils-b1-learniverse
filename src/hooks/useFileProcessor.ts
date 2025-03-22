@@ -1,12 +1,13 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { detectContentType, detectLanguage } from '@/utils/textAnalysis';
 import { useSystemLog } from '@/hooks/use-system-log';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
-const MAX_PROCESSING_TIME = 30000;
+const MAX_PROCESSING_TIME = 15000; // Reduced from 30s to 15s for better user experience
 
 export const useFileProcessor = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -16,25 +17,42 @@ export const useFileProcessor = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [language, setLanguage] = useState<'english' | 'italian' | 'unknown'>('italian');
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [processingTimeoutId, setProcessingTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // Using refs instead of state for timers to prevent unnecessary re-renders
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
   const { addNotification } = useNotifications();
   const { logContentAction, logAIAction } = useSystemLog();
+  const { user } = useAuth();
   
+  // Show admin access notification
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      toast({
+        title: "Access Denied",
+        description: "You do not have permission to access this page",
+        variant: "destructive"
+      });
+    }
+  }, [user, toast]);
+  
+  // Cleanup function to prevent memory leaks
   useEffect(() => {
     return () => {
-      if (processingTimeoutId) {
-        clearTimeout(processingTimeoutId);
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
       }
-      if (progressInterval) {
-        clearInterval(progressInterval);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
     };
-  }, [processingTimeoutId, progressInterval]);
+  }, []);
   
-  const readTextFile = (file: File, maxSize: number = Infinity): Promise<string> => {
+  const readTextFile = (file: File, maxSize: number = 50000): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -50,23 +68,38 @@ export const useFileProcessor = () => {
   };
   
   const resetState = useCallback(() => {
+    // Clear any running timers
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    
     setFile(null);
     setFileContent('');
     setFileContentType(null);
     setContentConfidence(0);
     setUploadProgress(0);
+    setIsProcessing(false);
   }, []);
   
   const processFile = useCallback(async (selectedFile: File) => {
     if (!selectedFile) return;
     
+    // Reset state before processing new file
+    resetState();
+    
     setFile(selectedFile);
     setUploadProgress(0);
     setIsProcessing(true);
     
-    const timeoutId = setTimeout(() => {
+    // Set timeout for processing
+    processingTimeoutRef.current = setTimeout(() => {
       if (isProcessing) {
-        setIsProcessing(false);
+        resetState();
         toast({
           title: "Processing timeout",
           description: "File processing took too long and was aborted",
@@ -80,20 +113,14 @@ export const useFileProcessor = () => {
       }
     }, MAX_PROCESSING_TIME);
     
-    setProcessingTimeoutId(timeoutId);
-    
     try {
-      const interval = setInterval(() => {
+      // Create progress animation
+      progressIntervalRef.current = setInterval(() => {
         setUploadProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(interval);
-            return 95;
-          }
+          if (prev >= 90) return 90;
           return prev + 5;
         });
-      }, 100);
-      
-      setProgressInterval(interval);
+      }, 200); // Slower updates for smoother animation
       
       let content = '';
       let extractedType = null;
@@ -106,8 +133,10 @@ export const useFileProcessor = () => {
           selectedFile.name.endsWith('.txt') || 
           selectedFile.name.endsWith('.md')) {
             
-        content = await readTextFile(selectedFile, 100000);
+        // Reduced max size to prevent large file processing issues
+        content = await readTextFile(selectedFile, 50000);
         
+        // Detect content type
         const contentTypeResult = await detectContentType(content, selectedFile.type);
         
         extractedType = contentTypeResult.type === "multiple-choice" ? "multipleChoice" : contentTypeResult.type;
@@ -126,27 +155,31 @@ export const useFileProcessor = () => {
           description: "Please upload a text or audio file",
           variant: "destructive"
         });
-        setFile(null);
-        setIsProcessing(false);
-        clearInterval(interval);
-        if (processingTimeoutId) clearTimeout(processingTimeoutId);
+        resetState();
         return;
       }
       
+      // Update state with file processing results
       setFileContent(content);
       setFileContentType(extractedType as any);
       setContentConfidence(confidenceScore);
       setLanguage(detectedLanguage);
       
+      // Complete progress animation
       setUploadProgress(100);
-      clearInterval(interval);
-      setProgressInterval(null);
       
-      if (processingTimeoutId) {
-        clearTimeout(processingTimeoutId);
-        setProcessingTimeoutId(null);
+      // Clean up timers
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
       
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
+      
+      // Log success
       logContentAction(
         'file_processed_successfully', 
         `File ${selectedFile.name} processed as ${extractedType} content with ${confidenceScore}% confidence`,
@@ -158,6 +191,7 @@ export const useFileProcessor = () => {
         `AI analyzed content and detected ${extractedType} content type with ${confidenceScore}% confidence`
       );
       
+      // Send notification
       addNotification(
         'File Processed Successfully',
         `${selectedFile.name} was processed automatically`,
@@ -166,7 +200,7 @@ export const useFileProcessor = () => {
           fileType: selectedFile.type,
           contentType: extractedType as string,
           confidence: confidenceScore,
-          processingTime: Date.now() - new Date().getTime() + MAX_PROCESSING_TIME,
+          processingTime: Date.now(),
           detectedLanguage,
           fileId
         }
@@ -177,6 +211,7 @@ export const useFileProcessor = () => {
         description: `Detected ${extractedType} content with ${confidenceScore.toFixed(1)}% confidence`,
       });
       
+      // Set processing to false after a short delay to allow animation to complete
       setTimeout(() => {
         setIsProcessing(false);
       }, 500);
@@ -184,14 +219,15 @@ export const useFileProcessor = () => {
     } catch (error) {
       console.error("Error processing file:", error);
       
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        setProgressInterval(null);
+      // Clean up timers
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
       
-      if (processingTimeoutId) {
-        clearTimeout(processingTimeoutId);
-        setProcessingTimeoutId(null);
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
       }
       
       logContentAction(
@@ -213,8 +249,7 @@ export const useFileProcessor = () => {
     isProcessing,
     logAIAction,
     logContentAction,
-    processingTimeoutId,
-    progressInterval,
+    resetState,
     toast
   ]);
   

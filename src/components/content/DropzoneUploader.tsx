@@ -1,10 +1,11 @@
 
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, FileAudio, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, FileAudio, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -53,6 +54,12 @@ const DropzoneUploader = ({
     }
   };
   
+  const getConfidenceBadgeVariant = (confidence: number) => {
+    if (confidence >= 80) return "default";
+    if (confidence >= 60) return "secondary";
+    return "destructive";
+  };
+  
   return (
     <div 
       {...getRootProps()} 
@@ -65,7 +72,7 @@ const DropzoneUploader = ({
       {isProcessing ? (
         <div className="py-4 flex flex-col items-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p>Processing file...</p>
+          <p className="font-medium">Processing file...</p>
           {uploadProgress > 0 && (
             <div className="w-full max-w-xs mt-4">
               <Progress value={uploadProgress} className="h-2" />
@@ -86,27 +93,49 @@ const DropzoneUploader = ({
           <p className="text-sm text-muted-foreground mt-1">
             {(file.size / 1024).toFixed(1)} KB
           </p>
+          
           {fileContentType && (
-            <div className="mt-2 flex items-center gap-2">
-              <Badge variant="outline" className="capitalize">
-                {fileContentType === 'multipleChoice' ? 'multiple choice' : fileContentType}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {contentConfidence}% confidence
-              </span>
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="capitalize">
+                  {fileContentType === 'multipleChoice' ? 'multiple choice' : fileContentType}
+                </Badge>
+                <Badge variant={getConfidenceBadgeVariant(contentConfidence)}>
+                  {contentConfidence.toFixed(0)}% confidence
+                </Badge>
+              </div>
+              
+              {language && language !== 'unknown' && (
+                <Badge variant="secondary" className="capitalize mt-1">
+                  {language}
+                </Badge>
+              )}
             </div>
           )}
-          {language && language !== 'unknown' && (
-            <div className="mt-1">
-              <Badge variant="secondary" className="capitalize">
-                {language}
-              </Badge>
-            </div>
-          )}
+          
           <div className="mt-4 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
-            <span className="text-sm font-medium text-green-600">Processing complete</span>
+            {contentConfidence < 60 ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-1">
+                      <AlertTriangle className="h-5 w-5 text-amber-500" />
+                      <span className="text-sm font-medium text-amber-600">Low confidence detection</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The system is not very confident about the content type. You may need to verify manually.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <span className="text-sm font-medium text-green-600">Processing complete</span>
+              </>
+            )}
           </div>
+          
           <Button 
             variant="outline" 
             className="mt-4"
@@ -136,12 +165,10 @@ const DropzoneUploader = ({
           >
             Select File
           </Button>
-          <p className="text-xs text-muted-foreground mt-4">
-            Supported formats: .txt, .md, .json, .mp3, .wav, .ogg
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Maximum file size: {MAX_FILE_SIZE / (1024 * 1024)}MB
-          </p>
+          <div className="text-xs text-muted-foreground mt-4 space-y-1">
+            <p>Supported formats: .txt, .md, .json, .mp3, .wav, .ogg</p>
+            <p>Maximum file size: {MAX_FILE_SIZE / (1024 * 1024)}MB</p>
+          </div>
         </div>
       )}
     </div>

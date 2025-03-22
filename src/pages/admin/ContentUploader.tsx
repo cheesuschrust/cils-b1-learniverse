@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { useAI } from '@/hooks/useAI';
@@ -28,15 +28,7 @@ const ContentUploader = () => {
   const { isProcessing: aiIsProcessing } = useAI();
   const { user } = useAuth();
   
-  useEffect(() => {
-    if (user && user.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "You do not have permission to access this page",
-        variant: "destructive"
-      });
-    }
-  }, [user, toast]);
+  // Access check notification moved to useEffect in the hook for better performance
   
   const handleFileDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -59,7 +51,7 @@ const ContentUploader = () => {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Content Uploader</h1>
-        <AIStatus showDetails={false} />
+        <AIStatus showDetails={true} />
       </div>
       
       <Card>

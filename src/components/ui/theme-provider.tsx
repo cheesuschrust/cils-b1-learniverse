@@ -1,5 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
 
 type Theme = "dark" | "light" | "system";
 
@@ -27,9 +28,17 @@ export function ThemeProvider({
   storageKey = "ui-theme",
   ...props
 }: ThemeProviderProps) {
+  const userPrefs = useUserPreferences();
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    () => (localStorage.getItem(storageKey) as Theme) || userPrefs.theme || defaultTheme
   );
+
+  // Sync with UserPreferencesContext
+  useEffect(() => {
+    if (userPrefs.theme && userPrefs.theme !== theme) {
+      setTheme(userPrefs.theme);
+    }
+  }, [userPrefs.theme]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -48,9 +57,10 @@ export function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
+    setTheme: (newTheme: Theme) => {
+      localStorage.setItem(storageKey, newTheme);
+      setTheme(newTheme);
+      userPrefs.setTheme?.(newTheme);
     },
   };
 
