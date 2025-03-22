@@ -198,7 +198,7 @@ const AdminDashboard = () => {
     if (success) {
       const targetUser = users.find(u => u.id === userId);
       if (targetUser) {
-        // Fix: Call addSystemLog with the correct parameters
+        // Looking at the AuthContext, we need to call addSystemLog correctly
         addSystemLog('user', `User status updated to ${newStatus}`, `Updated user status to ${newStatus} for ${targetUser.email}`);
       }
       setUsers(getAllUsers());
