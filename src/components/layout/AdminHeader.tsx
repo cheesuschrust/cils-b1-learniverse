@@ -1,154 +1,132 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import {
-  BellIcon,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  User,
-  Database,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Menu, Sun, Moon, Settings, LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useSystemLog } from "@/hooks/use-system-log";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
-type AdminHeaderProps = {
-  toggleSidebar?: () => void;
-  isSidebarOpen?: boolean;
-};
+interface AdminHeaderProps {
+  toggleSidebar: () => void;
+  isSidebarOpen: boolean;
+}
 
-const AdminHeader = ({ toggleSidebar, isSidebarOpen }: AdminHeaderProps) => {
+const AdminHeader: React.FC<AdminHeaderProps> = ({ toggleSidebar, isSidebarOpen }) => {
   const { user, logout } = useAuth();
-  const [notifications, setNotifications] = useState(3);
+  const { logAuthAction } = useSystemLog();
 
-  const handleLogout = () => {
-    logout();
-  };
-
-  const getUserInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+  const handleLogout = async () => {
+    try {
+      logAuthAction("logout_attempt", "User attempted to log out from admin interface");
+      await logout();
+      logAuthAction("logout_success", "User successfully logged out from admin interface");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      logAuthAction("logout_failed", "User logout attempt failed from admin interface");
+    }
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 border-b bg-background z-30 flex items-center">
-      <div className="container flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={toggleSidebar}
-          >
-            {isSidebarOpen ? <X /> : <Menu />}
-          </Button>
-          <Link to="/admin" className="flex items-center gap-2">
-            <Database className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg hidden sm:inline-block">
-              Admin Panel
-            </span>
-          </Link>
-        </div>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mr-2"
+          onClick={toggleSidebar}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+        <Link to="/admin/dashboard" className="flex items-center gap-2">
+          <span className="text-xl font-bold">Admin Dashboard</span>
+        </Link>
+      </div>
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label="Theme Toggle"
+            >
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle Theme</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              Light
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              Dark
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              System
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative"
-                aria-label="Notifications"
-              >
-                <BellIcon className="h-5 w-5" />
-                {notifications > 0 && (
-                  <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium flex items-center justify-center text-destructive-foreground">
-                    {notifications}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[300px]">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="max-h-[300px] overflow-y-auto">
-                <DropdownMenuItem className="flex flex-col items-start">
-                  <span className="font-medium">New user registered</span>
-                  <span className="text-xs text-muted-foreground">
-                    2 minutes ago
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start">
-                  <span className="font-medium">Content uploaded</span>
-                  <span className="text-xs text-muted-foreground">
-                    10 minutes ago
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start">
-                  <span className="font-medium">System update available</span>
-                  <span className="text-xs text-muted-foreground">
-                    1 hour ago
-                  </span>
-                </DropdownMenuItem>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-center cursor-pointer" onClick={() => setNotifications(0)}>
-                Mark all as read
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
-                    {user ? getUserInitials(user.firstName || user.email) : "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden md:inline-block">
-                  {user ? (user.firstName || user.email.split("@")[0]) : "User"}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex items-center cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex items-center cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive cursor-pointer"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-8 w-8 ml-1"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user?.firstName?.charAt(0) || "A"}
+                  {user?.lastName?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex flex-col space-y-1 p-2">
+              <p className="text-sm font-medium leading-none">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user?.email}
+              </p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/admin/dashboard" className="flex w-full cursor-pointer items-center">
+                <User className="mr-2 h-4 w-4" />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/admin/settings" className="flex w-full cursor-pointer items-center">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="flex cursor-pointer items-center"
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

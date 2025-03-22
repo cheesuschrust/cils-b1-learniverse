@@ -14,6 +14,7 @@ export interface AuthContextType {
     password: string,
     username?: string
   ) => Promise<boolean>;
+  checkEmailExists: (email: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
   completePasswordReset: (token: string, newPassword: string) => Promise<boolean>;
   verifyEmail: (token: string) => Promise<boolean>;
