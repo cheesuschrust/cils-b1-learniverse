@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,9 +14,7 @@ import { useSystemLog } from '@/hooks/use-system-log';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
-// Maximum file size in bytes (20MB)
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
-// Maximum processing time in milliseconds (30 seconds)
 const MAX_PROCESSING_TIME = 30000;
 
 const ContentUploader = () => {
@@ -39,7 +36,6 @@ const ContentUploader = () => {
   
   useEffect(() => {
     return () => {
-      // Cleanup timeout on unmount
       if (processingTimeoutId) {
         clearTimeout(processingTimeoutId);
       }
@@ -51,7 +47,6 @@ const ContentUploader = () => {
     
     const selectedFile = acceptedFiles[0];
     
-    // Check file size
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
@@ -65,7 +60,6 @@ const ContentUploader = () => {
     setUploadProgress(0);
     setIsProcessing(true);
     
-    // Set processing timeout to prevent browser hanging
     const timeoutId = setTimeout(() => {
       if (isProcessing) {
         setIsProcessing(false);
@@ -91,11 +85,10 @@ const ContentUploader = () => {
       let confidenceScore = 0;
       const fileId = uuidv4();
       
-      // Simulate upload progress
-      const uploadInterval = setInterval(() => {
+      let progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 95) {
-            clearInterval(uploadInterval);
+            clearInterval(progressInterval);
             return 95;
           }
           return prev + 5;
@@ -107,24 +100,20 @@ const ContentUploader = () => {
           selectedFile.name.endsWith('.txt') || 
           selectedFile.name.endsWith('.md')) {
             
-        // For large text files, limit the content to prevent browser hanging
-        content = await readTextFile(selectedFile, 100000); // Limit to 100KB
+        content = await readTextFile(selectedFile, 100000);
         
-        // Auto-detect content type
         const contentTypeResult = await detectContentType(content, selectedFile.type);
         
-        // Convert 'multiple-choice' to 'multipleChoice' if needed
         extractedType = contentTypeResult.type === "multiple-choice" ? "multipleChoice" : contentTypeResult.type;
         confidenceScore = contentTypeResult.confidence;
         
-        // Auto-detect language
         detectedLanguage = detectLanguage(content);
         
       } else if (selectedFile.type.startsWith('audio/')) {
         content = `Audio file: ${selectedFile.name}`;
         extractedType = 'listening';
         confidenceScore = 92;
-        detectedLanguage = 'italian'; // Default for audio files
+        detectedLanguage = 'italian';
       } else {
         toast({
           title: "Unsupported file type",
@@ -133,28 +122,24 @@ const ContentUploader = () => {
         });
         setFile(null);
         setIsProcessing(false);
-        clearInterval(uploadInterval);
+        clearInterval(progressInterval);
         if (processingTimeoutId) clearTimeout(processingTimeoutId);
         return;
       }
       
-      // Save processed data
       setFileContent(content);
       setFileContentType(extractedType as any);
       setContentConfidence(confidenceScore);
       setLanguage(detectedLanguage);
       
-      // Complete upload progress
       setUploadProgress(100);
-      clearInterval(uploadInterval);
+      clearInterval(progressInterval);
       
-      // Clear timeout as processing completed successfully
       if (processingTimeoutId) {
         clearTimeout(processingTimeoutId);
         setProcessingTimeoutId(null);
       }
       
-      // Log successful processing
       logContentAction(
         'file_processed_successfully', 
         `File ${selectedFile.name} processed as ${extractedType} content with ${confidenceScore}% confidence`,
@@ -166,7 +151,6 @@ const ContentUploader = () => {
         `AI analyzed content and detected ${extractedType} content type with ${confidenceScore}% confidence`
       );
       
-      // Send notification
       addNotification(
         'File Processed Successfully',
         `${selectedFile.name} was processed automatically`,
@@ -181,13 +165,11 @@ const ContentUploader = () => {
         }
       );
       
-      // Show success toast
       toast({
         title: "File processed successfully",
         description: `Detected ${extractedType} content with ${confidenceScore.toFixed(1)}% confidence`,
       });
       
-      // Reset processing state after small delay to show complete progress
       setTimeout(() => {
         setIsProcessing(false);
       }, 500);
@@ -195,16 +177,17 @@ const ContentUploader = () => {
     } catch (error) {
       console.error("Error processing file:", error);
       
-      // Clear progress interval if it exists
-      clearInterval(uploadInterval);
+      const currentProgressInterval = progressInterval;
       
-      // Clear timeout
+      if (currentProgressInterval) {
+        clearInterval(currentProgressInterval);
+      }
+      
       if (processingTimeoutId) {
         clearTimeout(processingTimeoutId);
         setProcessingTimeoutId(null);
       }
       
-      // Log error
       logContentAction(
         'file_processing_error', 
         `Error processing file ${selectedFile.name}: ${error}`,
@@ -241,13 +224,11 @@ const ContentUploader = () => {
       
       reader.onload = () => {
         const content = reader.result as string;
-        // Limit content size if needed
         resolve(content.length > maxSize ? content.substring(0, maxSize) + '...(content truncated)' : content);
       };
       
       reader.onerror = () => reject(new Error('Failed to read file'));
       
-      // For large files, read as text to prevent memory issues
       reader.readAsText(file);
     });
   };
@@ -258,7 +239,6 @@ const ContentUploader = () => {
     }
   };
   
-  // Check if user is admin, otherwise redirect
   useEffect(() => {
     if (user && user.role !== 'admin') {
       toast({
@@ -266,7 +246,6 @@ const ContentUploader = () => {
         description: "You do not have permission to access this page",
         variant: "destructive"
       });
-      // In a real app, you would redirect here
     }
   }, [user, toast]);
   

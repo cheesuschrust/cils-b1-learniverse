@@ -61,6 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, []);
 
+  // Check if email exists function
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const db = await getDatabase();
+      return db.users.some(u => u.email === email);
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return false;
+    }
+  };
+
   // Sign up function
   const signup = async (
     firstName: string,
@@ -74,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const db = await getDatabase();
       
       // Check if email already exists
-      if (db.users.some(u => u.email === email)) {
+      if (await checkEmailExists(email)) {
         toast({
           title: "Signup Failed",
           description: "Email already in use",
@@ -1461,6 +1472,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     signup,
+    checkEmailExists,
     resetPassword,
     completePasswordReset,
     verifyEmail,

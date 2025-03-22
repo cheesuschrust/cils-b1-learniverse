@@ -16,7 +16,7 @@ type Message = {
   timestamp: Date;
 };
 
-const INITIAL_BOT_MESSAGE = {
+const INITIAL_BOT_MESSAGE: Message = {
   id: '0',
   text: "👋 Hi there! I'm your support assistant. How can I help you today?",
   sender: 'bot',
