@@ -763,164 +763,176 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (firstName: string, lastName: string, email: string, password: string, username?: string) => {
-    setIsLoading(true);
+  // Complete the missing or incomplete methods
+  const logout = () => {
+    localStorage.removeItem("session");
+    setUser(null);
+    navigate("/login");
+    
+    addSystemLogInternal({
+      level: "info",
+      category: "auth",
+      message: "User logged out",
+      userId: user?.id,
+    });
+  };
+
+  const updateUserStatus = async (userId: string, status: "active" | "inactive" | "pending"): Promise<void> => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can update user status",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      // Validate inputs
-      if (!firstName || !lastName || !email || !password) {
-        throw new Error("All required fields must be provided");
-      }
-      
-      if (!isValidEmail(email)) {
-        throw new Error("Please provide a valid email address");
-      }
-      
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters long");
-      }
-      
       const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
       
-      // Check if email already exists
-      if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-        addSystemLogInternal({
-          level: "warning",
-          category: "auth",
-          message: "Signup attempt with existing email",
-          details: `Email: ${email}`,
-        });
-        
-        throw new Error("Email already exists");
+      if (userIndex === -1) {
+        throw new Error("User not found");
       }
       
-      // Check if username already exists (if provided)
-      if (username && users.some(u => u.username?.toLowerCase() === username.toLowerCase())) {
-        throw new Error("Username already exists");
-      }
-      
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
-      
-      // Create new user
-      const newUser: User = {
-        id: `user-${uuidv4()}`,
-        email,
-        firstName,
-        lastName,
-        username: username || `user${Math.floor(Math.random() * 10000)}`,
-        role: 'user',
-        passwordHash,
-        preferredLanguage: "both",
-        subscription: "free",
-        status: "pending", // Start as pending until email is verified
-        emailVerified: false,
-        created: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          listening: 0,
-          writing: 0,
-          speaking: 0
-        },
-        metrics: {
-          totalQuestions: 0,
-          correctAnswers: 0,
-          streak: 0,
-          totalTimeSpent: 0
-        },
-        preferences: {
-          theme: "system",
-          fontSize: 16,
-          notificationsEnabled: true,
-          animationsEnabled: true,
-          preferredLanguage: "both",
-          voiceSpeed: 1.0,
-          autoPlayAudio: true,
-          showProgressMetrics: true,
-          aiEnabled: true,
-          aiModelSize: "small",
-          aiProcessingOnDevice: true,
-          confidenceScoreVisible: true,
-        }
-      };
-      
-      // Add user to the list and persist
-      users.push(newUser);
+      users[userIndex].status = status;
       persistUsers(users);
       
-      // Generate verification token
-      const token = generateVerificationToken(newUser.id);
-      storeVerificationToken(newUser.id, token);
+      // Update current user if it's the same user
+      if (user.id === userId) {
+        setUser(sanitizeUser(users[userIndex]));
+      }
       
-      // Get email settings
-      const emailSettings = getPersistedEmailSettings();
-      
-      // Create verification link
-      const verificationLink = `${window.location.origin}/verify-email?userId=${newUser.id}&token=${token}`;
-      
-      // Prepare welcome and verification email
-      let emailBody = emailSettings.templates.welcome
-        .replace(/{{name}}/g, firstName)
-        + '<br><br>'
-        + emailSettings.templates.verification
-          .replace(/{{name}}/g, firstName)
-          .replace(/{{verificationLink}}/g, verificationLink);
-      
-      // Send email
-      await sendEmail(
-        email,
-        "Welcome to Italian Learning App - Verify Your Email",
-        emailBody,
-        emailSettings
-      );
-      
-      // Log user creation
       addSystemLogInternal({
         level: "info",
-        category: "auth",
-        message: "New user account created",
-        userId: newUser.id,
+        category: "user",
+        message: `User status updated to ${status}`,
+        userId,
       });
       
-      // Don't auto-login, require email verification first
       toast({
-        title: "Account Created",
-        description: "Please check your email to verify your account before logging in.",
+        title: "Success",
+        description: `User status has been updated to ${status}`,
       });
-      
-      navigate("/login");
     } catch (error) {
-      console.error("Signup error:", error);
+      console.error("Error updating user status:", error);
       
       addSystemLogInternal({
         level: "error",
-        category: "auth",
-        message: "Signup error",
+        category: "user",
+        message: "Error updating user status",
+        details: String(error),
+        userId,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add the remaining required methods to complete the interface
+  const updateUserSubscription = async (userId: string, subscription: "free" | "premium"): Promise<void> => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can update user subscription",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      users[userIndex].subscription = subscription;
+      persistUsers(users);
+      
+      // Update current user if it's the same user
+      if (user.id === userId) {
+        setUser(sanitizeUser(users[userIndex]));
+      }
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "user",
+        message: `User subscription updated to ${subscription}`,
+        userId,
+      });
+      
+      toast({
+        title: "Success",
+        description: `User subscription has been updated to ${subscription}`,
+      });
+    } catch (error) {
+      console.error("Error updating user subscription:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error updating user subscription",
+        details: String(error),
+        userId,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update user subscription",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getAllUsers = (): Omit<User, "passwordHash">[] => {
+    if (!user || user.role !== "admin") {
+      toast({
+        title: "Error",
+        description: "Only administrators can view all users",
+        variant: "destructive",
+      });
+      return [];
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      return users.map(u => sanitizeUser(u));
+    } catch (error) {
+      console.error("Error getting all users:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error retrieving user list",
         details: String(error),
       });
       
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create account. Please try again.",
+        description: "Failed to retrieve user list",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      
+      return [];
     }
   };
 
-  const updateProfile = async (profileData: Partial<Omit<User, "passwordHash">>) => {
+  const incrementDailyQuestionCount = async (type: keyof DailyQuestionCounts): Promise<boolean> => {
     if (!user) {
       toast({
         title: "Error",
-        description: "You must be logged in to update your profile",
+        description: "You must be logged in to track questions",
         variant: "destructive",
       });
-      return;
+      return false;
     }
-
-    setIsLoading(true);
+    
     try {
       const users = getPersistedUsers();
       const userIndex = users.findIndex(u => u.id === user.id);
@@ -929,133 +941,148 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("User not found");
       }
       
-      // Update user data (without changing role or passwordHash)
-      const { role, subscription, ...updatableFields } = profileData;
-      users[userIndex] = {
-        ...users[userIndex],
-        ...updatableFields,
-      };
+      // Increment the counter for the specified type
+      users[userIndex].dailyQuestionCounts[type]++;
       
-      // Persist updated users
+      // Also update the total questions metric
+      users[userIndex].metrics.totalQuestions++;
+      
       persistUsers(users);
       
-      // Update state with sanitized user
+      // Update state
       setUser(sanitizeUser(users[userIndex]));
       
-      toast({
-        title: "Success",
-        description: "Your profile has been updated",
-      });
+      return true;
     } catch (error) {
-      console.error("Profile update error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
+      console.error("Error incrementing question count:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error tracking question count",
+        details: String(error),
+        userId: user.id,
       });
-    } finally {
-      setIsLoading(false);
+      
+      return false;
     }
   };
 
-  const resetPassword = async (email: string) => {
-    setIsLoading(true);
+  const updateUserMetrics = async (metrics: Partial<UserMetrics>): Promise<void> => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update metrics",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+      const userIndex = users.findIndex(u => u.id === user.id);
       
       if (userIndex === -1) {
-        // Don't reveal if email exists for security
-        setTimeout(() => {
-          setIsLoading(false);
-          toast({
-            title: "Success",
-            description: "If an account with that email exists, a password reset link has been sent",
-          });
-        }, 1000);
+        throw new Error("User not found");
+      }
+      
+      // Update the metrics
+      users[userIndex].metrics = {
+        ...users[userIndex].metrics,
+        ...metrics
+      };
+      
+      persistUsers(users);
+      
+      // Update state
+      setUser(sanitizeUser(users[userIndex]));
+    } catch (error) {
+      console.error("Error updating user metrics:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error updating user metrics",
+        details: String(error),
+        userId: user.id,
+      });
+      
+      toast({
+        title: "Error",
+        description: "Failed to update user metrics",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetDailyQuestionCounts = () => {
+    if (!user) {
+      return;
+    }
+    
+    try {
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === user.id);
+      
+      if (userIndex === -1) {
         return;
       }
       
-      // In a real app, we would send a password reset email here
-      // For this demo, we'll just show a success message
+      // Reset all daily counts
+      users[userIndex].dailyQuestionCounts = {
+        flashcards: 0,
+        multipleChoice: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0
+      };
       
-      toast({
-        title: "Success",
-        description: "If an account with that email exists, a password reset link has been sent",
-      });
-    } catch (error) {
-      console.error("Password reset error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to request password reset. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updatePassword = async (currentPassword: string, newPassword: string) => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to change your password",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(
-        currentPassword, 
-        users[userIndex].passwordHash
-      );
-      
-      if (!isCurrentPasswordValid) {
-        throw new Error("Current password is incorrect");
-      }
-      
-      // Hash and update new password
-      const newPasswordHash = await bcrypt.hash(newPassword, 10);
-      users[userIndex].passwordHash = newPasswordHash;
-      
-      // Persist updated users
       persistUsers(users);
       
-      toast({
-        title: "Success",
-        description: "Your password has been updated",
-      });
+      // Update state
+      setUser(sanitizeUser(users[userIndex]));
     } catch (error) {
-      console.error("Password update error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update password. Please try again.",
-        variant: "destructive",
+      console.error("Error resetting daily question counts:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "user",
+        message: "Error resetting daily question counts",
+        details: String(error),
+        userId: user.id,
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const addAdmin = async (email: string, firstName: string, lastName: string, password: string) => {
+  const socialLogin = async (provider: "google" | "apple"): Promise<void> => {
+    // In a real implementation, this would redirect to the OAuth provider
+    // For this mock implementation, we'll just log the attempt
+    
+    addSystemLogInternal({
+      level: "info",
+      category: "auth",
+      message: `Social login attempt with ${provider}`,
+    });
+    
+    toast({
+      title: "Social Login",
+      description: `${provider} login is not implemented in this demo.`,
+      variant: "destructive",
+    });
+  };
+
+  const addAdmin = async (email: string, firstName: string, lastName: string, password: string): Promise<void> => {
     if (!user || user.role !== "admin") {
       toast({
         title: "Error",
-        description: "You must be an admin to add new administrators",
+        description: "Only administrators can add new administrators",
         variant: "destructive",
       });
       return;
     }
-
-    setIsLoading(true);
+    
     try {
+      // Validate inputs
+      if (!firstName || !lastName || !email || !password) {
+        throw new Error("All required fields must be provided");
+      }
