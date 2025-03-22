@@ -85,7 +85,7 @@ const SupportTickets: React.FC = () => {
   
   useEffect(() => {
     logSystemAction('Viewed support tickets');
-  }, []);
+  }, [logSystemAction]);
   
   const handleUpdateTicket = (ticketId: string, updates: Partial<SupportTicketProps>) => {
     setTickets(prevTickets => 
