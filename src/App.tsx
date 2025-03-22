@@ -25,6 +25,7 @@ import SystemLogs from "@/pages/admin/SystemLogs";
 import FileUploader from "@/pages/admin/FileUploader";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import CookieConsent from "@/components/common/CookieConsent";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 function App() {
   return (
@@ -35,26 +36,77 @@ function App() {
             <Navbar />
             <main className="flex-grow">
               <Routes>
+                {/* Public routes */}
                 <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-email" element={<EmailVerification />} />
-                <Route path="/profile" element={<UserProfile />} />
-                <Route path="/flashcards" element={<Flashcards />} />
-                <Route path="/writing" element={<Writing />} />
-                <Route path="/speaking" element={<Speaking />} />
-                <Route path="/listening" element={<Listening />} />
-                <Route path="/multiple-choice" element={<MultipleChoice />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 
+                {/* Protected routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <UserProfile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/flashcards" element={
+                  <ProtectedRoute>
+                    <Flashcards />
+                  </ProtectedRoute>
+                } />
+                <Route path="/writing" element={
+                  <ProtectedRoute>
+                    <Writing />
+                  </ProtectedRoute>
+                } />
+                <Route path="/speaking" element={
+                  <ProtectedRoute>
+                    <Speaking />
+                  </ProtectedRoute>
+                } />
+                <Route path="/listening" element={
+                  <ProtectedRoute>
+                    <Listening />
+                  </ProtectedRoute>
+                } />
+                <Route path="/multiple-choice" element={
+                  <ProtectedRoute>
+                    <MultipleChoice />
+                  </ProtectedRoute>
+                } />
+                
                 {/* Admin routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/content" element={<ContentUploader />} />
-                <Route path="/admin/email-settings" element={<EmailSettings />} />
-                <Route path="/admin/logs" element={<SystemLogs />} />
-                <Route path="/admin/files" element={<FileUploader />} />
+                <Route path="/admin/dashboard" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/content" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <ContentUploader />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/email-settings" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <EmailSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/logs" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <SystemLogs />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/files" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <FileUploader />
+                  </ProtectedRoute>
+                } />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />

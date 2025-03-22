@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +15,12 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Mic
 } from "lucide-react";
 import ProgressCard from "@/components/ui/ProgressCard";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import DashboardHeader from "@/components/ui/DashboardHeader";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Activity {
   id: number;
@@ -44,12 +46,20 @@ const Dashboard = () => {
   const [upcomingLessons, setUpcomingLessons] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // Simulate fetching user data on component mount
   useEffect(() => {
+    // If we have a real user from auth context, use their name
+    if (user) {
+      setUserName(user.firstName);
+    }
+    
     // This would be an API call in a real application
     setTimeout(() => {
-      setUserName("Marco");
+      if (!user) {
+        setUserName("Marco");
+      }
       
       setRecentActivities([
         {
@@ -116,7 +126,7 @@ const Dashboard = () => {
         }
       ]);
     }, 500);
-  }, []);
+  }, [user]);
   
   const progressStats = [
     {
@@ -263,27 +273,12 @@ const Dashboard = () => {
   };
   
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {userName}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track your progress and continue your Italian learning journey
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0 flex space-x-2">
-          <Button variant="outline" size="sm" onClick={handleViewCalendar}>
-            <Calendar className="mr-2 h-4 w-4" />
-            View Calendar
-          </Button>
-          <Button size="sm" onClick={handleStartTodaysLesson}>
-            <Zap className="mr-2 h-4 w-4" />
-            Start Today's Lesson
-          </Button>
-        </div>
-      </div>
+    <div className="container mx-auto px-4 sm:px-6 py-8 pt-20 md:pt-24">
+      <DashboardHeader 
+        userName={userName}
+        onViewCalendar={handleViewCalendar}
+        onStartLesson={handleStartTodaysLesson}
+      />
       
       {/* Progress Overview */}
       <div className="mb-8 animate-fade-up">
@@ -337,7 +332,7 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full lg:w-2/3 mt-6 lg:mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full lg:w-2/3 mt-6 lg:mt-0">
                 {progressStats.map((stat, index) => (
                   <ProgressCard
                     key={index}
@@ -395,6 +390,7 @@ const Dashboard = () => {
                   </div>
                 )}
 
+                {/* Challenge items */}
                 <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div className="flex items-center">
                     <div className="p-2 rounded-full bg-accent/30 mr-3">
@@ -563,7 +559,7 @@ const Dashboard = () => {
       
       {/* Study Sections */}
       <h2 className="text-2xl font-bold mb-6">Continue Studying</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
         <Link to="/flashcards">
           <Card className="h-full transition-all duration-300 hover:shadow-md hover:translate-y-[-5px] backdrop-blur-sm border-accent/20">
             <CardContent className="p-6">

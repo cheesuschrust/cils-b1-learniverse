@@ -77,7 +77,7 @@ export interface EmailTemplate {
 }
 
 export interface EmailConfig {
-  enableSsl?: boolean; // Changed from required to optional to match usage
+  enableSsl?: boolean; 
   host?: string;
   port?: number;
   username?: string;
@@ -85,8 +85,8 @@ export interface EmailConfig {
   apiKey?: string;
   domain?: string;
   region?: string;
-  accessKey?: string; // Added these missing properties
-  secretKey?: string; // Added these missing properties
+  accessKey?: string;
+  secretKey?: string;
 }
 
 export interface EmailSettings {
@@ -99,7 +99,7 @@ export interface EmailSettings {
     passwordReset: EmailTemplate;
     welcome: EmailTemplate;
   };
-  temporaryInboxDuration: number;
+  temporaryInboxDuration?: number; // Make this optional to resolve the type error
 }
 
 // Mock database

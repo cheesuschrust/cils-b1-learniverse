@@ -20,9 +20,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Try to refresh the session when the component mounts
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      refreshSession();
-    }
+    const checkAuthentication = async () => {
+      if (!isAuthenticated && !isLoading) {
+        await refreshSession();
+      }
+    };
+    
+    checkAuthentication();
   }, [isAuthenticated, isLoading, refreshSession]);
 
   if (isLoading) {
@@ -34,8 +38,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // For additional security, verify authentication before allowing access to protected routes
   if (!isAuthenticated) {
     // Store the current location to redirect back after login
+    toast({
+      title: "Authentication Required",
+      description: "Please log in to access this page.",
+      variant: "destructive",
+    });
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
