@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -17,6 +17,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, isAuthenticated, isLoading, refreshSession } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
+  const [hasShownToast, setHasShownToast] = useState(false);
 
   // Try to refresh the session when the component mounts
   useEffect(() => {
@@ -28,6 +29,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     
     checkAuthentication();
   }, [isAuthenticated, isLoading, refreshSession]);
+
+  // Handle toast notifications in useEffect, not during render
+  useEffect(() => {
+    // Only show notifications if we're done loading and not authenticated
+    if (!isLoading && !isAuthenticated && !hasShownToast) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access this page.",
+        variant: "destructive",
+      });
+      setHasShownToast(true);
+    }
+
+    // Show admin access denied toast if needed
+    if (!isLoading && isAuthenticated && requireAdmin && user?.role !== "admin" && !hasShownToast) {
+      toast({
+        title: "Access Denied",
+        description: "You need administrator privileges to access this page.",
+        variant: "destructive",
+      });
+      setHasShownToast(true);
+    }
+  }, [isLoading, isAuthenticated, user, requireAdmin, toast, hasShownToast]);
 
   if (isLoading) {
     return (
@@ -41,21 +65,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // For additional security, verify authentication before allowing access to protected routes
   if (!isAuthenticated) {
     // Store the current location to redirect back after login
-    toast({
-      title: "Authentication Required",
-      description: "Please log in to access this page.",
-      variant: "destructive",
-    });
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (requireAdmin && user?.role !== "admin") {
     // If admin access is required but user is not an admin
-    toast({
-      title: "Access Denied",
-      description: "You need administrator privileges to access this page.",
-      variant: "destructive",
-    });
     return <Navigate to="/dashboard" replace />;
   }
 
