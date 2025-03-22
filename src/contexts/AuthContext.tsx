@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  refreshSession: () => void; // Added refreshSession function type
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,29 +28,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Function to check if user is logged in
+  const checkUserLoggedIn = () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("userToken");
+
+      if (storedUser && token) {
+        // In a real app, we would validate the token with the backend
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      // Clear potentially corrupted data
+      localStorage.removeItem("user");
+      localStorage.removeItem("userToken");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check if user is logged in on mount
   useEffect(() => {
-    const checkUserLoggedIn = () => {
-      try {
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("userToken");
-
-        if (storedUser && token) {
-          // In a real app, we would validate the token with the backend
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-        // Clear potentially corrupted data
-        localStorage.removeItem("user");
-        localStorage.removeItem("userToken");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     checkUserLoggedIn();
   }, []);
+
+  // Function to refresh the user session
+  const refreshSession = () => {
+    checkUserLoggedIn();
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -147,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         signup,
+        refreshSession, // Added refreshSession to context value
       }}
     >
       {children}
