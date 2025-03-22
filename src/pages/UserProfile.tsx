@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,24 +9,41 @@ import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Key, Languages, CreditCard, Calendar, CheckCircle } from "lucide-react";
+import { User, Shield, Key, Languages, CreditCard, Calendar, CheckCircle, Save } from "lucide-react";
 
 const UserProfile = () => {
   const { user, updateProfile, updatePassword } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    username: user?.username || "",
-    displayName: user?.displayName || "",
-    email: user?.email || "",
-    phoneNumber: user?.phoneNumber || "",
-    address: user?.address || "",
-    preferredLanguage: user?.preferredLanguage || "both",
+    firstName: "",
+    lastName: "",
+    username: "",
+    displayName: "",
+    email: "",
+    phoneNumber: "",
+    address: "",
+    preferredLanguage: "both",
   });
+  
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        displayName: user.displayName || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+        address: user.address || "",
+        preferredLanguage: user.preferredLanguage || "both",
+      });
+    }
+  }, [user]);
   
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
@@ -63,6 +79,10 @@ const UserProfile = () => {
     setPasswordForm(prev => ({ ...prev, [name]: value }));
   };
   
+  const toggleEditing = () => {
+    setIsEditing(!isEditing);
+  };
+  
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -82,8 +102,15 @@ const UserProfile = () => {
         title: "Profile updated",
         description: "Your profile information has been successfully updated.",
       });
+      
+      setIsEditing(false);
     } catch (error) {
       console.error(error);
+      toast({
+        title: "Update failed",
+        description: "There was a problem updating your profile.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +145,11 @@ const UserProfile = () => {
       });
     } catch (error) {
       console.error(error);
+      toast({
+        title: "Update failed",
+        description: "There was a problem updating your password.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +170,12 @@ const UserProfile = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Your Profile</h1>
+        <Button onClick={toggleEditing} variant={isEditing ? "destructive" : "outline"}>
+          {isEditing ? "Cancel Editing" : "Edit Profile"}
+        </Button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
@@ -251,8 +288,16 @@ const UserProfile = () => {
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Completed:</span>
-                <span>{user.metrics.totalQuestions} questions</span>
+                <span className="text-muted-foreground">Questions completed:</span>
+                <span>{user.metrics.totalQuestions}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current streak:</span>
+                <span>{user.metrics.streak} days</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Correct answers:</span>
+                <span>{user.metrics.correctAnswers} ({user.metrics.totalQuestions > 0 ? Math.round((user.metrics.correctAnswers / user.metrics.totalQuestions) * 100) : 0}%)</span>
               </div>
             </div>
           </CardContent>
@@ -273,13 +318,21 @@ const UserProfile = () => {
         
         <TabsContent value="profile">
           <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal information and preferences
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>
+                  {isEditing ? "Edit your personal information" : "Your personal information and preferences"}
+                </CardDescription>
+              </div>
+              {isEditing && (
+                <Button type="submit" form="profile-form" disabled={isLoading}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? "Saving..." : "Save Changes"}
+                </Button>
+              )}
             </CardHeader>
-            <form onSubmit={handleProfileSubmit}>
+            <form id="profile-form" onSubmit={handleProfileSubmit}>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -290,6 +343,7 @@ const UserProfile = () => {
                       placeholder="John"
                       value={profileForm.firstName}
                       onChange={handleProfileChange}
+                      disabled={!isEditing}
                     />
                   </div>
                   
@@ -301,6 +355,7 @@ const UserProfile = () => {
                       placeholder="Doe"
                       value={profileForm.lastName}
                       onChange={handleProfileChange}
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -314,6 +369,7 @@ const UserProfile = () => {
                       placeholder="johndoe"
                       value={profileForm.username}
                       onChange={handleProfileChange}
+                      disabled={!isEditing}
                     />
                   </div>
                   
@@ -325,6 +381,7 @@ const UserProfile = () => {
                       placeholder="How you want to be called"
                       value={profileForm.displayName}
                       onChange={handleProfileChange}
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -352,6 +409,7 @@ const UserProfile = () => {
                       placeholder="+1 (555) 123-4567"
                       value={profileForm.phoneNumber}
                       onChange={handleProfileChange}
+                      disabled={!isEditing}
                     />
                   </div>
                   
@@ -360,6 +418,7 @@ const UserProfile = () => {
                     <Select
                       value={profileForm.preferredLanguage}
                       onValueChange={handleLanguageChange}
+                      disabled={!isEditing}
                     >
                       <SelectTrigger id="preferredLanguage" className="w-full">
                         <SelectValue placeholder="Select language preference" />
@@ -381,14 +440,17 @@ const UserProfile = () => {
                     placeholder="123 Main St, City, Country"
                     value={profileForm.address}
                     onChange={handleProfileChange}
+                    disabled={!isEditing}
                   />
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardFooter>
+              {!isEditing && (
+                <CardFooter>
+                  <Button type="button" onClick={toggleEditing}>
+                    Edit Profile
+                  </Button>
+                </CardFooter>
+              )}
             </form>
           </Card>
         </TabsContent>

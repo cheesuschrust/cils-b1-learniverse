@@ -3,11 +3,11 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 
-// Define the question types
-type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
+// Define question types that can be tracked
+export type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
 
 // Define the return type for our hook
-interface UseQuestionLimitResult {
+export interface UseQuestionLimitResult {
   canAccessContent: boolean;
   isLoading: boolean;
   remainingQuestions: number | "unlimited";
@@ -23,10 +23,10 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Handle the case where type is "multipleChoice"
+  // Normalize type to match keys in dailyQuestionCounts
   const countKey = type === "multipleChoice" ? "multipleChoice" : type;
   
-  // Function to get current question count
+  // Get current count for this question type
   const getCurrentCount = (): number => {
     if (!user || !user.dailyQuestionCounts) {
       return 0;
@@ -34,7 +34,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     return user.dailyQuestionCounts[countKey] || 0;
   };
   
-  // Function to check if user can access content
+  // Determine if user can access content based on subscription and usage
   const canAccessContent = (): boolean => {
     if (!isAuthenticated || !user) {
       return false;
@@ -47,7 +47,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     return getCurrentCount() < 1;
   };
   
-  // Function to get remaining questions
+  // Calculate remaining questions based on subscription type
   const getRemainingQuestions = (): number | "unlimited" => {
     if (!user) {
       return 0;
@@ -74,7 +74,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     setIsLoading(true);
     
     try {
-      // Attempt to increment the counter
+      // Increment the counter and return the result
       const result = await incrementDailyQuestionCount(countKey);
       
       if (!result) {

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -74,7 +73,7 @@ interface AuthContextType {
   user: Omit<User, "passwordHash"> | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   signup: (firstName: string, lastName: string, email: string, password: string, username?: string) => Promise<void>;
   refreshSession: () => void;
@@ -230,18 +229,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("session", JSON.stringify(session));
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const users = getPersistedUsers();
       const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!foundUser || !(await bcrypt.compare(password, foundUser.passwordHash))) {
-        throw new Error("Invalid email or password");
+        toast({
+          title: "Error",
+          description: "Invalid email or password",
+          variant: "destructive",
+        });
+        return false;
       }
       
       if (foundUser.status === "inactive") {
-        throw new Error("Your account has been deactivated. Please contact support.");
+        toast({
+          title: "Error",
+          description: "Your account has been deactivated. Please contact support.",
+          variant: "destructive",
+        });
+        return false;
       }
       
       // Create session
@@ -256,12 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set user without passwordHash
       setUser(sanitizeUser(foundUser));
       
-      toast({
-        title: "Success",
-        description: "You have successfully logged in",
-      });
-      
-      navigate("/dashboard");
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -269,6 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -694,6 +699,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Update metrics
       users[userIndex].metrics.totalQuestions++;
+      
+      // Update streak if it's a new day
+      const today = new Date().toDateString();
+      const lastActiveDate = new Date(users[userIndex].lastActive).toDateString();
+      
+      if (today !== lastActiveDate) {
+        users[userIndex].metrics.streak++;
+      }
       
       // Persist updated users
       persistUsers(users);
