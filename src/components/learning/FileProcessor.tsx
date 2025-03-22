@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { extractContentFromFile, generateQuestions, addListeningExercise } from "@/data/listeningExercises";
+import { detectContentType } from "@/utils/textAnalysis";
 
 interface FileProcessorProps {
   onExerciseAdded?: () => void;
@@ -128,7 +129,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     const categories: ContentCategory[] = [];
     const contentLower = content.toLowerCase();
     
-    // Simple keyword-based detection (in a real app, this would use more advanced NLP)
+    // Simple keyword-based detection
     const keywordMapping = {
       "listening": ["listen", "audio", "hear", "sound", "pronunciation", "ascolta", "ascoltare"],
       "flashcards": ["flashcard", "card", "vocabulary", "vocaboli", "vocabulario", "schede"],

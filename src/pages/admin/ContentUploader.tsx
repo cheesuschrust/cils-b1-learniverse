@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,11 +58,15 @@ import FileProcessor from "@/components/learning/FileProcessor";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-// Import natural for NLP capabilities
-import * as natural from "natural";
-
-const tokenizer = new natural.WordTokenizer();
-const stemmer = natural.PorterStemmer;
+// Import our custom text analysis utilities
+import { 
+  tokenize,
+  extractKeywords, 
+  extractEntities, 
+  generateSummary, 
+  detectContentType,
+  shuffleArray
+} from "@/utils/textAnalysis";
 
 type ContentType = "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking";
 
@@ -172,69 +175,22 @@ const extractContentFromFile = (file: File): Promise<string> => {
   });
 };
 
-// Function to perform NLP analysis on content
+// Function to perform text analysis on content
 const analyzeContent = (content: string, fileType: string): Promise<AIAnalysisResult> => {
   return new Promise((resolve) => {
-    // Tokenize content
-    const tokens = tokenizer.tokenize(content.toLowerCase());
+    // Extract keywords using our utility
+    const keywords = extractKeywords(content, 10);
     
-    // Extract keywords (simple frequency-based approach)
-    const wordFreq: Record<string, number> = {};
-    tokens.forEach(token => {
-      const stemmed = stemmer.stem(token);
-      if (stemmed.length > 3) { // Ignore very short words
-        wordFreq[stemmed] = (wordFreq[stemmed] || 0) + 1;
-      }
-    });
+    // Extract entities using our utility
+    const entities = extractEntities(content, 10);
     
-    // Sort keywords by frequency
-    const keywords = Object.entries(wordFreq)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(entry => entry[0]);
+    // Generate a simple summary using our utility
+    const summary = generateSummary(content, 3);
     
-    // Detect entities (simplified)
-    const potentialEntities = content.match(/[A-Z][a-z]+(\s[A-Z][a-z]+)*/g) || [];
-    const entities = [...new Set(potentialEntities)].slice(0, 10);
-    
-    // Generate a simple summary (first few sentences)
-    const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
-    const summary = sentences.slice(0, 3).join(' ');
-    
-    // Simple content type detection
-    let contentType: ContentType = "multiple-choice";
-    let confidence = 50;
-    
-    // Check for different patterns
-    if (fileType.startsWith("audio/") || 
-        content.toLowerCase().includes("listen") || 
-        content.toLowerCase().includes("audio") ||
-        content.toLowerCase().includes("pronunciation")) {
-      contentType = "listening";
-      confidence = 85;
-    } else if (content.toLowerCase().includes("vocabulary") || 
-              content.toLowerCase().includes("words") ||
-              content.toLowerCase().includes("flashcard") ||
-              content.toLowerCase().includes("flash card")) {
-      contentType = "flashcards";
-      confidence = 80;
-    } else if (content.toLowerCase().includes("speak") || 
-              content.toLowerCase().includes("pronunciation") ||
-              content.toLowerCase().includes("conversation")) {
-      contentType = "speaking";
-      confidence = 75;
-    } else if (content.toLowerCase().includes("write") || 
-              content.toLowerCase().includes("essay") ||
-              content.toLowerCase().includes("writing")) {
-      contentType = "writing";
-      confidence = 70;
-    } else if (content.match(/\?/g)?.length > 3 || 
-              content.match(/[A-D]\)/g)?.length > 3 ||
-              content.toLowerCase().includes("choose") ||
-              content.toLowerCase().includes("select")) {
-      contentType = "multiple-choice";
-      confidence = 90;
-    }
+    // Detect content type using our utility
+    const typeResult = detectContentType(content, fileType);
+    const contentType = typeResult.type;
+    const confidence = typeResult.confidence;
     
     // Generate simple questions based on content
     const questions = generateQuestionsFromContent(content, contentType);
@@ -354,16 +310,6 @@ const generateQuestionsFromContent = (content: string, contentType: ContentType)
   }
   
   return questions;
-};
-
-// Helper to shuffle array
-const shuffleArray = (array: any[]) => {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
 };
 
 // Save processed content to storage
@@ -1201,3 +1147,4 @@ const ContentUploader = () => {
 };
 
 export default ContentUploader;
+
