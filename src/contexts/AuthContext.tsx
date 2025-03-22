@@ -31,8 +31,37 @@ const DEFAULT_ADMIN = {
     correctAnswers: 0,
     streak: 0,
     totalTimeSpent: 0,
+  },
+  preferences: {
+    theme: "system",
+    fontSize: 16,
+    notificationsEnabled: true,
+    animationsEnabled: true,
+    preferredLanguage: "both",
+    voiceSpeed: 1.0,
+    autoPlayAudio: true,
+    showProgressMetrics: true,
+    aiEnabled: true,
+    aiModelSize: "small",
+    aiProcessingOnDevice: true,
+    confidenceScoreVisible: true,
   }
 };
+
+interface UserPreferences {
+  theme: string;
+  fontSize: number;
+  notificationsEnabled: boolean;
+  animationsEnabled: boolean;
+  preferredLanguage: string;
+  voiceSpeed: number;
+  autoPlayAudio: boolean;
+  showProgressMetrics: boolean;
+  aiEnabled: boolean;
+  aiModelSize: string;
+  aiProcessingOnDevice: boolean;
+  confidenceScoreVisible: boolean;
+}
 
 interface UserMetrics {
   totalQuestions: number;
@@ -67,6 +96,7 @@ interface User {
   lastActive: string;
   dailyQuestionCounts: DailyQuestionCounts;
   metrics: UserMetrics;
+  preferences?: UserPreferences;
 }
 
 interface AuthContextType {
@@ -323,6 +353,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           correctAnswers: 0,
           streak: 0,
           totalTimeSpent: 0
+        },
+        preferences: {
+          theme: "system",
+          fontSize: 16,
+          notificationsEnabled: true,
+          animationsEnabled: true,
+          preferredLanguage: "both",
+          voiceSpeed: 1.0,
+          autoPlayAudio: true,
+          showProgressMetrics: true,
+          aiEnabled: true,
+          aiModelSize: "small",
+          aiProcessingOnDevice: true,
+          confidenceScoreVisible: true,
         }
       };
       
@@ -539,6 +583,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           correctAnswers: 0,
           streak: 0,
           totalTimeSpent: 0
+        },
+        preferences: {
+          theme: "system",
+          fontSize: 16,
+          notificationsEnabled: true,
+          animationsEnabled: true,
+          preferredLanguage: "both",
+          voiceSpeed: 1.0,
+          autoPlayAudio: true,
+          showProgressMetrics: true,
+          aiEnabled: true,
+          aiModelSize: "small",
+          aiProcessingOnDevice: true,
+          confidenceScoreVisible: true,
         }
       };
       
@@ -821,6 +879,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           correctAnswers: 0,
           streak: 0,
           totalTimeSpent: 0
+        },
+        preferences: {
+          theme: "system",
+          fontSize: 16,
+          notificationsEnabled: true,
+          animationsEnabled: true,
+          preferredLanguage: "both",
+          voiceSpeed: 1.0,
+          autoPlayAudio: true,
+          showProgressMetrics: true,
+          aiEnabled: true,
+          aiModelSize: "small",
+          aiProcessingOnDevice: true,
+          confidenceScoreVisible: true,
         }
       };
       

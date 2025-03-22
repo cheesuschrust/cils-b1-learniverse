@@ -75,7 +75,7 @@ export const initModel = async ({
     }
     
     console.log(`Initializing ${modelType} model: ${model}`);
-    const instance = await pipeline(task || modelType, model, options);
+    const instance = await pipeline(task || modelType as any, model, options);
     modelCache[cacheKey] = instance;
     
     return instance;

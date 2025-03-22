@@ -22,7 +22,7 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CookieConsent from "./components/common/CookieConsent";
-import AIStatus from "./components/ai/AIStatus";
+// import AIStatus from "./components/ai/AIStatus";
 
 // Create a new query client instance
 const queryClient = new QueryClient();
