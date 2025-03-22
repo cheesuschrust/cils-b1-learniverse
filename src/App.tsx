@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 
 // Import layouts
@@ -8,7 +9,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import AdminLayout from '@/layouts/AdminLayout';
 
 // Import components
-import { ToastProvider } from '@/components/ui/use-toast';
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -42,11 +43,7 @@ function App() {
   return (
     <AuthProvider>
       <UserPreferencesProvider>
-        <Helmet>
-          <title>Italian Language Learning App</title>
-          <meta name="description" content="Learn Italian with our comprehensive language learning app" />
-        </Helmet>
-        <ToastProvider>
+        <HelmetProvider>
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
@@ -55,7 +52,7 @@ function App() {
               <Route path="/password-reset" element={<PasswordReset />} />
               
               {/* Protected Routes */}
-              <Route element={<ProtectedRoute />}>
+              <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                 <Route path="/" element={<DashboardLayout />}>
                   <Route index element={<Dashboard />} />
                   <Route path="flashcards" element={<Flashcards />} />
@@ -86,7 +83,8 @@ function App() {
             </Routes>
           </BrowserRouter>
           <Toaster />
-        </ToastProvider>
+          <ShadcnToaster />
+        </HelmetProvider>
       </UserPreferencesProvider>
     </AuthProvider>
   );

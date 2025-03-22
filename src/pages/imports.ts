@@ -7,16 +7,16 @@ export { default as NotFound } from './NotFound';
 
 // Main app pages
 export { default as Dashboard } from './Dashboard';
-export { default as Flashcards } from './learning/Flashcards';
-export { default as Lessons } from './learning/Lessons';
-export { default as SpeakingPractice } from './learning/SpeakingPractice';
-export { default as ListeningExercises } from './learning/ListeningExercises';
-export { default as WritingExercises } from './learning/WritingExercises';
+export { default as Flashcards } from './Flashcards';
+export { default as Lessons } from './Lessons';
+export { default as SpeakingPractice } from './Speaking';
+export { default as ListeningExercises } from './Listening';
+export { default as WritingExercises } from './Writing';
 export { default as LearningCalendar } from './calendar/LearningCalendar';
 export { default as UserProfile } from './user/UserProfile';
-export { default as Settings } from './settings/Settings';
-export { default as Communities } from './social/Communities';
-export { default as ProgressTracker } from './progress/ProgressTracker';
+export { default as Settings } from './Settings';
+export { default as Communities } from './Communities';
+export { default as ProgressTracker } from './ProgressTracker';
 
 // Admin pages
 export { default as AdminDashboard } from './admin/AdminDashboard';

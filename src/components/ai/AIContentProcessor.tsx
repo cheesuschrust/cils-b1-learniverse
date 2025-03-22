@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, FileText, FileUp, CheckCircle, AlertCircle, Loader2, Brain, RefreshCw } from "lucide-react";
+import { Upload, FileText, FileUp, CheckCircle, AlertCircle, Loader2, Brain, RefreshCw, FileAudio } from "lucide-react";
 import { useAI } from "@/hooks/useAI";
 import { detectContentType, ContentType, ContentTypeUI, convertContentType } from "@/utils/textAnalysis";
 import AIStatus from "@/components/ai/AIStatus";
@@ -47,6 +47,7 @@ const AIContentProcessor = () => {
   const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
   const [language, setLanguage] = useState<"english" | "italian">("italian");
   const [activeTab, setActiveTab] = useState("upload");
+  const [audioURL, setAudioURL] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -71,7 +72,9 @@ const AIContentProcessor = () => {
           selectedFile.name.endsWith('.txt') || 
           selectedFile.name.endsWith('.md')) {
         content = await readTextFile(selectedFile);
+        setAudioURL(null);
       } else if (selectedFile.type.startsWith('audio/')) {
+        // Handle audio files
         content = `Audio file: ${selectedFile.name}`;
         const audioType: AIContentConfidence = {
           type: "listening",
@@ -80,6 +83,10 @@ const AIContentProcessor = () => {
         };
         setContentTypes([audioType]);
         setSelectedType("listening");
+        
+        // Create a URL for the audio file
+        const audioURL = URL.createObjectURL(selectedFile);
+        setAudioURL(audioURL);
       } else {
         toast({
           title: "Unsupported file type",
@@ -97,9 +104,11 @@ const AIContentProcessor = () => {
       setProgress(50);
       
       // Detect language
-      const detectedLanguage = detectLanguage(content);
-      if (detectedLanguage === 'italian' || detectedLanguage === 'english') {
-        setLanguage(detectedLanguage as "english" | "italian");
+      if (!selectedFile.type.startsWith('audio/')) {
+        const detectedLanguage = detectLanguage(content);
+        if (detectedLanguage === 'italian' || detectedLanguage === 'english') {
+          setLanguage(detectedLanguage as "english" | "italian");
+        }
       }
       
       // If not an audio file, analyze content type
@@ -323,6 +332,11 @@ const AIContentProcessor = () => {
         questionScore += 40;
       }
       
+      // Check for audio URL in listening questions
+      if (question.audioUrl) {
+        questionScore += 40;
+      }
+      
       // Cap the score at 100
       totalScore += Math.min(100, questionScore);
     }
@@ -401,6 +415,7 @@ const AIContentProcessor = () => {
     setConfidence(0);
     setProgress(0);
     setActiveTab("upload");
+    setAudioURL(null);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -425,6 +440,22 @@ const AIContentProcessor = () => {
         <span className="text-xs font-medium">{Math.round(confidence)}%</span>
       </div>
     );
+  };
+
+  const handleDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles[0]) {
+      const event = {
+        target: {
+          files: acceptedFiles
+        }
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      
+      handleFileSelect(event);
+    }
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   };
 
   return (
@@ -453,16 +484,21 @@ const AIContentProcessor = () => {
           {/* Upload Tab */}
           <TabsContent value="upload">
             <div className="space-y-4">
-              <div
+              <div 
                 className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors border-muted-foreground/25 hover:border-primary/50"
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(Array.from(e.dataTransfer.files));
+                }}
               >
                 <input
                   type="file"
                   ref={fileInputRef}
                   className="hidden"
                   onChange={handleFileSelect}
-                  accept=".txt,.md,.json,.mp3,.wav,.ogg"
+                  accept=".txt,.md,.json,.mp3,.wav,.ogg,.m4a,.aac,.flac"
                 />
                 
                 {isProcessing ? (
@@ -472,11 +508,25 @@ const AIContentProcessor = () => {
                   </div>
                 ) : file ? (
                   <div className="py-4 flex flex-col items-center">
-                    <FileText className="h-8 w-8 text-primary mb-2" />
+                    {file.type.startsWith('audio/') ? (
+                      <FileAudio className="h-8 w-8 text-primary mb-2" />
+                    ) : (
+                      <FileText className="h-8 w-8 text-primary mb-2" />
+                    )}
                     <p className="font-medium">{file.name}</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {(file.size / 1024).toFixed(1)} KB
                     </p>
+                    {selectedType && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Badge variant="outline" className="capitalize">
+                          {selectedType === 'multipleChoice' ? 'multiple choice' : selectedType}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {confidence}% confidence
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-8 flex flex-col items-center">
@@ -489,7 +539,7 @@ const AIContentProcessor = () => {
                       Select File
                     </Button>
                     <p className="text-xs text-muted-foreground mt-4">
-                      Supported formats: .txt, .md, .json, .mp3, .wav, .ogg
+                      Supported formats: .txt, .md, .json, .mp3, .wav, .ogg, .m4a, .aac, .flac
                     </p>
                   </div>
                 )}
@@ -580,16 +630,28 @@ const AIContentProcessor = () => {
                   )}
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="content">Content</Label>
-                  <Textarea
-                    id="content"
-                    value={extractedContent}
-                    onChange={(e) => setExtractedContent(e.target.value)}
-                    placeholder="Content text"
-                    className="min-h-[200px]"
-                  />
-                </div>
+                {file.type.startsWith('audio/') && audioURL ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="audio-preview">Audio Preview</Label>
+                    <div className="border rounded-lg p-4">
+                      <audio controls src={audioURL} className="w-full" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      This audio file will be used to create listening comprehension questions
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Content</Label>
+                    <Textarea
+                      id="content"
+                      value={extractedContent}
+                      onChange={(e) => setExtractedContent(e.target.value)}
+                      placeholder="Content text"
+                      className="min-h-[200px]"
+                    />
+                  </div>
+                )}
                 
                 <div className="flex justify-end">
                   <Button 
@@ -678,6 +740,12 @@ const AIContentProcessor = () => {
                                   <li key={i}>{elem}</li>
                                 ))}
                               </ul>
+                            </div>
+                          )}
+                          
+                          {question.audioUrl && (
+                            <div className="ml-4 mt-2">
+                              <audio controls src={question.audioUrl} className="max-w-full" />
                             </div>
                           )}
                         </div>
@@ -835,6 +903,7 @@ const AIContentProcessor = () => {
             setConfidence(0);
             setProgress(0);
             setActiveTab("upload");
+            setAudioURL(null);
             if (fileInputRef.current) {
               fileInputRef.current.value = "";
             }
