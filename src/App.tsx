@@ -16,6 +16,7 @@ import Listening from "./pages/Listening";
 import Writing from "./pages/Writing";
 import Speaking from "./pages/Speaking";
 import AdminDashboard from "./pages/admin/Dashboard";
+import ContentUploader from "./pages/admin/ContentUploader";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/writing" element={<Writing />} />
               <Route path="/speaking" element={<Speaking />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/content-uploader" element={<ContentUploader />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

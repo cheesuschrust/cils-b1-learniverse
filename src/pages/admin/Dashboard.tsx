@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +16,10 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  FileUp
+  FileUp,
+  Upload
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface User {
   id: number;
@@ -130,12 +131,23 @@ const AdminDashboard = () => {
   
   return (
     <div className="container mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
-        Admin Dashboard
-      </h1>
-      <p className="text-muted-foreground mb-8 animate-fade-in">
-        Manage users, view statistics, and control content
-      </p>
+      <div className="flex justify-between items-center mb-8 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Manage users, view statistics, and control content
+          </p>
+        </div>
+        
+        <Link to="/admin/content-uploader">
+          <Button className="flex items-center">
+            <Upload className="h-4 w-4 mr-2" />
+            Content Uploader
+          </Button>
+        </Link>
+      </div>
       
       <Tabs defaultValue="users" className="animate-fade-up">
         <TabsList className="grid w-full grid-cols-3 mb-8">

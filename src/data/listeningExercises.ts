@@ -14,6 +14,7 @@ export interface ListeningExercise {
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   type: "multiple-choice" | "transcript";
   questions: ListeningQuestion[];
+  feedbackLanguage?: "english" | "italian" | "both";
 }
 
 // Function to extract text content from various file types
@@ -35,7 +36,7 @@ export const extractContentFromFile = async (file: File): Promise<string> => {
   
   // Audio files - in a real app, would use a speech-to-text service
   if (fileType.startsWith("audio/")) {
-    return "Audio transcription would occur here with a speech recognition service";
+    return "Audio transcription would occur here with a speech recognition service. In a production environment, this would connect to a service like Web Speech API, Azure Speech Services, or Google Cloud Speech-to-Text.";
   }
   
   // Word documents - in a real app, would use a docx parser
@@ -97,12 +98,70 @@ export const generateQuestions = (content: string, count: number = 4): Listening
   return questions;
 };
 
+// Function to generate bilingual feedback for student responses
+export const generateBilingualFeedback = (
+  accuracy: number, 
+  language: "english" | "italian" | "both" = "both",
+  detailed: boolean = false
+): { english: string, italian: string } => {
+  // Define feedback templates for different accuracy levels
+  const feedbackTemplates = {
+    high: {
+      english: detailed 
+        ? "Excellent work! Your answer demonstrates a strong understanding of the content. Your comprehension is very good, and you've correctly identified the main points."
+        : "Excellent work! Your comprehension is very good.",
+      italian: detailed
+        ? "Ottimo lavoro! La tua risposta dimostra una forte comprensione del contenuto. La tua comprensione è molto buona e hai identificato correttamente i punti principali."
+        : "Ottimo lavoro! La tua comprensione è molto buona."
+    },
+    medium: {
+      english: detailed
+        ? "Good effort! You've understood most of the content, but there are a few details that could be improved. Try to focus on the specific context next time."
+        : "Good effort! You've understood most of the content.",
+      italian: detailed
+        ? "Buon impegno! Hai compreso la maggior parte del contenuto, ma ci sono alcuni dettagli che potrebbero essere migliorati. Prova a concentrarti sul contesto specifico la prossima volta."
+        : "Buon impegno! Hai compreso la maggior parte del contenuto."
+    },
+    low: {
+      english: detailed
+        ? "Keep practicing! You're making progress, but this answer shows some misunderstanding of the content. Try listening to the audio again and focus on key words and phrases."
+        : "Keep practicing! You're making progress.",
+      italian: detailed
+        ? "Continua a esercitarti! Stai facendo progressi, ma questa risposta mostra alcune incomprensioni del contenuto. Prova ad ascoltare nuovamente l'audio e concentrati sulle parole e frasi chiave."
+        : "Continua a esercitarti! Stai facendo progressi."
+    }
+  };
+  
+  // Determine feedback level based on accuracy
+  let feedbackLevel;
+  if (accuracy >= 0.8) {
+    feedbackLevel = 'high';
+  } else if (accuracy >= 0.5) {
+    feedbackLevel = 'medium';
+  } else {
+    feedbackLevel = 'low';
+  }
+  
+  // Get appropriate feedback
+  const feedback = feedbackTemplates[feedbackLevel];
+  
+  // Return feedback in requested language(s)
+  if (language === "english") {
+    return { english: feedback.english, italian: "" };
+  } else if (language === "italian") {
+    return { english: "", italian: feedback.italian };
+  } else {
+    return feedback;
+  }
+};
+
 // Function to add a new listening exercise
 export const addListeningExercise = (
   title: string, 
   audioUrl: string, 
   transcript: string,
   difficulty: "Beginner" | "Intermediate" | "Advanced",
+  feedbackLanguage: "english" | "italian" | "both" = "both",
   customQuestions?: ListeningQuestion[]
 ): ListeningExercise => {
   const newId = Math.max(...listeningExercises.map(ex => ex.id), 0) + 1;
@@ -117,7 +176,8 @@ export const addListeningExercise = (
     transcript,
     difficulty,
     type: "multiple-choice",
-    questions
+    questions,
+    feedbackLanguage
   };
   
   // Add to the array
