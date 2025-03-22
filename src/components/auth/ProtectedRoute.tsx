@@ -18,13 +18,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const { toast } = useToast();
   const [hasShownToast, setHasShownToast] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(true);
 
   // Try to refresh the session when the component mounts
   useEffect(() => {
     const checkAuthentication = async () => {
+      setIsRefreshing(true);
       if (!isAuthenticated && !isLoading) {
-        await refreshSession();
+        try {
+          await refreshSession();
+        } catch (error) {
+          console.error("Error refreshing session:", error);
+        }
       }
+      setIsRefreshing(false);
     };
     
     checkAuthentication();
@@ -33,7 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Handle toast notifications in useEffect, not during render
   useEffect(() => {
     // Only show notifications if we're done loading and not authenticated
-    if (!isLoading && !isAuthenticated && !hasShownToast) {
+    if (!isLoading && !isRefreshing && !isAuthenticated && !hasShownToast) {
       toast({
         title: "Authentication Required",
         description: "Please log in to access this page.",
@@ -43,7 +50,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     // Show admin access denied toast if needed
-    if (!isLoading && isAuthenticated && requireAdmin && user?.role !== "admin" && !hasShownToast) {
+    if (!isLoading && !isRefreshing && isAuthenticated && requireAdmin && user?.role !== "admin" && !hasShownToast) {
       toast({
         title: "Access Denied",
         description: "You need administrator privileges to access this page.",
@@ -51,9 +58,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       });
       setHasShownToast(true);
     }
-  }, [isLoading, isAuthenticated, user, requireAdmin, toast, hasShownToast]);
+  }, [isLoading, isRefreshing, isAuthenticated, user, requireAdmin, toast, hasShownToast]);
 
-  if (isLoading) {
+  // Show loading state while checking authentication
+  if (isLoading || isRefreshing) {
     return (
       <div className="flex items-center justify-center h-[70vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

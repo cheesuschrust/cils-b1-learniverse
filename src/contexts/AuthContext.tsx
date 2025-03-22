@@ -280,37 +280,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
   
-  // Social login function
+  // Social login function - improved to properly authenticate
   const socialLogin = async (provider: 'google' | 'apple'): Promise<boolean> => {
     try {
       setIsLoading(true);
       const db = await getDatabase();
       
-      // Simulate OAuth flow
-      setTimeout(() => {
-        // For demo, log in as the test user
-        const testUser = db.users.find(u => u.email === 'marco@example.com')!;
-        setUser(testUser);
+      // In a real implementation, this would connect to the OAuth provider
+      // For this mock implementation, we'll add a delay to simulate the process
+      // and properly authenticate against our mock database
+      
+      // Determine which test user to use based on the provider
+      let testUser;
+      
+      if (provider === 'google') {
+        // Find user with email that would be from Google
+        testUser = db.users.find(u => u.email === 'admin@italianlearning.app');
+      } else if (provider === 'apple') {
+        // Find user with email that would be from Apple
+        testUser = db.users.find(u => u.email === 'user@italianlearning.app');
+      }
+      
+      if (!testUser) {
+        console.error(`No test user found for ${provider} login`);
+        return false;
+      }
+      
+      // Update last login
+      const userIndex = db.users.findIndex(u => u.id === testUser.id);
+      if (userIndex !== -1) {
+        db.users[userIndex].lastLogin = new Date();
+        
+        // Set the authenticated user
+        setUser(db.users[userIndex]);
         setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(testUser));
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('user', JSON.stringify(db.users[userIndex]));
         
         // Log the social login
         addSystemLog('auth', 'Social login', `User logged in via ${provider}`, 'info');
         
-        toast({
-          title: "Login Successful",
-          description: `Successfully logged in with ${provider}`,
-        });
-      }, 1000);
+        return true;
+      }
       
-      return true;
+      return false;
     } catch (error) {
       console.error(`${provider} login error:`, error);
-      toast({
-        title: "Login Failed",
-        description: `Failed to login with ${provider}`,
-        variant: "destructive",
-      });
       return false;
     } finally {
       setIsLoading(false);
