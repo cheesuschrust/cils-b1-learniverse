@@ -18,37 +18,99 @@ import Speaking from "./pages/Speaking";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ContentUploader from "./pages/admin/ContentUploader";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import CookieConsent from "./components/common/CookieConsent";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-grow pt-20">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/flashcards" element={<Flashcards />} />
-              <Route path="/multiple-choice" element={<MultipleChoice />} />
-              <Route path="/listening" element={<Listening />} />
-              <Route path="/writing" element={<Writing />} />
-              <Route path="/speaking" element={<Speaking />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/content-uploader" element={<ContentUploader />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <div className="min-h-screen flex flex-col">
+            <Navbar />
+            <main className="flex-grow pt-20">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/flashcards" 
+                  element={
+                    <ProtectedRoute>
+                      <Flashcards />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/multiple-choice" 
+                  element={
+                    <ProtectedRoute>
+                      <MultipleChoice />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/listening" 
+                  element={
+                    <ProtectedRoute>
+                      <Listening />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/writing" 
+                  element={
+                    <ProtectedRoute>
+                      <Writing />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/speaking" 
+                  element={
+                    <ProtectedRoute>
+                      <Speaking />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/dashboard" 
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/content-uploader" 
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <ContentUploader />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+          <CookieConsent />
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

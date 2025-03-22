@@ -7,13 +7,23 @@ import {
   CheckSquare,
   Headphones,
   Pen,
-  User,
   Menu,
   X,
   LogOut,
   Mic,
+  UserCircle,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavItem {
   name: string;
@@ -22,18 +32,11 @@ interface NavItem {
 }
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   
-  // Check if user is logged in
-  useEffect(() => {
-    // This will be replaced with actual auth check
-    const userToken = localStorage.getItem("userToken");
-    setIsLoggedIn(!!userToken);
-  }, []);
-
   // Handle scroll events for navbar styling
   useEffect(() => {
     const handleScroll = () => {
@@ -82,13 +85,6 @@ const Navbar = () => {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    setIsLoggedIn(false);
-    // Redirect to home
-    window.location.href = "/";
-  };
   
   return (
     <header 
@@ -109,7 +105,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          {isLoggedIn && (
+          {isAuthenticated && (
             <div className="flex items-center space-x-6">
               {mainLinks.map((link) => (
                 <Link
@@ -127,32 +123,40 @@ const Navbar = () => {
                 </Link>
               ))}
               
-              <Link
-                to="/dashboard"
-                className={cn(
-                  "flex items-center text-sm font-medium transition-colors hover:text-primary",
-                  location.pathname === "/dashboard"
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <User className="w-5 h-5 mr-2" />
-                <span>Dashboard</span>
-              </Link>
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleLogout}
-                className="flex items-center text-sm"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
+                    <UserCircle className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Link to="/dashboard" className="flex w-full items-center">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {user?.role === "admin" && (
+                    <DropdownMenuItem>
+                      <Link to="/admin/dashboard" className="flex w-full items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Admin</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
           
-          {!isLoggedIn && (
+          {!isAuthenticated && (
             <div className="flex items-center space-x-4">
               <Link to="/login">
                 <Button variant="ghost" size="sm">
@@ -184,7 +188,7 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden absolute top-16 inset-x-0 p-4 glass shadow-lg animate-fade-in">
           <nav className="flex flex-col space-y-4 p-4">
-            {isLoggedIn && (
+            {isAuthenticated && (
               <>
                 {mainLinks.map((link) => (
                   <Link
@@ -213,15 +217,31 @@ const Navbar = () => {
                   )}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <User className="w-5 h-5 mr-2" />
+                  <UserCircle className="w-5 h-5 mr-2" />
                   <span>Dashboard</span>
                 </Link>
+                
+                {user?.role === "admin" && (
+                  <Link
+                    to="/admin/dashboard"
+                    className={cn(
+                      "flex items-center text-sm font-medium p-2 rounded-md transition-colors",
+                      location.pathname.startsWith("/admin")
+                        ? "bg-secondary text-primary"
+                        : "text-foreground hover:bg-secondary"
+                    )}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Settings className="w-5 h-5 mr-2" />
+                    <span>Admin</span>
+                  </Link>
+                )}
                 
                 <Button 
                   variant="ghost" 
                   className="flex items-center justify-start text-sm w-full"
                   onClick={() => {
-                    handleLogout();
+                    logout();
                     setIsMenuOpen(false);
                   }}
                 >
@@ -231,7 +251,7 @@ const Navbar = () => {
               </>
             )}
             
-            {!isLoggedIn && (
+            {!isAuthenticated && (
               <div className="flex flex-col space-y-2">
                 <Link to="/login" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
