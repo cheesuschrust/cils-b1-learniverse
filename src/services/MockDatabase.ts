@@ -1,4 +1,3 @@
-
 import { MockDatabase, User, EmailSettings } from "@/contexts/shared-types";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
@@ -83,7 +82,8 @@ export const initializeDatabase = async (): Promise<MockDatabase> => {
       fromEmail: 'noreply@cittadinanza-b2.com',
       fromName: 'CILS B2 Cittadinanza',
       config: {
-        enableSsl: true
+        enableSsl: true, // Make sure this is present and has a value
+        enableSsl: true,
       },
       templates: {
         verification: {
@@ -126,4 +126,3 @@ export const getDatabase = async (): Promise<MockDatabase> => {
   }
   return dbInstance;
 };
-

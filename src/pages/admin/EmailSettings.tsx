@@ -38,11 +38,11 @@ const EmailSettings = () => {
     fromEmail: "",
     fromName: "",
     config: {
+      enableSsl: true, // Ensure this has a default value
       host: "",
       port: 587,
       username: "",
       password: "",
-      enableSsl: true,
       apiKey: ""
     },
     templates: {

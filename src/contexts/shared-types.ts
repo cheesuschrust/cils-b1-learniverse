@@ -69,7 +69,7 @@ export interface UserPreferences {
 }
 
 // Email settings
-export type EmailProvider = 'smtp' | 'mailgun' | 'sendgrid' | 'ses' | 'temporaryEmail';
+export type EmailProvider = 'smtp' | 'mailgun' | 'sendgrid' | 'ses' | 'gmail' | 'temporaryEmail';
 
 export interface EmailTemplate {
   subject: string;
@@ -77,7 +77,7 @@ export interface EmailTemplate {
 }
 
 export interface EmailConfig {
-  enableSsl: boolean;
+  enableSsl?: boolean; // Changed from required to optional to match usage
   host?: string;
   port?: number;
   username?: string;
@@ -85,8 +85,8 @@ export interface EmailConfig {
   apiKey?: string;
   domain?: string;
   region?: string;
-  accessKey?: string;
-  secretKey?: string;
+  accessKey?: string; // Added these missing properties
+  secretKey?: string; // Added these missing properties
 }
 
 export interface EmailSettings {
@@ -110,4 +110,3 @@ export interface MockDatabase {
   resetTokens: Map<string, { email: string; expires: Date }>;
   verificationTokens: Map<string, { email: string; expires: Date }>;
 }
-

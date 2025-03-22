@@ -4,11 +4,11 @@ export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 
 
 // Config for email providers
 export interface EmailProviderConfig {
+  enableSsl?: boolean; // Make this optional to match the shared-types
   host?: string;
   port?: number;
   username?: string;
   password?: string;
-  enableSsl?: boolean;
   apiKey?: string;
   domain?: string;
   accessKey?: string;
