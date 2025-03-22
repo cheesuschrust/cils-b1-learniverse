@@ -6,12 +6,12 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select';
 import {
   Table,
@@ -22,70 +22,98 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { 
-  AlertCircle, 
-  Info, 
-  AlertTriangle,
-  Filter,
-  RefreshCw,
-  CheckCircle,
-  X
-} from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, parseISO } from 'date-fns';
+import { CalendarIcon, XCircle, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 10;
+// Define the system log structure
+interface SystemLog {
+  id: string;
+  timestamp: string;
+  level: "info" | "warning" | "error";
+  category: "auth" | "ai" | "content" | "user" | "system" | "email" | "admin";
+  message: string;
+  details?: string;
+  userId?: string;
+  ipAddress?: string;
+  resolved?: boolean;
+}
+
+// Filter state interface
+interface LogFilters {
+  level: string;
+  category: string;
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+  resolved: boolean | undefined;
+  search: string;
+}
 
 const SystemLogs = () => {
-  const { getSystemLogs, updateSystemLog, user } = useAuth();
+  const { getSystemLogs, updateSystemLog } = useAuth();
   const { toast } = useToast();
   
-  const [filters, setFilters] = useState({
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState<LogFilters>({
     level: '',
     category: '',
-    dateFrom: '',
-    dateTo: '',
-    resolved: undefined as boolean | undefined,
+    dateFrom: undefined,
+    dateTo: undefined,
+    resolved: undefined,
+    search: '',
   });
   
-  const [filteredLogs, setFilteredLogs] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [selectedLog, setSelectedLog] = useState<any | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const logsPerPage = 10;
   
-  // Get unique categories for the filter dropdown
-  const [categories, setCategories] = useState<string[]>([]);
-  
+  // Load logs on mount and when filters change
   useEffect(() => {
     loadLogs();
-  }, []);
+  }, [filters]);
   
   const loadLogs = () => {
     try {
-      // Get all logs
-      const logs = getSystemLogs();
+      // Convert filters to the format expected by getSystemLogs
+      const apiFilters: any = {};
+      if (filters.level) apiFilters.level = filters.level;
+      if (filters.category) apiFilters.category = filters.category;
+      if (filters.dateFrom) apiFilters.dateFrom = filters.dateFrom.toISOString();
+      if (filters.dateTo) apiFilters.dateTo = filters.dateTo.toISOString();
+      if (filters.resolved !== undefined) apiFilters.resolved = filters.resolved;
       
-      // Extract unique categories
-      const uniqueCategories = Array.from(new Set(logs.map(log => log.category)));
-      setCategories(uniqueCategories);
+      let filteredLogs = getSystemLogs(apiFilters);
       
-      // Apply filters and set the filtered logs
-      applyFilters();
+      // Apply search filter locally
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        filteredLogs = filteredLogs.filter(log => 
+          log.message.toLowerCase().includes(searchLower) || 
+          (log.details && log.details.toLowerCase().includes(searchLower)) ||
+          (log.userId && log.userId.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      setLogs(filteredLogs);
+      setCurrentPage(1); // Reset to first page when filters change
     } catch (error) {
       console.error('Error loading logs:', error);
       toast({
@@ -96,84 +124,33 @@ const SystemLogs = () => {
     }
   };
   
-  const applyFilters = () => {
+  const handleResolveLog = (logId: string, resolved: boolean) => {
     try {
-      // Get logs with filters
-      const logs = getSystemLogs({
-        level: filters.level ? (filters.level as "info" | "warning" | "error") : undefined,
-        category: filters.category || undefined,
-        dateFrom: filters.dateFrom || undefined,
-        dateTo: filters.dateTo || undefined,
-        resolved: filters.resolved,
-      });
+      const success = updateSystemLog(logId, { resolved });
       
-      // Sort by timestamp descending (newest first)
-      const sortedLogs = [...logs].sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      
-      setTotalPages(Math.ceil(sortedLogs.length / ITEMS_PER_PAGE));
-      
-      // Apply pagination
-      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-      const paginatedLogs = sortedLogs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-      
-      setFilteredLogs(paginatedLogs);
-    } catch (error) {
-      console.error('Error applying filters:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to filter system logs',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  useEffect(() => {
-    applyFilters();
-  }, [filters, currentPage]);
-  
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-  
-  const resetFilters = () => {
-    setFilters({
-      level: '',
-      category: '',
-      dateFrom: '',
-      dateTo: '',
-      resolved: undefined,
-    });
-    setCurrentPage(1);
-  };
-  
-  const handleLogClick = (log: any) => {
-    setSelectedLog(log);
-    setIsDialogOpen(true);
-  };
-  
-  const toggleLogResolution = async (logId: string, currentState: boolean) => {
-    const success = updateSystemLog(logId, { resolved: !currentState });
-    
-    if (success) {
-      toast({
-        title: 'Success',
-        description: `Log ${!currentState ? 'marked as resolved' : 'unmarked as resolved'}`,
-      });
-      
-      // Update the selected log if it's open
-      if (selectedLog && selectedLog.id === logId) {
-        setSelectedLog({
-          ...selectedLog,
-          resolved: !currentState,
+      if (success) {
+        // Update local state
+        setLogs(logs.map(log => 
+          log.id === logId ? { ...log, resolved } : log
+        ));
+        
+        if (selectedLog && selectedLog.id === logId) {
+          setSelectedLog({ ...selectedLog, resolved });
+        }
+        
+        toast({
+          title: resolved ? 'Log Resolved' : 'Log Marked as Unresolved',
+          description: `Log has been marked as ${resolved ? 'resolved' : 'unresolved'}`,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update log status',
+          variant: 'destructive',
         });
       }
-      
-      // Refresh logs
-      applyFilters();
-    } else {
+    } catch (error) {
+      console.error('Error resolving log:', error);
       toast({
         title: 'Error',
         description: 'Failed to update log status',
@@ -182,88 +159,53 @@ const SystemLogs = () => {
     }
   };
   
-  const getLevelIcon = (level: string) => {
+  const handleFilterChange = (field: keyof LogFilters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  const clearFilters = () => {
+    setFilters({
+      level: '',
+      category: '',
+      dateFrom: undefined,
+      dateTo: undefined,
+      resolved: undefined,
+      search: '',
+    });
+  };
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(logs.length / logsPerPage);
+  const indexOfLastLog = currentPage * logsPerPage;
+  const indexOfFirstLog = indexOfLastLog - logsPerPage;
+  const currentLogs = logs.slice(indexOfFirstLog, indexOfLastLog);
+  
+  const getLevelBadge = (level: "info" | "warning" | "error") => {
     switch (level) {
-      case 'info':
-        return <Info className="h-4 w-4 text-blue-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case "info":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+            <Info className="w-3 h-3 mr-1" /> Info
+          </Badge>
+        );
+      case "warning":
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+            <AlertTriangle className="w-3 h-3 mr-1" /> Warning
+          </Badge>
+        );
+      case "error":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+            <XCircle className="w-3 h-3 mr-1" /> Error
+          </Badge>
+        );
       default:
         return null;
     }
-  };
-  
-  const getLevelBadge = (level: string) => {
-    switch (level) {
-      case 'info':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Info</Badge>;
-      case 'warning':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">Warning</Badge>;
-      case 'error':
-        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">Error</Badge>;
-      default:
-        return null;
-    }
-  };
-  
-  const formatDateTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy HH:mm:ss');
-    } catch (error) {
-      return dateString;
-    }
-  };
-  
-  // Render pagination controls
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-    
-    return (
-      <Pagination className="mt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious 
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-            />
-          </PaginationItem>
-          
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            // Show pages around current page
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-            
-            return (
-              <PaginationItem key={pageNum}>
-                <PaginationLink
-                  isActive={currentPage === pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </PaginationLink>
-              </PaginationItem>
-            );
-          })}
-          
-          <PaginationItem>
-            <PaginationNext 
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
-    );
   };
   
   return (
@@ -271,267 +213,353 @@ const SystemLogs = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">System Logs</h1>
-          <Button onClick={loadLogs} size="sm" variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
         </div>
         
         {/* Filters */}
-        <div className="bg-white rounded-lg border p-4 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-4 w-4" />
-            <h2 className="font-medium">Filters</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="level-filter">Level</Label>
-              <Select
-                value={filters.level}
-                onValueChange={(value) => handleFilterChange('level', value)}
-              >
-                <SelectTrigger id="level-filter">
-                  <SelectValue placeholder="All Levels" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Levels</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+            <CardDescription>
+              Filter logs by various criteria
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="level-filter">Log Level</Label>
+                <Select
+                  value={filters.level}
+                  onValueChange={(value) => handleFilterChange('level', value)}
+                >
+                  <SelectTrigger id="level-filter">
+                    <SelectValue placeholder="All Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Levels</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="category-filter">Category</Label>
+                <Select
+                  value={filters.category}
+                  onValueChange={(value) => handleFilterChange('category', value)}
+                >
+                  <SelectTrigger id="category-filter">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="auth">Authentication</SelectItem>
+                    <SelectItem value="ai">AI</SelectItem>
+                    <SelectItem value="content">Content</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="resolved-filter">Status</Label>
+                <Select
+                  value={filters.resolved === undefined ? '' : filters.resolved ? 'resolved' : 'unresolved'}
+                  onValueChange={(value) => {
+                    if (value === '') {
+                      handleFilterChange('resolved', undefined);
+                    } else {
+                      handleFilterChange('resolved', value === 'resolved');
+                    }
+                  }}
+                >
+                  <SelectTrigger id="resolved-filter">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Status</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="unresolved">Unresolved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>From Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filters.dateFrom ? (
+                        format(filters.dateFrom, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={filters.dateFrom}
+                      onSelect={(date) => handleFilterChange('dateFrom', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>To Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filters.dateTo ? (
+                        format(filters.dateTo, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={filters.dateTo}
+                      onSelect={(date) => handleFilterChange('dateTo', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <Input
+                  id="search"
+                  placeholder="Search in logs..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                />
+              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="category-filter">Category</Label>
-              <Select
-                value={filters.category}
-                onValueChange={(value) => handleFilterChange('category', value)}
-              >
-                <SelectTrigger id="category-filter">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="dateFrom">From Date</Label>
-              <Input
-                id="dateFrom"
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="dateTo">To Date</Label>
-              <Input
-                id="dateTo"
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-between mt-4">
-            <div>
-              <Label htmlFor="resolved-filter">Status</Label>
-              <Select
-                value={filters.resolved === undefined ? "" : String(filters.resolved)}
-                onValueChange={(value) => {
-                  if (value === "") {
-                    handleFilterChange('resolved', undefined);
-                  } else {
-                    handleFilterChange('resolved', value === "true");
-                  }
-                }}
-              >
-                <SelectTrigger id="resolved-filter" className="w-40">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
-                  <SelectItem value="false">Unresolved</SelectItem>
-                  <SelectItem value="true">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button variant="outline" onClick={resetFilters}>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+            >
               Clear Filters
             </Button>
+          </CardFooter>
+        </Card>
+        
+        {/* Log Table */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Log Entries</CardTitle>
+                <CardDescription>
+                  Showing {indexOfFirstLog + 1} to {Math.min(indexOfLastLog, logs.length)} of {logs.length} logs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Level</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="w-[150px]">Category</TableHead>
+                        <TableHead className="w-[180px]">Timestamp</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentLogs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No logs found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        currentLogs.map((log) => (
+                          <TableRow 
+                            key={log.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setSelectedLog(log)}
+                          >
+                            <TableCell>{getLevelBadge(log.level)}</TableCell>
+                            <TableCell className="font-medium">{log.message}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{log.category}</Badge>
+                            </TableCell>
+                            <TableCell>{format(parseISO(log.timestamp), 'PPp')}</TableCell>
+                            <TableCell>
+                              {log.resolved ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Resolved
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300">
+                                  Unresolved
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+              {totalPages > 1 && (
+                <CardFooter>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          isActive={currentPage > 1}
+                          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} 
+                        />
+                      </PaginationItem>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink 
+                            isActive={page === currentPage}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          isActive={currentPage < totalPages}
+                          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </CardFooter>
+              )}
+            </Card>
+          </div>
+          
+          {/* Log Details */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Log Details</CardTitle>
+                <CardDescription>
+                  Selected log information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {selectedLog ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="block text-sm font-medium mb-1">Level</Label>
+                      <div>{getLevelBadge(selectedLog.level)}</div>
+                    </div>
+                    
+                    <div>
+                      <Label className="block text-sm font-medium mb-1">Category</Label>
+                      <Badge variant="outline">{selectedLog.category}</Badge>
+                    </div>
+                    
+                    <div>
+                      <Label className="block text-sm font-medium mb-1">Timestamp</Label>
+                      <p className="text-sm">{format(parseISO(selectedLog.timestamp), 'PPpp')}</p>
+                    </div>
+                    
+                    <div>
+                      <Label className="block text-sm font-medium mb-1">Message</Label>
+                      <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.message}</p>
+                    </div>
+                    
+                    {selectedLog.details && (
+                      <div>
+                        <Label className="block text-sm font-medium mb-1">Details</Label>
+                        <pre className="text-xs p-2 bg-muted rounded-md whitespace-pre-wrap font-mono">
+                          {selectedLog.details}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {selectedLog.userId && (
+                      <div>
+                        <Label className="block text-sm font-medium mb-1">User ID</Label>
+                        <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.userId}</p>
+                      </div>
+                    )}
+                    
+                    {selectedLog.ipAddress && (
+                      <div>
+                        <Label className="block text-sm font-medium mb-1">IP Address</Label>
+                        <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.ipAddress}</p>
+                      </div>
+                    )}
+                    
+                    <div className="pt-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="resolved" 
+                          checked={selectedLog.resolved}
+                          onCheckedChange={(checked) => {
+                            handleResolveLog(selectedLog.id, checked === true);
+                          }}
+                        />
+                        <label
+                          htmlFor="resolved"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          Mark as resolved
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Select a log to view details</p>
+                  </div>
+                )}
+              </CardContent>
+              {selectedLog && (
+                <CardFooter>
+                  <Button
+                    variant={selectedLog.resolved ? "outline" : "default"}
+                    className="w-full"
+                    onClick={() => handleResolveLog(selectedLog.id, !selectedLog.resolved)}
+                  >
+                    {selectedLog.resolved ? (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Mark as Unresolved
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Mark as Resolved
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              )}
+            </Card>
           </div>
         </div>
-        
-        {/* Results Table */}
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Time</TableHead>
-                <TableHead className="w-[100px]">Level</TableHead>
-                <TableHead className="w-[120px]">Category</TableHead>
-                <TableHead>Message</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[80px]">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No logs found matching your filters
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredLogs.map((log) => (
-                  <TableRow key={log.id} className="cursor-pointer hover:bg-gray-50">
-                    <TableCell className="font-mono text-xs" onClick={() => handleLogClick(log)}>
-                      {formatDateTime(log.timestamp)}
-                    </TableCell>
-                    <TableCell onClick={() => handleLogClick(log)}>
-                      <div className="flex items-center">
-                        {getLevelIcon(log.level)}
-                        <span className="ml-2 capitalize">{log.level}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell onClick={() => handleLogClick(log)}>
-                      <Badge variant="outline" className="capitalize">
-                        {log.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-md truncate" onClick={() => handleLogClick(log)}>
-                      {log.message}
-                    </TableCell>
-                    <TableCell onClick={() => handleLogClick(log)}>
-                      {log.resolved ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
-                          Resolved
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
-                          Unresolved
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLogResolution(log.id, log.resolved);
-                        }}
-                      >
-                        {log.resolved ? (
-                          <X className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          
-          {renderPagination()}
-        </div>
-        
-        {/* Log Details Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Log Details</DialogTitle>
-              <DialogDescription>
-                Full information about the selected log entry
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedLog && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Timestamp</h3>
-                    <p className="font-mono">{formatDateTime(selectedLog.timestamp)}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Level</h3>
-                    <div className="flex items-center mt-1">
-                      {getLevelBadge(selectedLog.level)}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Category</h3>
-                    <p className="capitalize">{selectedLog.category}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                    <div className="flex items-center mt-1">
-                      {selectedLog.resolved ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
-                          Resolved
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
-                          Unresolved
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Message</h3>
-                  <p className="mt-1">{selectedLog.message}</p>
-                </div>
-                
-                {selectedLog.details && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Details</h3>
-                    <pre className="mt-1 p-3 bg-gray-50 rounded text-sm font-mono overflow-x-auto">
-                      {selectedLog.details}
-                    </pre>
-                  </div>
-                )}
-                
-                {selectedLog.userId && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">User ID</h3>
-                    <p className="mt-1 font-mono text-sm">{selectedLog.userId}</p>
-                  </div>
-                )}
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    variant={selectedLog.resolved ? "destructive" : "default"}
-                    onClick={() => toggleLogResolution(selectedLog.id, selectedLog.resolved)}
-                  >
-                    {selectedLog.resolved ? "Mark as Unresolved" : "Mark as Resolved"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </ProtectedRoute>
   );

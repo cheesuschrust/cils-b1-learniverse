@@ -106,7 +106,7 @@ interface SystemLog {
   id: string;
   timestamp: string;
   level: "info" | "warning" | "error";
-  category: "auth" | "ai" | "content" | "user" | "system" | "email";
+  category: "auth" | "ai" | "content" | "user" | "system" | "email" | "admin";
   message: string;
   details?: string;
   userId?: string;
@@ -1085,13 +1085,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("All required fields must be provided");
       }
 
+      // Log with correct category
+      addSystemLogInternal({
+        level: "info",
+        category: "user", // Changed from "admin" to "user"
+        message: "New admin account created",
+        userId: user.id,
+      });
+      
       // ... rest of addAdmin implementation remains unchanged
     } catch (error) {
       console.error("Error adding admin:", error);
       
       addSystemLogInternal({
         level: "error",
-        category: "admin",
+        category: "user", // Changed from "admin" to "user"
         message: "Error adding admin",
         details: String(error),
       });

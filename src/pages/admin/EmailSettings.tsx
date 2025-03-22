@@ -101,7 +101,7 @@ const EmailSettings = () => {
       setSettings((prev) => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof EmailSettings],
+          ...(prev[parent as keyof EmailSettings] as object),
           [child]: value,
         },
       }));
@@ -378,7 +378,7 @@ const EmailSettings = () => {
                           Email Verification Template
                         </Label>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Available variables: {{name}}, {{verificationLink}}
+                          Available variables: &#123;&#123;name&#125;&#125;, &#123;&#123;verificationLink&#125;&#125;
                         </p>
                         <Textarea
                           id="verification-template"
@@ -396,7 +396,7 @@ const EmailSettings = () => {
                           Password Reset Template
                         </Label>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Available variables: {{name}}, {{resetLink}}
+                          Available variables: &#123;&#123;name&#125;&#125;, &#123;&#123;resetLink&#125;&#125;
                         </p>
                         <Textarea
                           id="passwordReset-template"
@@ -414,7 +414,7 @@ const EmailSettings = () => {
                           Welcome Email Template
                         </Label>
                         <p className="text-sm text-muted-foreground mb-2">
-                          Available variables: {{name}}
+                          Available variables: &#123;&#123;name&#125;&#125;
                         </p>
                         <Textarea
                           id="welcome-template"
