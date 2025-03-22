@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -446,15 +447,16 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
   };
 
-  const onDrop = (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    handleFileSelect({ target: { files: [file] } });
+  const onDrop = (files: File[]) => {
+    if (files.length === 0) return;
+    const file = files[0];
+    const event = {
+      target: {
+        files: [file] as unknown as FileList
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    handleFileSelect(event);
   };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-    onDrop,
-    accept: acceptedFileTypes
-  });
 
   return (
     <Card className="w-full">

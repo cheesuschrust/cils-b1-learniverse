@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,43 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Helper function to get activity icon
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "flashcards":
+        return <Book className="h-4 w-4 text-primary" />;
+      case "multiple-choice":
+        return <CheckSquare className="h-4 w-4 text-primary" />;
+      case "listening":
+        return <Headphones className="h-4 w-4 text-primary" />;
+      case "writing":
+        return <Pen className="h-4 w-4 text-primary" />;
+      case "speaking":
+        return <Mic className="h-4 w-4 text-primary" />;
+      default:
+        return <Book className="h-4 w-4 text-primary" />;
+    }
+  };
+  
+  // Helper function to get result icon
+  const getResultIcon = (result: "correct" | "incorrect" | "completed") => {
+    switch (result) {
+      case "correct":
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "incorrect":
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
+      case "completed":
+        return <Clock className="h-4 w-4 text-primary" />;
+      default:
+        return null;
+    }
+  };
+  
+  // Handler for viewing calendar
+  const handleViewCalendar = () => {
+    navigate("/calendar");
+  };
+  
   // Fetch user data and progress on component mount
   useEffect(() => {
     if (user) {
@@ -107,7 +145,7 @@ const Dashboard = () => {
             setRecentActivities(JSON.parse(storedActivities));
           } else {
             // Default activities for new users
-            const initialActivities = [
+            const initialActivities: Activity[] = [
               {
                 id: 1,
                 type: "multiple-choice",
@@ -689,4 +727,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

@@ -1,13 +1,23 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { AdminHeader } from "@/components/layout/AdminHeader";
+import AdminHeader from "@/components/layout/AdminHeader";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { Home, Users, Upload, Settings, FileUp, Brain } from "lucide-react";
 
 const AdminLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
-      <AdminHeader />
+      <AdminHeader 
+        toggleSidebar={toggleSidebar} 
+        isSidebarOpen={isSidebarOpen} 
+      />
 
       <div className="flex-1 flex">
         <AdminSidebar 
@@ -19,6 +29,7 @@ const AdminLayout = () => {
             { to: "/admin/file-uploader", label: "File Uploader", icon: <FileUp className="h-4 w-4" /> },
             { to: "/admin/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
           ]}
+          isOpen={isSidebarOpen}
         />
 
         <main className="flex-1 overflow-y-auto bg-background">
