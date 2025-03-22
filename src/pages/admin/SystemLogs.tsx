@@ -1,567 +1,395 @@
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO } from 'date-fns';
-import { CalendarIcon, XCircle, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useAuth, LogCategory } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { DownloadIcon, FilterIcon, RefreshCw, Trash2, AlertCircle, CheckCircle, InfoIcon, Search, ArrowLeft, ArrowRight } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
-// Define the system log structure
+// Update the SystemLog interface to match LogEntry from AuthContext
 interface SystemLog {
   id: string;
-  timestamp: string;
-  level: "info" | "warning" | "error";
-  category: "auth" | "ai" | "content" | "user" | "system" | "email" | "admin";
-  message: string;
-  details?: string;
+  timestamp: Date;
+  category: LogCategory;
+  action: string;
   userId?: string;
-  ipAddress?: string;
-  resolved?: boolean;
-}
-
-// Filter state interface
-interface LogFilters {
-  level: string;
-  category: string;
-  dateFrom: Date | undefined;
-  dateTo: Date | undefined;
-  resolved: boolean | undefined;
-  search: string;
+  details?: string;
+  level: 'info' | 'warning' | 'error';
 }
 
 const SystemLogs = () => {
   const { getSystemLogs, updateSystemLog } = useAuth();
-  const { toast } = useToast();
-  
   const [logs, setLogs] = useState<SystemLog[]>([]);
-  const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
+  const [activeCategory, setActiveCategory] = useState<LogCategory | "all">("all");
+  const [activeLevel, setActiveLevel] = useState<'all' | 'info' | 'warning' | 'error'>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<LogFilters>({
-    level: '',
-    category: '',
-    dateFrom: undefined,
-    dateTo: undefined,
-    resolved: undefined,
-    search: '',
-  });
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
-  const logsPerPage = 10;
+  // Format date for display
+  const formatDate = (date: Date) => {
+    return format(date, "MMM d, yyyy HH:mm:ss");
+  };
+  
+  // Load logs based on current filters
+  const loadLogs = () => {
+    let category: LogCategory | undefined = activeCategory as LogCategory;
+    if (activeCategory === "all") {
+      category = undefined;
+    }
+    
+    let level: 'info' | 'warning' | 'error' | undefined = undefined;
+    if (activeLevel !== 'all') {
+      level = activeLevel;
+    }
+    
+    let startDateTime: Date | undefined = undefined;
+    if (startDate) {
+      startDateTime = new Date(startDate);
+    }
+    
+    let endDateTime: Date | undefined = undefined;
+    if (endDate) {
+      endDateTime = new Date(endDate);
+      // Set to end of day
+      endDateTime.setHours(23, 59, 59, 999);
+    }
+    
+    // Get logs with filters
+    const fetchedLogs = getSystemLogs(category, level, startDateTime, endDateTime);
+    
+    // Apply search filter if needed
+    let filteredLogs = fetchedLogs;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filteredLogs = fetchedLogs.filter(log => 
+        log.action.toLowerCase().includes(searchLower) || 
+        (log.details && log.details.toLowerCase().includes(searchLower)) ||
+        (log.userId && log.userId.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    setLogs(filteredLogs);
+  };
   
   // Load logs on mount and when filters change
   useEffect(() => {
     loadLogs();
-  }, [filters]);
+  }, [activeCategory, activeLevel, searchTerm, startDate, endDate]);
   
-  const loadLogs = () => {
-    try {
-      // Convert filters to the format expected by getSystemLogs
-      const apiFilters: any = {};
-      if (filters.level) apiFilters.level = filters.level;
-      if (filters.category) apiFilters.category = filters.category;
-      if (filters.dateFrom) apiFilters.dateFrom = filters.dateFrom.toISOString();
-      if (filters.dateTo) apiFilters.dateTo = filters.dateTo.toISOString();
-      if (filters.resolved !== undefined) apiFilters.resolved = filters.resolved;
-      
-      let filteredLogs = getSystemLogs(apiFilters);
-      
-      // Apply search filter locally
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredLogs = filteredLogs.filter(log => 
-          log.message.toLowerCase().includes(searchLower) || 
-          (log.details && log.details.toLowerCase().includes(searchLower)) ||
-          (log.userId && log.userId.toLowerCase().includes(searchLower))
+  // Get level badge style
+  const getLevelBadge = (level: 'info' | 'warning' | 'error') => {
+    switch (level) {
+      case 'info':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <InfoIcon className="h-3 w-3 mr-1" />
+            Info
+          </Badge>
         );
-      }
-      
-      setLogs(filteredLogs);
-      setCurrentPage(1); // Reset to first page when filters change
-    } catch (error) {
-      console.error('Error loading logs:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load system logs',
-        variant: 'destructive',
-      });
+      case 'warning':
+        return (
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Warning
+          </Badge>
+        );
+      case 'error':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Error
+          </Badge>
+        );
     }
   };
   
-  const handleResolveLog = (logId: string, resolved: boolean) => {
-    try {
-      const success = updateSystemLog(logId, { resolved });
-      
-      if (success) {
-        // Update local state
-        setLogs(logs.map(log => 
-          log.id === logId ? { ...log, resolved } : log
-        ));
-        
-        if (selectedLog && selectedLog.id === logId) {
-          setSelectedLog({ ...selectedLog, resolved });
-        }
-        
-        toast({
-          title: resolved ? 'Log Resolved' : 'Log Marked as Unresolved',
-          description: `Log has been marked as ${resolved ? 'resolved' : 'unresolved'}`,
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to update log status',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error resolving log:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update log status',
-        variant: 'destructive',
-      });
+  // Get category badge
+  const getCategoryBadge = (category: LogCategory) => {
+    let color = "";
+    switch (category) {
+      case 'auth':
+        color = "bg-purple-50 text-purple-700 border-purple-200";
+        break;
+      case 'user':
+        color = "bg-green-50 text-green-700 border-green-200";
+        break;
+      case 'content':
+        color = "bg-blue-50 text-blue-700 border-blue-200";
+        break;
+      case 'email':
+        color = "bg-amber-50 text-amber-700 border-amber-200";
+        break;
+      case 'system':
+        color = "bg-gray-50 text-gray-700 border-gray-200";
+        break;
+      case 'ai':
+        color = "bg-cyan-50 text-cyan-700 border-cyan-200";
+        break;
     }
-  };
-  
-  const handleFilterChange = (field: keyof LogFilters, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  
-  const clearFilters = () => {
-    setFilters({
-      level: '',
-      category: '',
-      dateFrom: undefined,
-      dateTo: undefined,
-      resolved: undefined,
-      search: '',
-    });
+    
+    return (
+      <Badge variant="outline" className={color}>
+        {category}
+      </Badge>
+    );
   };
   
   // Calculate pagination
-  const totalPages = Math.ceil(logs.length / logsPerPage);
-  const indexOfLastLog = currentPage * logsPerPage;
-  const indexOfFirstLog = indexOfLastLog - logsPerPage;
-  const currentLogs = logs.slice(indexOfFirstLog, indexOfLastLog);
+  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLogs = logs.slice(startIndex, startIndex + itemsPerPage);
   
-  const getLevelBadge = (level: "info" | "warning" | "error") => {
-    switch (level) {
-      case "info":
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-            <Info className="w-3 h-3 mr-1" /> Info
-          </Badge>
-        );
-      case "warning":
-        return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-            <AlertTriangle className="w-3 h-3 mr-1" /> Warning
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
-            <XCircle className="w-3 h-3 mr-1" /> Error
-          </Badge>
-        );
-      default:
-        return null;
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
     }
   };
   
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+  
+  // Handle export to CSV
+  const exportToCSV = () => {
+    const header = "ID,Timestamp,Category,Action,User ID,Details,Level\n";
+    const csvContent = logs.map(log => {
+      const timestamp = formatDate(log.timestamp);
+      const details = log.details ? `"${log.details.replace(/"/g, '""')}"` : "";
+      return `${log.id},"${timestamp}",${log.category},"${log.action.replace(/"/g, '""')}",${log.userId || ""},"${details}",${log.level}`;
+    }).join('\n');
+    
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `system_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  // Reset filters
+  const resetFilters = () => {
+    setActiveCategory("all");
+    setActiveLevel("all");
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
+  
   return (
-    <ProtectedRoute requireAdmin>
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">System Logs</h1>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">System Logs</CardTitle>
+          <CardDescription>View and analyze system activity logs</CardDescription>
+        </CardHeader>
         
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-            <CardDescription>
-              Filter logs by various criteria
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="level-filter">Log Level</Label>
-                <Select
-                  value={filters.level}
-                  onValueChange={(value) => handleFilterChange('level', value)}
-                >
-                  <SelectTrigger id="level-filter">
-                    <SelectValue placeholder="All Levels" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Levels</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-grow relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search logs..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={loadLogs} 
+                title="Refresh logs"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
               
-              <div className="space-y-2">
-                <Label htmlFor="category-filter">Category</Label>
-                <Select
-                  value={filters.category}
-                  onValueChange={(value) => handleFilterChange('category', value)}
-                >
-                  <SelectTrigger id="category-filter">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
-                    <SelectItem value="auth">Authentication</SelectItem>
-                    <SelectItem value="ai">AI</SelectItem>
-                    <SelectItem value="content">Content</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={exportToCSV} 
+                title="Export logs to CSV"
+              >
+                <DownloadIcon className="h-4 w-4" />
+              </Button>
               
-              <div className="space-y-2">
-                <Label htmlFor="resolved-filter">Status</Label>
-                <Select
-                  value={filters.resolved === undefined ? '' : filters.resolved ? 'resolved' : 'unresolved'}
-                  onValueChange={(value) => {
-                    if (value === '') {
-                      handleFilterChange('resolved', undefined);
-                    } else {
-                      handleFilterChange('resolved', value === 'resolved');
-                    }
-                  }}
-                >
-                  <SelectTrigger id="resolved-filter">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="unresolved">Unresolved</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={resetFilters} 
+                title="Reset filters"
+              >
+                <FilterIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+              <Select value={activeCategory} onValueChange={(value) => setActiveCategory(value as LogCategory | "all")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="auth">Authentication</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="content">Content</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="ai">AI</SelectItem>
+                </SelectContent>
+              </Select>
               
-              <div className="space-y-2">
-                <Label>From Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateFrom ? (
-                        format(filters.dateFrom, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={filters.dateFrom}
-                      onSelect={(date) => handleFilterChange('dateFrom', date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Select value={activeLevel} onValueChange={(value) => setActiveLevel(value as 'all' | 'info' | 'warning' | 'error')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
+                </SelectContent>
+              </Select>
               
-              <div className="space-y-2">
-                <Label>To Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateTo ? (
-                        format(filters.dateTo, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={filters.dateTo}
-                      onSelect={(date) => handleFilterChange('dateTo', date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="search">Search</Label>
+              <div>
                 <Input
-                  id="search"
-                  placeholder="Search in logs..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  placeholder="Start date"
+                />
+              </div>
+              
+              <div>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  placeholder="End date"
                 />
               </div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              variant="outline" 
-              onClick={clearFilters}
-            >
-              Clear Filters
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        {/* Log Table */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Log Entries</CardTitle>
-                <CardDescription>
-                  Showing {indexOfFirstLog + 1} to {Math.min(indexOfLastLog, logs.length)} of {logs.length} logs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[100px]">Level</TableHead>
-                        <TableHead>Message</TableHead>
-                        <TableHead className="w-[150px]">Category</TableHead>
-                        <TableHead className="w-[180px]">Timestamp</TableHead>
-                        <TableHead className="w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentLogs.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No logs found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        currentLogs.map((log) => (
-                          <TableRow 
-                            key={log.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => setSelectedLog(log)}
-                          >
-                            <TableCell>{getLevelBadge(log.level)}</TableCell>
-                            <TableCell className="font-medium">{log.message}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{log.category}</Badge>
-                            </TableCell>
-                            <TableCell>{format(parseISO(log.timestamp), 'PPp')}</TableCell>
-                            <TableCell>
-                              {log.resolved ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                  <CheckCircle className="w-3 h-3 mr-1" /> Resolved
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300">
-                                  Unresolved
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-              {totalPages > 1 && (
-                <CardFooter>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          isActive={currentPage > 1}
-                          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} 
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink 
-                            isActive={page === currentPage}
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      
-                      <PaginationItem>
-                        <PaginationNext 
-                          isActive={currentPage < totalPages}
-                          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </CardFooter>
-              )}
-            </Card>
           </div>
           
-          {/* Log Details */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Log Details</CardTitle>
-                <CardDescription>
-                  Selected log information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {selectedLog ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="block text-sm font-medium mb-1">Level</Label>
-                      <div>{getLevelBadge(selectedLog.level)}</div>
-                    </div>
-                    
-                    <div>
-                      <Label className="block text-sm font-medium mb-1">Category</Label>
-                      <Badge variant="outline">{selectedLog.category}</Badge>
-                    </div>
-                    
-                    <div>
-                      <Label className="block text-sm font-medium mb-1">Timestamp</Label>
-                      <p className="text-sm">{format(parseISO(selectedLog.timestamp), 'PPpp')}</p>
-                    </div>
-                    
-                    <div>
-                      <Label className="block text-sm font-medium mb-1">Message</Label>
-                      <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.message}</p>
-                    </div>
-                    
-                    {selectedLog.details && (
-                      <div>
-                        <Label className="block text-sm font-medium mb-1">Details</Label>
-                        <pre className="text-xs p-2 bg-muted rounded-md whitespace-pre-wrap font-mono">
-                          {selectedLog.details}
-                        </pre>
-                      </div>
-                    )}
-                    
-                    {selectedLog.userId && (
-                      <div>
-                        <Label className="block text-sm font-medium mb-1">User ID</Label>
-                        <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.userId}</p>
-                      </div>
-                    )}
-                    
-                    {selectedLog.ipAddress && (
-                      <div>
-                        <Label className="block text-sm font-medium mb-1">IP Address</Label>
-                        <p className="text-sm p-2 bg-muted rounded-md">{selectedLog.ipAddress}</p>
-                      </div>
-                    )}
-                    
-                    <div className="pt-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="resolved" 
-                          checked={selectedLog.resolved}
-                          onCheckedChange={(checked) => {
-                            handleResolveLog(selectedLog.id, checked === true);
-                          }}
-                        />
-                        <label
-                          htmlFor="resolved"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          Mark as resolved
-                        </label>
-                      </div>
-                    </div>
-                  </div>
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead className="w-full">Action</TableHead>
+                  <TableHead>User ID</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No logs found
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Select a log to view details</p>
-                  </div>
+                  paginatedLogs.map(log => (
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(log.timestamp)}
+                      </TableCell>
+                      <TableCell>
+                        {getCategoryBadge(log.category)}
+                      </TableCell>
+                      <TableCell>
+                        {getLevelBadge(log.level)}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{log.action}</div>
+                          {log.details && (
+                            <div className="text-sm text-muted-foreground">{log.details}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {log.userId || "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
-              </CardContent>
-              {selectedLog && (
-                <CardFooter>
-                  <Button
-                    variant={selectedLog.resolved ? "outline" : "default"}
-                    className="w-full"
-                    onClick={() => handleResolveLog(selectedLog.id, !selectedLog.resolved)}
-                  >
-                    {selectedLog.resolved ? (
-                      <>
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Mark as Unresolved
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Mark as Resolved
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
+              </TableBody>
+            </Table>
           </div>
-        </div>
-      </div>
-    </ProtectedRoute>
+          
+          {logs.length > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, logs.length)} of {logs.length} entries
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <span className="text-sm">
+                  Page {currentPage} of {totalPages || 1}
+                </span>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+                
+                <Select 
+                  value={itemsPerPage.toString()} 
+                  onValueChange={(value) => {
+                    setItemsPerPage(parseInt(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 per page</SelectItem>
+                    <SelectItem value="25">25 per page</SelectItem>
+                    <SelectItem value="50">50 per page</SelectItem>
+                    <SelectItem value="100">100 per page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

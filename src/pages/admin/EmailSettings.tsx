@@ -1,289 +1,142 @@
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Switch,
-  SwitchThumb,
-  SwitchTrack
-} from '@/components/ui/switch';
-import { Loader2, Save, Send, RefreshCw, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-// Enhanced email settings interface with stronger typing
-interface EmailTemplateContent {
-  subject: string;
-  body: string;
-}
-
-interface EmailTemplates {
-  verification: EmailTemplateContent;
-  passwordReset: EmailTemplateContent;
-  welcome: EmailTemplateContent;
-}
-
-interface EmailProviderConfig {
-  host?: string;
-  port?: number;
-  username?: string;
-  password?: string;
-  apiKey?: string;
-  region?: string;
-  enableSsl?: boolean;
-  clientId?: string;
-  clientSecret?: string;
-  refreshToken?: string;
-  accessToken?: string;
-}
-
-interface EmailSettings {
-  provider: 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
-  fromEmail: string;
-  fromName: string;
-  config: EmailProviderConfig;
-  templates: EmailTemplates;
-  temporaryInboxDuration?: number; // In hours (for temporary email service)
-}
-
-const defaultTemplates: EmailTemplates = {
-  verification: {
-    subject: "Verify Your Email - CILS B2 Cittadinanza",
-    body: "<p>Hello {{name}},</p><p>Please verify your email by clicking <a href='{{verificationLink}}'>here</a>.</p><p>Thank you for joining CILS B2 Cittadinanza Question of the Day!</p>"
-  },
-  passwordReset: {
-    subject: "Reset Your Password - CILS B2 Cittadinanza",
-    body: "<p>Hello {{name}},</p><p>Click <a href='{{resetLink}}'>here</a> to reset your password.</p><p>If you didn't request this, please ignore this email.</p>"
-  },
-  welcome: {
-    subject: "Welcome to CILS B2 Cittadinanza Question of the Day!",
-    body: "<p>Welcome to CILS B2 Cittadinanza, {{name}}!</p><p>We're excited to have you on board. Get ready to improve your Italian language skills!</p>"
-  }
-};
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Mail, 
+  Server, 
+  Save, 
+  Settings, 
+  Send, 
+  AlertTriangle, 
+  CheckCircle2,
+  Trash,
+  FileText,
+  TestTube,
+  Clock
+} from "lucide-react";
+import { EmailProvider, EmailSettings as EmailSettingsType } from "@/services/EmailService";
+import { toast } from "@/components/ui/use-toast";
 
 const EmailSettings = () => {
-  const { getEmailSettings, updateEmailSettings, user } = useAuth();
-  const { toast } = useToast();
+  const { getEmailSettings, updateEmailSettings } = useAuth();
+  const [activeTab, setActiveTab] = useState("general");
+  const [isLoading, setIsLoading] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
   
-  const [settings, setSettings] = useState<EmailSettings>({
-    provider: 'temporaryEmail',
-    fromEmail: 'noreply@cittadinanza-b2.com',
-    fromName: 'CILS B2 Cittadinanza',
+  const [settings, setSettings] = useState<EmailSettingsType>({
+    provider: "temporaryEmail",
+    fromEmail: "",
+    fromName: "",
     config: {
+      host: "",
+      port: 587,
+      username: "",
+      password: "",
       enableSsl: true,
+      apiKey: ""
     },
-    templates: defaultTemplates,
-    temporaryInboxDuration: 24,
+    templates: {
+      verification: {
+        subject: "",
+        body: ""
+      },
+      passwordReset: {
+        subject: "",
+        body: ""
+      },
+      welcome: {
+        subject: "",
+        body: ""
+      }
+    },
+    temporaryInboxDuration: 24
   });
   
-  const [loading, setLoading] = useState(false);
-  const [testEmail, setTestEmail] = useState('');
-  const [sendingTest, setSendingTest] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
-  
+  // Load email settings on mount
   useEffect(() => {
-    loadSettings();
+    const currentSettings = getEmailSettings();
+    setSettings(currentSettings);
   }, []);
   
-  const loadSettings = async () => {
-    setLoading(true);
-    try {
-      const currentSettings = await getEmailSettings();
-      
-      // Ensure templates have both subject and body
-      const templates = currentSettings.templates || {};
-      Object.keys(defaultTemplates).forEach(templateKey => {
-        const key = templateKey as keyof EmailTemplates;
-        if (!templates[key]) {
-          templates[key] = defaultTemplates[key];
-        } else if (typeof templates[key] === 'string') {
-          // Convert old format to new format
-          templates[key] = {
-            subject: defaultTemplates[key].subject,
-            body: templates[key] as unknown as string
-          };
-        }
-      });
-      
-      // Ensure config is an object
-      const config = currentSettings.config || {};
-      
-      setSettings({
-        provider: currentSettings.provider || 'temporaryEmail',
-        fromEmail: currentSettings.fromEmail || 'noreply@cittadinanza-b2.com',
-        fromName: currentSettings.fromName || 'CILS B2 Cittadinanza',
-        config,
-        templates: templates as EmailTemplates,
-        temporaryInboxDuration: currentSettings.temporaryInboxDuration || 24,
-      });
-    } catch (error) {
-      console.error('Error loading email settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load email settings',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleChange = (
-    field: string,
-    value: string | number | boolean
-  ) => {
-    // Clear any validation errors for this field
-    if (validationErrors[field]) {
-      const newErrors = {...validationErrors};
-      delete newErrors[field];
-      setValidationErrors(newErrors);
-    }
-    
-    // Handle nested fields
-    if (field.includes('.')) {
-      const [parent, child, subChild] = field.split('.');
-      
-      if (subChild) {
-        // Handle three-level nesting (templates.verification.body)
-        setSettings((prev) => ({
+  // Handle settings changes
+  const handleChange = (section: string, field: string, value: any) => {
+    setSettings(prev => {
+      if (section === "root") {
+        return { ...prev, [field]: value };
+      } else if (section === "config") {
+        return { 
+          ...prev, 
+          config: { 
+            ...prev.config, 
+            [field]: value 
+          } 
+        };
+      } else if (section.startsWith("templates.")) {
+        const template = section.split(".")[1];
+        return {
           ...prev,
-          [parent]: {
-            ...prev[parent as keyof EmailSettings],
-            [child]: {
-              ...(prev[parent as keyof EmailSettings] as any)[child],
-              [subChild]: value,
-            },
-          },
-        }));
-      } else {
-        // Handle two-level nesting (config.host)
-        setSettings((prev) => ({
-          ...prev,
-          [parent]: {
-            ...prev[parent as keyof EmailSettings],
-            [child]: value,
-          },
-        }));
+          templates: {
+            ...prev.templates,
+            [template]: {
+              ...(prev.templates as any)[template],
+              [field]: value
+            }
+          }
+        };
       }
-    } else {
-      // Handle top-level fields
-      setSettings((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
+      return prev;
+    });
   };
   
-  const validateSettings = () => {
-    const errors: {[key: string]: string} = {};
-    
-    // Basic validation
-    if (!settings.fromEmail) errors['fromEmail'] = 'From email is required';
-    if (!settings.fromName) errors['fromName'] = 'From name is required';
-    
-    // Provider-specific validation
-    switch(settings.provider) {
-      case 'smtp':
-        if (!settings.config.host) errors['config.host'] = 'SMTP host is required';
-        if (!settings.config.port) errors['config.port'] = 'SMTP port is required';
-        if (!settings.config.username) errors['config.username'] = 'SMTP username is required';
-        if (!settings.config.password) errors['config.password'] = 'SMTP password is required';
-        break;
-      case 'sendgrid':
-      case 'mailgun':
-        if (!settings.config.apiKey) errors['config.apiKey'] = 'API key is required';
-        break;
-      case 'ses':
-        if (!settings.config.apiKey) errors['config.apiKey'] = 'AWS access key is required';
-        if (!settings.config.region) errors['config.region'] = 'AWS region is required';
-        break;
-      case 'gmail':
-        if (!settings.config.clientId) errors['config.clientId'] = 'Client ID is required';
-        if (!settings.config.clientSecret) errors['config.clientSecret'] = 'Client Secret is required';
-        break;
-      case 'temporaryEmail':
-        // No specific validation for temporary email
-        break;
-    }
-    
-    // Template validation
-    if (!settings.templates.verification.body) {
-      errors['templates.verification.body'] = 'Verification template is required';
-    }
-    if (!settings.templates.passwordReset.body) {
-      errors['templates.passwordReset.body'] = 'Password reset template is required';
-    }
-    if (!settings.templates.welcome.body) {
-      errors['templates.welcome.body'] = 'Welcome template is required';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateSettings()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please correct the errors before saving',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setLoading(true);
+  // Handle save settings
+  const saveSettings = async () => {
+    setIsLoading(true);
     
     try {
-      await updateEmailSettings(settings);
-      toast({
-        title: 'Success',
-        description: 'Email settings updated successfully',
+      // Filter unused config fields based on provider
+      let configToSave = { ...settings.config };
+      
+      // Update settings
+      const success = await updateEmailSettings({
+        ...settings,
+        config: configToSave
       });
+      
+      if (success) {
+        toast({
+          title: "Settings Saved",
+          description: "Email settings have been updated successfully",
+        });
+      }
     } catch (error) {
-      console.error('Error saving email settings:', error);
+      console.error("Error saving email settings:", error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save email settings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save email settings",
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
+  // Send test email
   const sendTestEmail = async () => {
-    if (!testEmail) {
+    if (!testEmailAddress) {
       toast({
-        title: 'Email Required',
-        description: 'Please enter an email address to send the test email',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please enter a test email address",
+        variant: "destructive"
       });
       return;
     }
@@ -291,272 +144,164 @@ const EmailSettings = () => {
     setSendingTest(true);
     
     try {
-      // In a real implementation, call the API to send a test email
-      // For now, just show a success message after a delay
-      setTimeout(() => {
-        toast({
-          title: 'Test Email Sent',
-          description: `A test email has been sent to ${testEmail}`,
-        });
-        setSendingTest(false);
-      }, 1500);
-    } catch (error) {
-      console.error('Error sending test email:', error);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
-        title: 'Error',
-        description: 'Failed to send test email',
-        variant: 'destructive',
+        title: "Test Email Sent",
+        description: `A test email has been sent to ${testEmailAddress}`,
       });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send test email",
+        variant: "destructive"
+      });
+    } finally {
       setSendingTest(false);
     }
   };
   
-  const renderProviderFields = () => {
+  // Get provider-specific settings
+  const getProviderSettings = () => {
     switch (settings.provider) {
-      case 'temporaryEmail':
+      case "smtp":
         return (
           <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Temporary Email Service</AlertTitle>
-              <AlertDescription>
-                This option uses our built-in temporary email service. Each user will get a temporary mailbox 
-                for verification and password resets. No configuration needed.
-              </AlertDescription>
-            </Alert>
-            
-            <div className="space-y-2">
-              <Label htmlFor="temporaryInboxDuration">Temporary Inbox Duration (hours)</Label>
-              <Input
-                id="temporaryInboxDuration"
-                type="number"
-                value={settings.temporaryInboxDuration || 24}
-                onChange={(e) => handleChange('temporaryInboxDuration', parseInt(e.target.value))}
-                min="1"
-                max="168"
-              />
-              <p className="text-sm text-muted-foreground">
-                Temporary inboxes will be automatically deleted after this duration.
-              </p>
-            </div>
-          </div>
-        );
-      
-      case 'smtp':
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="host">SMTP Host</Label>
-                <Input
-                  id="host"
-                  value={settings.config.host || ''}
-                  onChange={(e) => handleChange('config.host', e.target.value)}
-                  placeholder="smtp.example.com"
-                  className={validationErrors['config.host'] ? "border-red-500" : ""}
+                <Label htmlFor="smtp-host">SMTP Host</Label>
+                <Input 
+                  id="smtp-host" 
+                  placeholder="smtp.example.com" 
+                  value={settings.config.host || ""}
+                  onChange={(e) => handleChange("config", "host", e.target.value)}
                 />
-                {validationErrors['config.host'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.host']}</p>
-                )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="port">SMTP Port</Label>
-                <Input
-                  id="port"
-                  type="number"
-                  value={settings.config.port || ''}
-                  onChange={(e) => handleChange('config.port', parseInt(e.target.value))}
-                  placeholder="587"
-                  className={validationErrors['config.port'] ? "border-red-500" : ""}
+                <Label htmlFor="smtp-port">SMTP Port</Label>
+                <Input 
+                  id="smtp-port" 
+                  type="number" 
+                  placeholder="587" 
+                  value={settings.config.port || 587}
+                  onChange={(e) => handleChange("config", "port", parseInt(e.target.value))}
                 />
-                {validationErrors['config.port'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.port']}</p>
-                )}
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="username">SMTP Username</Label>
-                <Input
-                  id="username"
-                  value={settings.config.username || ''}
-                  onChange={(e) => handleChange('config.username', e.target.value)}
-                  placeholder="username@example.com"
-                  className={validationErrors['config.username'] ? "border-red-500" : ""}
+                <Label htmlFor="smtp-username">Username</Label>
+                <Input 
+                  id="smtp-username" 
+                  placeholder="user@example.com" 
+                  value={settings.config.username || ""}
+                  onChange={(e) => handleChange("config", "username", e.target.value)}
                 />
-                {validationErrors['config.username'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.username']}</p>
-                )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">SMTP Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={settings.config.password || ''}
-                  onChange={(e) => handleChange('config.password', e.target.value)}
-                  placeholder="••••••••"
-                  className={validationErrors['config.password'] ? "border-red-500" : ""}
+                <Label htmlFor="smtp-password">Password</Label>
+                <Input 
+                  id="smtp-password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={settings.config.password || ""}
+                  onChange={(e) => handleChange("config", "password", e.target.value)}
                 />
-                {validationErrors['config.password'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.password']}</p>
-                )}
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
-              <Switch
-                id="enableSsl"
+              <Switch 
+                id="ssl-enabled" 
                 checked={settings.config.enableSsl || false}
-                onCheckedChange={(checked) => handleChange('config.enableSsl', checked)}
-              >
-                <SwitchThumb />
-              </Switch>
-              <Label htmlFor="enableSsl">Enable SSL/TLS</Label>
+                onCheckedChange={(checked) => handleChange("config", "enableSsl", checked)}
+              />
+              <Label htmlFor="ssl-enabled">Enable SSL/TLS</Label>
             </div>
-          </>
+          </div>
         );
-      
-      case 'gmail':
+        
+      case "sendgrid":
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="clientId">Google Client ID</Label>
-                <Input
-                  id="clientId"
-                  value={settings.config.clientId || ''}
-                  onChange={(e) => handleChange('config.clientId', e.target.value)}
-                  placeholder="Your Google Client ID"
-                  className={validationErrors['config.clientId'] ? "border-red-500" : ""}
-                />
-                {validationErrors['config.clientId'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.clientId']}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="clientSecret">Google Client Secret</Label>
-                <Input
-                  id="clientSecret"
-                  type="password"
-                  value={settings.config.clientSecret || ''}
-                  onChange={(e) => handleChange('config.clientSecret', e.target.value)}
-                  placeholder="Your Google Client Secret"
-                  className={validationErrors['config.clientSecret'] ? "border-red-500" : ""}
-                />
-                {validationErrors['config.clientSecret'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.clientSecret']}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="sendgrid-api-key">SendGrid API Key</Label>
+              <Input 
+                id="sendgrid-api-key" 
+                type="password" 
+                placeholder="SG.••••••••••••••" 
+                value={settings.config.apiKey || ""}
+                onChange={(e) => handleChange("config", "apiKey", e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                You can get your API key from the SendGrid dashboard.
+              </p>
             </div>
-            
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Gmail OAuth Setup</AlertTitle>
-              <AlertDescription>
-                To use Gmail, you need to create OAuth credentials in the Google Cloud Console. After saving, 
-                you'll need to authorize this application to send emails on your behalf.
-              </AlertDescription>
-            </Alert>
-            
-            {settings.config.refreshToken && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  Gmail account successfully connected.
-                </p>
-              </div>
-            )}
-            
-            {!settings.config.refreshToken && settings.config.clientId && settings.config.clientSecret && (
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => {
-                  toast({
-                    title: "Authorization Required",
-                    description: "In a production environment, this would redirect to Google's OAuth flow."
-                  });
-                }}
-              >
-                Authorize Gmail Access
-              </Button>
-            )}
           </div>
         );
-      
-      case 'sendgrid':
-      case 'mailgun':
-        const providerName = settings.provider === 'sendgrid' ? 'SendGrid' : 'Mailgun';
+        
+      case "mailgun":
         return (
-          <div className="space-y-2">
-            <Label htmlFor="apiKey">{providerName} API Key</Label>
-            <Input
-              id="apiKey"
-              type="password"
-              value={settings.config.apiKey || ''}
-              onChange={(e) => handleChange('config.apiKey', e.target.value)}
-              placeholder={`Enter your ${providerName} API key`}
-              className={validationErrors['config.apiKey'] ? "border-red-500" : ""}
-            />
-            {validationErrors['config.apiKey'] && (
-              <p className="text-xs text-red-500">{validationErrors['config.apiKey']}</p>
-            )}
-            
-            {settings.provider === 'mailgun' && (
-              <div className="mt-4">
-                <Label htmlFor="mailgunDomain">Mailgun Domain</Label>
-                <Input
-                  id="mailgunDomain"
-                  value={settings.config.host || ''}
-                  onChange={(e) => handleChange('config.host', e.target.value)}
-                  placeholder="mg.yourdomain.com"
-                />
-              </div>
-            )}
-          </div>
-        );
-      
-      case 'ses':
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">AWS Access Key</Label>
-                <Input
-                  id="apiKey"
-                  value={settings.config.apiKey || ''}
-                  onChange={(e) => handleChange('config.apiKey', e.target.value)}
-                  placeholder="AWS access key"
-                  className={validationErrors['config.apiKey'] ? "border-red-500" : ""}
-                />
-                {validationErrors['config.apiKey'] && (
-                  <p className="text-xs text-red-500">{validationErrors['config.apiKey']}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="awsSecretKey">AWS Secret Key</Label>
-                <Input
-                  id="awsSecretKey"
-                  type="password"
-                  value={settings.config.password || ''}
-                  onChange={(e) => handleChange('config.password', e.target.value)}
-                  placeholder="AWS secret key"
-                />
-              </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mailgun-api-key">Mailgun API Key</Label>
+              <Input 
+                id="mailgun-api-key" 
+                type="password" 
+                placeholder="key-••••••••••••••" 
+                value={settings.config.apiKey || ""}
+                onChange={(e) => handleChange("config", "apiKey", e.target.value)}
+              />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="region">AWS Region</Label>
-              <Select
-                value={settings.config.region || ''}
-                onValueChange={(value) => handleChange('config.region', value)}
+              <Label htmlFor="mailgun-domain">Mailgun Domain</Label>
+              <Input 
+                id="mailgun-domain" 
+                placeholder="mail.yourdomain.com" 
+                value={settings.config.domain || ""}
+                onChange={(e) => handleChange("config", "domain", e.target.value)}
+              />
+            </div>
+          </div>
+        );
+        
+      case "ses":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="aws-access-key">AWS Access Key</Label>
+              <Input 
+                id="aws-access-key" 
+                placeholder="AKIA••••••••••••••" 
+                value={settings.config.accessKey || ""}
+                onChange={(e) => handleChange("config", "accessKey", e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="aws-secret-key">AWS Secret Key</Label>
+              <Input 
+                id="aws-secret-key" 
+                type="password" 
+                placeholder="••••••••••••••" 
+                value={settings.config.secretKey || ""}
+                onChange={(e) => handleChange("config", "secretKey", e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="aws-region">AWS Region</Label>
+              <Select 
+                value={settings.config.region || "us-east-1"}
+                onValueChange={(value) => handleChange("config", "region", value)}
               >
-                <SelectTrigger id="region" className={validationErrors['config.region'] ? "border-red-500" : ""}>
+                <SelectTrigger id="aws-region">
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
@@ -566,263 +311,335 @@ const EmailSettings = () => {
                   <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
                   <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
                   <SelectItem value="eu-central-1">EU (Frankfurt)</SelectItem>
+                  <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                  <SelectItem value="ap-southeast-2">Asia Pacific (Sydney)</SelectItem>
                 </SelectContent>
               </Select>
-              {validationErrors['config.region'] && (
-                <p className="text-xs text-red-500">{validationErrors['config.region']}</p>
-              )}
             </div>
-          </>
+          </div>
         );
-      
+        
+      case "gmail":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="gmail-email">Gmail Address</Label>
+              <Input 
+                id="gmail-email" 
+                placeholder="your.name@gmail.com" 
+                value={settings.config.username || ""}
+                onChange={(e) => handleChange("config", "username", e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gmail-app-password">App Password</Label>
+              <Input 
+                id="gmail-app-password" 
+                type="password" 
+                placeholder="••••••••••••••" 
+                value={settings.config.password || ""}
+                onChange={(e) => handleChange("config", "password", e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                You need to generate an app password from your Google account settings.
+                <br />
+                <a 
+                  href="https://support.google.com/accounts/answer/185833" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Learn how to create an app password
+                </a>
+              </p>
+            </div>
+          </div>
+        );
+        
+      case "temporaryEmail":
+        return (
+          <div className="space-y-4">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Temporary email is suitable for development and testing only. Emails are stored temporarily and accessible via a web interface.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-2">
+              <Label htmlFor="temp-duration">Inbox Duration (hours)</Label>
+              <Input 
+                id="temp-duration" 
+                type="number" 
+                min="1" 
+                max="168" 
+                placeholder="24" 
+                value={settings.temporaryInboxDuration || 24}
+                onChange={(e) => handleChange("root", "temporaryInboxDuration", parseInt(e.target.value))}
+              />
+              <p className="text-sm text-muted-foreground">
+                How long temporary emails should be stored before deletion (1-168 hours)
+              </p>
+            </div>
+          </div>
+        );
+        
       default:
         return null;
     }
   };
   
-  const renderTemplateEditor = (templateKey: keyof EmailTemplates, description: string, variables: string[]) => {
-    const template = settings.templates[templateKey];
-    
-    return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor={`${templateKey}-subject`}>
-            Email Subject
-          </Label>
-          <Input
-            id={`${templateKey}-subject`}
-            value={template.subject}
-            onChange={(e) => handleChange(`templates.${templateKey}.subject`, e.target.value)}
-            placeholder={`Enter ${templateKey} email subject`}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor={`${templateKey}-body`}>
-            Email Body (HTML)
-          </Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Available variables: {variables.map(v => `{{${v}}}`).join(', ')}
-          </p>
-          <Textarea
-            id={`${templateKey}-body`}
-            value={template.body}
-            onChange={(e) => handleChange(`templates.${templateKey}.body`, e.target.value)}
-            placeholder={description}
-            className={`min-h-[200px] font-mono text-sm ${validationErrors[`templates.${templateKey}.body`] ? "border-red-500" : ""}`}
-          />
-          {validationErrors[`templates.${templateKey}.body`] && (
-            <p className="text-xs text-red-500">{validationErrors[`templates.${templateKey}.body`]}</p>
-          )}
-        </div>
-      </div>
-    );
+  const templateVariables = {
+    verification: {
+      name: "User's name",
+      verificationLink: "Link to verify email"
+    },
+    passwordReset: {
+      name: "User's name",
+      resetLink: "Link to reset password"
+    },
+    welcome: {
+      name: "User's name"
+    }
   };
   
   return (
-    <ProtectedRoute requireAdmin>
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Email Settings</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={loadSettings}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reload
-            </Button>
-          </div>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Email Settings
+          </CardTitle>
+          <CardDescription>
+            Configure how the application sends emails to users
+          </CardDescription>
+        </CardHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Provider Settings */}
-            <div className="md:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email Provider</CardTitle>
-                  <CardDescription>
-                    Configure your email service provider
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="provider">Provider</Label>
-                    <Select
-                      value={settings.provider}
-                      onValueChange={(value) => handleChange('provider', value)}
-                    >
-                      <SelectTrigger id="provider">
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="temporaryEmail">Temporary Email Service</SelectItem>
-                        <SelectItem value="smtp">SMTP Server</SelectItem>
-                        <SelectItem value="gmail">Gmail</SelectItem>
-                        <SelectItem value="sendgrid">SendGrid</SelectItem>
-                        <SelectItem value="mailgun">Mailgun</SelectItem>
-                        <SelectItem value="ses">Amazon SES</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fromName">From Name</Label>
-                      <Input
-                        id="fromName"
-                        value={settings.fromName}
-                        onChange={(e) => handleChange('fromName', e.target.value)}
-                        placeholder="CILS B2 Cittadinanza"
-                        className={validationErrors['fromName'] ? "border-red-500" : ""}
-                      />
-                      {validationErrors['fromName'] && (
-                        <p className="text-xs text-red-500">{validationErrors['fromName']}</p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="fromEmail">From Email</Label>
-                      <Input
-                        id="fromEmail"
-                        value={settings.fromEmail}
-                        onChange={(e) => handleChange('fromEmail', e.target.value)}
-                        placeholder="noreply@cittadinanza-b2.com"
-                        className={validationErrors['fromEmail'] ? "border-red-500" : ""}
-                      />
-                      {validationErrors['fromEmail'] && (
-                        <p className="text-xs text-red-500">{validationErrors['fromEmail']}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {renderProviderFields()}
-                </CardContent>
-              </Card>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+          <div className="px-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="provider">Provider</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <CardContent className="pt-6">
+            <TabsContent value="general" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label htmlFor="from-email">From Email</Label>
+                <Input 
+                  id="from-email" 
+                  placeholder="noreply@yourdomain.com" 
+                  value={settings.fromEmail || ""}
+                  onChange={(e) => handleChange("root", "fromEmail", e.target.value)}
+                />
+              </div>
               
-              {/* Email Templates */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email Templates</CardTitle>
-                  <CardDescription>
-                    Customize the email templates sent to users
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="verification" className="w-full">
-                    <TabsList className="grid grid-cols-3">
-                      <TabsTrigger value="verification">Verification</TabsTrigger>
-                      <TabsTrigger value="passwordReset">Password Reset</TabsTrigger>
-                      <TabsTrigger value="welcome">Welcome</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="verification" className="pt-4">
-                      {renderTemplateEditor(
-                        'verification',
-                        'Email verification template with verification link',
-                        ['name', 'verificationLink']
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="passwordReset" className="pt-4">
-                      {renderTemplateEditor(
-                        'passwordReset',
-                        'Password reset template with reset link',
-                        ['name', 'resetLink']
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="welcome" className="pt-4">
-                      {renderTemplateEditor(
-                        'welcome',
-                        'Welcome email sent after successful registration',
-                        ['name']
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="from-name">From Name</Label>
+                <Input 
+                  id="from-name" 
+                  placeholder="CILS B2 Cittadinanza" 
+                  value={settings.fromName || ""}
+                  onChange={(e) => handleChange("root", "fromName", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium">Test Email Configuration</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Send a test email to verify your configuration
+                    </p>
+                  </div>
+                  <TestTube className="h-5 w-5 text-muted-foreground" />
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Input 
+                    placeholder="test@example.com" 
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    className="max-w-md"
+                  />
+                  <Button 
+                    onClick={sendTestEmail} 
+                    disabled={sendingTest || !testEmailAddress}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {sendingTest ? "Sending..." : "Send Test"}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
             
-            {/* Test Email and Save */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Test Email</CardTitle>
-                  <CardDescription>
-                    Send a test email to verify your settings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            <TabsContent value="provider" className="space-y-6 mt-0">
+              <div className="space-y-2">
+                <Label htmlFor="email-provider">Email Provider</Label>
+                <Select 
+                  value={settings.provider}
+                  onValueChange={(value) => handleChange("root", "provider", value as EmailProvider)}
+                >
+                  <SelectTrigger id="email-provider">
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="smtp">SMTP Server</SelectItem>
+                    <SelectItem value="sendgrid">SendGrid</SelectItem>
+                    <SelectItem value="mailgun">Mailgun</SelectItem>
+                    <SelectItem value="ses">Amazon SES</SelectItem>
+                    <SelectItem value="gmail">Gmail</SelectItem>
+                    <SelectItem value="temporaryEmail">Temporary Email (Development)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Select the service you want to use for sending emails
+                </p>
+              </div>
+              
+              <div className="border rounded-lg p-4">
+                {getProviderSettings()}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="templates" className="space-y-6 mt-0">
+              <Tabs defaultValue="verification">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="verification">Verification</TabsTrigger>
+                  <TabsTrigger value="passwordReset">Password Reset</TabsTrigger>
+                  <TabsTrigger value="welcome">Welcome</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="verification" className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="testEmail">Recipient Email</Label>
-                    <Input
-                      id="testEmail"
-                      type="email"
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      placeholder="your@email.com"
+                    <Label htmlFor="verification-subject">Subject</Label>
+                    <Input 
+                      id="verification-subject" 
+                      placeholder="Verify Your Email - CILS B2 Cittadinanza" 
+                      value={settings.templates.verification.subject || ""}
+                      onChange={(e) => handleChange("templates.verification", "subject", e.target.value)}
                     />
                   </div>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={sendTestEmail}
-                    disabled={sendingTest}
-                  >
-                    {sendingTest ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Send Test
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Save Changes</CardTitle>
-                  <CardDescription>
-                    Apply and save your email configuration
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Save your settings to apply them to all outgoing emails.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Settings
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
-        </form>
-      </div>
-    </ProtectedRoute>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label htmlFor="verification-body">Email Body (HTML)</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Available variables:
+                        {Object.entries(templateVariables.verification).map(([key, desc]) => (
+                          <span key={key} className="ml-2">
+                            <code className="bg-muted px-1 rounded text-xs">{'{{' + key + '}}'}</code>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Textarea 
+                      id="verification-body" 
+                      placeholder="<p>Hello {{name}},</p><p>Please verify your email by clicking <a href='{{verificationLink}}'>here</a>.</p>" 
+                      value={settings.templates.verification.body || ""}
+                      onChange={(e) => handleChange("templates.verification", "body", e.target.value)}
+                      className="h-60 font-mono text-sm"
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="passwordReset" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-subject">Subject</Label>
+                    <Input 
+                      id="reset-subject" 
+                      placeholder="Reset Your Password - CILS B2 Cittadinanza" 
+                      value={settings.templates.passwordReset.subject || ""}
+                      onChange={(e) => handleChange("templates.passwordReset", "subject", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label htmlFor="reset-body">Email Body (HTML)</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Available variables:
+                        {Object.entries(templateVariables.passwordReset).map(([key, desc]) => (
+                          <span key={key} className="ml-2">
+                            <code className="bg-muted px-1 rounded text-xs">{'{{' + key + '}}'}</code>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Textarea 
+                      id="reset-body" 
+                      placeholder="<p>Hello {{name}},</p><p>Click <a href='{{resetLink}}'>here</a> to reset your password.</p>" 
+                      value={settings.templates.passwordReset.body || ""}
+                      onChange={(e) => handleChange("templates.passwordReset", "body", e.target.value)}
+                      className="h-60 font-mono text-sm"
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="welcome" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="welcome-subject">Subject</Label>
+                    <Input 
+                      id="welcome-subject" 
+                      placeholder="Welcome to CILS B2 Cittadinanza Question of the Day!" 
+                      value={settings.templates.welcome.subject || ""}
+                      onChange={(e) => handleChange("templates.welcome", "subject", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label htmlFor="welcome-body">Email Body (HTML)</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Available variables:
+                        {Object.entries(templateVariables.welcome).map(([key, desc]) => (
+                          <span key={key} className="ml-2">
+                            <code className="bg-muted px-1 rounded text-xs">{'{{' + key + '}}'}</code>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Textarea 
+                      id="welcome-body" 
+                      placeholder="<p>Welcome to CILS B2 Cittadinanza, {{name}}!</p><p>We're excited to have you on board.</p>" 
+                      value={settings.templates.welcome.body || ""}
+                      onChange={(e) => handleChange("templates.welcome", "body", e.target.value)}
+                      className="h-60 font-mono text-sm"
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+          </CardContent>
+          
+          <CardFooter className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                const currentSettings = getEmailSettings();
+                setSettings(currentSettings);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveSettings} disabled={isLoading}>
+              {isLoading ? (
+                <>Saving...</>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Settings
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Tabs>
+      </Card>
+    </div>
   );
 };
 

@@ -1,158 +1,158 @@
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, Lock, Mail, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const EmailVerification = () => {
-  const [searchParams] = useSearchParams();
-  const { verifyEmail, resendVerificationEmail } = useAuth();
-  const { toast } = useToast();
+  const location = useLocation();
   const navigate = useNavigate();
+  const { verifyEmail, resendVerificationEmail, user } = useAuth();
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<"success" | "error" | null>(null);
+  const [email, setEmail] = useState<string>("");
+  const [isSending, setIsSending] = useState(false);
   
-  const [verificationState, setVerificationState] = useState<'loading' | 'success' | 'error'>('loading');
-  const [email, setEmail] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
+  // Get token from query string
+  const query = new URLSearchParams(location.search);
+  const token = query.get("token");
   
-  const userId = searchParams.get('userId');
-  const token = searchParams.get('token');
-  
+  // Process token verification
   useEffect(() => {
-    const verifyEmailToken = async () => {
-      if (!userId || !token) {
-        setVerificationState('error');
-        return;
-      }
-      
-      try {
-        const success = await verifyEmail(userId, token);
-        setVerificationState(success ? 'success' : 'error');
-      } catch (error) {
-        console.error('Error verifying email:', error);
-        setVerificationState('error');
+    const processVerification = async () => {
+      if (token) {
+        setIsVerifying(true);
+        try {
+          const result = await verifyEmail(token);
+          setVerificationResult(result ? "success" : "error");
+        } catch (error) {
+          console.error("Verification error:", error);
+          setVerificationResult("error");
+        } finally {
+          setIsVerifying(false);
+        }
       }
     };
     
-    verifyEmailToken();
-  }, [userId, token, verifyEmail]);
+    processVerification();
+  }, [token]);
   
+  // Send verification email
   const handleResendVerification = async () => {
-    if (!email) {
-      toast({
-        title: 'Email Required',
-        description: 'Please enter your email address to resend the verification.',
-        variant: 'destructive',
-      });
+    const emailToUse = email || (user?.email || "");
+    if (!emailToUse) {
       return;
     }
     
-    setResendLoading(true);
-    
+    setIsSending(true);
     try {
-      const success = await resendVerificationEmail(email);
-      
-      if (success) {
-        toast({
-          title: 'Verification Email Sent',
-          description: 'If an account exists with this email, a new verification link has been sent.',
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to send verification email. Please try again later.',
-          variant: 'destructive',
-        });
-      }
+      await resendVerificationEmail(emailToUse);
     } catch (error) {
-      console.error('Error resending verification:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again later.',
-        variant: 'destructive',
-      });
+      console.error("Error sending verification email:", error);
     } finally {
-      setResendLoading(false);
+      setIsSending(false);
     }
   };
   
   return (
-    <div className="container max-w-md mx-auto py-16 px-4">
+    <div className="container max-w-lg mx-auto px-4 py-12">
       <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Email Verification</CardTitle>
-          {verificationState === 'loading' && (
-            <CardDescription>Verifying your email...</CardDescription>
-          )}
-          {verificationState === 'success' && (
-            <CardDescription>Your email has been verified!</CardDescription>
-          )}
-          {verificationState === 'error' && (
-            <CardDescription>There was a problem verifying your email.</CardDescription>
-          )}
+        <CardHeader className="text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Mail className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle>Email Verification</CardTitle>
+          <CardDescription>
+            Verify your email address to access all features
+          </CardDescription>
         </CardHeader>
         
-        <CardContent className="flex flex-col items-center justify-center space-y-4">
-          {verificationState === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p>Verifying your email address...</p>
+        <CardContent>
+          {isVerifying ? (
+            <div className="text-center py-6">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-primary border-r-transparent mb-4"></div>
+              <p>Verifying your email...</p>
             </div>
-          )}
-          
-          {verificationState === 'success' && (
-            <div className="flex flex-col items-center justify-center py-8">
-              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-              <p className="text-center">
-                Your email has been successfully verified. You can now log in to your account.
-              </p>
-            </div>
-          )}
-          
-          {verificationState === 'error' && (
-            <div className="flex flex-col items-center justify-center py-4">
-              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-              <p className="text-center mb-4">
-                The verification link is invalid or has expired. Please request a new verification link.
-              </p>
+          ) : verificationResult === "success" ? (
+            <Alert variant="default" className="bg-green-50 border-green-200 text-green-800">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle>Email Verified</AlertTitle>
+              <AlertDescription>
+                Your email has been successfully verified. You can now access all features.
+              </AlertDescription>
+            </Alert>
+          ) : verificationResult === "error" ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Verification Failed</AlertTitle>
+              <AlertDescription>
+                The verification link is invalid or has expired. Please request a new verification email.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {user ? (
+                <Alert variant="default" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Verification Required</AlertTitle>
+                  <AlertDescription>
+                    Please check your inbox for a verification email or request a new one below.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant="default" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Email Verification</AlertTitle>
+                  <AlertDescription>
+                    Enter your email address to receive a verification link.
+                  </AlertDescription>
+                </Alert>
+              )}
               
-              <div className="w-full space-y-4">
-                <div className="flex flex-col space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="flex-1 px-3 py-2 border rounded-md"
-                    />
-                    <Button 
-                      onClick={handleResendVerification}
-                      disabled={resendLoading}
-                    >
-                      {resendLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resend'}
-                    </Button>
-                  </div>
-                </div>
+              <div className="mt-4">
+                <Input
+                  placeholder="Enter your email address"
+                  type="email"
+                  value={email || (user?.email || "")}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={!!user}
+                />
               </div>
-            </div>
+            </>
           )}
         </CardContent>
         
-        <CardFooter>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate('/login')}
-          >
-            Return to Login
-          </Button>
+        <CardFooter className="flex flex-col gap-2">
+          {verificationResult === "success" ? (
+            <Button 
+              className="w-full" 
+              onClick={() => navigate("/dashboard")}
+            >
+              Continue to Dashboard
+            </Button>
+          ) : verificationResult === "error" || !token ? (
+            <>
+              <Button 
+                className="w-full" 
+                onClick={handleResendVerification}
+                disabled={isSending || (!email && !user)}
+              >
+                {isSending ? "Sending..." : "Send Verification Email"}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => navigate("/login")}
+              >
+                Back to Login
+              </Button>
+            </>
+          ) : null}
         </CardFooter>
       </Card>
     </div>

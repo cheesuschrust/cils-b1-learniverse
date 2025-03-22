@@ -17,7 +17,7 @@ export type UserRole = 'user' | 'admin';
 // Define log category
 export type LogCategory = 'content' | 'email' | 'system' | 'user' | 'auth' | 'ai';
 
-// User interface
+// User interface with all required properties
 export interface User {
   id: string;
   firstName: string;
@@ -28,7 +28,28 @@ export interface User {
   isVerified: boolean;
   createdAt: Date;
   lastLogin: Date;
+  lastActive: Date;
   preferences: UserPreferences;
+  subscription: 'free' | 'premium';
+  status: 'active' | 'inactive' | 'suspended';
+  preferredLanguage: 'english' | 'italian' | 'both';
+  dailyQuestionCounts: {
+    flashcards: number;
+    multipleChoice: number;
+    listening: number;
+    writing: number;
+    speaking: number;
+    [key: string]: number;
+  };
+  displayName?: string;
+  phoneNumber?: string;
+  address?: string;
+  lastActive?: Date;
+  metrics: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+  };
 }
 
 export interface UserPreferences {
@@ -57,7 +78,7 @@ interface MockDatabase {
   verificationTokens: Map<string, { email: string; expires: Date }>;
 }
 
-// Context interface
+// Context interface with all required methods
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -98,6 +119,14 @@ interface AuthContextType {
   disableUser: (userId: string) => Promise<boolean>;
   enableUser: (userId: string) => Promise<boolean>;
   makeAdmin: (userId: string) => Promise<boolean>;
+  updateProfile: (updates: Partial<User>) => Promise<boolean>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  incrementDailyQuestionCount: (type: string) => Promise<boolean>;
+  resendVerificationEmail: (email: string) => Promise<boolean>;
+  updateUserStatus: (userId: string, status: string) => Promise<boolean>;
+  updateUserSubscription: (userId: string, subscription: string) => Promise<boolean>;
+  addAdmin: (userId: string) => Promise<boolean>;
+  updateSystemLog: (logId: string, updates: Partial<LogEntry>) => Promise<boolean>;
 }
 
 // Create context
@@ -115,11 +144,27 @@ const db: MockDatabase = {
       isVerified: true,
       createdAt: new Date('2023-01-01'),
       lastLogin: new Date(),
+      lastActive: new Date(),
       preferences: {
         theme: 'system',
         emailNotifications: true,
         language: 'en',
         difficulty: 'intermediate'
+      },
+      subscription: 'premium',
+      status: 'active',
+      preferredLanguage: 'both',
+      dailyQuestionCounts: {
+        flashcards: 0,
+        multipleChoice: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0
+      },
+      metrics: {
+        totalQuestions: 0,
+        correctAnswers: 0,
+        streak: 0
       }
     },
     {
@@ -132,11 +177,28 @@ const db: MockDatabase = {
       isVerified: true,
       createdAt: new Date('2023-02-15'),
       lastLogin: new Date(),
+      lastActive: new Date(),
       preferences: {
         theme: 'light',
         emailNotifications: true,
         language: 'it',
         difficulty: 'intermediate'
+      },
+      subscription: 'free',
+      status: 'active',
+      preferredLanguage: 'both',
+      dailyQuestionCounts: {
+        flashcards: 0,
+        multipleChoice: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0
+      },
+      displayName: 'Marco R.',
+      metrics: {
+        totalQuestions: 15,
+        correctAnswers: 12,
+        streak: 3
       }
     }
   ],
@@ -268,11 +330,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isVerified: false,  // Start as unverified
         createdAt: new Date(),
         lastLogin: new Date(),
+        lastActive: new Date(),
         preferences: {
           theme: 'system',
           emailNotifications: true,
           language: 'en',
           difficulty: 'beginner'
+        },
+        subscription: 'free',
+        status: 'active',
+        preferredLanguage: 'both',
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0
         }
       };
       
@@ -1064,7 +1142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Disable user (admin only) - Implementation would be more complex in a real app
+  // Disable user (admin only)
   const disableUser = async (userId: string): Promise<boolean> => {
     try {
       // Ensure user is admin
@@ -1126,7 +1204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Enable user (admin only) - Implementation would be more complex in a real app
+  // Enable user (admin only)
   const enableUser = async (userId: string): Promise<boolean> => {
     try {
       // Ensure user is admin
@@ -1230,6 +1308,234 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update profile (wrapper for updateUser)
+  const updateProfile = async (updates: Partial<User>): Promise<boolean> => {
+    return updateUser(updates);
+  };
+
+  // Update password implementation
+  const updatePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your password",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      // Verify current password
+      const storedPassword = passwordHash.get(user.email);
+      if (!storedPassword) {
+        toast({
+          title: "Error",
+          description: "Current password verification failed",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, storedPassword);
+      if (!passwordMatch) {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Update with new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      passwordHash.set(user.email, hashedNewPassword);
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully",
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating password:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update password",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Increment daily question count
+  const incrementDailyQuestionCount = async (type: string): Promise<boolean> => {
+    if (!user) {
+      return false;
+    }
+
+    try {
+      // For premium users, always allow
+      if (user.subscription === 'premium') {
+        return true;
+      }
+
+      // For free users, check limit
+      const currentCount = user.dailyQuestionCounts[type] || 0;
+      if (currentCount >= 1) {
+        return false;
+      }
+
+      // Update count
+      const userIndex = db.users.findIndex(u => u.id === user.id);
+      if (userIndex === -1) {
+        return false;
+      }
+
+      db.users[userIndex].dailyQuestionCounts[type] = currentCount + 1;
+      
+      // Update user state
+      setUser({...db.users[userIndex]});
+      
+      return true;
+    } catch (error) {
+      console.error("Error incrementing question count:", error);
+      return false;
+    }
+  };
+
+  // Resend verification email
+  const resendVerificationEmail = async (email: string): Promise<boolean> => {
+    return sendVerificationEmailToUser(email);
+  };
+
+  // Update user status (admin only)
+  const updateUserStatus = async (userId: string, status: string): Promise<boolean> => {
+    if (!user || user.role !== 'admin') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to update user status",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const userIndex = db.users.findIndex(u => u.id === userId);
+      if (userIndex === -1) {
+        toast({
+          title: "Error",
+          description: "User not found",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      db.users[userIndex].status = status as 'active' | 'inactive' | 'suspended';
+      
+      addSystemLog('user', `User status updated`, `User ${db.users[userIndex].email} status changed to ${status}`);
+      
+      toast({
+        title: "Success",
+        description: "User status updated successfully",
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Update user subscription (admin only)
+  const updateUserSubscription = async (userId: string, subscription: string): Promise<boolean> => {
+    if (!user || user.role !== 'admin') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to update user subscription",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const userIndex = db.users.findIndex(u => u.id === userId);
+      if (userIndex === -1) {
+        toast({
+          title: "Error",
+          description: "User not found",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      db.users[userIndex].subscription = subscription as 'free' | 'premium';
+      
+      addSystemLog('user', `User subscription updated`, `User ${db.users[userIndex].email} subscription changed to ${subscription}`);
+      
+      toast({
+        title: "Success",
+        description: "User subscription updated successfully",
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating user subscription:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user subscription",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Add admin role (admin only)
+  const addAdmin = async (userId: string): Promise<boolean> => {
+    return makeAdmin(userId);
+  };
+
+  // Update system log
+  const updateSystemLog = async (logId: string, updates: Partial<LogEntry>): Promise<boolean> => {
+    if (!user || user.role !== 'admin') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to update system logs",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const logIndex = db.logs.findIndex(l => l.id === logId);
+      if (logIndex === -1) {
+        toast({
+          title: "Error",
+          description: "Log entry not found",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      db.logs[logIndex] = { ...db.logs[logIndex], ...updates };
+      
+      toast({
+        title: "Success",
+        description: "Log entry updated successfully",
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating log entry:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update log entry",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const contextValue: AuthContextType = {
     user,
     isAuthenticated,
@@ -1254,6 +1560,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     disableUser,
     enableUser,
     makeAdmin,
+    updateProfile,
+    updatePassword,
+    incrementDailyQuestionCount,
+    resendVerificationEmail,
+    updateUserStatus,
+    updateUserSubscription,
+    addAdmin,
+    updateSystemLog
   };
 
   return (
@@ -1271,3 +1585,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
