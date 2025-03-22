@@ -30,16 +30,28 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const userPrefs = useUserPreferences();
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || userPrefs.theme || defaultTheme
+    () => {
+      // First check localStorage
+      const localTheme = localStorage.getItem(storageKey) as Theme;
+      if (localTheme) return localTheme;
+      
+      // Then check user preferences
+      if (userPrefs.theme) return userPrefs.theme;
+      
+      // Fall back to default theme
+      return defaultTheme;
+    }
   );
 
   // Sync with UserPreferencesContext
   useEffect(() => {
     if (userPrefs.theme && userPrefs.theme !== theme) {
+      // When user preferences change, update the theme
       setTheme(userPrefs.theme);
     }
   }, [userPrefs.theme]);
 
+  // Apply theme to document
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
@@ -55,12 +67,17 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
+  // Theme setter that updates both localStorage and user preferences
   const value = {
     theme,
     setTheme: (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme);
       setTheme(newTheme);
-      userPrefs.setTheme?.(newTheme);
+      
+      // Also update the user preferences if it exists
+      if (userPrefs.setTheme) {
+        userPrefs.setTheme(newTheme);
+      }
     },
   };
 

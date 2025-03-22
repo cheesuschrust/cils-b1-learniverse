@@ -14,19 +14,21 @@ import UserPreferences from "@/components/user/UserPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
 import { getAllVoices, speak } from "@/utils/textToSpeech";
+import { useTheme } from "@/components/ui/theme-provider";
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("preferences");
   const { voicePreference, setVoicePreference } = useUserPreferences();
+  const { theme, setTheme } = useTheme();
   
   // User profile state
   const [userProfile, setUserProfile] = useState({
     name: user?.firstName || "",
     email: user?.email || "",
     bio: user?.preferences?.bio || "",
-    theme: user?.preferences?.theme || "system",
+    theme: theme || "system",
     notifications: user?.preferences?.emailNotifications || false
   });
   
@@ -45,7 +47,7 @@ const Settings = () => {
         name: user.firstName || "",
         email: user.email || "",
         bio: user.preferences?.bio || "",
-        theme: user.preferences?.theme || "system",
+        theme: theme || "system",
         notifications: user.preferences?.emailNotifications || false
       });
     }
@@ -68,7 +70,7 @@ const Settings = () => {
     };
     
     loadVoices();
-  }, [user, voicePreference]);
+  }, [user, voicePreference, theme]);
   
   const handleProfileUpdate = async () => {
     try {
@@ -84,6 +86,9 @@ const Settings = () => {
           emailNotifications: userProfile.notifications
         }
       });
+      
+      // Update the theme in the ThemeProvider
+      setTheme(userProfile.theme as "light" | "dark" | "system");
       
       toast({
         title: "Profile Updated",
@@ -184,6 +189,13 @@ const Settings = () => {
   
   const isAdmin = user.role === "admin";
 
+  // Handle theme changes directly
+  const handleThemeChange = (newTheme: string) => {
+    setUserProfile({...userProfile, theme: newTheme as "light" | "dark" | "system"});
+    // Also update the theme immediately through the theme provider
+    setTheme(newTheme as "light" | "dark" | "system");
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center mb-6">
@@ -255,7 +267,7 @@ const Settings = () => {
                 </h3>
                 <Select 
                   value={userProfile.theme} 
-                  onValueChange={(value) => setUserProfile({...userProfile, theme: value})}
+                  onValueChange={handleThemeChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select theme" />

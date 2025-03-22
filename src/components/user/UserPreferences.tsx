@@ -11,6 +11,8 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Volume2, Monitor, BellRing, Languages, Moon, Sun, Cpu } from "lucide-react";
 import VoicePreferences from "./VoicePreferences";
+import { useTheme } from "@/components/ui/theme-provider";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
 
 interface UserPreferencesProps {
   onClose?: () => void;
@@ -19,20 +21,22 @@ interface UserPreferencesProps {
 const UserPreferences = ({ onClose }: UserPreferencesProps) => {
   const { user, updateProfile } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
+  const userPreferences = useUserPreferences();
   const [isLoading, setIsLoading] = useState(false);
   
   // Preference state
   const [preferences, setPreferences] = useState({
     // Display and UI
-    theme: "system" as 'system' | 'light' | 'dark',
+    theme: theme as 'system' | 'light' | 'dark',
     fontSize: 16,
     notificationsEnabled: true,
     animationsEnabled: true,
     
     // Learning settings
-    preferredLanguage: "both",
+    preferredLanguage: userPreferences.preferredLanguage || "both",
     voiceSpeed: 1.0,
-    autoPlayAudio: true,
+    autoPlayAudio: userPreferences.autoPlayAudio || true,
     showProgressMetrics: true,
     
     // AI settings
@@ -52,12 +56,13 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
     if (user?.preferences) {
       setPreferences(prev => ({
         ...prev,
-        ...user.preferences,
-        // Handle specific property extractions
-        preferredLanguage: user.preferredLanguage || prev.preferredLanguage
+        theme: theme as 'system' | 'light' | 'dark',
+        preferredLanguage: userPreferences.preferredLanguage || prev.preferredLanguage,
+        autoPlayAudio: userPreferences.autoPlayAudio || prev.autoPlayAudio,
+        emailNotifications: user.preferences.emailNotifications || prev.emailNotifications,
       }));
     }
-  }, [user]);
+  }, [user, theme, userPreferences]);
   
   const handleToggleChange = (key: string) => (checked: boolean) => {
     setPreferences(prev => ({
@@ -67,6 +72,11 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
   };
   
   const handleSelectChange = (key: string) => (value: string) => {
+    if (key === "theme") {
+      // When theme changes, also update ThemeProvider
+      setTheme(value as "light" | "dark" | "system");
+    }
+    
     setPreferences(prev => ({
       ...prev,
       [key]: value
@@ -84,8 +94,22 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
     setIsLoading(true);
     
     try {
+      // Ensure the theme is saved via ThemeProvider
+      setTheme(preferences.theme);
+      userPreferences.setTheme?.(preferences.theme);
+      
+      // Update auto play audio preference
+      userPreferences.setAutoPlayAudio?.(preferences.autoPlayAudio);
+      
+      // Update preferred language
+      userPreferences.setPreferredLanguage?.(preferences.preferredLanguage as "english" | "italian" | "both");
+      
       await updateProfile({
-        preferences,
+        preferences: {
+          ...user?.preferences,
+          theme: preferences.theme,
+          emailNotifications: preferences.emailNotifications,
+        },
         preferredLanguage: preferences.preferredLanguage as "english" | "italian" | "both"
       });
       
