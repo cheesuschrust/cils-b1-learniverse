@@ -6,8 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Key, AlertCircle } from "lucide-react";
+import { Mail, Key, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+// Validation schema
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const { login, socialLogin, isLoading, isAuthenticated } = useAuth();
@@ -17,9 +36,14 @@ const Login = () => {
   
   const from = location.state?.from?.pathname || "/dashboard";
   
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{email?: string; password?: string}>({});
+  // Define form with validation
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -28,21 +52,9 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Simple validation
-    const newErrors: {email?: string; password?: string} = {};
-    if (!email) newErrors.email = "Email is required";
-    if (!password) newErrors.password = "Password is required";
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
+  const onSubmit = async (data: LoginFormValues) => {
     try {
-      const success = await login(email, password);
+      const success = await login(data.email, data.password);
       if (success) {
         toast({
           title: "Login successful",
@@ -71,7 +83,7 @@ const Login = () => {
 
   return (
     <div className="container max-w-md mx-auto py-16 px-4">
-      <Card>
+      <Card className="shadow-lg border-opacity-50">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
           <CardDescription>
@@ -113,70 +125,69 @@ const Login = () => {
             </div>
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-              </div>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john.doe@example.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) {
-                    setErrors(prev => ({ ...prev, email: undefined }));
-                  }
-                }}
-                className={errors.email ? "border-red-500" : ""}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center">
+                      <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="john.doe@example.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.email && (
-                <p className="text-xs text-red-500 flex items-center mt-1">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Key className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <label htmlFor="password" className="text-sm font-medium">
-                    Password
-                  </label>
-                </div>
-                <Link to="/reset-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) {
-                    setErrors(prev => ({ ...prev, password: undefined }));
-                  }
-                }}
-                className={errors.password ? "border-red-500" : ""}
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="flex items-center">
+                        <Key className="w-4 h-4 mr-2 text-muted-foreground" />
+                        Password
+                      </FormLabel>
+                      <Link to="/reset-password" className="text-sm text-primary hover:underline">
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <FormControl>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.password && (
-                <p className="text-xs text-red-500 flex items-center mt-1">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {errors.password}
-                </p>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
-          </form>
+              
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
         <CardFooter>
           <p className="text-sm text-center w-full">

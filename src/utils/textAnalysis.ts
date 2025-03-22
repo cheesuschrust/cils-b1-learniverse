@@ -1,5 +1,5 @@
 
-// Simple text analysis utilities for browser environments
+import { classifyText } from '@/services/AIService';
 
 // Simple tokenizer (splits text into words)
 export const tokenize = (text: string): string[] => {
@@ -40,11 +40,33 @@ export const generateSummary = (text: string, maxSentences: number = 3): string 
   return sentences.slice(0, maxSentences).join(' ');
 };
 
-// Detect content type based on keywords and patterns
-export const detectContentType = (content: string, fileType: string): {
+// Detect content type based on keywords and patterns using AI when available
+export const detectContentType = async (content: string, fileType: string): Promise<{
   type: "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking";
   confidence: number;
-} => {
+}> => {
+  // Try to use AI for detection
+  try {
+    const classifications = await classifyText(content);
+    
+    // Map classifications to content types
+    if (classifications.some(c => c.label.includes("listening") || c.label.includes("audio"))) {
+      return { type: "listening", confidence: 85 };
+    } else if (classifications.some(c => c.label.includes("flashcard") || c.label.includes("vocabulary"))) {
+      return { type: "flashcards", confidence: 80 };
+    } else if (classifications.some(c => c.label.includes("question") || c.label.includes("quiz"))) {
+      return { type: "multiple-choice", confidence: 90 };
+    } else if (classifications.some(c => c.label.includes("writing") || c.label.includes("essay"))) {
+      return { type: "writing", confidence: 75 };
+    } else if (classifications.some(c => c.label.includes("speaking") || c.label.includes("pronunciation"))) {
+      return { type: "speaking", confidence: 70 };
+    }
+  } catch (e) {
+    // If AI fails, fallback to rule-based approach
+    console.log("AI classification failed, using fallback detection");
+  }
+  
+  // Fallback to rule-based approach
   const contentLower = content.toLowerCase();
   let contentType: "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking" = "multiple-choice";
   let confidence = 50;

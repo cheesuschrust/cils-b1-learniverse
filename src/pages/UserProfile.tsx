@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Key, Languages, CreditCard, Calendar, CheckCircle, Save } from "lucide-react";
+import { User, Shield, Key, Languages, CreditCard, Calendar, CheckCircle, Save, Settings } from "lucide-react";
+import UserPreferences from "@/components/user/UserPreferences";
 
 const UserProfile = () => {
   const { user, updateProfile, updatePassword } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -172,9 +175,15 @@ const UserProfile = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Your Profile</h1>
-        <Button onClick={toggleEditing} variant={isEditing ? "destructive" : "outline"}>
-          {isEditing ? "Cancel Editing" : "Edit Profile"}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setActiveTab("preferences")} variant="outline">
+            <Settings className="h-4 w-4 mr-2" />
+            Preferences
+          </Button>
+          <Button onClick={toggleEditing} variant={isEditing ? "destructive" : "outline"}>
+            {isEditing ? "Cancel Editing" : "Edit Profile"}
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -304,15 +313,19 @@ const UserProfile = () => {
         </Card>
       </div>
       
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Profile Information
+            <span className="hidden sm:inline">Profile</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            Security
+            <span className="hidden sm:inline">Security</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Preferences</span>
           </TabsTrigger>
         </TabsList>
         
@@ -370,7 +383,11 @@ const UserProfile = () => {
                       value={profileForm.username}
                       onChange={handleProfileChange}
                       disabled={!isEditing}
+                      required
                     />
+                    {!profileForm.username && isEditing && (
+                      <p className="text-xs text-destructive">Username is required</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -524,6 +541,10 @@ const UserProfile = () => {
               </CardFooter>
             </form>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="preferences">
+          <UserPreferences onClose={() => setActiveTab("profile")} />
         </TabsContent>
       </Tabs>
     </div>
