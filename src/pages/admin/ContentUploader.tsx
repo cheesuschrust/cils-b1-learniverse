@@ -19,7 +19,7 @@ import { Switch } from '@/components/ui/switch';
 const ContentUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState('');
-  const [fileContentType, setFileContentType] = useState<'flashcards' | 'multiple-choice' | 'listening' | 'writing' | 'speaking' | null>(null);
+  const [fileContentType, setFileContentType] = useState<'flashcards' | 'multipleChoice' | 'listening' | 'writing' | 'speaking' | null>(null);
   const [contentConfidence, setContentConfidence] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -73,7 +73,14 @@ const ContentUploader = () => {
       
       // Auto-detect content type
       const contentTypeResult = await detectContentType(content, selectedFile.type);
-      setFileContentType(contentTypeResult.type);
+      
+      // Convert 'multiple-choice' to 'multipleChoice' if needed
+      let detectedType = contentTypeResult.type;
+      if (detectedType === "multiple-choice") {
+        detectedType = "multipleChoice" as any;
+      }
+      
+      setFileContentType(detectedType as any);
       setContentConfidence(contentTypeResult.confidence);
       
       // Auto-detect language
@@ -131,6 +138,10 @@ const ContentUploader = () => {
   };
   
   const handleContentTypeChange = (value: string) => {
+    // Convert 'multiple-choice' to 'multipleChoice' if needed
+    if (value === "multiple-choice") {
+      value = "multipleChoice";
+    }
     setFileContentType(value as any);
   };
   
@@ -146,9 +157,15 @@ const ContentUploader = () => {
     
     setIsProcessing(true);
     try {
+      // Convert 'multipleChoice' back to 'multiple-choice' if needed for the AI service
+      let contentType = fileContentType;
+      if (contentType === 'multipleChoice') {
+        contentType = 'multiple-choice' as any;
+      }
+      
       const questions = await generateQuestions(
         fileContent,
-        fileContentType,
+        contentType as any,
         5, // Number of questions
         difficulty
       );
@@ -283,7 +300,7 @@ const ContentUploader = () => {
                       {fileContentType && (
                         <div className="mt-2 flex items-center gap-2">
                           <Badge variant="outline" className="capitalize">
-                            {fileContentType.replace('-', ' ')}
+                            {fileContentType === 'multipleChoice' ? 'multiple choice' : fileContentType}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {contentConfidence}% confidence
@@ -335,7 +352,7 @@ const ContentUploader = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="flashcards">Flashcards</SelectItem>
-                          <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                          <SelectItem value="multipleChoice">Multiple Choice</SelectItem>
                           <SelectItem value="listening">Listening</SelectItem>
                           <SelectItem value="writing">Writing</SelectItem>
                           <SelectItem value="speaking">Speaking</SelectItem>

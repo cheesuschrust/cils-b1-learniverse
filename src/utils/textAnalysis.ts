@@ -42,7 +42,7 @@ export const generateSummary = (text: string, maxSentences: number = 3): string 
 
 // Detect content type based on keywords and patterns using AI when available
 export const detectContentType = async (content: string, fileType: string): Promise<{
-  type: "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking";
+  type: "flashcards" | "multiple-choice" | "writing" | "speaking" | "listening";
   confidence: number;
 }> => {
   // Try to use AI for detection
@@ -68,7 +68,7 @@ export const detectContentType = async (content: string, fileType: string): Prom
   
   // Fallback to rule-based approach
   const contentLower = content.toLowerCase();
-  let contentType: "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking" = "multiple-choice";
+  let contentType: "flashcards" | "multiple-choice" | "writing" | "speaking" | "listening" = "multiple-choice";
   let confidence = 50;
   
   // Check for different patterns

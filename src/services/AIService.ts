@@ -75,6 +75,7 @@ export const initModel = async ({
     }
     
     console.log(`Initializing ${modelType} model: ${model}`);
+    // Use type assertion to handle the string type
     const instance = await pipeline(task || modelType as any, model, options);
     modelCache[cacheKey] = instance;
     
@@ -278,14 +279,17 @@ Please provide ${language === "both" ? "bilingual feedback in both English and I
  */
 export const generateQuestions = async (
   content: string,
-  type: "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking",
+  type: "flashcards" | "multiple-choice" | "listening" | "writing" | "speaking",
   count: number = 5,
   difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
 ): Promise<any[]> => {
   try {
     let prompt = "";
     
-    switch (type) {
+    // Convert type to correct format if necessary
+    const contentType = type === "multiple-choice" ? "multipleChoice" : type;
+    
+    switch (contentType) {
       case "flashcards":
         prompt = `Extract ${count} vocabulary terms from the following Italian content that would be appropriate for ${difficulty} level learners. For each term, provide the Italian word, its English translation, and a sample sentence in Italian using the word.
 Format each as a JSON object with fields: term, translation, sampleSentence.
