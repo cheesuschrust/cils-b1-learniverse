@@ -1,5 +1,5 @@
 
-import { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from "../shared-types";
+import type { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from "../shared-types";
 
 export interface AuthContextType {
   user: User | null;

@@ -9,8 +9,8 @@ import {
   sendWelcomeEmail 
 } from '@/services/EmailService';
 import { getDatabase, passwordHash } from '@/services/MockDatabase';
-import { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from './shared-types';
-import { AuthContextType } from './types/auth-types';
+import type { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from './shared-types';
+import type { AuthContextType } from './types/auth-types';
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -599,6 +599,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       const parsedUser = JSON.parse(storedUser);
+      const db = await getDatabase();
       
       // Find user in db
       const userIndex = db.users.findIndex(u => u.id === parsedUser.id);
@@ -640,6 +641,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
+      
+      const db = await getDatabase();
       
       // Find user in db
       const userIndex = db.users.findIndex(u => u.id === user.id);
@@ -724,6 +727,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
+      const db = await getDatabase();
+      
       // Find user in db
       const userIndex = db.users.findIndex(u => u.id === user.id);
       if (userIndex === -1) {
@@ -771,30 +776,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startDate?: Date, 
     endDate?: Date
   ): LogEntry[] => {
-    const db = getDatabase();
-    let filteredLogs = [...db.logs];
-    
-    // Filter by category
-    if (category) {
-      filteredLogs = filteredLogs.filter(log => log.category === category);
+    try {
+      const db = getDatabase();
+      let filteredLogs = [...db.logs];
+      
+      // Filter by category
+      if (category) {
+        filteredLogs = filteredLogs.filter(log => log.category === category);
+      }
+      
+      // Filter by level
+      if (level) {
+        filteredLogs = filteredLogs.filter(log => log.level === level);
+      }
+      
+      // Filter by date range
+      if (startDate) {
+        filteredLogs = filteredLogs.filter(log => log.timestamp >= startDate);
+      }
+      
+      if (endDate) {
+        filteredLogs = filteredLogs.filter(log => log.timestamp <= endDate);
+      }
+      
+      // Sort by timestamp (newest first)
+      return filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    } catch (error) {
+      console.error("Error getting system logs:", error);
+      return [];
     }
-    
-    // Filter by level
-    if (level) {
-      filteredLogs = filteredLogs.filter(log => log.level === level);
-    }
-    
-    // Filter by date range
-    if (startDate) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp >= startDate);
-    }
-    
-    if (endDate) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp <= endDate);
-    }
-    
-    // Sort by timestamp (newest first)
-    return filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   };
   
   // Add system log
@@ -804,28 +814,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     details?: string, 
     level: 'info' | 'warning' | 'error' = 'info'
   ): void => {
-    const db = getDatabase();
-    const logEntry: LogEntry = {
-      id: uuidv4(),
-      timestamp: new Date(),
-      category,
-      action,
-      userId: user?.id,
-      details,
-      level
-    };
-    
-    db.logs.push(logEntry);
-    
-    // Keep log size manageable
-    if (db.logs.length > 10000) {
-      db.logs = db.logs.slice(-10000);
+    try {
+      const db = getDatabase();
+      const logEntry: LogEntry = {
+        id: uuidv4(),
+        timestamp: new Date(),
+        category,
+        action,
+        userId: user?.id,
+        details,
+        level
+      };
+      
+      db.logs.push(logEntry);
+      
+      // Keep log size manageable
+      if (db.logs.length > 10000) {
+        db.logs = db.logs.slice(-10000);
+      }
+    } catch (error) {
+      console.error("Error adding system log:", error);
     }
   };
   
   // Get email settings
   const getEmailSettings = (): EmailSettings => {
-    return db.emailSettings;
+    try {
+      const db = getDatabase();
+      return db.emailSettings;
+    } catch (error) {
+      console.error("Error getting email settings:", error);
+      // Return default email settings as fallback
+      return {
+        provider: 'smtp',
+        fromEmail: 'noreply@example.com',
+        fromName: 'Example App',
+        config: {
+          enableSsl: true,
+        },
+        templates: {
+          verification: {
+            subject: 'Verify your email',
+            body: 'Please verify your email'
+          },
+          passwordReset: {
+            subject: 'Reset your password',
+            body: 'Please reset your password'
+          },
+          welcome: {
+            subject: 'Welcome',
+            body: 'Welcome to our app'
+          }
+        },
+        temporaryInboxDuration: 24
+      };
+    }
   };
   
   // Update email settings
@@ -840,6 +883,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
+      
+      const db = await getDatabase();
       
       // Update settings
       db.emailSettings = settings;
@@ -861,11 +906,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Get all users (admin only)
   const getAllUsers = (): User[] => {
-    if (!user || user.role !== 'admin') {
+    try {
+      if (!user || user.role !== 'admin') {
+        return [];
+      }
+      
+      const db = getDatabase();
+      return [...db.users];
+    } catch (error) {
+      console.error("Error getting users:", error);
       return [];
     }
-    
-    return [...db.users];
   };
   
   // Delete user (admin only)
@@ -890,6 +941,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
+      
+      const db = await getDatabase();
       
       // Find user
       const userToDelete = db.users.find(u => u.id === userId);
@@ -951,6 +1004,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
+      const db = await getDatabase();
+      
       // Find user
       const userIndex = db.users.findIndex(u => u.id === userId);
       if (userIndex === -1) {
@@ -1003,6 +1058,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
+      const db = await getDatabase();
+      
       // Find user
       const userIndex = db.users.findIndex(u => u.id === userId);
       if (userIndex === -1) {
@@ -1054,6 +1111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
+      
+      const db = await getDatabase();
       
       // Find user
       const userIndex = db.users.findIndex(u => u.id === userId);
@@ -1170,6 +1229,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      const db = await getDatabase();
+      
       // Update count
       const userIndex = db.users.findIndex(u => u.id === user.id);
       if (userIndex === -1) {
@@ -1205,6 +1266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const db = await getDatabase();
       const userIndex = db.users.findIndex(u => u.id === userId);
       if (userIndex === -1) {
         toast({
@@ -1247,6 +1309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const db = await getDatabase();
       const userIndex = db.users.findIndex(u => u.id === userId);
       if (userIndex === -1) {
         toast({
@@ -1294,6 +1357,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const db = await getDatabase();
       const logIndex = db.logs.findIndex(l => l.id === logId);
       if (logIndex === -1) {
         toast({
@@ -1372,6 +1436,5 @@ export const useAuth = () => {
   return context;
 };
 
-// Export types
-export { LogCategory, LogEntry, User, UserPreferences, EmailSettings } from './shared-types';
-
+// Export types - Using proper syntax for isolatedModules compatibility
+export type { LogCategory, LogEntry, User, UserPreferences, EmailSettings } from './shared-types';
