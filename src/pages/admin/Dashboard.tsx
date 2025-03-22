@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Command,
@@ -239,7 +240,8 @@ const AdminDashboard = () => {
     }
   };
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fixed: Updated the handler to handle both input and select elements
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewUserData(prev => ({ ...prev, [name]: value }));
   };
@@ -428,7 +430,7 @@ const AdminDashboard = () => {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           {user.subscription === "premium" ? (
-                            <Badge variant="success">Premium</Badge>
+                            <Badge variant="secondary">Premium</Badge>
                           ) : (
                             <Badge variant="default">Free</Badge>
                           )}
@@ -548,3 +550,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+

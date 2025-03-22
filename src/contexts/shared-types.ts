@@ -76,20 +76,24 @@ export interface EmailTemplate {
   body: string;
 }
 
+export interface EmailConfig {
+  enableSsl: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  domain?: string;
+  region?: string;
+  accessKey?: string;
+  secretKey?: string;
+}
+
 export interface EmailSettings {
   provider: EmailProvider;
   fromEmail: string;
   fromName: string;
-  config: {
-    enableSsl: boolean;
-    host?: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    apiKey?: string;
-    domain?: string;
-    region?: string;
-  };
+  config: EmailConfig;
   templates: {
     verification: EmailTemplate;
     passwordReset: EmailTemplate;
@@ -106,3 +110,4 @@ export interface MockDatabase {
   resetTokens: Map<string, { email: string; expires: Date }>;
   verificationTokens: Map<string, { email: string; expires: Date }>;
 }
+

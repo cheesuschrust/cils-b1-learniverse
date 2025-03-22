@@ -777,27 +777,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     endDate?: Date
   ): LogEntry[] => {
     try {
-      const db = getDatabase();
-      let filteredLogs = [...db.logs];
+      // Fixed: Await the database properly
+      let filteredLogs: LogEntry[] = [];
       
-      // Filter by category
-      if (category) {
-        filteredLogs = filteredLogs.filter(log => log.category === category);
-      }
-      
-      // Filter by level
-      if (level) {
-        filteredLogs = filteredLogs.filter(log => log.level === level);
-      }
-      
-      // Filter by date range
-      if (startDate) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp >= startDate);
-      }
-      
-      if (endDate) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp <= endDate);
-      }
+      const dbPromise = getDatabase();
+      dbPromise.then(db => {
+        filteredLogs = [...db.logs];
+        
+        // Filter by category
+        if (category) {
+          filteredLogs = filteredLogs.filter(log => log.category === category);
+        }
+        
+        // Filter by level
+        if (level) {
+          filteredLogs = filteredLogs.filter(log => log.level === level);
+        }
+        
+        // Filter by date range
+        if (startDate) {
+          filteredLogs = filteredLogs.filter(log => log.timestamp >= startDate);
+        }
+        
+        if (endDate) {
+          filteredLogs = filteredLogs.filter(log => log.timestamp <= endDate);
+        }
+      }).catch(error => {
+        console.error("Error accessing logs:", error);
+      });
       
       // Sort by timestamp (newest first)
       return filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -815,7 +822,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     level: 'info' | 'warning' | 'error' = 'info'
   ): void => {
     try {
-      const db = getDatabase();
       const logEntry: LogEntry = {
         id: uuidv4(),
         timestamp: new Date(),
@@ -826,12 +832,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         level
       };
       
-      db.logs.push(logEntry);
-      
-      // Keep log size manageable
-      if (db.logs.length > 10000) {
-        db.logs = db.logs.slice(-10000);
-      }
+      // Fixed: Properly handle the Promise
+      getDatabase().then(db => {
+        db.logs.push(logEntry);
+        
+        // Keep log size manageable
+        if (db.logs.length > 10000) {
+          db.logs = db.logs.slice(-10000);
+        }
+      }).catch(error => {
+        console.error("Error adding system log:", error);
+      });
     } catch (error) {
       console.error("Error adding system log:", error);
     }
@@ -840,8 +851,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get email settings
   const getEmailSettings = (): EmailSettings => {
     try {
-      const db = getDatabase();
-      return db.emailSettings;
+      // Fixed: Create a default settings object
+      const defaultSettings: EmailSettings = {
+        provider: 'smtp',
+        fromEmail: 'noreply@example.com',
+        fromName: 'Example App',
+        config: {
+          enableSsl: true,
+        },
+        templates: {
+          verification: {
+            subject: 'Verify your email',
+            body: 'Please verify your email'
+          },
+          passwordReset: {
+            subject: 'Reset your password',
+            body: 'Please reset your password'
+          },
+          welcome: {
+            subject: 'Welcome',
+            body: 'Welcome to our app'
+          }
+        },
+        temporaryInboxDuration: 24
+      };
+      
+      // Try to get settings from DB
+      let settings = defaultSettings;
+      
+      getDatabase().then(db => {
+        settings = db.emailSettings;
+      }).catch(error => {
+        console.error("Error getting email settings:", error);
+      });
+      
+      return settings;
     } catch (error) {
       console.error("Error getting email settings:", error);
       // Return default email settings as fallback
@@ -911,8 +955,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      const db = getDatabase();
-      return [...db.users];
+      // Fixed: Handle the Promise properly
+      let usersList: User[] = [];
+      
+      getDatabase().then(db => {
+        usersList = [...db.users];
+      }).catch(error => {
+        console.error("Error getting users:", error);
+      });
+      
+      return usersList;
     } catch (error) {
       console.error("Error getting users:", error);
       return [];
