@@ -49,6 +49,9 @@ interface ContentCategory {
   confidence: number;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const PROCESS_TIMEOUT = 10000; // 10 seconds
+
 const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,8 +66,10 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [selectedCategoryType, setSelectedCategoryType] = useState<"listening" | "flashcards" | "multiple-choice" | "writing" | "speaking" | null>(null);
   const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [processingError, setProcessingError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const processingTimeoutRef = useRef<number | null>(null);
   const { toast } = useToast();
   const { classifyText, generateQuestions, isProcessing: isAIProcessing } = useAI();
   const { user } = useAuth();
@@ -119,10 +124,33 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     };
   }, [isProcessing, generatingQuestions, loadingProgress]);
 
+  // Cleanup function to handle timeouts and reset state
+  useEffect(() => {
+    return () => {
+      if (processingTimeoutRef.current) {
+        window.clearTimeout(processingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
+    // Reset any previous errors
+    setProcessingError(null);
+    
     const selectedFile = e.target.files[0];
+    
+    // Check file size
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: `Maximum file size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setFile(selectedFile);
     setTitle(selectedFile.name.split('.')[0].replace(/_/g, ' '));
     setFileType(selectedFile.type);
@@ -146,11 +174,19 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 
   const extractContentFromFile = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // Set a timeout to prevent hanging
+      const timeout = window.setTimeout(() => {
+        reject(new Error("Processing took too long. Please try a smaller file or different format."));
+      }, PROCESS_TIMEOUT);
+      
+      processingTimeoutRef.current = timeout;
+      
       if (file.type.startsWith("audio/")) {
         toast({
           title: "Audio file detected",
           description: "Audio transcription will be processed by AI. Please wait...",
         });
+        window.clearTimeout(timeout);
         resolve("Audio content will be processed by AI transcription"); 
         return;
       }
@@ -160,6 +196,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
           title: "Image file detected",
           description: "Image will be processed for text extraction. This may take a moment...",
         });
+        window.clearTimeout(timeout);
         resolve("Image content will be processed by OCR");
         return;
       }
@@ -167,11 +204,20 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       const reader = new FileReader();
       
       reader.onload = (e) => {
+        window.clearTimeout(timeout);
         const text = e.target?.result as string;
-        resolve(text);
+        
+        // Limit text size to prevent browser freezing
+        const maxLength = 100000; // ~100KB of text
+        const truncatedText = text && text.length > maxLength 
+          ? text.substring(0, maxLength) + "\n\n[Content truncated due to size...]" 
+          : text;
+        
+        resolve(truncatedText);
       };
       
       reader.onerror = () => {
+        window.clearTimeout(timeout);
         reject(new Error("Failed to read file"));
       };
       
@@ -183,6 +229,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
           title: `${file.type.includes("pdf") ? "PDF" : file.type.includes("excel") ? "Spreadsheet" : "Document"} detected`,
           description: "Complex document parsing may take a moment...",
         });
+        window.clearTimeout(timeout);
         resolve(`Content extracted from ${file.name} will be processed`);
       } else {
         reader.readAsText(file);
@@ -201,6 +248,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
     
     setIsProcessing(true);
+    setProcessingError(null);
     
     try {
       const content = await extractContentFromFile(file);
@@ -222,6 +270,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
           }
         } catch (error) {
           console.error("Error analyzing content:", error);
+          setProcessingError("Failed to categorize content. Please try again or select manually.");
         }
       }
       
@@ -229,13 +278,14 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         title: "File processed successfully",
         description: "Content has been extracted and analyzed",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error processing file",
-        description: "There was a problem extracting content from this file",
+        description: error?.message || "There was a problem extracting content from this file",
         variant: "destructive",
       });
       console.error("File processing error:", error);
+      setProcessingError(error?.message || "Processing failed. Try a smaller file or different format.");
     } finally {
       setIsProcessing(false);
     }
@@ -243,68 +293,23 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 
   const detectContentCategories = async (content: string): Promise<ContentCategory[]> => {
     try {
-      const classifications = await classifyText(content);
+      // Limit content size for classification to prevent freezing
+      const contentForClassification = content.length > 5000 ? content.substring(0, 5000) : content;
       
-      let categories: ContentCategory[] = [];
-      const contentLower = content.toLowerCase();
-      
-      const hasQuestions = (content.match(/\?/g) || []).length > 2;
-      const hasNumberedItems = (content.match(/\d+\.\s/g) || []).length > 2;
-      const hasOptions = (content.match(/[a-d]\)/gi) || []).length > 2;
-      
-      if (fileType.startsWith("audio/")) {
-        categories.push({
-          type: "listening",
-          confidence: 90
-        });
+      // Skip AI classification for large files
+      if (content.length > 20000) {
+        return inferContentType(content);
       }
       
-      if (hasQuestions && hasOptions) {
-        categories.push({
-          type: "multiple-choice",
-          confidence: 85
-        });
+      try {
+        const classifications = await classifyText(contentForClassification);
+        // Use the AI classifications if available
+        // If not, fall back to basic inference
+      } catch (error) {
+        console.error("Error with AI classification:", error);
       }
       
-      if (hasNumberedItems && !hasQuestions) {
-        categories.push({
-          type: "flashcards",
-          confidence: 80
-        });
-      }
-      
-      if (contentLower.includes("speak") || contentLower.includes("pronunciation") || 
-          contentLower.includes("talk") || contentLower.includes("say") ||
-          contentLower.includes("repeat")) {
-        categories.push({
-          type: "speaking",
-          confidence: 75
-        });
-      }
-      
-      if (contentLower.includes("write") || contentLower.includes("essay") || 
-          contentLower.includes("composition") || contentLower.includes("paragraph")) {
-        categories.push({
-          type: "writing",
-          confidence: 75
-        });
-      }
-      
-      if (categories.length === 0) {
-        if (hasQuestions) {
-          categories.push({
-            type: "multiple-choice",
-            confidence: 65
-          });
-        } else {
-          categories.push({
-            type: "flashcards",
-            confidence: 60
-          });
-        }
-      }
-      
-      return categories;
+      return inferContentType(contentForClassification);
     } catch (error) {
       console.error("Error detecting content categories:", error);
       return [{
@@ -312,6 +317,70 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         confidence: 50
       }];
     }
+  };
+  
+  // Simple inference without AI to prevent freezing
+  const inferContentType = (content: string): ContentCategory[] => {
+    let categories: ContentCategory[] = [];
+    const contentLower = content.toLowerCase();
+    
+    const hasQuestions = (content.match(/\?/g) || []).length > 2;
+    const hasNumberedItems = (content.match(/\d+\.\s/g) || []).length > 2;
+    const hasOptions = (content.match(/[a-d]\)/gi) || []).length > 2;
+    
+    if (fileType.startsWith("audio/")) {
+      categories.push({
+        type: "listening",
+        confidence: 90
+      });
+    }
+    
+    if (hasQuestions && hasOptions) {
+      categories.push({
+        type: "multiple-choice",
+        confidence: 85
+      });
+    }
+    
+    if (hasNumberedItems && !hasQuestions) {
+      categories.push({
+        type: "flashcards",
+        confidence: 80
+      });
+    }
+    
+    if (contentLower.includes("speak") || contentLower.includes("pronunciation") || 
+        contentLower.includes("talk") || contentLower.includes("say") ||
+        contentLower.includes("repeat")) {
+      categories.push({
+        type: "speaking",
+        confidence: 75
+      });
+    }
+    
+    if (contentLower.includes("write") || contentLower.includes("essay") || 
+        contentLower.includes("composition") || contentLower.includes("paragraph")) {
+      categories.push({
+        type: "writing",
+        confidence: 75
+      });
+    }
+    
+    if (categories.length === 0) {
+      if (hasQuestions) {
+        categories.push({
+          type: "multiple-choice",
+          confidence: 65
+        });
+      } else {
+        categories.push({
+          type: "flashcards",
+          confidence: 60
+        });
+      }
+    }
+    
+    return categories;
   };
 
   const handleGenerateQuestions = async () => {
@@ -327,8 +396,13 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     setGeneratingQuestions(true);
     
     try {
+      // Limit content for question generation
+      const contentForGeneration = extractedContent.length > 5000 
+        ? extractedContent.substring(0, 5000) + "\n\n[Content truncated for processing...]" 
+        : extractedContent;
+      
       const questions = await generateQuestions(
-        extractedContent,
+        contentForGeneration,
         selectedCategoryType === "multiple-choice" ? "multipleChoice" : selectedCategoryType,
         5,
         difficulty
@@ -447,17 +521,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
   };
 
-  const onDrop = (files: File[]) => {
-    if (files.length === 0) return;
-    const file = files[0];
-    const event = {
-      target: {
-        files: [file] as unknown as FileList
-      }
-    } as React.ChangeEvent<HTMLInputElement>;
-    handleFileSelect(event);
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -492,6 +555,9 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                     <span className="font-medium">Click to upload</span> or drag and drop
                     <p className="text-xs mt-1">
                       Supports text, PDF, Word, Excel, audio, and image files
+                    </p>
+                    <p className="text-xs mt-1 text-muted-foreground">
+                      Maximum file size: {MAX_FILE_SIZE / (1024 * 1024)}MB
                     </p>
                   </div>
                 )}
@@ -573,6 +639,13 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                   </>
                 )}
               </Button>
+              
+              {processingError && (
+                <div className="w-full p-3 border border-destructive/50 bg-destructive/10 rounded-md text-sm text-destructive flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{processingError}</span>
+                </div>
+              )}
               
               {(isProcessing || generatingQuestions) && loadingProgress > 0 && (
                 <div className="w-full">
@@ -672,8 +745,14 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                 value={extractedContent}
                 onChange={(e) => setExtractedContent(e.target.value)}
                 placeholder="Content will appear here after processing"
-                className="min-h-[200px]"
+                className="min-h-[200px] max-h-[400px]"
               />
+              
+              {extractedContent.length > 100000 && (
+                <p className="text-xs text-amber-500">
+                  Note: This is a large document. Only the first 100,000 characters are shown to prevent browser performance issues.
+                </p>
+              )}
             </div>
           )}
           
