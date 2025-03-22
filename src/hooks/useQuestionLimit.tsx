@@ -3,8 +3,10 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 
+// Define the question types
 type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
 
+// Define the return type for our hook
 interface UseQuestionLimitResult {
   canAccessContent: boolean;
   isLoading: boolean;
@@ -21,29 +23,35 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Convert type to match the keys in dailyQuestionCounts
+  // Handle the case where type is "multipleChoice"
   const countKey = type === "multipleChoice" ? "multipleChoice" : type;
   
-  // Get the current count for this question type (safely)
+  // Function to get current question count
   const getCurrentCount = (): number => {
-    if (!user || !user.dailyQuestionCounts) return 0;
+    if (!user || !user.dailyQuestionCounts) {
+      return 0;
+    }
     return user.dailyQuestionCounts[countKey] || 0;
   };
   
-  // Check if user can access content
+  // Function to check if user can access content
   const canAccessContent = (): boolean => {
-    if (!isAuthenticated || !user) return false;
+    if (!isAuthenticated || !user) {
+      return false;
+    }
     
-    // Premium users can always access content
-    if (user.subscription === "premium") return true;
+    if (user.subscription === "premium") {
+      return true;
+    }
     
-    // Free users can access if they haven't used their daily limit
     return getCurrentCount() < 1;
   };
   
-  // Get remaining questions
+  // Function to get remaining questions
   const getRemainingQuestions = (): number | "unlimited" => {
-    if (!user) return 0;
+    if (!user) {
+      return 0;
+    }
     
     if (user.subscription === "premium") {
       return "unlimited";
@@ -52,7 +60,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     return Math.max(0, 1 - getCurrentCount());
   };
   
-  // Track question usage
+  // Function to track question usage
   const trackQuestionUsage = async (): Promise<boolean> => {
     if (!isAuthenticated) {
       toast({
@@ -86,6 +94,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     }
   };
   
+  // Return the hook result
   return {
     canAccessContent: canAccessContent(),
     isLoading,
