@@ -66,6 +66,7 @@ export interface UserPreferences {
   aiModelSize?: string;
   aiProcessingOnDevice?: boolean;
   confidenceScoreVisible?: boolean;
+  bio?: string; // Add the bio property
 }
 
 // Email settings
