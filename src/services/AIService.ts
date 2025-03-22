@@ -8,6 +8,24 @@ env.allowLocalModels = true;
 // Cache for initialized models to avoid reloading
 const modelCache: Record<string, any> = {};
 
+// Also track training examples to improve generation
+const trainingExamples: Record<ContentType, any[]> = {
+  'flashcards': [],
+  'multiple-choice': [],
+  'writing': [],
+  'speaking': [],
+  'listening': []
+};
+
+// Track confidence scores by content type
+const confidenceScores: Record<ContentType, number> = {
+  'flashcards': 80,
+  'multiple-choice': 85,
+  'writing': 75,
+  'speaking': 70,
+  'listening': 80
+};
+
 export type AIModelType = 
   | 'text-generation' 
   | 'text-classification'
@@ -284,46 +302,58 @@ export const generateQuestions = async (
   difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
 ): Promise<any[]> => {
   try {
+    // Use training examples to improve generation if available
+    const examples = trainingExamples[type];
+    const hasTrainingExamples = examples && examples.length > 0;
+    
     let prompt = "";
+    
+    // Add examples to the prompt if available
+    if (hasTrainingExamples) {
+      prompt += `Here are some example questions: ${JSON.stringify(examples.slice(0, 2))}\n\n`;
+    }
     
     switch (type) {
       case "flashcards":
-        prompt = `Extract ${count} vocabulary terms from the following Italian content that would be appropriate for ${difficulty} level learners. For each term, provide the Italian word, its English translation, and a sample sentence in Italian using the word.
+        prompt += `Extract ${count} vocabulary terms from the following Italian content that would be appropriate for ${difficulty} level learners. For each term, provide the Italian word, its English translation, and a sample sentence in Italian using the word.
 Format each as a JSON object with fields: term, translation, sampleSentence.
 
 Content: "${content.substring(0, 500)}"`;
         break;
       
       case "multiple-choice":
-        prompt = `Create ${count} multiple-choice questions in Italian about the following content for ${difficulty} level learners. Each question should have 4 options with exactly one correct answer.
+        prompt += `Create ${count} multiple-choice questions in Italian about the following content for ${difficulty} level learners. Each question should have 4 options with exactly one correct answer.
 Format each as a JSON object with fields: question, options (array of 4 strings), correctAnswerIndex (0-3).
 
 Content: "${content.substring(0, 500)}"`;
         break;
         
       case "writing":
-        prompt = `Create ${count} writing prompts in Italian based on the following content for ${difficulty} level learners. Include a prompt and expected answer points to cover.
+        prompt += `Create ${count} writing prompts in Italian based on the following content for ${difficulty} level learners. Include a prompt and expected answer points to cover.
 Format each as a JSON object with fields: prompt, expectedElements (array of strings), minWordCount.
 
 Content: "${content.substring(0, 500)}"`;
         break;
         
       case "speaking":
-        prompt = `Create ${count} speaking practice questions in Italian based on the following content for ${difficulty} level learners. Include a question and expected answer elements.
+        prompt += `Create ${count} speaking practice questions in Italian based on the following content for ${difficulty} level learners. Include a question and expected answer elements.
 Format each as a JSON object with fields: question, expectedElements (array of strings).
 
 Content: "${content.substring(0, 500)}"`;
         break;
         
       case "listening":
-        prompt = `Create ${count} listening comprehension questions based on this Italian audio transcript for ${difficulty} level learners. Include a question and 4 options with exactly one correct answer.
+        prompt += `Create ${count} listening comprehension questions based on this Italian audio transcript for ${difficulty} level learners. Include a question and 4 options with exactly one correct answer.
 Format each as a JSON object with fields: question, options (array of 4 strings), correctAnswerIndex (0-3).
 
 Transcript: "${content.substring(0, 500)}"`;
         break;
     }
     
-    const result = await generateText(prompt, { maxLength: 1000 });
+    const result = await generateText(prompt, { 
+      maxLength: 1000,
+      temperature: 0.7
+    });
     
     try {
       // Try to parse the result and clean it up
@@ -368,4 +398,70 @@ Transcript: "${content.substring(0, 500)}"`;
     console.error("Question generation error:", error);
     return [];
   }
+};
+
+/**
+ * Add training examples to improve question generation
+ */
+export const addTrainingExamples = (type: ContentType, examples: any[]): void => {
+  if (!trainingExamples[type]) {
+    trainingExamples[type] = [];
+  }
+  
+  // Add new examples, avoiding duplicates
+  examples.forEach(example => {
+    const isDuplicate = trainingExamples[type].some(existingExample => {
+      // Compare based on key fields
+      if (type === 'flashcards' && existingExample.term === example.term) return true;
+      if (type === 'multiple-choice' && existingExample.question === example.question) return true;
+      if (type === 'writing' && existingExample.prompt === example.prompt) return true;
+      if (type === 'speaking' && existingExample.question === example.question) return true;
+      if (type === 'listening' && existingExample.question === example.question) return true;
+      return false;
+    });
+    
+    if (!isDuplicate) {
+      trainingExamples[type].push(example);
+    }
+  });
+  
+  // Update confidence score
+  updateConfidenceScore(type);
+  
+  console.log(`Added ${examples.length} training examples for ${type}. Total: ${trainingExamples[type].length}`);
+};
+
+/**
+ * Update the confidence score for a specific content type
+ */
+export const updateConfidenceScore = (type: ContentType, newScore?: number): void => {
+  if (newScore !== undefined) {
+    confidenceScores[type] = newScore;
+  } else {
+    // Calculate new score based on number of training examples
+    const exampleCount = trainingExamples[type].length;
+    const baseScore = confidenceScores[type];
+    
+    // More examples = higher confidence, with diminishing returns
+    if (exampleCount > 0) {
+      const exampleBonus = Math.min(15, Math.log(exampleCount + 1) * 5);
+      confidenceScores[type] = Math.min(98, baseScore + exampleBonus);
+    }
+  }
+  
+  console.log(`Updated confidence score for ${type}: ${confidenceScores[type].toFixed(2)}%`);
+};
+
+/**
+ * Get the current confidence score for a content type
+ */
+export const getConfidenceScore = (type: ContentType): number => {
+  return confidenceScores[type] || 75;
+};
+
+/**
+ * Get training examples for a specific content type
+ */
+export const getTrainingExamples = (type: ContentType): any[] => {
+  return trainingExamples[type] || [];
 };

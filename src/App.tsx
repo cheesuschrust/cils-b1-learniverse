@@ -1,124 +1,94 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { Toaster } from 'react-hot-toast';
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { Toaster } from "@/components/ui/toaster";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import Index from "@/pages/Index";
-import Dashboard from "@/pages/Dashboard";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
-import ResetPassword from "@/pages/ResetPassword";
-import EmailVerification from "@/pages/EmailVerification";
-import NotFound from "@/pages/NotFound";
-import UserProfile from "@/pages/UserProfile";
-import Flashcards from "@/pages/Flashcards";
-import Writing from "@/pages/Writing";
-import Speaking from "@/pages/Speaking";
-import Listening from "@/pages/Listening";
-import MultipleChoice from "@/pages/MultipleChoice";
-import AdminDashboard from "@/pages/admin/Dashboard";
-import ContentUploader from "@/pages/admin/ContentUploader";
-import EmailSettings from "@/pages/admin/EmailSettings";
-import SystemLogs from "@/pages/admin/SystemLogs";
-import FileUploader from "@/pages/admin/FileUploader";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import CookieConsent from "@/components/common/CookieConsent";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+// Import layouts
+import DashboardLayout from '@/layouts/DashboardLayout';
+import AdminLayout from '@/layouts/AdminLayout';
+
+// Import components
+import { ToastProvider } from '@/components/ui/use-toast';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import NotFound from '@/pages/NotFound';
+
+// Import pages
+import {
+  Login,
+  SignUp,
+  PasswordReset,
+  Dashboard,
+  Flashcards,
+  Lessons,
+  SpeakingPractice,
+  ListeningExercises,
+  WritingExercises,
+  LearningCalendar,
+  UserProfile,
+  Settings,
+  Communities,
+  ProgressTracker,
+  AdminDashboard,
+  UserManagement,
+  ContentUploader,
+  FileUploader,
+  AdminSettings,
+  ContentAnalysis
+} from '@/pages/imports';
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="cittadinanza-theme">
-      <Router>
-        <AuthProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-email" element={<EmailVerification />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                
-                {/* Protected routes */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <UserProfile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/flashcards" element={
-                  <ProtectedRoute>
-                    <Flashcards />
-                  </ProtectedRoute>
-                } />
-                <Route path="/writing" element={
-                  <ProtectedRoute>
-                    <Writing />
-                  </ProtectedRoute>
-                } />
-                <Route path="/speaking" element={
-                  <ProtectedRoute>
-                    <Speaking />
-                  </ProtectedRoute>
-                } />
-                <Route path="/listening" element={
-                  <ProtectedRoute>
-                    <Listening />
-                  </ProtectedRoute>
-                } />
-                <Route path="/multiple-choice" element={
-                  <ProtectedRoute>
-                    <MultipleChoice />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin routes */}
-                <Route path="/admin/dashboard" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/content" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <ContentUploader />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/email-settings" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <EmailSettings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/logs" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <SystemLogs />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/files" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <FileUploader />
-                  </ProtectedRoute>
-                } />
-                
-                {/* 404 route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+    <AuthProvider>
+      <UserPreferencesProvider>
+        <Helmet>
+          <title>Italian Language Learning App</title>
+          <meta name="description" content="Learn Italian with our comprehensive language learning app" />
+        </Helmet>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/password-reset" element={<PasswordReset />} />
+              
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<DashboardLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="flashcards" element={<Flashcards />} />
+                  <Route path="lessons" element={<Lessons />} />
+                  <Route path="speaking" element={<SpeakingPractice />} />
+                  <Route path="listening" element={<ListeningExercises />} />
+                  <Route path="writing" element={<WritingExercises />} />
+                  <Route path="calendar" element={<LearningCalendar />} />
+                  <Route path="profile" element={<UserProfile />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="communities" element={<Communities />} />
+                  <Route path="progress" element={<ProgressTracker />} />
+                </Route>
+
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="content" element={<ContentUploader />} />
+                  <Route path="content-analysis" element={<ContentAnalysis />} />
+                  <Route path="file-uploader" element={<FileUploader />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
+              </Route>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
           <Toaster />
-          <CookieConsent />
-        </AuthProvider>
-      </Router>
-    </ThemeProvider>
+        </ToastProvider>
+      </UserPreferencesProvider>
+    </AuthProvider>
   );
 }
 
