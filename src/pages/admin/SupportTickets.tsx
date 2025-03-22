@@ -7,14 +7,14 @@ import { SupportTicketProps } from '@/components/tickets/SupportTicketItem';
 import { useSystemLog } from '@/hooks/use-system-log';
 import HelpTooltip from '@/components/help/HelpTooltip';
 
-// Mock data - in a real app, this would come from your backend
+// Mock data
 const mockTickets: SupportTicketProps[] = [
   {
     id: '1',
     subject: 'Problem with flashcards not saving',
     message: 'I created several flashcards but when I closed the browser and came back, they were all gone. Is there a way to recover them?',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    updatedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000), // 1.5 days ago
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    updatedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000),
     status: 'open',
     priority: 'high',
     category: 'technical',
@@ -27,8 +27,8 @@ const mockTickets: SupportTicketProps[] = [
     id: '2',
     subject: 'Question about subscription plan',
     message: 'I\'m interested in upgrading to the premium plan. Does it include unlimited speaking practice sessions?',
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
     status: 'in-progress',
     priority: 'medium',
     category: 'billing',
@@ -39,7 +39,7 @@ const mockTickets: SupportTicketProps[] = [
       {
         id: 'resp1',
         message: 'Hi Jane, yes, the premium plan includes unlimited speaking practice sessions. Would you like me to provide more details about the other premium features?',
-        createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+        createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
         userId: 'admin1',
         userName: 'Admin User',
         isAdmin: true
@@ -50,8 +50,8 @@ const mockTickets: SupportTicketProps[] = [
     id: '3',
     subject: 'Feature request: Dictionary integration',
     message: 'It would be great if you could add a dictionary feature that allows users to look up words directly from the lessons without leaving the platform.',
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-    updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 days ago
+    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
     status: 'resolved',
     priority: 'low',
     category: 'feedback',
@@ -62,7 +62,7 @@ const mockTickets: SupportTicketProps[] = [
       {
         id: 'resp2',
         message: 'Thank you for your suggestion! We're actually working on a dictionary integration feature that should be available in the next update. We'll keep you posted on the release date.',
-        createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000), // 9 days ago
+        createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
         userId: 'admin1',
         userName: 'Admin User',
         isAdmin: true
@@ -70,7 +70,7 @@ const mockTickets: SupportTicketProps[] = [
       {
         id: 'resp3',
         message: 'That sounds great! Looking forward to it.',
-        createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 days ago
+        createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
         userId: 'user3',
         userName: 'Maria Rodriguez',
         isAdmin: false
