@@ -14,6 +14,7 @@ import Flashcards from "./pages/Flashcards";
 import MultipleChoice from "./pages/MultipleChoice";
 import Listening from "./pages/Listening";
 import Writing from "./pages/Writing";
+import Speaking from "./pages/Speaking";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/multiple-choice" element={<MultipleChoice />} />
               <Route path="/listening" element={<Listening />} />
               <Route path="/writing" element={<Writing />} />
+              <Route path="/speaking" element={<Speaking />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

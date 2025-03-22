@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   LogOut,
+  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,11 @@ const Navbar = () => {
       name: "Writing",
       href: "/writing",
       icon: <Pen className="w-5 h-5 mr-2" />,
+    },
+    {
+      name: "Speaking",
+      href: "/speaking",
+      icon: <Mic className="w-5 h-5 mr-2" />,
     },
   ];
 
