@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import * as AIService from '@/services/AIService';
+import { ContentType, ContentTypeUI, convertContentType } from '@/utils/textAnalysis';
 
 export type AIState = {
   isModelLoaded: boolean;
@@ -13,7 +14,7 @@ export type AIState = {
   classifyText: (text: string) => Promise<AIService.AITextClassificationResult[]>;
   transcribeAudio: (audioData: string | Blob | ArrayBuffer) => Promise<AIService.AISpeechRecognitionResult>;
   generateFeedback: (userInput: string, expectedAnswer: string, language?: "english" | "italian" | "both") => Promise<string>;
-  generateQuestions: (content: string, type: "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking", count?: number, difficulty?: "Beginner" | "Intermediate" | "Advanced") => Promise<any[]>;
+  generateQuestions: (content: string, type: ContentTypeUI, count?: number, difficulty?: "Beginner" | "Intermediate" | "Advanced") => Promise<any[]>;
 }
 
 export function useAI(): AIState {
@@ -134,14 +135,16 @@ export function useAI(): AIState {
 
   const generateQuestions = async (
     content: string, 
-    type: "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking",
+    type: ContentTypeUI,
     count: number = 5,
     difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
   ): Promise<any[]> => {
     setIsProcessing(true);
     setError(null);
     try {
-      const result = await AIService.generateQuestions(content, type, count, difficulty);
+      // Convert type if needed before passing to AIService
+      const apiType = convertContentType(type) as ContentType;
+      const result = await AIService.generateQuestions(content, apiType, count, difficulty);
       setIsProcessing(false);
       return result;
     } catch (err: any) {

@@ -40,9 +40,21 @@ export const generateSummary = (text: string, maxSentences: number = 3): string 
   return sentences.slice(0, maxSentences).join(' ');
 };
 
+// Define a type for content types that's consistent across the application
+export type ContentType = "flashcards" | "multiple-choice" | "writing" | "speaking" | "listening";
+// Also define an alternative type for the UI which uses camelCase for multipleChoice
+export type ContentTypeUI = "flashcards" | "multipleChoice" | "writing" | "speaking" | "listening";
+
+// Helper function to convert between the two content type formats
+export const convertContentType = (type: ContentType | ContentTypeUI): ContentType | ContentTypeUI => {
+  if (type === "multiple-choice") return "multipleChoice";
+  if (type === "multipleChoice") return "multiple-choice";
+  return type;
+};
+
 // Detect content type based on keywords and patterns using AI when available
 export const detectContentType = async (content: string, fileType: string): Promise<{
-  type: "flashcards" | "multiple-choice" | "writing" | "speaking" | "listening";
+  type: ContentType;
   confidence: number;
 }> => {
   // Try to use AI for detection
@@ -68,7 +80,7 @@ export const detectContentType = async (content: string, fileType: string): Prom
   
   // Fallback to rule-based approach
   const contentLower = content.toLowerCase();
-  let contentType: "flashcards" | "multiple-choice" | "writing" | "speaking" | "listening" = "multiple-choice";
+  let contentType: ContentType = "multiple-choice";
   let confidence = 50;
   
   // Check for different patterns

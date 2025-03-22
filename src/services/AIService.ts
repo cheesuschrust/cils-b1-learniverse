@@ -1,5 +1,5 @@
-
 import { pipeline, env } from '@huggingface/transformers';
+import { ContentType, ContentTypeUI, convertContentType } from '@/utils/textAnalysis';
 
 // Enable WebGPU if available, fallback to WebGL or CPU
 env.useBrowserCache = true;
@@ -279,17 +279,14 @@ Please provide ${language === "both" ? "bilingual feedback in both English and I
  */
 export const generateQuestions = async (
   content: string,
-  type: "flashcards" | "multiple-choice" | "listening" | "writing" | "speaking",
+  type: ContentType,
   count: number = 5,
   difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
 ): Promise<any[]> => {
   try {
     let prompt = "";
     
-    // Convert type to correct format if necessary
-    const contentType = type === "multiple-choice" ? "multipleChoice" : type;
-    
-    switch (contentType) {
+    switch (type) {
       case "flashcards":
         prompt = `Extract ${count} vocabulary terms from the following Italian content that would be appropriate for ${difficulty} level learners. For each term, provide the Italian word, its English translation, and a sample sentence in Italian using the word.
 Format each as a JSON object with fields: term, translation, sampleSentence.
@@ -297,7 +294,7 @@ Format each as a JSON object with fields: term, translation, sampleSentence.
 Content: "${content.substring(0, 500)}"`;
         break;
       
-      case "multipleChoice":
+      case "multiple-choice":
         prompt = `Create ${count} multiple-choice questions in Italian about the following content for ${difficulty} level learners. Each question should have 4 options with exactly one correct answer.
 Format each as a JSON object with fields: question, options (array of 4 strings), correctAnswerIndex (0-3).
 
