@@ -39,6 +39,9 @@ import {
 } from '@/pages/imports';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import SystemLogs from '@/pages/admin/SystemLogs';
+import SupportTickets from '@/pages/admin/SupportTickets';
+import Support from '@/pages/Support';
 
 function App() {
   return (
@@ -67,6 +70,7 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="communities" element={<Communities />} />
                     <Route path="progress" element={<ProgressTracker />} />
+                    <Route path="support" element={<Support />} />
                   </Route>
 
                   {/* Admin Routes */}
@@ -78,6 +82,8 @@ function App() {
                     <Route path="content-analysis" element={<ContentAnalysis />} />
                     <Route path="file-uploader" element={<FileUploader />} />
                     <Route path="settings" element={<AdminSettings />} />
+                    <Route path="logs" element={<SystemLogs />} />
+                    <Route path="support-tickets" element={<SupportTickets />} />
                   </Route>
                 </Route>
                 
