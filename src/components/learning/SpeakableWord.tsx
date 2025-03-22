@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speak, getCurrentVoicePreference } from '@/utils/textToSpeech';
-import { useToast } from '@/components/ui/use-toast';
+import { speak, getCurrentVoicePreference, getAvailableVoices } from '@/utils/textToSpeech';
+import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
 interface SpeakableWordProps {
@@ -23,7 +23,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
 }) => {
   const { toast } = useToast();
   const { voicePreference } = useUserPreferences();
-  const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const handleSpeak = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the parent onClick
@@ -55,7 +55,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
         type="button"
         size="icon"
         variant="ghost"
-        className="ml-1 h-6 w-6 opacity-60 hover:opacity-100 focus:opacity-100"
+        className={`ml-1 h-6 w-6 opacity-60 hover:opacity-100 focus:opacity-100 ${isSpeaking ? 'text-primary' : ''}`}
         disabled={disabled || isSpeaking}
         onClick={handleSpeak}
         title={`Pronounce "${word}"`}

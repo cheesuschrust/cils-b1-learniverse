@@ -1,13 +1,13 @@
 
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, FileAudio, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, FileAudio, Loader2, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // Reduced to 15MB for better performance
 
 interface DropzoneUploaderProps {
   file: File | null;
@@ -37,12 +37,20 @@ const DropzoneUploader = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     accept: {
+      // Accept all common file types
       'text/plain': ['.txt'],
       'text/markdown': ['.md'],
       'application/json': ['.json'],
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'audio/mpeg': ['.mp3'],
       'audio/wav': ['.wav'],
-      'audio/ogg': ['.ogg']
+      'audio/ogg': ['.ogg'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png']
     },
     disabled: isProcessing || aiIsProcessing,
     maxSize: MAX_FILE_SIZE
@@ -58,6 +66,20 @@ const DropzoneUploader = ({
     if (confidence >= 80) return "default";
     if (confidence >= 60) return "secondary";
     return "destructive";
+  };
+
+  const getFileTypeExplanation = (type: string | null) => {
+    if (!type) return "";
+    
+    const explanations: Record<string, string> = {
+      'flashcards': 'Vocabulary learning through flashcards',
+      'multipleChoice': 'Questions with multiple choice answers',
+      'listening': 'Audio-based comprehension exercises',
+      'writing': 'Written composition practice',
+      'speaking': 'Oral language practice exercises'
+    };
+    
+    return explanations[type] || 'Unrecognized content type';
   };
   
   return (
@@ -100,9 +122,19 @@ const DropzoneUploader = ({
                 <Badge variant="outline" className="capitalize">
                   {fileContentType === 'multipleChoice' ? 'multiple choice' : fileContentType}
                 </Badge>
-                <Badge variant={getConfidenceBadgeVariant(contentConfidence)}>
-                  {contentConfidence.toFixed(0)}% confidence
-                </Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant={getConfidenceBadgeVariant(contentConfidence)} className="flex items-center gap-1">
+                        {contentConfidence.toFixed(0)}% confidence
+                        <Info className="h-3 w-3 ml-1" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{getFileTypeExplanation(fileContentType)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {language && language !== 'unknown' && (
@@ -150,9 +182,9 @@ const DropzoneUploader = ({
       ) : (
         <div className="py-8 flex flex-col items-center">
           <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-          <p className="text-lg font-medium">Drag & drop a file here</p>
+          <p className="text-lg font-medium">Drag & drop any file here</p>
           <p className="text-sm text-muted-foreground mt-1">
-            for automatic processing
+            The AI will automatically analyze and categorize it
           </p>
           <Button 
             variant="outline" 
@@ -166,7 +198,7 @@ const DropzoneUploader = ({
             Select File
           </Button>
           <div className="text-xs text-muted-foreground mt-4 space-y-1">
-            <p>Supported formats: .txt, .md, .json, .mp3, .wav, .ogg</p>
+            <p>Supported formats: Text files, PDFs, Word documents, Excel, Audio files, Images</p>
             <p>Maximum file size: {MAX_FILE_SIZE / (1024 * 1024)}MB</p>
           </div>
         </div>

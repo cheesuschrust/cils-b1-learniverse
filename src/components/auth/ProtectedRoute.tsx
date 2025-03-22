@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,14 +20,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [hasShownToast, setHasShownToast] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(true);
   const refreshAttempted = useRef(false);
+  const lastRefreshTime = useRef<number>(0);
 
   // Try to refresh the session when the component mounts, but only once
   useEffect(() => {
     const checkAuthentication = async () => {
-      if (refreshAttempted.current) return;
+      // Don't refresh too frequently - add 10 second minimum between refreshes
+      const now = Date.now();
+      const timeSinceLastRefresh = now - lastRefreshTime.current;
+      const minRefreshInterval = 10000; // 10 seconds
+      
+      if (refreshAttempted.current && timeSinceLastRefresh < minRefreshInterval) {
+        setIsRefreshing(false);
+        return;
+      }
       
       setIsRefreshing(true);
       refreshAttempted.current = true;
+      lastRefreshTime.current = now;
       
       if (!isAuthenticated && !isLoading) {
         try {
@@ -41,9 +51,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     
     checkAuthentication();
     
+    // Setup interval to periodically check authentication on active routes
+    const intervalId = setInterval(() => {
+      if (isAuthenticated) {
+        refreshSession().catch(err => console.error("Background refresh error:", err));
+      }
+    }, 300000); // Check every 5 minutes
+    
     // Clean up function
     return () => {
-      refreshAttempted.current = true;
+      clearInterval(intervalId);
     };
   }, [isAuthenticated, isLoading, refreshSession]);
 

@@ -1,16 +1,173 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Volume2, Settings as SettingsIcon, Save, User, Bell, Moon, RotateCcw } from "lucide-react";
 import UserPreferences from "@/components/user/UserPreferences";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import { getAvailableVoices, speak } from "@/utils/textToSpeech";
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("preferences");
+  const { voicePreference, updateVoicePreference } = useUserPreferences();
+  
+  // User profile state
+  const [userProfile, setUserProfile] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    bio: user?.bio || "",
+    theme: user?.preferences?.theme || "system",
+    notifications: user?.preferences?.notifications || false
+  });
+  
+  // Voice settings state
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedItalianVoice, setSelectedItalianVoice] = useState(voicePreference?.it || "");
+  const [selectedEnglishVoice, setSelectedEnglishVoice] = useState(voicePreference?.en || "");
+  const [voiceSpeed, setVoiceSpeed] = useState(voicePreference?.rate || 1);
+  const [voicePitch, setVoicePitch] = useState(voicePreference?.pitch || 1);
+  const [isTesting, setIsTesting] = useState(false);
+
+  useEffect(() => {
+    // Update form when user data changes
+    if (user) {
+      setUserProfile({
+        name: user.name || "",
+        email: user.email || "",
+        bio: user.bio || "",
+        theme: user.preferences?.theme || "system",
+        notifications: user.preferences?.notifications || false
+      });
+    }
+    
+    // Get available voices for speech synthesis
+    const loadVoices = async () => {
+      const voices = await getAvailableVoices();
+      setAvailableVoices(voices);
+      
+      // Set default voices if none selected
+      if (!selectedItalianVoice) {
+        const italianVoice = voices.find(v => v.lang.startsWith('it'))?.name || "";
+        setSelectedItalianVoice(italianVoice);
+      }
+      
+      if (!selectedEnglishVoice) {
+        const englishVoice = voices.find(v => v.lang.startsWith('en'))?.name || "";
+        setSelectedEnglishVoice(englishVoice);
+      }
+    };
+    
+    loadVoices();
+  }, [user, voicePreference]);
+  
+  const handleProfileUpdate = async () => {
+    try {
+      if (!user) return;
+      
+      await updateUser({
+        ...user,
+        name: userProfile.name,
+        bio: userProfile.bio,
+        preferences: {
+          ...user.preferences,
+          theme: userProfile.theme,
+          notifications: userProfile.notifications
+        }
+      });
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated."
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update your profile. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleVoiceUpdate = () => {
+    updateVoicePreference({
+      it: selectedItalianVoice,
+      en: selectedEnglishVoice,
+      rate: voiceSpeed,
+      pitch: voicePitch
+    });
+    
+    toast({
+      title: "Voice Settings Updated",
+      description: "Your voice preferences have been saved."
+    });
+  };
+  
+  const testVoice = async (language: 'it' | 'en') => {
+    setIsTesting(true);
+    try {
+      const voice = language === 'it' ? selectedItalianVoice : selectedEnglishVoice;
+      const text = language === 'it' 
+        ? "Ciao, questo è un esempio di come suonerà la voce italiana." 
+        : "Hello, this is an example of how the English voice will sound.";
+      
+      await speak(text, language, {
+        it: selectedItalianVoice,
+        en: selectedEnglishVoice,
+        rate: voiceSpeed,
+        pitch: voicePitch
+      });
+    } catch (error) {
+      console.error("Error testing voice:", error);
+      toast({
+        title: "Voice Test Failed",
+        description: "There was a problem testing the voice.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+  
+  const getVoicesByLanguage = (langPrefix: string) => {
+    return availableVoices
+      .filter(voice => voice.lang.startsWith(langPrefix))
+      .sort((a, b) => {
+        // Prioritize natural-sounding voices
+        const aIsGoogle = a.name.includes('Google') || a.name.includes('Natural');
+        const bIsGoogle = b.name.includes('Google') || b.name.includes('Natural');
+        
+        if (aIsGoogle && !bIsGoogle) return -1;
+        if (!aIsGoogle && bIsGoogle) return 1;
+        
+        return a.name.localeCompare(b.name);
+      });
+  };
+  
+  const resetVoiceSettings = () => {
+    const defaultItalianVoice = availableVoices.find(v => v.lang.startsWith('it'))?.name || "";
+    const defaultEnglishVoice = availableVoices.find(v => v.lang.startsWith('en'))?.name || "";
+    
+    setSelectedItalianVoice(defaultItalianVoice);
+    setSelectedEnglishVoice(defaultEnglishVoice);
+    setVoiceSpeed(1);
+    setVoicePitch(1);
+    
+    toast({
+      title: "Voice Settings Reset",
+      description: "Voice settings have been reset to defaults."
+    });
+  };
   
   if (!user) {
     return (
@@ -37,12 +194,234 @@ const Settings = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="preferences">User Preferences</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="voice">Voice Settings</TabsTrigger>
           {isAdmin && <TabsTrigger value="account">Account Management</TabsTrigger>}
           {isAdmin && <TabsTrigger value="system">System Configuration</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="preferences">
           <UserPreferences />
+        </TabsContent>
+        
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" /> Profile Information
+              </CardTitle>
+              <CardDescription>
+                Update your personal information and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    value={userProfile.name} 
+                    onChange={(e) => setUserProfile({...userProfile, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    value={userProfile.email} 
+                    readOnly 
+                    disabled 
+                    className="bg-muted/40"
+                  />
+                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Input 
+                  id="bio" 
+                  value={userProfile.bio} 
+                  onChange={(e) => setUserProfile({...userProfile, bio: e.target.value})}
+                  placeholder="Tell us a bit about yourself"
+                />
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Moon className="h-4 w-4" /> Theme Preference
+                </h3>
+                <Select 
+                  value={userProfile.theme} 
+                  onValueChange={(value) => setUserProfile({...userProfile, theme: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System Default</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2 pt-2">
+                <Bell className="h-4 w-4" />
+                <Label htmlFor="notifications" className="flex-1">Enable notifications</Label>
+                <Switch 
+                  id="notifications" 
+                  checked={userProfile.notifications} 
+                  onCheckedChange={(checked) => setUserProfile({...userProfile, notifications: checked})}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleProfileUpdate} className="ml-auto">
+                <Save className="h-4 w-4 mr-2" /> Save Changes
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="voice">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Volume2 className="h-5 w-5" /> Voice Settings
+              </CardTitle>
+              <CardDescription>
+                Customize the text-to-speech voices used for pronunciation
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="italian-voice" className="font-medium">Italian Voice</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-3">
+                      <Select 
+                        value={selectedItalianVoice} 
+                        onValueChange={setSelectedItalianVoice}
+                      >
+                        <SelectTrigger id="italian-voice">
+                          <SelectValue placeholder="Select an Italian voice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getVoicesByLanguage('it').map((voice) => (
+                            <SelectItem key={voice.name} value={voice.name}>
+                              {voice.name} {voice.localService ? " (local)" : ""}
+                            </SelectItem>
+                          ))}
+                          {getVoicesByLanguage('it').length === 0 && (
+                            <SelectItem value="" disabled>No Italian voices available</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      onClick={() => testVoice('it')} 
+                      disabled={isTesting || !selectedItalianVoice}
+                      className="flex items-center justify-center"
+                    >
+                      <Volume2 className={`h-4 w-4 mr-2 ${isTesting ? 'animate-pulse' : ''}`} />
+                      Test
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="english-voice" className="font-medium">English Voice</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-3">
+                      <Select 
+                        value={selectedEnglishVoice} 
+                        onValueChange={setSelectedEnglishVoice}
+                      >
+                        <SelectTrigger id="english-voice">
+                          <SelectValue placeholder="Select an English voice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getVoicesByLanguage('en').map((voice) => (
+                            <SelectItem key={voice.name} value={voice.name}>
+                              {voice.name} {voice.localService ? " (local)" : ""}
+                            </SelectItem>
+                          ))}
+                          {getVoicesByLanguage('en').length === 0 && (
+                            <SelectItem value="" disabled>No English voices available</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      onClick={() => testVoice('en')} 
+                      disabled={isTesting || !selectedEnglishVoice}
+                      className="flex items-center justify-center"
+                    >
+                      <Volume2 className={`h-4 w-4 mr-2 ${isTesting ? 'animate-pulse' : ''}`} />
+                      Test
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator className="my-2" />
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="speed" className="font-medium">Speech Speed</Label>
+                      <span className="text-sm text-muted-foreground">{voiceSpeed.toFixed(1)}x</span>
+                    </div>
+                    <Input
+                      id="speed"
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={voiceSpeed}
+                      onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Slower</span>
+                      <span>Faster</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="pitch" className="font-medium">Voice Pitch</Label>
+                      <span className="text-sm text-muted-foreground">{voicePitch.toFixed(1)}</span>
+                    </div>
+                    <Input
+                      id="pitch"
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={voicePitch}
+                      onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Lower</span>
+                      <span>Higher</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={resetVoiceSettings}>
+                <RotateCcw className="h-4 w-4 mr-2" /> Reset to Defaults
+              </Button>
+              <Button onClick={handleVoiceUpdate}>
+                <Save className="h-4 w-4 mr-2" /> Save Voice Settings
+              </Button>
+            </CardFooter>
+          </Card>
         </TabsContent>
         
         <TabsContent value="account">
