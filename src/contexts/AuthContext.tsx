@@ -17,6 +17,7 @@ const DEFAULT_ADMIN = {
   preferredLanguage: "both" as const,
   subscription: "premium" as const,
   status: "active" as const,
+  emailVerified: true, // Admin is pre-verified
   created: new Date().toISOString(),
   lastActive: new Date().toISOString(),
   dailyQuestionCounts: {
@@ -90,6 +91,7 @@ interface User {
   preferredLanguage?: "english" | "italian" | "both";
   subscription: "free" | "premium";
   status: "active" | "pending" | "inactive";
+  emailVerified: boolean;
   phoneNumber?: string;
   address?: string;
   created: string;
@@ -97,6 +99,19 @@ interface User {
   dailyQuestionCounts: DailyQuestionCounts;
   metrics: UserMetrics;
   preferences?: UserPreferences;
+}
+
+// Define the system log structure
+interface SystemLog {
+  id: string;
+  timestamp: string;
+  level: "info" | "warning" | "error";
+  category: "auth" | "ai" | "content" | "user" | "system" | "email";
+  message: string;
+  details?: string;
+  userId?: string;
+  ipAddress?: string;
+  resolved?: boolean;
 }
 
 interface AuthContextType {
@@ -118,6 +133,37 @@ interface AuthContextType {
   incrementDailyQuestionCount: (type: keyof DailyQuestionCounts) => Promise<boolean>;
   updateUserMetrics: (metrics: Partial<UserMetrics>) => Promise<void>;
   resetDailyQuestionCounts: () => void;
+  verifyEmail: (userId: string, token: string) => Promise<boolean>;
+  resendVerificationEmail: (email: string) => Promise<boolean>;
+  getSystemLogs: (filters?: {
+    level?: "info" | "warning" | "error";
+    category?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    resolved?: boolean;
+  }) => SystemLog[];
+  addSystemLog: (log: Omit<SystemLog, "id" | "timestamp">) => void;
+  updateSystemLog: (logId: string, updates: Partial<SystemLog>) => boolean;
+  updateEmailSettings: (settings: EmailSettings) => Promise<void>;
+  getEmailSettings: () => EmailSettings;
+}
+
+interface EmailSettings {
+  provider: "smtp" | "sendgrid" | "mailgun" | "ses";
+  fromEmail: string;
+  fromName: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  region?: string;
+  enableSsl?: boolean;
+  templates: {
+    verification: string;
+    passwordReset: string;
+    welcome: string;
+  };
 }
 
 // Helper function to remove the passwordHash before returning user data
@@ -131,6 +177,16 @@ const persistUsers = (users: User[]) => {
   localStorage.setItem("users", JSON.stringify(users));
 };
 
+// Helper to persist system logs to localStorage
+const persistSystemLogs = (logs: SystemLog[]) => {
+  localStorage.setItem("systemLogs", JSON.stringify(logs));
+};
+
+// Helper to persist email settings to localStorage
+const persistEmailSettings = (settings: EmailSettings) => {
+  localStorage.setItem("emailSettings", JSON.stringify(settings));
+};
+
 // Helper to retrieve users from localStorage
 const getPersistedUsers = (): User[] => {
   const users = localStorage.getItem("users");
@@ -141,6 +197,47 @@ const getPersistedUsers = (): User[] => {
     return initialUsers;
   }
   return JSON.parse(users);
+};
+
+// Helper to retrieve system logs from localStorage
+const getPersistedSystemLogs = (): SystemLog[] => {
+  const logs = localStorage.getItem("systemLogs");
+  if (!logs) {
+    return [];
+  }
+  return JSON.parse(logs);
+};
+
+// Helper to retrieve email settings from localStorage
+const getPersistedEmailSettings = (): EmailSettings => {
+  const settings = localStorage.getItem("emailSettings");
+  if (!settings) {
+    // Default email settings
+    const defaultSettings: EmailSettings = {
+      provider: "smtp",
+      fromEmail: "noreply@italianlearning.app",
+      fromName: "Italian Learning App",
+      host: "smtp.example.com",
+      port: 587,
+      username: "",
+      password: "",
+      enableSsl: true,
+      templates: {
+        verification: "<p>Hello {{name}},</p><p>Please verify your email by clicking <a href='{{verificationLink}}'>here</a>.</p>",
+        passwordReset: "<p>Hello {{name}},</p><p>Click <a href='{{resetLink}}'>here</a> to reset your password.</p>",
+        welcome: "<p>Welcome to Italian Learning App, {{name}}!</p><p>We're excited to have you on board.</p>"
+      }
+    };
+    persistEmailSettings(defaultSettings);
+    return defaultSettings;
+  }
+  return JSON.parse(settings);
+};
+
+// Helper to check if an email is valid
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
 
 // Helper to reset daily question counts at midnight
@@ -169,6 +266,48 @@ const checkAndResetDailyCounts = (users: User[]): User[] => {
   return users;
 };
 
+// Mock email sending function - in a real app, this would use an actual email service
+const sendEmail = async (to: string, subject: string, body: string, settings: EmailSettings): Promise<boolean> => {
+  console.log(`Sending email to ${to} with subject "${subject}"`);
+  console.log(`Email body: ${body}`);
+  console.log(`Using email provider: ${settings.provider}`);
+  
+  // In a real app, this would connect to an actual email service API
+  // For now, we'll simulate success and log the attempt
+  
+  // Add a log entry for the email
+  const logEntry: Omit<SystemLog, "id" | "timestamp"> = {
+    level: "info",
+    category: "email",
+    message: `Email sent to ${to}`,
+    details: `Subject: ${subject}\nProvider: ${settings.provider}`,
+  };
+  
+  addSystemLogInternal(logEntry);
+  
+  // Simulate a small delay and return success
+  return new Promise(resolve => {
+    setTimeout(() => resolve(true), 500);
+  });
+};
+
+// Internal function to add a system log
+const addSystemLogInternal = (logData: Omit<SystemLog, "id" | "timestamp">): SystemLog => {
+  const logs = getPersistedSystemLogs();
+  
+  const newLog: SystemLog = {
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    ...logData,
+    resolved: logData.resolved || false
+  };
+  
+  logs.push(newLog);
+  persistSystemLogs(logs);
+  
+  return newLog;
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -190,6 +329,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem("session");
           setUser(null);
           setIsLoading(false);
+          
+          // Log session expiration
+          addSystemLogInternal({
+            level: "info",
+            category: "auth",
+            message: "User session expired",
+            userId
+          });
+          
           return;
         }
         
@@ -209,13 +357,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           persistUsers(updatedUsers);
           
           setUser(sanitizeUser(currentUser));
+          
+          // Log successful session resumption
+          addSystemLogInternal({
+            level: "info",
+            category: "auth",
+            message: "User session resumed",
+            userId
+          });
         } else {
           localStorage.removeItem("session");
+          
+          // Log error
+          addSystemLogInternal({
+            level: "error",
+            category: "auth",
+            message: "Session invalid - user not found",
+            details: `User ID: ${userId}`,
+          });
         }
       }
     } catch (error) {
       console.error("Error checking authentication:", error);
       localStorage.removeItem("session");
+      
+      // Log error
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Error checking authentication",
+        details: String(error),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -226,6 +398,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Initialize users if needed
     if (!localStorage.getItem("users")) {
       persistUsers([DEFAULT_ADMIN]);
+      
+      // Log system initialization
+      addSystemLogInternal({
+        level: "info",
+        category: "system",
+        message: "System initialized with default admin account",
+      });
     }
     
     checkUserLoggedIn();
@@ -257,15 +436,206 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     localStorage.setItem("session", JSON.stringify(session));
+    
+    // Log session creation
+    addSystemLogInternal({
+      level: "info",
+      category: "auth",
+      message: "New user session created",
+      userId,
+    });
+  };
+
+  // Email verification functions
+  const generateVerificationToken = (userId: string): string => {
+    // In a real app, this would be a secure token
+    // For this mock implementation, we'll create a simple token
+    return `${userId}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  };
+
+  const storeVerificationToken = (userId: string, token: string) => {
+    const tokens = JSON.parse(localStorage.getItem("verificationTokens") || "{}");
+    tokens[userId] = {
+      token,
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+    };
+    localStorage.setItem("verificationTokens", JSON.stringify(tokens));
+  };
+
+  const verifyEmail = async (userId: string, token: string): Promise<boolean> => {
+    try {
+      const tokens = JSON.parse(localStorage.getItem("verificationTokens") || "{}");
+      const tokenData = tokens[userId];
+      
+      if (!tokenData) {
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Email verification failed - token not found",
+          userId,
+        });
+        return false;
+      }
+      
+      if (new Date(tokenData.expires) < new Date()) {
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Email verification failed - token expired",
+          userId,
+        });
+        return false;
+      }
+      
+      if (tokenData.token !== token) {
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Email verification failed - invalid token",
+          userId,
+        });
+        return false;
+      }
+      
+      // Update user
+      const users = getPersistedUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        addSystemLogInternal({
+          level: "error",
+          category: "auth",
+          message: "Email verification failed - user not found",
+          userId,
+        });
+        return false;
+      }
+      
+      // Mark email as verified and update status if needed
+      users[userIndex].emailVerified = true;
+      if (users[userIndex].status === "pending") {
+        users[userIndex].status = "active";
+      }
+      
+      persistUsers(users);
+      
+      // Remove used token
+      delete tokens[userId];
+      localStorage.setItem("verificationTokens", JSON.stringify(tokens));
+      
+      // If this is the current user, update state
+      if (user && user.id === userId) {
+        setUser(sanitizeUser(users[userIndex]));
+      }
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "Email successfully verified",
+        userId,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Email verification error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Email verification error",
+        details: String(error),
+        userId,
+      });
+      
+      return false;
+    }
+  };
+
+  const resendVerificationEmail = async (email: string): Promise<boolean> => {
+    try {
+      const users = getPersistedUsers();
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      if (!user) {
+        // Don't reveal if email exists
+        return true;
+      }
+      
+      if (user.emailVerified) {
+        // Email already verified
+        return true;
+      }
+      
+      // Generate and store new token
+      const token = generateVerificationToken(user.id);
+      storeVerificationToken(user.id, token);
+      
+      // Get email settings
+      const emailSettings = getPersistedEmailSettings();
+      
+      // Create verification link (in a real app, this would be a proper URL)
+      const verificationLink = `${window.location.origin}/verify-email?userId=${user.id}&token=${token}`;
+      
+      // Prepare email content
+      const name = user.firstName || user.username || "User";
+      let emailBody = emailSettings.templates.verification
+        .replace(/{{name}}/g, name)
+        .replace(/{{verificationLink}}/g, verificationLink);
+      
+      // Send email
+      await sendEmail(
+        user.email,
+        "Verify your email address",
+        emailBody,
+        emailSettings
+      );
+      
+      addSystemLogInternal({
+        level: "info",
+        category: "email",
+        message: "Verification email resent",
+        userId: user.id,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error resending verification email:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "email",
+        message: "Failed to resend verification email",
+        details: String(error),
+      });
+      
+      return false;
+    }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
+      if (!email || !password) {
+        toast({
+          title: "Error",
+          description: "Please provide both email and password",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
       const users = getPersistedUsers();
       const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
-      if (!foundUser || !(await bcrypt.compare(password, foundUser.passwordHash))) {
+      if (!foundUser) {
+        // Log failed login attempt but don't reveal if email exists
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Failed login attempt - user not found",
+          details: `Email: ${email}`,
+        });
+        
         toast({
           title: "Error",
           description: "Invalid email or password",
@@ -274,10 +644,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
+      const passwordValid = await bcrypt.compare(password, foundUser.passwordHash);
+      
+      if (!passwordValid) {
+        // Log failed login attempt with incorrect password
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Failed login attempt - incorrect password",
+          userId: foundUser.id,
+        });
+        
+        toast({
+          title: "Error",
+          description: "Invalid email or password",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Check user status
       if (foundUser.status === "inactive") {
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Login attempt on inactive account",
+          userId: foundUser.id,
+        });
+        
         toast({
           title: "Error",
           description: "Your account has been deactivated. Please contact support.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Check email verification (skip for admin users)
+      if (!foundUser.emailVerified && foundUser.role !== "admin") {
+        // Send verification email again
+        const token = generateVerificationToken(foundUser.id);
+        storeVerificationToken(foundUser.id, token);
+        
+        // Get email settings
+        const emailSettings = getPersistedEmailSettings();
+        
+        // Create verification link
+        const verificationLink = `${window.location.origin}/verify-email?userId=${foundUser.id}&token=${token}`;
+        
+        // Prepare email content
+        const name = foundUser.firstName || foundUser.username || "User";
+        let emailBody = emailSettings.templates.verification
+          .replace(/{{name}}/g, name)
+          .replace(/{{verificationLink}}/g, verificationLink);
+        
+        // Send email
+        await sendEmail(
+          foundUser.email,
+          "Please verify your email address",
+          emailBody,
+          emailSettings
+        );
+        
+        addSystemLogInternal({
+          level: "info",
+          category: "auth",
+          message: "Login attempt with unverified email - verification email sent",
+          userId: foundUser.id,
+        });
+        
+        toast({
+          title: "Email Verification Required",
+          description: "Please check your email and verify your account before logging in.",
           variant: "destructive",
         });
         return false;
@@ -295,9 +733,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set user without passwordHash
       setUser(sanitizeUser(foundUser));
       
+      // Log successful login
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "User logged in successfully",
+        userId: foundUser.id,
+      });
+      
       return true;
     } catch (error) {
       console.error("Login error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Login error",
+        details: String(error),
+      });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",
@@ -312,10 +766,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (firstName: string, lastName: string, email: string, password: string, username?: string) => {
     setIsLoading(true);
     try {
+      // Validate inputs
+      if (!firstName || !lastName || !email || !password) {
+        throw new Error("All required fields must be provided");
+      }
+      
+      if (!isValidEmail(email)) {
+        throw new Error("Please provide a valid email address");
+      }
+      
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+      
       const users = getPersistedUsers();
       
       // Check if email already exists
       if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        addSystemLogInternal({
+          level: "warning",
+          category: "auth",
+          message: "Signup attempt with existing email",
+          details: `Email: ${email}`,
+        });
+        
         throw new Error("Email already exists");
       }
       
@@ -338,7 +812,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         passwordHash,
         preferredLanguage: "both",
         subscription: "free",
-        status: "active",
+        status: "pending", // Start as pending until email is verified
+        emailVerified: false,
         created: new Date().toISOString(),
         lastActive: new Date().toISOString(),
         dailyQuestionCounts: {
@@ -374,20 +849,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       users.push(newUser);
       persistUsers(users);
       
-      // Create session
-      createSession(newUser.id);
+      // Generate verification token
+      const token = generateVerificationToken(newUser.id);
+      storeVerificationToken(newUser.id, token);
       
-      // Set user without passwordHash
-      setUser(sanitizeUser(newUser));
+      // Get email settings
+      const emailSettings = getPersistedEmailSettings();
       
-      toast({
-        title: "Success",
-        description: "Your account has been created",
+      // Create verification link
+      const verificationLink = `${window.location.origin}/verify-email?userId=${newUser.id}&token=${token}`;
+      
+      // Prepare welcome and verification email
+      let emailBody = emailSettings.templates.welcome
+        .replace(/{{name}}/g, firstName)
+        + '<br><br>'
+        + emailSettings.templates.verification
+          .replace(/{{name}}/g, firstName)
+          .replace(/{{verificationLink}}/g, verificationLink);
+      
+      // Send email
+      await sendEmail(
+        email,
+        "Welcome to Italian Learning App - Verify Your Email",
+        emailBody,
+        emailSettings
+      );
+      
+      // Log user creation
+      addSystemLogInternal({
+        level: "info",
+        category: "auth",
+        message: "New user account created",
+        userId: newUser.id,
       });
       
-      navigate("/dashboard");
+      // Don't auto-login, require email verification first
+      toast({
+        title: "Account Created",
+        description: "Please check your email to verify your account before logging in.",
+      });
+      
+      navigate("/login");
     } catch (error) {
       console.error("Signup error:", error);
+      
+      addSystemLogInternal({
+        level: "error",
+        category: "auth",
+        message: "Signup error",
+        details: String(error),
+      });
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create account. Please try again.",
@@ -547,425 +1059,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsLoading(true);
     try {
-      const users = getPersistedUsers();
-      
-      // Check if email already exists
-      if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error("A user with this email already exists");
-      }
-      
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
-      
-      // Create new admin user
-      const newAdmin: User = {
-        id: `admin-${uuidv4()}`,
-        email,
-        firstName,
-        lastName,
-        username: `admin${Math.floor(Math.random() * 10000)}`,
-        role: 'admin',
-        passwordHash,
-        preferredLanguage: "both",
-        subscription: "premium",
-        status: "active",
-        created: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          listening: 0,
-          writing: 0,
-          speaking: 0
-        },
-        metrics: {
-          totalQuestions: 0,
-          correctAnswers: 0,
-          streak: 0,
-          totalTimeSpent: 0
-        },
-        preferences: {
-          theme: "system",
-          fontSize: 16,
-          notificationsEnabled: true,
-          animationsEnabled: true,
-          preferredLanguage: "both",
-          voiceSpeed: 1.0,
-          autoPlayAudio: true,
-          showProgressMetrics: true,
-          aiEnabled: true,
-          aiModelSize: "small",
-          aiProcessingOnDevice: true,
-          confidenceScoreVisible: true,
-        }
-      };
-      
-      // Add user to the list and persist
-      users.push(newAdmin);
-      persistUsers(users);
-      
-      toast({
-        title: "Success",
-        description: `Admin account for ${email} has been created`,
-      });
-    } catch (error) {
-      console.error("Add admin error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create admin account. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const updateUserStatus = async (userId: string, status: "active" | "inactive" | "pending") => {
-    if (!user || user.role !== "admin") {
-      toast({
-        title: "Error",
-        description: "You must be an admin to update user status",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === userId);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      // Update user status
-      users[userIndex].status = status;
-      
-      // Persist updated users
-      persistUsers(users);
-      
-      toast({
-        title: "Success",
-        description: `User status updated to ${status}`,
-      });
-      
-      // If current user is updated, refresh state
-      if (user.id === userId) {
-        setUser(sanitizeUser(users[userIndex]));
-      }
-      
-      return;
-    } catch (error) {
-      console.error("Update user status error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update user status.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const updateUserSubscription = async (userId: string, subscription: "free" | "premium") => {
-    if (!user || user.role !== "admin") {
-      toast({
-        title: "Error",
-        description: "You must be an admin to update user subscription",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === userId);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      // Update user subscription
-      users[userIndex].subscription = subscription;
-      
-      // Persist updated users
-      persistUsers(users);
-      
-      toast({
-        title: "Success",
-        description: `User subscription updated to ${subscription}`,
-      });
-      
-      // If current user is updated, refresh state
-      if (user.id === userId) {
-        setUser(sanitizeUser(users[userIndex]));
-      }
-      
-      return;
-    } catch (error) {
-      console.error("Update user subscription error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update user subscription.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const getAllUsers = () => {
-    if (!user || user.role !== "admin") {
-      toast({
-        title: "Error",
-        description: "You must be an admin to view all users",
-        variant: "destructive",
-      });
-      return [];
-    }
-    
-    const users = getPersistedUsers();
-    return users.map(u => sanitizeUser(u));
-  };
-  
-  const incrementDailyQuestionCount = async (type: keyof DailyQuestionCounts): Promise<boolean> => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to use this feature",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      // Check if free user has reached limit
-      if (users[userIndex].subscription === "free" && users[userIndex].dailyQuestionCounts[type] >= 1) {
-        toast({
-          title: "Daily Limit Reached",
-          description: "Upgrade to premium for unlimited questions",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      // Increment question count
-      users[userIndex].dailyQuestionCounts[type]++;
-      
-      // Update metrics
-      users[userIndex].metrics.totalQuestions++;
-      
-      // Update streak if it's a new day
-      const today = new Date().toDateString();
-      const lastActiveDate = new Date(users[userIndex].lastActive).toDateString();
-      
-      if (today !== lastActiveDate) {
-        users[userIndex].metrics.streak++;
-      }
-      
-      // Persist updated users
-      persistUsers(users);
-      
-      // Update state
-      setUser(sanitizeUser(users[userIndex]));
-      
-      return true;
-    } catch (error) {
-      console.error("Increment question count error:", error);
-      return false;
-    }
-  };
-  
-  const updateUserMetrics = async (metrics: Partial<UserMetrics>) => {
-    if (!user) {
-      return;
-    }
-    
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex === -1) {
-        return;
-      }
-      
-      // Update metrics
-      users[userIndex].metrics = {
-        ...users[userIndex].metrics,
-        ...metrics
-      };
-      
-      // Persist updated users
-      persistUsers(users);
-      
-      // Update state
-      setUser(sanitizeUser(users[userIndex]));
-    } catch (error) {
-      console.error("Update metrics error:", error);
-    }
-  };
-  
-  const resetDailyQuestionCounts = () => {
-    if (!user) {
-      return;
-    }
-    
-    try {
-      const users = getPersistedUsers();
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex === -1) {
-        return;
-      }
-      
-      // Reset daily counts
-      users[userIndex].dailyQuestionCounts = {
-        flashcards: 0,
-        multipleChoice: 0,
-        listening: 0,
-        writing: 0,
-        speaking: 0
-      };
-      
-      // Persist updated users
-      persistUsers(users);
-      
-      // Update state
-      setUser(sanitizeUser(users[userIndex]));
-    } catch (error) {
-      console.error("Reset daily counts error:", error);
-    }
-  };
-  
-  const socialLogin = async (provider: "google" | "apple") => {
-    setIsLoading(true);
-    try {
-      // In a real app, we would integrate with Google/Apple OAuth here
-      // For this demo, we'll create a temporary user
-      
-      const email = `${provider}_user_${Math.floor(Math.random() * 10000)}@example.com`;
-      const username = `${provider}User${Math.floor(Math.random() * 10000)}`;
-      const firstName = provider === "google" ? "Google" : "Apple";
-      const lastName = "User";
-      
-      const users = getPersistedUsers();
-      
-      // Create new user with generated credentials
-      const newUser: User = {
-        id: `user-${uuidv4()}`,
-        email,
-        firstName,
-        lastName,
-        username,
-        role: 'user',
-        passwordHash: await bcrypt.hash(uuidv4(), 10), // Random password hash
-        preferredLanguage: "both",
-        subscription: "free",
-        status: "active",
-        created: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          listening: 0,
-          writing: 0,
-          speaking: 0
-        },
-        metrics: {
-          totalQuestions: 0,
-          correctAnswers: 0,
-          streak: 0,
-          totalTimeSpent: 0
-        },
-        preferences: {
-          theme: "system",
-          fontSize: 16,
-          notificationsEnabled: true,
-          animationsEnabled: true,
-          preferredLanguage: "both",
-          voiceSpeed: 1.0,
-          autoPlayAudio: true,
-          showProgressMetrics: true,
-          aiEnabled: true,
-          aiModelSize: "small",
-          aiProcessingOnDevice: true,
-          confidenceScoreVisible: true,
-        }
-      };
-      
-      // Add user to the list and persist
-      users.push(newUser);
-      persistUsers(users);
-      
-      // Create session
-      createSession(newUser.id);
-      
-      // Set user without passwordHash
-      setUser(sanitizeUser(newUser));
-      
-      toast({
-        title: "Success",
-        description: `Logged in with ${provider}`,
-      });
-      
-      navigate("/dashboard");
-    } catch (error) {
-      console.error(`${provider} login error:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to login with ${provider}. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem("session");
-    setUser(null);
-    navigate("/");
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        signup,
-        refreshSession,
-        updateProfile,
-        resetPassword,
-        updatePassword,
-        addAdmin,
-        socialLogin,
-        updateUserStatus,
-        updateUserSubscription,
-        getAllUsers,
-        incrementDailyQuestionCount,
-        updateUserMetrics,
-        resetDailyQuestionCounts
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
