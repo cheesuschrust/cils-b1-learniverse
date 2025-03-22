@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +19,16 @@ import {
   Languages,
   HelpCircle,
   Sparkles,
+  Volume2,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Sample speaking prompts
 const speakingPrompts = [
   {
     id: 1,
@@ -80,6 +86,17 @@ const speakingPrompts = [
   },
 ];
 
+const voiceOptions = [
+  { id: "it-IT-female", name: "Italian (Female)", lang: "it-IT" },
+  { id: "it-IT-male", name: "Italian (Male)", lang: "it-IT" },
+  { id: "en-US-female", name: "English (Female)", lang: "en-US" },
+  { id: "en-US-male", name: "English (Male)", lang: "en-US" },
+  { id: "it-IT-ElsaNeural", name: "Elsa (Italian)", lang: "it-IT" },
+  { id: "it-IT-DiegoNeural", name: "Diego (Italian)", lang: "it-IT" },
+  { id: "en-US-AriaNeural", name: "Aria (English)", lang: "en-US" },
+  { id: "en-US-GuyNeural", name: "Guy (English)", lang: "en-US" }
+];
+
 const Speaking = () => {
   const [selectedPrompt, setSelectedPrompt] = useState(speakingPrompts[0]);
   const [isRecording, setIsRecording] = useState(false);
@@ -100,10 +117,35 @@ const Speaking = () => {
   } | null>(null);
   const [showTips, setShowTips] = useState(false);
   const [selectedTab, setSelectedTab] = useState("practice");
+  const [selectedVoice, setSelectedVoice] = useState("it-IT-female");
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isReadingPrompt, setIsReadingPrompt] = useState(false);
+  const [feedbackLanguage, setFeedbackLanguage] = useState<"english" | "italian" | "both">("both");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setAvailableVoices(voices);
+      }
+    };
+    
+    loadVoices();
+    
+    if (window.speechSynthesis !== undefined) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    
+    return () => {
+      if (window.speechSynthesis !== undefined) {
+        speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
   
   useEffect(() => {
     if (audioBlob) {
@@ -151,7 +193,6 @@ const Speaking = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         setAudioBlob(audioBlob);
         
-        // Release microphone
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -184,6 +225,54 @@ const Speaking = () => {
     }
   };
   
+  const speakText = (text: string, language: string) => {
+    if (!window.speechSynthesis) {
+      toast({
+        title: "Speech synthesis not supported",
+        description: "Your browser doesn't support text-to-speech",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => 
+      v.lang.startsWith(language) && 
+      ((selectedVoice.includes('female') && v.name.toLowerCase().includes('female')) ||
+       (selectedVoice.includes('male') && v.name.toLowerCase().includes('male')) ||
+       v.name.includes(selectedVoice.split('-').pop() || ''))
+    );
+    
+    if (voice) {
+      utterance.voice = voice;
+    } else {
+      const fallbackVoice = voices.find(v => v.lang.startsWith(language));
+      if (fallbackVoice) {
+        utterance.voice = fallbackVoice;
+      }
+    }
+    
+    utterance.lang = language;
+    utterance.rate = 0.9;
+    
+    utterance.onstart = () => setIsReadingPrompt(true);
+    utterance.onend = () => setIsReadingPrompt(false);
+    
+    window.speechSynthesis.speak(utterance);
+  };
+  
+  const readPrompt = () => {
+    speakText(selectedPrompt.prompt, 'it-IT');
+  };
+  
+  const readTranslation = () => {
+    speakText(selectedPrompt.translation, 'en-US');
+  };
+  
   const analyzeRecording = () => {
     if (!audioBlob) {
       toast({
@@ -196,12 +285,9 @@ const Speaking = () => {
     
     setIsAnalyzing(true);
     
-    // In a real application, you would send the audio to a speech recognition
-    // and analysis service. Here we'll simulate the response after a delay.
     setTimeout(() => {
-      // Mock AI feedback 
       const mockFeedback = {
-        accuracy: Math.floor(Math.random() * 30) + 70, // 70-100
+        accuracy: Math.floor(Math.random() * 30) + 70,
         fluency: Math.floor(Math.random() * 30) + 70,
         pronunciation: Math.floor(Math.random() * 30) + 70,
         grammar: Math.floor(Math.random() * 30) + 70,
@@ -312,18 +398,84 @@ const Speaking = () => {
               <div className="bg-secondary/30 p-4 rounded-lg">
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <h3 className="font-medium mb-2">Prompt (Italian):</h3>
+                    <h3 className="font-medium mb-2 flex justify-between items-center">
+                      <span>Prompt (Italian):</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={readPrompt}
+                        disabled={isReadingPrompt}
+                        className="h-7 px-2"
+                      >
+                        <Volume2 className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Listen</span>
+                      </Button>
+                    </h3>
                     <p>{selectedPrompt.prompt}</p>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-medium mb-2 flex items-center">
-                      <Languages className="h-4 w-4 mr-1" />
-                      English:
+                    <h3 className="font-medium mb-2 flex justify-between items-center">
+                      <span className="flex items-center">
+                        <Languages className="h-4 w-4 mr-1" />
+                        English:
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={readTranslation}
+                        disabled={isReadingPrompt}
+                        className="h-7 px-2"
+                      >
+                        <Volume2 className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Listen</span>
+                      </Button>
                     </h3>
                     <p className="text-muted-foreground">
                       {selectedPrompt.translation}
                     </p>
                   </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="voice-select" className="text-sm font-medium">
+                    Voice Selection
+                  </label>
+                  <Select 
+                    value={selectedVoice} 
+                    onValueChange={setSelectedVoice}
+                  >
+                    <SelectTrigger id="voice-select">
+                      <SelectValue placeholder="Select a voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {voiceOptions.map(voice => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="feedback-language" className="text-sm font-medium">
+                    Feedback Language
+                  </label>
+                  <Select 
+                    value={feedbackLanguage} 
+                    onValueChange={(value: any) => setFeedbackLanguage(value)}
+                  >
+                    <SelectTrigger id="feedback-language">
+                      <SelectValue placeholder="Select feedback language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="english">English Only</SelectItem>
+                      <SelectItem value="italian">Italian Only</SelectItem>
+                      <SelectItem value="both">Both Languages</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
@@ -439,10 +591,7 @@ const Speaking = () => {
               <Button
                 variant="outline"
                 onClick={() => {
-                  const audio = new Audio();
-                  // In a real app, this would be a TTS service
-                  audio.src = "https://static.openaudio.ai/2023/06/sample-audio-in-italian.mp3";
-                  audio.play();
+                  speakText(selectedPrompt.exampleAnswer, 'it-IT');
                 }}
               >
                 Listen to Example
@@ -590,6 +739,24 @@ const Speaking = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <div className="mt-8 p-6 bg-accent/30 rounded-lg">
+        <h3 className="text-lg font-bold mb-2">
+          Voice Synthesis Technology
+        </h3>
+        <p className="text-muted-foreground">
+          This application uses the Web Speech API, a built-in browser technology that provides high-quality voice synthesis without requiring external services.
+        </p>
+        <ul className="mt-2 space-y-1 list-disc list-inside text-sm">
+          <li>No external API keys required</li>
+          <li>Works offline after initial page load</li>
+          <li>Supports multiple languages and voices</li>
+          <li>Speech recognition capabilities for pronunciation analysis</li>
+        </ul>
+        <p className="mt-4 text-sm">
+          For optimal performance, use Chrome or Edge browsers which offer the widest range of voices.
+        </p>
+      </div>
     </div>
   );
 };

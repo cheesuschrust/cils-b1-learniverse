@@ -27,12 +27,18 @@ import {
   Save,
   AlertCircle,
   Loader2,
+  Brain,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { extractContentFromFile, generateQuestions, addListeningExercise } from "@/data/listeningExercises";
 
 interface FileProcessorProps {
   onExerciseAdded?: () => void;
+}
+
+interface ContentCategory {
+  type: "listening" | "flashcards" | "multiple-choice" | "writing" | "speaking";
+  confidence: number;
 }
 
 const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
@@ -43,6 +49,8 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
   const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
   const [fileUrl, setFileUrl] = useState("");
   const [fileType, setFileType] = useState("");
+  const [detectedCategories, setDetectedCategories] = useState<ContentCategory[]>([]);
+  const [feedbackLanguage, setFeedbackLanguage] = useState<"english" | "italian" | "both">("both");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -86,9 +94,22 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       const content = await extractContentFromFile(file);
       setExtractedContent(content);
       
+      // Automatically categorize content
+      const categories = detectContentCategories(content);
+      setDetectedCategories(categories);
+      
+      // Set the content type to the highest confidence category
+      if (categories.length > 0) {
+        const primaryCategory = categories.sort((a, b) => b.confidence - a.confidence)[0];
+        toast({
+          title: "Content categorized",
+          description: `Detected as ${primaryCategory.type} content (${primaryCategory.confidence}% confidence)`,
+        });
+      }
+      
       toast({
         title: "File processed successfully",
-        description: "Content has been extracted from the file",
+        description: "Content has been extracted and categorized",
       });
     } catch (error) {
       toast({
@@ -100,6 +121,69 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Function to detect content categories based on content analysis
+  const detectContentCategories = (content: string): ContentCategory[] => {
+    const categories: ContentCategory[] = [];
+    const contentLower = content.toLowerCase();
+    
+    // Simple keyword-based detection (in a real app, this would use more advanced NLP)
+    const keywordMapping = {
+      "listening": ["listen", "audio", "hear", "sound", "pronunciation", "ascolta", "ascoltare"],
+      "flashcards": ["flashcard", "card", "vocabulary", "vocaboli", "vocabulario", "schede"],
+      "multiple-choice": ["choice", "choose", "select", "option", "scelta", "multipla", "scegli"],
+      "writing": ["write", "essay", "composition", "scrivi", "scrittura", "composizione"],
+      "speaking": ["speak", "talk", "conversation", "parla", "parlare", "conversazione", "dialogo"]
+    };
+    
+    // Check for question-like patterns
+    const hasQuestions = (content.match(/\?/g) || []).length > 3;
+    const hasNumberedItems = (content.match(/\d+\.\s/g) || []).length > 3;
+    const hasOptions = (content.match(/[a-d]\)/gi) || []).length > 3;
+    
+    // Calculate confidence scores for each category
+    for (const [category, keywords] of Object.entries(keywordMapping)) {
+      let confidence = 0;
+      keywords.forEach(keyword => {
+        if (contentLower.includes(keyword)) {
+          confidence += 15;
+        }
+      });
+      
+      // Additional pattern-based heuristics
+      if (category === "multiple-choice" && (hasQuestions || hasOptions)) {
+        confidence += 40;
+      } else if (category === "flashcards" && hasNumberedItems) {
+        confidence += 20;
+      } else if (category === "listening" && fileType.startsWith("audio/")) {
+        confidence += 60;
+      } else if (category === "speaking" && 
+                 (contentLower.includes("pronunc") || contentLower.includes("speak") || 
+                  contentLower.includes("talk") || contentLower.includes("parla"))) {
+        confidence += 30;
+      }
+      
+      // Cap at 100%
+      confidence = Math.min(confidence, 100);
+      
+      if (confidence > 0) {
+        categories.push({
+          type: category as any,
+          confidence
+        });
+      }
+    }
+    
+    // If no categories detected with confidence, add a default
+    if (categories.length === 0) {
+      categories.push({
+        type: "multiple-choice",
+        confidence: 50
+      });
+    }
+    
+    return categories.sort((a, b) => b.confidence - a.confidence);
   };
 
   const saveAsListeningExercise = () => {
@@ -131,12 +215,13 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         title,
         audioUrl,
         extractedContent,
-        difficulty
+        difficulty,
+        feedbackLanguage
       );
       
       toast({
         title: "Exercise created",
-        description: `"${title}" has been added to the listening exercises`,
+        description: `"${title}" has been added to the learning exercises with ${feedbackLanguage} feedback`,
       });
       
       // Reset form
@@ -145,6 +230,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
       setTitle("");
       setFileUrl("");
       setFileType("");
+      setDetectedCategories([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       
       // Notify parent component
@@ -253,6 +339,22 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                 </Select>
               </div>
               
+              <div className="grid w-full gap-2">
+                <label htmlFor="feedbackLanguage" className="text-sm font-medium">
+                  Feedback Language
+                </label>
+                <Select value={feedbackLanguage} onValueChange={(value: any) => setFeedbackLanguage(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select feedback language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English Only</SelectItem>
+                    <SelectItem value="italian">Italian Only</SelectItem>
+                    <SelectItem value="both">Both Languages</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
               {fileType.startsWith("audio/") && (
                 <div className="w-full mt-2">
                   <label className="text-sm font-medium mb-2 block">
@@ -273,9 +375,34 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
                     Processing...
                   </>
                 ) : (
-                  <>Extract Content</>
+                  <>Extract & Categorize Content</>
                 )}
               </Button>
+            </div>
+          )}
+          
+          {detectedCategories.length > 0 && (
+            <div className="bg-accent/30 p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-2 flex items-center">
+                <Brain className="h-4 w-4 mr-2 text-primary" />
+                AI Content Classification
+              </h3>
+              <div className="space-y-2">
+                {detectedCategories.map((category, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm capitalize">{category.type}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 h-2 bg-secondary rounded-full">
+                        <div 
+                          className="h-2 bg-primary rounded-full" 
+                          style={{ width: `${category.confidence}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">{category.confidence}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           
@@ -304,7 +431,7 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
             onClick={saveAsListeningExercise}
           >
             <Save className="mr-2 h-4 w-4" />
-            Save as Listening Exercise
+            Save Exercise
           </Button>
         </CardFooter>
       )}

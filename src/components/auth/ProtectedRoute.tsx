@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -13,8 +13,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requireAdmin = false 
 }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, refreshSession } = useAuth();
   const location = useLocation();
+
+  // Try to refresh the session when the component mounts
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      refreshSession();
+    }
+  }, [isAuthenticated, isLoading, refreshSession]);
 
   if (isLoading) {
     return (
@@ -26,7 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    // Redirect to login and remember where they were trying to go
+    // Store the current location to redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
