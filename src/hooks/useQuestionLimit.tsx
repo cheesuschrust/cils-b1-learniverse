@@ -61,7 +61,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
       toast({
         title: "Authentication Required",
         description: "Please log in to access this content",
-        variant: "destructive",
+        variant: "destructive"
       });
       return false;
     }
@@ -76,7 +76,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
         toast({
           title: "Daily Limit Reached",
           description: "You've reached your daily limit. Upgrade to premium for unlimited access.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
       
@@ -94,6 +94,6 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     isLoading,
     remainingQuestions: getRemainingQuestions(),
     usedQuestions: getUsedQuestions(),
-    trackQuestionUsage,
+    trackQuestionUsage
   };
 };
