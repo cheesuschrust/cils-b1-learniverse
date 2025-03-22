@@ -195,7 +195,7 @@ const AdminDashboard = () => {
   const handleUserStatusChange = async (userId: string, newStatus: string) => {
     const success = await updateUserStatus(userId, newStatus);
     if (success) {
-      addSystemLog('user', `User status updated to ${newStatus}`);
+      addSystemLog('user', 'Updated user status', `User ${user.email} status updated to ${newStatus}`);
       setUsers(getAllUsers());
     }
   };

@@ -11,11 +11,22 @@ import {
   EmailProvider
 } from '@/services/EmailService';
 
-// Define user roles
-export type UserRole = 'user' | 'admin';
-
 // Define log category
 export type LogCategory = 'content' | 'email' | 'system' | 'user' | 'auth' | 'ai';
+
+// Define log entry interface
+export interface LogEntry {
+  id: string;
+  timestamp: Date;
+  category: LogCategory;
+  action: string;
+  userId?: string;
+  details?: string;
+  level: 'info' | 'warning' | 'error';
+}
+
+// Define user roles
+export type UserRole = 'user' | 'admin';
 
 // User interface with all required properties
 export interface User {

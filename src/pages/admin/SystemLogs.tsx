@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth, LogCategory } from "@/contexts/AuthContext";
+import { useAuth, LogCategory, LogEntry } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,15 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "@/components/ui/textarea";
 
 // Adjust the SystemLog interface to match LogEntry
-interface SystemLog {
-  id: string;
-  timestamp: Date;
-  category: LogCategory;
-  action: string;
-  userId?: string;
-  details?: string;
-  level: 'info' | 'warning' | 'error';
-}
+type SystemLog = LogEntry;
 
 const SystemLogs = () => {
   const { getSystemLogs, updateSystemLog } = useAuth();
@@ -132,7 +124,6 @@ const SystemLogs = () => {
     try {
       const success = await updateSystemLog(selectedLog.id, { details: editedDetails });
       if (success) {
-        // Update the logs state with the new details
         setLogs(prevLogs =>
           prevLogs.map(log =>
             log.id === selectedLog.id ? { ...log, details: editedDetails } : log
@@ -178,7 +169,6 @@ const SystemLogs = () => {
             <div>
               <Label htmlFor="category-filter">Category</Label>
               <Select
-                id="category-filter"
                 value={categoryFilter}
                 onValueChange={(value) => setCategoryFilter(value as LogCategory | "all")}
               >
@@ -200,7 +190,6 @@ const SystemLogs = () => {
             <div>
               <Label htmlFor="level-filter">Level</Label>
               <Select
-                id="level-filter"
                 value={levelFilter}
                 onValueChange={(value) => setLevelFilter(value as "all" | "info" | "warning" | "error")}
               >
@@ -309,7 +298,7 @@ const SystemLogs = () => {
                               log.level === "error"
                                 ? "destructive"
                                 : log.level === "warning"
-                                ? "warning"
+                                ? "secondary"
                                 : "secondary"
                             }
                           >

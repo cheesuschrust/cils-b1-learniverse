@@ -19,7 +19,6 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   
-  // Profile form state
   const [profileForm, setProfileForm] = useState({
     firstName: "",
     lastName: "",
@@ -31,7 +30,6 @@ const UserProfile = () => {
     preferredLanguage: "both",
   });
   
-  // Update form when user data changes
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -47,14 +45,12 @@ const UserProfile = () => {
     }
   }, [user]);
   
-  // Password form state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
   
-  // Format date for display
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return "N/A";
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -311,6 +307,21 @@ const UserProfile = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-2">Account Activity</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span>Created</span>
+            <span>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span>Last active</span>
+            <span>{user.lastActive ? new Date(user.lastActive).toLocaleDateString() : "N/A"}</span>
+          </div>
+        </div>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

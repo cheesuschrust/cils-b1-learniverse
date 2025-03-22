@@ -23,7 +23,7 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
   // Preference state
   const [preferences, setPreferences] = useState({
     // Display and UI
-    theme: "system",
+    theme: "system" as 'system' | 'light' | 'dark',
     fontSize: 16,
     notificationsEnabled: true,
     animationsEnabled: true,
