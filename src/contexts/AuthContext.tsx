@@ -6,253 +6,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   sendVerificationEmail, 
   sendPasswordResetEmail, 
-  sendWelcomeEmail,
-  EmailSettings,
-  EmailProvider
+  sendWelcomeEmail 
 } from '@/services/EmailService';
-
-// Define log category
-export type LogCategory = 'content' | 'email' | 'system' | 'user' | 'auth' | 'ai';
-
-// Define log entry interface
-export interface LogEntry {
-  id: string;
-  timestamp: Date;
-  category: LogCategory;
-  action: string;
-  userId?: string;
-  details?: string;
-  level: 'info' | 'warning' | 'error';
-}
-
-// Define user roles
-export type UserRole = 'user' | 'admin';
-
-// User interface with all required properties
-export interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username?: string;
-  email: string;
-  role: UserRole;
-  isVerified: boolean;
-  createdAt: Date;
-  lastLogin: Date;
-  lastActive: Date;
-  preferences: UserPreferences;
-  subscription: 'free' | 'premium';
-  status: 'active' | 'inactive' | 'suspended';
-  preferredLanguage: 'english' | 'italian' | 'both';
-  dailyQuestionCounts: {
-    flashcards: number;
-    multipleChoice: number;
-    listening: number;
-    writing: number;
-    speaking: number;
-    [key: string]: number;
-  };
-  displayName?: string;
-  phoneNumber?: string;
-  address?: string;
-  metrics: {
-    totalQuestions: number;
-    correctAnswers: number;
-    streak: number;
-  };
-}
-
-export interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
-  emailNotifications: boolean;
-  language: 'en' | 'it';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  fontSize?: number;
-  notificationsEnabled?: boolean;
-  animationsEnabled?: boolean;
-  preferredLanguage?: string;
-  voiceSpeed?: number;
-  autoPlayAudio?: boolean;
-  showProgressMetrics?: boolean;
-  aiEnabled?: boolean;
-  aiModelSize?: string;
-  aiProcessingOnDevice?: boolean;
-  confidenceScoreVisible?: boolean;
-}
-
-// Mock database
-interface MockDatabase {
-  users: User[];
-  logs: LogEntry[];
-  emailSettings: EmailSettings;
-  resetTokens: Map<string, { email: string; expires: Date }>;
-  verificationTokens: Map<string, { email: string; expires: Date }>;
-}
-
-// Context interface with all required methods
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  signup: (
-    firstName: string,
-    lastName: string,
-    email: string,
-    password: string,
-    username?: string
-  ) => Promise<boolean>;
-  resetPassword: (email: string) => Promise<boolean>;
-  completePasswordReset: (token: string, newPassword: string) => Promise<boolean>;
-  verifyEmail: (token: string) => Promise<boolean>;
-  refreshSession: () => Promise<boolean>;
-  updateUser: (updates: Partial<User>) => Promise<boolean>;
-  updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<boolean>;
-  sendVerificationEmail: (email: string) => Promise<boolean>;
-  getSystemLogs: (
-    category?: LogCategory, 
-    level?: 'info' | 'warning' | 'error', 
-    startDate?: Date, 
-    endDate?: Date
-  ) => LogEntry[];
-  addSystemLog: (
-    category: LogCategory, 
-    action: string, 
-    details?: string, 
-    level?: 'info' | 'warning' | 'error'
-  ) => void;
-  socialLogin: (provider: 'google' | 'apple') => Promise<boolean>;
-  getEmailSettings: () => EmailSettings;
-  updateEmailSettings: (settings: EmailSettings) => Promise<boolean>;
-  getAllUsers: () => User[];
-  deleteUser: (userId: string) => Promise<boolean>;
-  disableUser: (userId: string) => Promise<boolean>;
-  enableUser: (userId: string) => Promise<boolean>;
-  makeAdmin: (userId: string) => Promise<boolean>;
-  updateProfile: (updates: Partial<User>) => Promise<boolean>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
-  incrementDailyQuestionCount: (type: string) => Promise<boolean>;
-  resendVerificationEmail: (email: string) => Promise<boolean>;
-  updateUserStatus: (userId: string, status: string) => Promise<boolean>;
-  updateUserSubscription: (userId: string, subscription: string) => Promise<boolean>;
-  addAdmin: (userId: string) => Promise<boolean>;
-  updateSystemLog: (logId: string, updates: Partial<LogEntry>) => Promise<boolean>;
-}
+import { getDatabase, passwordHash } from '@/services/MockDatabase';
+import { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from './shared-types';
+import { AuthContextType } from './types/auth-types';
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock database implementation (simulating database storage)
-const db: MockDatabase = {
-  users: [
-    {
-      id: '1',
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@italianlearning.app',
-      role: 'admin',
-      isVerified: true,
-      createdAt: new Date('2023-01-01'),
-      lastLogin: new Date(),
-      lastActive: new Date(),
-      preferences: {
-        theme: 'system',
-        emailNotifications: true,
-        language: 'en',
-        difficulty: 'intermediate'
-      },
-      subscription: 'premium',
-      status: 'active',
-      preferredLanguage: 'both',
-      dailyQuestionCounts: {
-        flashcards: 0,
-        multipleChoice: 0,
-        listening: 0,
-        writing: 0,
-        speaking: 0
-      },
-      metrics: {
-        totalQuestions: 0,
-        correctAnswers: 0,
-        streak: 0
-      }
-    },
-    {
-      id: '2',
-      firstName: 'Marco',
-      lastName: 'Rossi',
-      username: 'marco',
-      email: 'marco@example.com',
-      role: 'user',
-      isVerified: true,
-      createdAt: new Date('2023-02-15'),
-      lastLogin: new Date(),
-      lastActive: new Date(),
-      preferences: {
-        theme: 'light',
-        emailNotifications: true,
-        language: 'it',
-        difficulty: 'intermediate'
-      },
-      subscription: 'free',
-      status: 'active',
-      preferredLanguage: 'both',
-      dailyQuestionCounts: {
-        flashcards: 0,
-        multipleChoice: 0,
-        listening: 0,
-        writing: 0,
-        speaking: 0
-      },
-      displayName: 'Marco R.',
-      metrics: {
-        totalQuestions: 15,
-        correctAnswers: 12,
-        streak: 3
-      }
-    }
-  ],
-  logs: [],
-  emailSettings: {
-    provider: 'temporaryEmail' as EmailProvider,
-    fromEmail: 'noreply@cittadinanza-b2.com',
-    fromName: 'CILS B2 Cittadinanza',
-    config: {
-      enableSsl: true
-    },
-    templates: {
-      verification: {
-        subject: "Verify Your Email - CILS B2 Cittadinanza",
-        body: "<p>Hello {{name}},</p><p>Please verify your email by clicking <a href='{{verificationLink}}'>here</a>.</p><p>Thank you for joining CILS B2 Cittadinanza Question of the Day!</p>"
-      },
-      passwordReset: {
-        subject: "Reset Your Password - CILS B2 Cittadinanza",
-        body: "<p>Hello {{name}},</p><p>Click <a href='{{resetLink}}'>here</a> to reset your password.</p><p>If you didn't request this, please ignore this email.</p>"
-      },
-      welcome: {
-        subject: "Welcome to CILS B2 Cittadinanza Question of the Day!",
-        body: "<p>Welcome to CILS B2 Cittadinanza, {{name}}!</p><p>We're excited to have you on board. Get ready to improve your Italian language skills!</p>"
-      }
-    },
-    temporaryInboxDuration: 24
-  },
-  resetTokens: new Map(),
-  verificationTokens: new Map()
-};
-
-// Password hash map (simulating password storage)
-const passwordHash: Map<string, string> = new Map();
-
-// Initialize default admin password
-(async () => {
-  const hashedPassword = await bcrypt.hash('Admin123!', 10);
-  passwordHash.set('admin@italianlearning.app', hashedPassword);
-  
-  // Add a test user password
-  const userPassword = await bcrypt.hash('password123', 10);
-  passwordHash.set('marco@example.com', userPassword);
-})();
 
 // AuthProvider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -269,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
+          const db = await getDatabase();
           
           // Update last login time
           const userIndex = db.users.findIndex(u => u.id === parsedUser.id);
@@ -309,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
+      const db = await getDatabase();
       
       // Check if email already exists
       if (db.users.some(u => u.email === email)) {
@@ -438,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      const db = await getDatabase();
       
       // Find user
       const foundUser = db.users.find(u => u.email === email);
@@ -520,6 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const socialLogin = async (provider: 'google' | 'apple'): Promise<boolean> => {
     try {
       setIsLoading(true);
+      const db = await getDatabase();
       
       // Simulate OAuth flow
       setTimeout(() => {
@@ -555,6 +320,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Password reset request
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
+      const db = await getDatabase();
+      
       // Check if user exists
       const user = db.users.find(u => u.email === email);
       if (!user) {
@@ -617,6 +384,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Complete password reset with token
   const completePasswordReset = async (token: string, newPassword: string): Promise<boolean> => {
     try {
+      const db = await getDatabase();
+      
       // Validate token
       const tokenData = db.resetTokens.get(token);
       if (!tokenData) {
@@ -680,6 +449,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Verify email with token
   const verifyEmail = async (token: string): Promise<boolean> => {
     try {
+      const db = await getDatabase();
+      
       // Validate token
       const tokenData = db.verificationTokens.get(token);
       if (!tokenData) {
@@ -749,6 +520,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Send verification email
   const sendVerificationEmailToUser = async (email: string): Promise<boolean> => {
     try {
+      const db = await getDatabase();
+      
       // Find user
       const user = db.users.find(u => u.email === email);
       if (!user) {
@@ -816,7 +589,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
-  
+
   // Refresh user session
   const refreshSession = async (): Promise<boolean> => {
     try {
@@ -998,6 +771,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startDate?: Date, 
     endDate?: Date
   ): LogEntry[] => {
+    const db = getDatabase();
     let filteredLogs = [...db.logs];
     
     // Filter by category
@@ -1030,6 +804,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     details?: string, 
     level: 'info' | 'warning' | 'error' = 'info'
   ): void => {
+    const db = getDatabase();
     const logEntry: LogEntry = {
       id: uuidv4(),
       timestamp: new Date(),
@@ -1596,3 +1371,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Export types
+export { LogCategory, LogEntry, User, UserPreferences, EmailSettings } from './shared-types';
+

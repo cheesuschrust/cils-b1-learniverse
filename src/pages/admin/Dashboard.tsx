@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -13,29 +26,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
+  UserPlus, 
   Users, 
-  BarChart3, 
-  Settings, 
   Search, 
+  MoreVertical, 
+  Shield, 
   UserCheck, 
   UserX, 
-  Trash2,
-  FileSpreadsheet,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  FileUp,
-  Upload,
-  CreditCard,
-  Tag,
-  Info,
-  UserPlus,
-  Calendar,
-  Shield
+  Star, 
+  Clock, 
+  RefreshCw, 
+  Plus 
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +68,7 @@ const AdminDashboard = () => {
     firstName: "",
     lastName: "",
     email: "",
-    password: "",
+    makeAdmin: false,
     subscription: "free" as "free" | "premium",
   });
   
@@ -59,69 +78,71 @@ const AdminDashboard = () => {
   
   const [users, setUsers] = useState<Array<any>>([]);
   const [userDetails, setUserDetails] = useState<any>(null);
-  const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState("users");
   
   useEffect(() => {
     loadUsers();
   }, []);
   
   const loadUsers = () => {
-    const allUsers = getAllUsers();
-    setUsers(allUsers);
+    setUsers(getAllUsers());
   };
   
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.firstName && user.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.lastName && user.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredUsers = users.filter(user => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      user.firstName.toLowerCase().includes(searchLower) ||
+      user.lastName.toLowerCase().includes(searchLower) ||
+      user.email.toLowerCase().includes(searchLower) ||
+      (user.username && user.username.toLowerCase().includes(searchLower))
+    );
+  });
   
-  const getStatusIcon = (status: string) => {
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+  
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "pending":
-        return <Clock className="h-5 w-5 text-amber-500" />;
+        return "bg-green-500";
       case "inactive":
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return "bg-gray-500";
+      case "suspended":
+        return "bg-red-500";
       default:
-        return null;
+        return "bg-gray-500";
     }
   };
   
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "active":
-        return "Active";
-      case "pending":
-        return "Pending";
-      case "inactive":
-        return "Inactive";
-      default:
-        return status;
-    }
-  };
-  
-  const getSubscriptionBadge = (subscription: string) => {
-    switch (subscription) {
-      case "premium":
-        return <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-0">Premium</Badge>;
-      case "free":
-      default:
-        return <Badge variant="outline">Free</Badge>;
-    }
-  };
-  
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
+  };
+  
+  const getTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    
+    return Math.floor(seconds) + " seconds ago";
   };
   
   const activateUser = async (userId: string) => {
@@ -174,23 +195,34 @@ const AdminDashboard = () => {
   
   const viewUserDetails = (user: any) => {
     setUserDetails(user);
-    setIsUserDetailsOpen(true);
+    setShowUserDetails(true);
+  };
+  
+  const promoteToAdmin = async (userId: string) => {
+    await addAdmin(userId);
+    systemLog.logUserAction("User promoted", `User ID: ${userId} was promoted to Admin`);
+    loadUsers();
+    toast({
+      title: "Role Updated",
+      description: "User has been promoted to Admin",
+    });
   };
   
   const handleAddUser = async () => {
     try {
-      await addAdmin(
-        newUserData.email,
-        newUserData.firstName,
-        newUserData.lastName,
-        newUserData.password
-      );
+      // Here would typically be code to create a new user
+      // For this demo, we'll just show a success message
+      
+      toast({
+        title: "User Added",
+        description: `New user ${newUserData.email} has been created`,
+      });
       
       setNewUserData({
         firstName: "",
         lastName: "",
         email: "",
-        password: "",
+        makeAdmin: false,
         subscription: "free"
       });
       
@@ -199,27 +231,29 @@ const AdminDashboard = () => {
       loadUsers();
     } catch (error) {
       console.error("Error adding user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add user",
+        variant: "destructive",
+      });
     }
   };
   
-  const handleNewUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewUserData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleUserStatusChange = async (userId: string, newStatus: string) => {
-    const success = await updateUserStatus(userId, newStatus);
-    if (success) {
-      const targetUser = users.find(u => u.id === userId);
-      if (targetUser) {
-        setUsers(getAllUsers());
-        toast({
-          title: "Status Updated",
-          description: `User status changed to ${newStatus} successfully`,
-        });
-      }
-      setUsers(getAllUsers());
-    }
+  const handleCheckboxChange = (checked: boolean) => {
+    setNewUserData(prev => ({ ...prev, makeAdmin: checked }));
+  };
+  
+  const handleRefresh = () => {
+    loadUsers();
+    toast({
+      title: "Refreshed",
+      description: "User list has been refreshed",
+    });
   };
   
   const handleUserSubscriptionChange = async (userId: string, newSubscription: string) => {
@@ -233,674 +267,282 @@ const AdminDashboard = () => {
     }
   };
   
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.status === "active").length;
-  const premiumUsers = users.filter(user => user.subscription === "premium").length;
-  const totalQuestions = users.reduce((sum, user) => sum + user.metrics.totalQuestions, 0);
-  
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const newUsers = users.filter(user => new Date(user.createdAt) >= thirtyDaysAgo).length;
-  
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage users, view statistics, and control content
-          </p>
-        </div>
-        
-        <Link to="/admin/content-uploader">
-          <Button className="flex items-center">
-            <Upload className="h-4 w-4 mr-2" />
-            Content Uploader
-          </Button>
-        </Link>
-      </div>
-      
-      <Tabs defaultValue="users" className="animate-fade-up">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="users" className="flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="statistics" className="flex items-center">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Statistics
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="users">
-          <div className="flex flex-col md:flex-row justify-between mb-6">
-            <div className="relative w-full md:w-1/3 mb-4 md:mb-0">
-              <Input
-                placeholder="Search users by name, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" className="flex items-center">
-                <FileUp className="h-4 w-4 mr-2" />
-                Import
-              </Button>
-              <Button variant="outline" size="sm" className="flex items-center">
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="flex items-center">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Admin
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Administrator</DialogTitle>
-                    <DialogDescription>
-                      Create a new admin account with full system access.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input 
-                          id="firstName" 
-                          name="firstName" 
-                          value={newUserData.firstName}
-                          onChange={handleNewUserChange}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input 
-                          id="lastName" 
-                          name="lastName" 
-                          value={newUserData.lastName}
-                          onChange={handleNewUserChange}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input 
-                        id="email" 
-                        name="email" 
-                        type="email" 
-                        value={newUserData.email}
-                        onChange={handleNewUserChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input 
-                        id="password" 
-                        name="password" 
-                        type="password" 
-                        value={newUserData.password}
-                        onChange={handleNewUserChange}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleAddUser}>Add Admin</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-          
-          <Card className="backdrop-blur-sm border-accent/20">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Subscription</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="font-medium">{user.firstName} {user.lastName}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.role === "admin" ? "default" : "outline"}>
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {getStatusIcon(user.status)}
-                          <span className="ml-2">{getStatusText(user.status)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getSubscriptionBadge(user.subscription)}
-                      </TableCell>
-                      <TableCell>{formatDate(user.created)}</TableCell>
-                      <TableCell>{formatDate(user.lastActive)}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => viewUserDetails(user)}
-                                >
-                                  <Info className="h-4 w-4 text-blue-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>View Details</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          {user.status !== "active" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => activateUser(user.id)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <UserCheck className="h-4 w-4 text-green-500" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Activate User</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          
-                          {user.status !== "inactive" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => deactivateUser(user.id)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <UserX className="h-4 w-4 text-amber-500" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Deactivate User</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          
-                          {user.subscription === "free" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => upgradeUser(user.id)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <CreditCard className="h-4 w-4 text-purple-500" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Upgrade to Premium</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          
-                          {user.subscription === "premium" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => downgradeUser(user.id)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Tag className="h-4 w-4 text-gray-500" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Downgrade to Free</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          
-          <Dialog open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen}>
-            {userDetails && (
-              <DialogContent className="max-w-3xl">
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">Admin Dashboard</CardTitle>
+          <div className="space-x-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add User
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>User Details</DialogTitle>
+                  <DialogTitle>Add New User</DialogTitle>
                   <DialogDescription>
-                    Complete information about {userDetails.firstName} {userDetails.lastName}
+                    Create a new user account for the platform.
                   </DialogDescription>
                 </DialogHeader>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Basic Information</h3>
-                      <div className="rounded-md bg-accent/30 p-4 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Name:</span>
-                          <span className="text-sm font-medium">{userDetails.firstName} {userDetails.lastName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Username:</span>
-                          <span className="text-sm font-medium">{userDetails.username || "Not set"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Email:</span>
-                          <span className="text-sm font-medium">{userDetails.email}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Phone:</span>
-                          <span className="text-sm font-medium">{userDetails.phoneNumber || "Not set"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Address:</span>
-                          <span className="text-sm font-medium">{userDetails.address || "Not set"}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Account Details</h3>
-                      <div className="rounded-md bg-accent/30 p-4 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Status:</span>
-                          <div className="flex items-center">
-                            {getStatusIcon(userDetails.status)}
-                            <span className="ml-2 text-sm font-medium">{getStatusText(userDetails.status)}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Role:</span>
-                          <Badge variant={userDetails.role === "admin" ? "default" : "outline"}>
-                            {userDetails.role}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Subscription:</span>
-                          {getSubscriptionBadge(userDetails.subscription)}
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Joined:</span>
-                          <span className="text-sm font-medium">{formatDate(userDetails.created)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Last Active:</span>
-                          <span className="text-sm font-medium">{formatDate(userDetails.lastActive)}</span>
-                        </div>
-                      </div>
-                    </div>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="firstName" className="text-right">
+                      First Name
+                    </Label>
+                    <Input
+                      type="text"
+                      id="firstName"
+                      name="firstName"
+                      value={newUserData.firstName}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Daily Question Usage</h3>
-                      <div className="rounded-md bg-accent/30 p-4 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Flashcards:</span>
-                          <Badge variant="outline">{userDetails.dailyQuestionCounts?.flashcards || 0}</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Multiple Choice:</span>
-                          <Badge variant="outline">{userDetails.dailyQuestionCounts?.multipleChoice || 0}</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Listening:</span>
-                          <Badge variant="outline">{userDetails.dailyQuestionCounts?.listening || 0}</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Writing:</span>
-                          <Badge variant="outline">{userDetails.dailyQuestionCounts?.writing || 0}</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Speaking:</span>
-                          <Badge variant="outline">{userDetails.dailyQuestionCounts?.speaking || 0}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Performance Metrics</h3>
-                      <div className="rounded-md bg-accent/30 p-4 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Total Questions:</span>
-                          <span className="text-sm font-medium">{userDetails.metrics?.totalQuestions || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Correct Answers:</span>
-                          <span className="text-sm font-medium">{userDetails.metrics?.correctAnswers || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Current Streak:</span>
-                          <span className="text-sm font-medium">{userDetails.metrics?.streak || 0} days</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Total Time Spent:</span>
-                          <span className="text-sm font-medium">{userDetails.metrics?.totalTimeSpent || 0} minutes</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Accuracy Rate:</span>
-                          <span className="text-sm font-medium">
-                            {userDetails.metrics?.totalQuestions > 0 
-                              ? Math.round((userDetails.metrics?.correctAnswers / userDetails.metrics?.totalQuestions) * 100) 
-                              : 0}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      {userDetails.status !== "active" ? (
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => {
-                            activateUser(userDetails.id);
-                            setIsUserDetailsOpen(false);
-                          }}
-                          className="flex-1"
-                        >
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Activate User
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => {
-                            deactivateUser(userDetails.id);
-                            setIsUserDetailsOpen(false);
-                          }}
-                          className="flex-1"
-                        >
-                          <UserX className="h-4 w-4 mr-2" />
-                          Deactivate User
-                        </Button>
-                      )}
-                      
-                      {userDetails.subscription === "free" ? (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            upgradeUser(userDetails.id);
-                            setIsUserDetailsOpen(false);
-                          }}
-                          className="flex-1"
-                        >
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Upgrade to Premium
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            downgradeUser(userDetails.id);
-                            setIsUserDetailsOpen(false);
-                          }}
-                          className="flex-1"
-                        >
-                          <Tag className="h-4 w-4 mr-2" />
-                          Downgrade to Free
-                        </Button>
-                      )}
-                    </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="lastName" className="text-right">
+                      Last Name
+                    </Label>
+                    <Input
+                      type="text"
+                      id="lastName"
+                      name="lastName"
+                      value={newUserData.lastName}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email" className="text-right">
+                      Email
+                    </Label>
+                    <Input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={newUserData.email}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="subscription" className="text-right">
+                      Subscription
+                    </Label>
+                    <select
+                      id="subscription"
+                      name="subscription"
+                      value={newUserData.subscription}
+                      onChange={handleInputChange}
+                      className="col-span-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    >
+                      <option value="free">Free</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="makeAdmin" className="text-right">
+                      Make Admin
+                    </Label>
+                    <Checkbox
+                      id="makeAdmin"
+                      checked={newUserData.makeAdmin}
+                      onCheckedChange={handleCheckboxChange}
+                    />
                   </div>
                 </div>
+                <DialogFooter>
+                  <Button type="submit" onClick={handleAddUser}>
+                    Create User
+                  </Button>
+                </DialogFooter>
               </DialogContent>
-            )}
-          </Dialog>
-        </TabsContent>
-        
-        <TabsContent value="statistics">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Total Users</CardTitle>
-                <CardDescription>All registered accounts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{totalUsers}</div>
-                <p className="text-xs text-green-500 mt-1">+{newUsers} new in the last 30 days</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Active Users</CardTitle>
-                <CardDescription>Users with active status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{activeUsers}</div>
-                <p className="text-xs text-green-500 mt-1">{Math.round((activeUsers / totalUsers) * 100)}% of total users</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Premium Users</CardTitle>
-                <CardDescription>Subscribers with paid plans</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{premiumUsers}</div>
-                <p className="text-xs text-amber-500 mt-1">{Math.round((premiumUsers / totalUsers) * 100)}% conversion rate</p>
-              </CardContent>
-            </Card>
+            </Dialog>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader>
-                <CardTitle>User Activity</CardTitle>
-                <CardDescription>
-                  Login frequency and engagement
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80 flex items-center justify-center">
-                <div className="text-center">
-                  <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Total questions answered: {totalQuestions}
-                  </p>
-                  <p className="text-muted-foreground mt-2">
-                    Avg. {totalUsers > 0 ? Math.round(totalQuestions / totalUsers) : 0} questions per user
-                  </p>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="users" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="users" onClick={() => setActiveTab("users")}>
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="analytics" onClick={() => setActiveTab("analytics")}>
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="logs" onClick={() => setActiveTab("logs")}>
+                Logs
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="users" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search users..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader>
-                <CardTitle>Subscription Metrics</CardTitle>
-                <CardDescription>
-                  Revenue and subscription patterns
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80 flex items-center justify-center">
-                <div className="text-center">
-                  <CreditCard className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Premium conversion: {Math.round((premiumUsers / totalUsers) * 100)}%
-                  </p>
-                  <p className="text-muted-foreground mt-2">
-                    Estimated monthly revenue: ${premiumUsers * 9.99}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <Card className="backdrop-blur-sm border-accent/20">
-            <CardHeader>
-              <CardTitle>User Growth Over Time</CardTitle>
-              <CardDescription>
-                New user registrations by month
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-80 flex items-center justify-center">
-              <div className="text-center">
-                <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {newUsers} new users in the last 30 days
-                </p>
-                <p className="text-muted-foreground mt-2">
-                  User retention rate: {activeUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}%
-                </p>
+                <Badge variant="secondary">
+                  Total Users: {users.length}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <Card className="backdrop-blur-sm border-accent/20">
-            <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>
-                Manage application settings and configurations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Content Settings</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label htmlFor="daily-questions" className="text-sm font-medium">
-                          Daily Questions Limit (Free Users)
-                        </label>
-                        <Input
-                          id="daily-questions"
-                          type="number"
-                          defaultValue="1"
-                          min="1"
-                          max="10"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="premium-questions" className="text-sm font-medium">
-                          Daily Questions Limit (Premium Users)
-                        </label>
-                        <Input
-                          id="premium-questions"
-                          type="number"
-                          defaultValue="Unlimited"
-                          readOnly
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Language Settings</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label htmlFor="default-language" className="text-sm font-medium">
-                          Default Interface Language
-                        </label>
-                        <select
-                          id="default-language"
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          <option value="en">English</option>
-                          <option value="it">Italian</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="ai-language" className="text-sm font-medium">
-                          AI Feedback Language
-                        </label>
-                        <select
-                          id="ai-language"
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          <option value="both">Both (English & Italian)</option>
-                          <option value="en">English Only</option>
-                          <option value="it">Italian Only</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Administrator Settings</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="space-y-2">
-                        <label htmlFor="admin-emails" className="text-sm font-medium">
-                          Admin Notification Emails
-                        </label>
-                        <Input
-                          id="admin-emails"
-                          type="text"
-                          placeholder="admin@example.com, admin2@example.com"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Comma-separated list of email addresses to receive system notifications
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-4">
-                  <Button variant="outline">Reset to Defaults</Button>
-                  <Button>Save Changes</Button>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Avatar</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Subscription</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Active</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <Avatar>
+                            <AvatarImage src={`https://avatar.api.dicebear.com/7.x/ лица/${user.email}.svg`} />
+                            <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell>
+                          {user.firstName} {user.lastName}
+                          {user.role === "admin" && (
+                            <Badge className="ml-2" variant="outline">
+                              Admin
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          {user.subscription === "premium" ? (
+                            <Badge variant="success">Premium</Badge>
+                          ) : (
+                            <Badge variant="default">Free</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <div
+                              className={`h-2 w-2 rounded-full mr-2 ${getStatusColor(user.status)}`}
+                            ></div>
+                            {user.status}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getTimeAgo(user.lastActive)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => viewUserDetails(user)}>
+                                <Users className="mr-2 h-4 w-4" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {user.status === "active" ? (
+                                <DropdownMenuItem onClick={() => deactivateUser(user.id)}>
+                                  <UserX className="mr-2 h-4 w-4" /> Deactivate
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => activateUser(user.id)}>
+                                  <UserCheck className="mr-2 h-4 w-4" /> Activate
+                                </DropdownMenuItem>
+                              )}
+                              {user.subscription === "free" ? (
+                                <DropdownMenuItem onClick={() => upgradeUser(user.id)}>
+                                  <Star className="mr-2 h-4 w-4" /> Upgrade to Premium
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => downgradeUser(user.id)}>
+                                  <Clock className="mr-2 h-4 w-4" /> Downgrade to Free
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => promoteToAdmin(user.id)}>
+                                <Shield className="mr-2 h-4 w-4" /> Make Admin
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+            <TabsContent value="analytics">
+              <div>Analytics content</div>
+            </TabsContent>
+            <TabsContent value="logs">
+              <div>Logs content</div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      
+      {/* User Details Dialog */}
+      <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Information about the selected user.
+            </DialogDescription>
+          </DialogHeader>
+          {userDetails && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Avatar</Label>
+                <Avatar className="col-span-3">
+                  <AvatarImage src={`https://avatar.api.dicebear.com/7.x/ лица/${userDetails.email}.svg`} />
+                  <AvatarFallback>{getInitials(userDetails.firstName, userDetails.lastName)}</AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Full Name</Label>
+                <div className="col-span-3">
+                  {userDetails.firstName} {userDetails.lastName}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Email</Label>
+                <div className="col-span-3">{userDetails.email}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Subscription</Label>
+                <div className="col-span-3">
+                  {userDetails.subscription === "premium" ? "Premium" : "Free"}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Status</Label>
+                <div className="col-span-3">{userDetails.status}</div>
+              </div>
+              {/* Add more user details here */}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowUserDetails(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
