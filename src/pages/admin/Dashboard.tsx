@@ -40,6 +40,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { useSystemLog } from "@/hooks/use-system-log";
 
 const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,8 +53,9 @@ const AdminDashboard = () => {
     subscription: "free" as "free" | "premium",
   });
   
-  const { getAllUsers, updateUserStatus, updateUserSubscription, addAdmin, addSystemLog } = useAuth();
+  const { getAllUsers, updateUserStatus, updateUserSubscription, addAdmin } = useAuth();
   const { toast } = useToast();
+  const systemLog = useSystemLog();
   
   const [users, setUsers] = useState<Array<any>>([]);
   const [userDetails, setUserDetails] = useState<any>(null);
@@ -123,39 +125,51 @@ const AdminDashboard = () => {
   };
   
   const activateUser = async (userId: string) => {
-    await updateUserStatus(userId, "active");
-    loadUsers();
-    toast({
-      title: "User Activated",
-      description: "User has been successfully activated",
-    });
+    const success = await updateUserStatus(userId, "active");
+    if (success) {
+      loadUsers();
+      systemLog.logUserAction("User activated", `User ID: ${userId} was activated`);
+      toast({
+        title: "User Activated",
+        description: "User has been successfully activated",
+      });
+    }
   };
   
   const deactivateUser = async (userId: string) => {
-    await updateUserStatus(userId, "inactive");
-    loadUsers();
-    toast({
-      title: "User Deactivated",
-      description: "User has been successfully deactivated",
-    });
+    const success = await updateUserStatus(userId, "inactive");
+    if (success) {
+      loadUsers();
+      systemLog.logUserAction("User deactivated", `User ID: ${userId} was deactivated`);
+      toast({
+        title: "User Deactivated",
+        description: "User has been successfully deactivated",
+      });
+    }
   };
   
   const upgradeUser = async (userId: string) => {
-    await updateUserSubscription(userId, "premium");
-    loadUsers();
-    toast({
-      title: "Subscription Updated",
-      description: "User has been upgraded to Premium",
-    });
+    const success = await updateUserSubscription(userId, "premium");
+    if (success) {
+      loadUsers();
+      systemLog.logUserAction("User upgraded", `User ID: ${userId} was upgraded to Premium`);
+      toast({
+        title: "Subscription Updated",
+        description: "User has been upgraded to Premium",
+      });
+    }
   };
   
   const downgradeUser = async (userId: string) => {
-    await updateUserSubscription(userId, "free");
-    loadUsers();
-    toast({
-      title: "Subscription Updated",
-      description: "User has been downgraded to Free",
-    });
+    const success = await updateUserSubscription(userId, "free");
+    if (success) {
+      loadUsers();
+      systemLog.logUserAction("User downgraded", `User ID: ${userId} was downgraded to Free`);
+      toast({
+        title: "Subscription Updated",
+        description: "User has been downgraded to Free",
+      });
+    }
   };
   
   const viewUserDetails = (user: any) => {
@@ -180,6 +194,7 @@ const AdminDashboard = () => {
         subscription: "free"
       });
       
+      systemLog.logUserAction("Admin added", `New admin account created: ${newUserData.email}`);
       setIsAddUserOpen(false);
       loadUsers();
     } catch (error) {
@@ -208,12 +223,14 @@ const AdminDashboard = () => {
   };
   
   const handleUserSubscriptionChange = async (userId: string, newSubscription: string) => {
-    await updateUserSubscription(userId, newSubscription);
-    loadUsers();
-    toast({
-      title: "Subscription Updated",
-      description: `User has been upgraded to ${newSubscription}`,
-    });
+    const success = await updateUserSubscription(userId, newSubscription);
+    if (success) {
+      loadUsers();
+      toast({
+        title: "Subscription Updated",
+        description: `User has been upgraded to ${newSubscription}`,
+      });
+    }
   };
   
   const totalUsers = users.length;
