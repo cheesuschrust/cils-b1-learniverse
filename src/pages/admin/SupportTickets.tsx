@@ -7,7 +7,7 @@ import { SupportTicketProps } from '@/components/tickets/SupportTicketItem';
 import { useSystemLog } from '@/hooks/use-system-log';
 import HelpTooltip from '@/components/help/HelpTooltip';
 
-// Mock data
+// Mock ticket data
 const mockTickets: SupportTicketProps[] = [
   {
     id: '1',
@@ -61,7 +61,7 @@ const mockTickets: SupportTicketProps[] = [
     responses: [
       {
         id: 'resp2',
-        message: 'Thank you for your suggestion! We're actually working on a dictionary integration feature that should be available in the next update. We'll keep you posted on the release date.',
+        message: "Thank you for your suggestion! We're actually working on a dictionary integration feature that should be available in the next update. We'll keep you posted on the release date.",
         createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
         userId: 'admin1',
         userName: 'Admin User',
