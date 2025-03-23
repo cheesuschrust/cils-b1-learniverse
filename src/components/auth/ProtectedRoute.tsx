@@ -18,20 +18,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const { toast } = useToast();
   const [hasShownToast, setHasShownToast] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshAttempted = useRef(false);
   const lastRefreshTime = useRef<number>(0);
 
   // Try to refresh the session when the component mounts, but only once
   useEffect(() => {
     const checkAuthentication = async () => {
-      // Don't refresh too frequently - add 10 second minimum between refreshes
+      // Don't refresh too frequently - add minimum between refreshes
       const now = Date.now();
       const timeSinceLastRefresh = now - lastRefreshTime.current;
-      const minRefreshInterval = 10000; // 10 seconds
+      const minRefreshInterval = 30000; // 30 seconds
       
-      if (refreshAttempted.current && timeSinceLastRefresh < minRefreshInterval) {
-        setIsRefreshing(false);
+      if (isAuthenticated || refreshAttempted.current || timeSinceLastRefresh < minRefreshInterval) {
         return;
       }
       
@@ -39,34 +38,36 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       refreshAttempted.current = true;
       lastRefreshTime.current = now;
       
-      if (!isAuthenticated && !isLoading) {
-        try {
-          await refreshSession();
-        } catch (error) {
-          console.error("Error refreshing session:", error);
-        }
+      try {
+        await refreshSession();
+      } catch (error) {
+        console.error("Error refreshing session:", error);
+      } finally {
+        setIsRefreshing(false);
       }
-      setIsRefreshing(false);
     };
     
     checkAuthentication();
     
-    // Setup interval to periodically check authentication on active routes
+    // Background refresh with reduced frequency
     const intervalId = setInterval(() => {
       if (isAuthenticated) {
-        refreshSession().catch(err => console.error("Background refresh error:", err));
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastRefreshTime.current;
+        if (timeSinceLastRefresh > 600000) { // 10 minutes
+          lastRefreshTime.current = now;
+          refreshSession().catch(err => console.error("Background refresh error:", err));
+        }
       }
-    }, 300000); // Check every 5 minutes
+    }, 600000); // Check every 10 minutes
     
-    // Clean up function
     return () => {
       clearInterval(intervalId);
     };
-  }, [isAuthenticated, isLoading, refreshSession]);
+  }, [isAuthenticated, refreshSession]);
 
-  // Handle toast notifications in useEffect, not during render
+  // Handle toast notifications
   useEffect(() => {
-    // Only show notifications if we're done loading and not authenticated
     if (!isLoading && !isRefreshing && !isAuthenticated && !hasShownToast) {
       toast({
         title: "Authentication Required",
@@ -76,7 +77,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       setHasShownToast(true);
     }
 
-    // Show admin access denied toast if needed
     if (!isLoading && !isRefreshing && isAuthenticated && requireAdmin && user?.role !== "admin" && !hasShownToast) {
       toast({
         title: "Access Denied",
@@ -111,4 +111,4 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default React.memo(ProtectedRoute);
