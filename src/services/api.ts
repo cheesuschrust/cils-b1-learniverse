@@ -1,261 +1,279 @@
 
-import { User, EmailSettings } from "@/contexts/shared-types";
-import { getDatabase, passwordHash } from "./MockDatabase";
-import bcrypt from 'bcryptjs';
+import { toast } from "@/hooks/use-toast";
 
-// Base API class for all API calls
-export class API {
-  static async handleRequest<T>(
-    endpoint: string,
-    method: string = "GET",
-    data?: any
-  ): Promise<T> {
-    try {
-      // For now, we're simulating API calls with local data
-      // In a real app, this would be replaced with actual fetch calls
-      return await this.simulateApiCall<T>(endpoint, method, data);
-    } catch (error) {
-      console.error(`API Error (${endpoint}):`, error);
-      throw error;
-    }
-  }
+interface APIOptions {
+  baseURL?: string;
+  timeout?: number;
+  headers?: Record<string, string>;
+  withCredentials?: boolean;
+}
 
-  // This simulates API calls until real backend is implemented
-  private static async simulateApiCall<T>(
-    endpoint: string,
-    method: string,
-    data?: any
-  ): Promise<T> {
-    // Simulate network delay - reduced delay to speed up response time
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    const db = await getDatabase();
-    
-    // Handle different endpoints
-    if (endpoint.startsWith("/auth")) {
-      return this.handleAuthEndpoints(endpoint, method, data, db) as unknown as T;
-    } else if (endpoint.startsWith("/user")) {
-      return this.handleUserEndpoints(endpoint, method, data, db) as unknown as T;
-    } else if (endpoint.startsWith("/content")) {
-      return this.handleContentEndpoints(endpoint, method, data) as unknown as T;
-    }
-    
-    throw new Error(`Endpoint not implemented: ${endpoint}`);
+interface APIErrorResponse {
+  message: string;
+  status?: number;
+  code?: string;
+}
+
+class APIClient {
+  private baseURL: string;
+  private timeout: number;
+  private headers: Record<string, string>;
+  private withCredentials: boolean;
+  
+  constructor(options: APIOptions = {}) {
+    this.baseURL = options.baseURL || '/api';
+    this.timeout = options.timeout || 30000;
+    this.headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+    this.withCredentials = options.withCredentials || true;
   }
   
-  private static async handleAuthEndpoints(
-    endpoint: string,
-    method: string,
-    data: any,
-    db: any
-  ) {
-    if (endpoint === "/auth/login" && method === "POST") {
-      const { email, password } = data;
-      const user = db.users.find((u: User) => u.email === email);
+  // Add a cache to prevent redundant calls
+  private cache: Map<string, { data: any, timestamp: number }> = new Map();
+  private cacheExpiration = 60000; // 1 minute cache
+  
+  async handleRequest<T>(
+    endpoint: string, 
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', 
+    data: any = null, 
+    customHeaders: Record<string, string> = {},
+    skipCache = false
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    // For GET requests, check cache first
+    if (method === 'GET' && !skipCache) {
+      const cacheKey = `${method}:${url}:${JSON.stringify(data)}`;
+      const cachedItem = this.cache.get(cacheKey);
       
-      if (!user) {
-        throw new Error("User not found");
+      if (cachedItem && (Date.now() - cachedItem.timestamp < this.cacheExpiration)) {
+        console.log(`Using cached data for ${cacheKey}`);
+        return cachedItem.data;
       }
-      
-      // Special case for social login
-      if (email.includes('@example.com') && password.includes('social-login')) {
-        // Update last login
-        user.lastLogin = new Date();
-        user.lastActive = new Date();
-        return { user };
-      }
-      
-      const storedHash = passwordHash.get(email);
-      const isValid = await bcrypt.compare(password, storedHash || "");
-      
-      if (!isValid) {
-        throw new Error("Invalid credentials");
-      }
-      
-      // Update last login
-      user.lastLogin = new Date();
-      user.lastActive = new Date();
-      
-      return { user };
     }
     
-    if (endpoint === "/auth/register" && method === "POST") {
-      const { email, password, firstName, lastName } = data;
-      
-      // Check if user already exists
-      if (db.users.some((u: User) => u.email === email)) {
-        throw new Error("User already exists");
-      }
-      
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
-      
-      // Create new user
-      const newUser: User = {
-        id: crypto.randomUUID(),
-        firstName,
-        lastName,
-        email,
-        role: "user",
-        isVerified: false,
-        createdAt: new Date(),
-        lastLogin: new Date(),
-        lastActive: new Date(),
-        preferences: {
-          theme: "system",
-          emailNotifications: true,
-          language: "en",
-          difficulty: "beginner",
-        },
-        subscription: "free",
-        status: "active",
-        preferredLanguage: "both",
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          listening: 0,
-          writing: 0,
-          speaking: 0,
-        },
-        metrics: {
-          totalQuestions: 0,
-          correctAnswers: 0,
-          streak: 0,
+    const options: RequestInit = {
+      method,
+      headers: {
+        ...this.headers,
+        ...customHeaders
+      },
+      credentials: this.withCredentials ? 'include' : 'same-origin'
+    };
+    
+    if (data) {
+      if (method === 'GET') {
+        // Convert data to query params
+        const params = new URLSearchParams();
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+        const queryString = params.toString();
+        if (queryString) {
+          endpoint += (endpoint.includes('?') ? '&' : '?') + queryString;
         }
-      };
-      
-      // Add user to database
-      db.users.push(newUser);
-      
-      return { user: newUser };
+      } else {
+        options.body = JSON.stringify(data);
+      }
     }
     
-    throw new Error(`Auth endpoint not implemented: ${endpoint}`);
+    // Implement a timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Request to ${endpoint} timed out after ${this.timeout}ms`));
+      }, this.timeout);
+    });
+    
+    try {
+      // Race the fetch against the timeout
+      const controller = new AbortController();
+      options.signal = controller.signal;
+      
+      // Simulate API response for demo purposes
+      const responsePromise = new Promise<T>((resolve) => {
+        setTimeout(() => {
+          // Create a dummy successful response based on the endpoint
+          const simulatedResponse = this.simulateResponse<T>(endpoint, method, data);
+          resolve(simulatedResponse);
+        }, 300); // Simulate network latency but keep it fast
+      });
+      
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+      
+      // For GET requests, update the cache
+      if (method === 'GET') {
+        const cacheKey = `${method}:${url}:${JSON.stringify(data)}`;
+        this.cache.set(cacheKey, {
+          data: response,
+          timestamp: Date.now()
+        });
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`API Error (${method} ${endpoint}):`, error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'An unknown error occurred';
+        
+      throw new Error(errorMessage);
+    }
   }
   
-  private static async handleUserEndpoints(
-    endpoint: string,
-    method: string,
-    data: any,
-    db: any
-  ) {
-    if (endpoint === "/user/profile" && method === "GET") {
-      const { userId } = data;
-      const user = db.users.find((u: User) => u.id === userId);
-      
-      if (!user) {
-        throw new Error("User not found");
-      }
-      
-      return { user };
-    }
+  // Simulate API responses for demo purposes
+  private simulateResponse<T>(endpoint: string, method: string, data: any): T {
+    console.log(`Simulating API response for ${method} ${endpoint}`);
     
-    if (endpoint === "/user/update" && method === "PUT") {
-      const { userId, userData } = data;
-      const userIndex = db.users.findIndex((u: User) => u.id === userId);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      console.log("API: Updating user with data:", userData);
-      
-      // Make a deep copy of the user to avoid reference issues
-      const updatedUser = { 
-        ...db.users[userIndex],
-        lastActive: new Date()
-      };
-      
-      // Update basic fields
-      if (userData.firstName) updatedUser.firstName = userData.firstName;
-      if (userData.lastName) updatedUser.lastName = userData.lastName;
-      if (userData.username) updatedUser.username = userData.username;
-      if (userData.displayName) updatedUser.displayName = userData.displayName;
-      if (userData.phoneNumber) updatedUser.phoneNumber = userData.phoneNumber;
-      if (userData.address) updatedUser.address = userData.address;
-      if (userData.preferredLanguage) updatedUser.preferredLanguage = userData.preferredLanguage;
-      
-      // Update preferences if provided
-      if (userData.preferences) {
-        updatedUser.preferences = {
-          ...updatedUser.preferences,
-          ...userData.preferences
-        };
-      }
-      
-      // Update voice preference if provided
-      if (userData.voicePreference) {
-        updatedUser.voicePreference = userData.voicePreference;
-      }
-      
-      // Update user in the database
-      db.users[userIndex] = updatedUser;
-      
-      return { user: updatedUser };
-    }
-    
-    if (endpoint === "/user/password" && method === "PUT") {
-      const { userId, currentPassword, newPassword } = data;
-      const userIndex = db.users.findIndex((u: User) => u.id === userId);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      const user = db.users[userIndex];
-      const storedHash = passwordHash.get(user.email);
-      
-      // Verify current password
-      const isValid = await bcrypt.compare(currentPassword, storedHash || "");
-      if (!isValid) {
-        throw new Error("Current password is incorrect");
-      }
-      
-      // Hash and store new password
-      const newHash = await bcrypt.hash(newPassword, 10);
-      passwordHash.set(user.email, newHash);
-      
-      return;
-    }
-    
-    if (endpoint === "/user/preferences" && method === "PUT") {
-      const { userId, preferences } = data;
-      const userIndex = db.users.findIndex((u: User) => u.id === userId);
-      
-      if (userIndex === -1) {
-        throw new Error("User not found");
-      }
-      
-      // Update preferences
-      db.users[userIndex].preferences = {
-        ...db.users[userIndex].preferences,
-        ...preferences
-      };
-      
-      return { user: db.users[userIndex] };
-    }
-    
-    throw new Error(`User endpoint not implemented: ${endpoint}`);
-  }
-  
-  private static async handleContentEndpoints(
-    endpoint: string,
-    method: string,
-    data: any
-  ) {
-    // This would be replaced with real API calls to content services
-    if (endpoint === "/content/flashcards" && method === "GET") {
+    // Handle specific endpoints
+    if (endpoint.includes('/auth/login')) {
       return {
-        data: [
-          { id: crypto.randomUUID(), italian: "casa", english: "house", mastered: false },
-          { id: crypto.randomUUID(), italian: "cibo", english: "food", mastered: false },
-          { id: crypto.randomUUID(), italian: "acqua", english: "water", mastered: false },
-          { id: crypto.randomUUID(), italian: "cittadino", english: "citizen", mastered: false },
-          { id: crypto.randomUUID(), italian: "diritto", english: "right (legal)", mastered: false },
-        ]
-      };
+        user: {
+          id: 'user1',
+          email: data.email || 'user@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          role: 'user',
+          status: 'active',
+          subscription: 'free',
+          createdAt: new Date().toISOString(),
+          preferences: {
+            darkMode: false,
+            notifications: true,
+            language: 'english'
+          }
+        }
+      } as unknown as T;
     }
     
-    throw new Error(`Content endpoint not implemented: ${endpoint}`);
+    if (endpoint.includes('/auth/register')) {
+      return {
+        user: {
+          id: 'user' + Date.now(),
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: 'user',
+          status: 'active',
+          subscription: 'free',
+          createdAt: new Date().toISOString(),
+          preferences: {
+            darkMode: false,
+            notifications: true,
+            language: 'english'
+          }
+        }
+      } as unknown as T;
+    }
+    
+    if (endpoint.includes('/user/profile')) {
+      return {
+        user: {
+          id: data.userId || 'user1',
+          email: 'user@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          role: 'user',
+          status: 'active',
+          subscription: 'premium',
+          createdAt: new Date().toISOString(),
+          preferences: {
+            darkMode: true,
+            notifications: true,
+            language: 'english'
+          },
+          voicePreference: {
+            italianVoiceURI: 'Luca',
+            englishVoiceURI: 'Daniel',
+            voiceRate: 1.0,
+            voicePitch: 1.0
+          }
+        }
+      } as unknown as T;
+    }
+    
+    if (endpoint.includes('/user/update')) {
+      const userData = data.userData;
+      return {
+        user: {
+          id: data.userId,
+          email: 'user@example.com',
+          firstName: userData.firstName || 'John',
+          lastName: userData.lastName || 'Doe',
+          role: 'user',
+          status: 'active',
+          subscription: 'premium',
+          createdAt: new Date().toISOString(),
+          preferences: userData.preferences || {
+            darkMode: true,
+            notifications: true,
+            language: 'english'
+          },
+          voicePreference: userData.voicePreference || {
+            italianVoiceURI: 'Luca',
+            englishVoiceURI: 'Daniel',
+            voiceRate: 1.0,
+            voicePitch: 1.0
+          }
+        }
+      } as unknown as T;
+    }
+    
+    if (endpoint.includes('/admin/users/stats')) {
+      return {
+        totalUsers: 128,
+        activeUsers: 98,
+        inactiveUsers: 30,
+        premiumUsers: 42
+      } as unknown as T;
+    }
+    
+    if (endpoint.includes('/admin/logs')) {
+      return {
+        totalLogs: 312,
+        errorLogs: 12,
+        warningLogs: 45,
+        infoLogs: 255,
+        recentLogs: [
+          {
+            id: '1',
+            level: 'error',
+            action: 'Failed login attempt',
+            details: 'Multiple failed login attempts from IP 192.168.1.1',
+            category: 'security',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '2',
+            level: 'warning',
+            action: 'Content upload partially processed',
+            details: 'Large PDF file took too long to process completely',
+            category: 'content',
+            timestamp: new Date(Date.now() - 60000).toISOString()
+          },
+          {
+            id: '3',
+            level: 'info',
+            action: 'New user registered',
+            details: 'User registration completed successfully',
+            category: 'user',
+            timestamp: new Date(Date.now() - 120000).toISOString()
+          }
+        ]
+      } as unknown as T;
+    }
+    
+    // Generic success response
+    return { success: true } as unknown as T;
+  }
+  
+  clearCache() {
+    this.cache.clear();
   }
 }
+
+export const API = new APIClient();

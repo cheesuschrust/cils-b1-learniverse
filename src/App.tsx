@@ -1,118 +1,185 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
-import { Toaster } from 'react-hot-toast';
 
-// Import layouts
-import DashboardLayout from '@/layouts/DashboardLayout';
-import AdminLayout from '@/layouts/AdminLayout';
-
-// Import components
-import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import NotFound from '@/pages/NotFound';
-import { NotificationsProvider } from '@/contexts/NotificationsContext';
-import Index from '@/pages/Index';
-
-// Import pages
-import {
-  Login,
-  SignUp,
-  PasswordReset,
-  Dashboard,
-  Flashcards,
-  Lessons,
-  SpeakingPractice,
-  ListeningExercises,
-  WritingExercises,
-  LearningCalendar,
-  UserProfile,
-  Settings,
-  Communities,
-  ProgressTracker,
-  AdminDashboard,
-  UserManagement,
-  ContentUploader,
-  FileUploader,
-  AdminSettings,
-  ContentAnalysis,
-  MultipleChoice
-} from '@/pages/imports';
-import { AuthProvider } from '@/contexts/AuthContext';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
-import SystemLogs from '@/pages/admin/SystemLogs';
-import SupportTickets from '@/pages/admin/SupportTickets';
-import Support from '@/pages/Support';
+import { Toaster } from '@/components/ui/toaster';
+import NotFound from '@/pages/NotFound';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import ResetPassword from '@/pages/ResetPassword';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfService from '@/pages/TermsOfService';
+import Dashboard from '@/pages/Dashboard';
+import Profile from '@/pages/Profile';
+import Settings from '@/pages/Settings';
+import AppLayout from '@/components/layout/AppLayout';
+import LandingPage from '@/pages/LandingPage';
+import AdminLayout from '@/components/layout/AdminLayout';
+import AdminDashboard from '@/pages/admin/Dashboard';
+import UserManagement from '@/pages/admin/UserManagement';
+import ContentAnalysis from '@/pages/admin/ContentAnalysis';
+import FileUploader from '@/pages/admin/FileUploader';
+import EmailSettings from '@/pages/admin/EmailSettings';
+import AdminSettings from '@/pages/admin/Settings';
+import SupportPage from '@/pages/SupportPage';
+import AdminSupportPage from '@/pages/admin/SupportPage';
+import UserGuides from '@/pages/help/UserGuides';
+import AdminGuide from '@/pages/admin/AdminGuide';
+import QuestionBrowser from '@/pages/questions/QuestionBrowser';
+import QuestionEditor from '@/pages/admin/QuestionEditor';
+import Vocabulary from '@/pages/learning/Vocabulary';
+import Grammar from '@/pages/learning/Grammar';
+import ReadingComprehension from '@/pages/learning/ReadingComprehension';
+import ListeningComprehension from '@/pages/learning/ListeningComprehension';
+import WritingPractice from '@/pages/practice/WritingPractice';
+import SpeakingPractice from '@/pages/practice/SpeakingPractice';
+import MockExam from '@/pages/exams/MockExam';
+import ExamResults from '@/pages/exams/ExamResults';
+import { Loader2 } from 'lucide-react';
+
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Admin route component
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+  
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 function App() {
+  // Listen for online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Network connection restored');
+    };
+    
+    const handleOffline = () => {
+      console.log('Network connection lost');
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
   return (
     <HelmetProvider>
-      <BrowserRouter>
+      <ThemeProvider>
         <AuthProvider>
           <UserPreferencesProvider>
-            <NotificationsProvider>
+            <BrowserRouter>
+              <Helmet>
+                <title>CILS B2 Cittadinanza</title>
+                <meta name="description" content="Prepare for the CILS B2 Cittadinanza exam with comprehensive tools and resources." />
+              </Helmet>
+              
               <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
+                {/* Public routes */}
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/password-reset" element={<PasswordReset />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
                 
-                {/* Root redirects - handle all old routes */}
-                <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-                <Route path="/flashcards" element={<Navigate to="/app/flashcards" replace />} />
-                <Route path="/multiple-choice" element={<Navigate to="/app/multiple-choice" replace />} />
-                <Route path="/listening" element={<Navigate to="/app/listening" replace />} />
-                <Route path="/writing" element={<Navigate to="/app/writing" replace />} />
-                <Route path="/speaking" element={<Navigate to="/app/speaking" replace />} />
-                <Route path="/calendar" element={<Navigate to="/app/calendar" replace />} />
-                <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/communities" element={<Navigate to="/app/communities" replace />} />
-                <Route path="/progress" element={<Navigate to="/app/progress" replace />} />
-                <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
-                <Route path="/support" element={<Navigate to="/app/support" replace />} />
-                
-                {/* Protected Routes */}
-                <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
-                  <Route path="/app" element={<DashboardLayout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="flashcards" element={<Flashcards />} />
-                    <Route path="multiple-choice" element={<MultipleChoice />} />
-                    <Route path="lessons" element={<Lessons />} />
-                    <Route path="speaking" element={<SpeakingPractice />} />
-                    <Route path="listening" element={<ListeningExercises />} />
-                    <Route path="writing" element={<WritingExercises />} />
-                    <Route path="calendar" element={<LearningCalendar />} />
-                    <Route path="profile" element={<UserProfile />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="communities" element={<Communities />} />
-                    <Route path="progress" element={<ProgressTracker />} />
-                    <Route path="support" element={<Support />} />
-                  </Route>
-
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="content" element={<ContentUploader />} />
-                    <Route path="content-analysis" element={<ContentAnalysis />} />
-                    <Route path="file-uploader" element={<FileUploader />} />
-                    <Route path="settings" element={<AdminSettings />} />
-                    <Route path="logs" element={<SystemLogs />} />
-                    <Route path="support-tickets" element={<SupportTickets />} />
-                  </Route>
+                {/* Protected app routes */}
+                <Route path="/app" element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }>
+                  {/* Main routes */}
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="support" element={<SupportPage />} />
+                  <Route path="guides" element={<UserGuides />} />
+                  
+                  {/* Learning routes */}
+                  <Route path="vocabulary" element={<Vocabulary />} />
+                  <Route path="grammar" element={<Grammar />} />
+                  <Route path="reading" element={<ReadingComprehension />} />
+                  <Route path="listening" element={<ListeningComprehension />} />
+                  
+                  {/* Practice routes */}
+                  <Route path="writing" element={<WritingPractice />} />
+                  <Route path="speaking" element={<SpeakingPractice />} />
+                  
+                  {/* Question browser */}
+                  <Route path="questions" element={<QuestionBrowser />} />
+                  
+                  {/* Exam routes */}
+                  <Route path="exams/mock" element={<MockExam />} />
+                  <Route path="exams/results/:examId" element={<ExamResults />} />
                 </Route>
                 
+                {/* Admin routes */}
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminLayout />
+                  </AdminRoute>
+                }>
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="content-analysis" element={<ContentAnalysis />} />
+                  <Route path="file-uploader" element={<FileUploader />} />
+                  <Route path="email-settings" element={<EmailSettings />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                  <Route path="support" element={<AdminSupportPage />} />
+                  <Route path="guide" element={<AdminGuide />} />
+                  <Route path="questions/editor" element={<QuestionEditor />} />
+                </Route>
+                
+                {/* Redirect old dashboard path to new one */}
+                <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                
+                {/* 404 route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              
               <Toaster />
-              <ShadcnToaster />
-            </NotificationsProvider>
+            </BrowserRouter>
           </UserPreferencesProvider>
         </AuthProvider>
-      </BrowserRouter>
+      </ThemeProvider>
     </HelmetProvider>
   );
 }

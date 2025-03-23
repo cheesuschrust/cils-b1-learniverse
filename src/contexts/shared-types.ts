@@ -1,113 +1,92 @@
 
-// Define log category
-export type LogCategory = 'content' | 'email' | 'system' | 'user' | 'auth' | 'ai';
-
-// Define log entry interface
-export interface LogEntry {
-  id: string;
-  timestamp: Date;
-  category: LogCategory;
-  action: string;
-  userId?: string;
-  details?: string;
-  level: 'info' | 'warning' | 'error';
-}
-
-// Define user roles
-export type UserRole = 'user' | 'admin';
-
-// User interface with all required properties
-export interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username?: string;
-  email: string;
-  role: UserRole;
-  isVerified: boolean;
-  createdAt: Date;
-  lastLogin: Date;
-  lastActive: Date;
-  preferences: UserPreferences;
-  subscription: 'free' | 'premium';
-  status: 'active' | 'inactive' | 'suspended';
-  preferredLanguage: 'english' | 'italian' | 'both';
-  dailyQuestionCounts: {
-    flashcards: number;
-    multipleChoice: number;
-    listening: number;
-    writing: number;
-    speaking: number;
-    [key: string]: number;
-  };
-  displayName?: string;
-  phoneNumber?: string;
-  address?: string;
-  metrics: {
-    totalQuestions: number;
-    correctAnswers: number;
-    streak: number;
-  };
-}
+import { VoicePreference } from "@/utils/textToSpeech";
 
 export interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
-  emailNotifications: boolean;
-  language: 'en' | 'it';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  fontSize?: number;
-  notificationsEnabled?: boolean;
-  animationsEnabled?: boolean;
-  preferredLanguage?: string;
-  voiceSpeed?: number;
+  darkMode: boolean;
+  notifications: boolean;
+  language: "english" | "italian" | "both";
+  fontSize?: "small" | "medium" | "large";
+  dailyGoal?: number;
   autoPlayAudio?: boolean;
-  showProgressMetrics?: boolean;
-  aiEnabled?: boolean;
-  aiModelSize?: string;
-  aiProcessingOnDevice?: boolean;
-  confidenceScoreVisible?: boolean;
-  bio?: string; // Add the bio property
+  showTranslations?: boolean;
 }
-
-// Email settings
-export type EmailProvider = 'smtp' | 'mailgun' | 'sendgrid' | 'ses' | 'gmail' | 'temporaryEmail';
 
 export interface EmailTemplate {
   subject: string;
   body: string;
 }
 
-export interface EmailConfig {
-  enableSsl?: boolean; 
-  host?: string;
-  port?: number;
-  username?: string;
-  password?: string;
-  apiKey?: string;
-  domain?: string;
-  region?: string;
-  accessKey?: string;
-  secretKey?: string;
-}
-
 export interface EmailSettings {
-  provider: EmailProvider;
+  provider: 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
   fromEmail: string;
   fromName: string;
-  config: EmailConfig;
+  config: {
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    apiKey?: string;
+    domain?: string;
+    accessKey?: string;
+    secretKey?: string;
+    region?: string;
+    enableSsl?: boolean;
+  };
   templates: {
     verification: EmailTemplate;
     passwordReset: EmailTemplate;
     welcome: EmailTemplate;
   };
-  temporaryInboxDuration?: number; // Make this optional to resolve the type error
+  temporaryInboxDuration?: number;
 }
 
-// Mock database
-export interface MockDatabase {
-  users: User[];
-  logs: LogEntry[];
-  emailSettings: EmailSettings;
-  resetTokens: Map<string, { email: string; expires: Date }>;
-  verificationTokens: Map<string, { email: string; expires: Date }>;
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  username?: string;
+  role: "user" | "admin";
+  status: "active" | "inactive" | "suspended";
+  subscription: "free" | "premium" | "trial";
+  createdAt: string;
+  lastLogin?: string;
+  phoneNumber?: string;
+  address?: string;
+  preferences: UserPreferences;
+  voicePreference?: VoicePreference;
+}
+
+export interface UserPreferencesContextType {
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+  language: "english" | "italian" | "both";
+  setLanguage: (language: "english" | "italian" | "both") => void;
+  notifications: boolean;
+  toggleNotifications: () => void;
+  fontSize: "small" | "medium" | "large";
+  setFontSize: (size: "small" | "medium" | "large") => void;
+  voicePreference: VoicePreference;
+  setVoicePreference: (preference: VoicePreference) => void;
+  autoPlayAudio: boolean;
+  toggleAutoPlayAudio: () => void;
+  showTranslations: boolean;
+  toggleShowTranslations: () => void;
+  dailyGoal: number;
+  setDailyGoal: (goal: number) => void;
+  resetPreferences: () => void;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  signup: (firstName: string, lastName: string, email: string, password: string, username?: string) => Promise<boolean>;
+  updateProfile: (data: any) => Promise<User>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  socialLogin: (provider: 'google' | 'apple') => Promise<boolean>;
 }

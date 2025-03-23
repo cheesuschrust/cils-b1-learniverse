@@ -34,7 +34,7 @@ const WordOfTheDay: React.FC<WordOfTheDayProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <SpeakableWord 
               word={word} 
               language="it" 
