@@ -1,110 +1,92 @@
 
-import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/layout/Layout';
+import AdminLayout from './components/layout/AdminLayout';
+import LoadingSpinner from './components/ui/spinner';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
+import { ThemeProvider } from './components/ui/theme-provider';
 import { HelmetProvider } from 'react-helmet-async';
-import { Toaster } from 'react-hot-toast';
 
-// Import layouts
-import DashboardLayout from '@/layouts/DashboardLayout';
-import AdminLayout from '@/layouts/AdminLayout';
+// Lazy load pages for better performance
+const HomePage = lazy(() => import('./pages/Index'));
+const LoginPage = lazy(() => import('./pages/Login'));
+const RegisterPage = lazy(() => import('./pages/Register'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const FlashcardsPage = lazy(() => import('./pages/activities/Flashcards'));
+const MultipleChoicePage = lazy(() => import('./pages/activities/MultipleChoice'));
+const ReadingComprehensionPage = lazy(() => import('./pages/activities/ReadingComprehension'));
+const SpeakingPage = lazy(() => import('./pages/activities/Speaking'));
+const WritingPage = lazy(() => import('./pages/activities/Writing'));
+const ListeningPage = lazy(() => import('./pages/activities/Listening'));
 
-// Import components
-import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import NotFound from '@/pages/NotFound';
-import { NotificationsProvider } from '@/contexts/NotificationsContext';
-import Index from '@/pages/Index';
-
-// Import pages
-import {
-  Login,
-  SignUp,
-  PasswordReset,
-  Dashboard,
-  Flashcards,
-  Lessons,
-  SpeakingPractice,
-  ListeningExercises,
-  WritingExercises,
-  LearningCalendar,
-  UserProfile,
-  Settings,
-  Communities,
-  ProgressTracker,
-  AdminDashboard,
-  UserManagement,
-  ContentUploader,
-  FileUploader,
-  AdminSettings,
-  ContentAnalysis,
-  MultipleChoice
-} from '@/pages/imports';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
-import SystemLogs from '@/pages/admin/SystemLogs';
-import SupportTickets from '@/pages/admin/SupportTickets';
-import Support from '@/pages/Support';
+// Admin pages
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const ContentManagement = lazy(() => import('./pages/admin/ContentManagement'));
+const ContentAnalysis = lazy(() => import('./pages/admin/ContentAnalysis'));
+const SystemLogs = lazy(() => import('./pages/admin/SystemLogs'));
+const SupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
+const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'));
 
 function App() {
   return (
     <HelmetProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <UserPreferencesProvider>
-            <NotificationsProvider>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/password-reset" element={<PasswordReset />} />
-                
-                {/* Root redirect */}
-                <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-                
-                {/* Protected Routes */}
-                <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
-                  <Route path="/app" element={<DashboardLayout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="flashcards" element={<Flashcards />} />
-                    <Route path="multiple-choice" element={<MultipleChoice />} />
-                    <Route path="lessons" element={<Lessons />} />
-                    <Route path="speaking" element={<SpeakingPractice />} />
-                    <Route path="listening" element={<ListeningExercises />} />
-                    <Route path="writing" element={<WritingExercises />} />
-                    <Route path="calendar" element={<LearningCalendar />} />
-                    <Route path="profile" element={<UserProfile />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="communities" element={<Communities />} />
-                    <Route path="progress" element={<ProgressTracker />} />
-                    <Route path="support" element={<Support />} />
-                  </Route>
-
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="content" element={<ContentUploader />} />
-                    <Route path="content-analysis" element={<ContentAnalysis />} />
-                    <Route path="file-uploader" element={<FileUploader />} />
-                    <Route path="settings" element={<AdminSettings />} />
-                    <Route path="logs" element={<SystemLogs />} />
-                    <Route path="support-tickets" element={<SupportTickets />} />
-                  </Route>
-                </Route>
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-              <ShadcnToaster />
-            </NotificationsProvider>
-          </UserPreferencesProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <Router>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><LoadingSpinner size="lg" /></div>}>
+          <Routes>
+            {/* Main routes */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<HomePage />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              
+              {/* Activities routes */}
+              <Route path="activities">
+                <Route path="flashcards" element={<FlashcardsPage />} />
+                <Route path="multiple-choice" element={<MultipleChoicePage />} />
+                <Route path="reading" element={<ReadingComprehensionPage />} />
+                <Route path="speaking" element={<SpeakingPage />} />
+                <Route path="writing" element={<WritingPage />} />
+                <Route path="listening" element={<ListeningPage />} />
+              </Route>
+            </Route>
+            
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="content" element={<ContentManagement />} />
+              <Route path="content-analysis" element={<ContentAnalysis />} />
+              <Route path="logs" element={<SystemLogs />} />
+              <Route path="tickets" element={<SupportTickets />} />
+              <Route path="settings" element={<SystemSettings />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </Router>
     </HelmetProvider>
   );
 }
 
-export default App;
+// Main app export wrapped with providers
+export default function AppWithProviders() {
+  return (
+    <UserPreferencesProvider>
+      <ThemeProvider defaultTheme="light">
+        <AuthProvider>
+          <NotificationsProvider>
+            <App />
+          </NotificationsProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </UserPreferencesProvider>
+  );
+}
