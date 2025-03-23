@@ -14,9 +14,9 @@ interface WordOfTheDayProps {
 }
 
 const WordOfTheDay: React.FC<WordOfTheDayProps> = ({ 
-  word = "Ciao", 
-  meaning = "Hello, Hi", 
-  example = "Ciao, come stai?", 
+  word = "libertà", 
+  meaning = "freedom", 
+  example = "La libertà è un diritto fondamentale.", 
   className = "" 
 }) => {
   const today = new Date();

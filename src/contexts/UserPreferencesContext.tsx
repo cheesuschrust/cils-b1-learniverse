@@ -1,83 +1,159 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { VoicePreference } from '@/utils/textToSpeech';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 interface UserPreferencesContextType {
   theme: 'light' | 'dark' | 'system';
-  setTheme?: (theme: 'light' | 'dark' | 'system') => void;
-  preferredLanguage: 'english' | 'italian' | 'both';
-  setPreferredLanguage?: (language: 'english' | 'italian' | 'both') => void;
-  autoPlayAudio: boolean;
-  setAutoPlayAudio?: (autoPlay: boolean) => void;
-  voicePreference: VoicePreference;
-  setVoicePreference?: (preference: VoicePreference) => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  fontSize: 'small' | 'medium' | 'large';
+  setFontSize: (size: 'small' | 'medium' | 'large') => void;
+  voicePreference: string | undefined;
+  setVoicePreference: (voice: string | undefined) => void;
+  autoPlay: boolean;
+  setAutoPlay: (autoPlay: boolean) => void;
+  showTranslations: boolean;
+  setShowTranslations: (show: boolean) => void;
+  dailyGoal: number;
+  setDailyGoal: (goal: number) => void;
+  savePreferences: () => Promise<boolean>;
 }
 
-// Default voice preference
-const defaultVoicePreference: VoicePreference = {
-  italianVoiceURI: '',
-  englishVoiceURI: '',
-  voiceRate: 1.0,
-  voicePitch: 1.0
+const defaultPreferences = {
+  theme: 'system' as const,
+  fontSize: 'medium' as const,
+  voicePreference: undefined,
+  autoPlay: false,
+  showTranslations: true,
+  dailyGoal: 5,
 };
 
-const defaultPreferences: UserPreferencesContextType = {
-  theme: 'system',
-  preferredLanguage: 'both',
-  autoPlayAudio: true,
-  voicePreference: defaultVoicePreference,
-};
-
-const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
+const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
 export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
-    () => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
-  );
-  
-  const [preferredLanguage, setPreferredLanguage] = useState<'english' | 'italian' | 'both'>(
-    () => (localStorage.getItem('preferredLanguage') as 'english' | 'italian' | 'both') || 'both'
-  );
-  
-  const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(
-    () => localStorage.getItem('autoPlayAudio') !== 'false'
-  );
-  
-  const [voicePreference, setVoicePreference] = useState<VoicePreference>(() => {
-    const savedPreference = localStorage.getItem('voicePreference');
-    return savedPreference 
-      ? JSON.parse(savedPreference) 
-      : defaultVoicePreference;
+  const { user, updateUserPreferences, isAuthenticated } = useAuth();
+  const [preferences, setPreferences] = useState({
+    ...defaultPreferences,
+    ...(user?.preferences || {}),
   });
   
-  // Save preferences to localStorage when they change
+  // Update preferences when user changes
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    if (user?.preferences) {
+      setPreferences(prev => ({
+        ...prev,
+        ...user.preferences,
+      }));
+    }
+  }, [user]);
   
+  // Load preferences from localStorage when not authenticated
   useEffect(() => {
-    localStorage.setItem('preferredLanguage', preferredLanguage);
-  }, [preferredLanguage]);
+    if (!isAuthenticated) {
+      const storedPrefs = localStorage.getItem('userPreferences');
+      if (storedPrefs) {
+        try {
+          setPreferences(prev => ({
+            ...prev,
+            ...JSON.parse(storedPrefs),
+          }));
+        } catch (e) {
+          console.error('Failed to parse stored preferences:', e);
+        }
+      }
+    }
+  }, [isAuthenticated]);
   
-  useEffect(() => {
-    localStorage.setItem('autoPlayAudio', String(autoPlayAudio));
-  }, [autoPlayAudio]);
+  const setTheme = (theme: 'light' | 'dark' | 'system') => {
+    setPreferences(prev => ({
+      ...prev,
+      theme,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, theme });
+    }
+  };
   
-  useEffect(() => {
-    localStorage.setItem('voicePreference', JSON.stringify(voicePreference));
-  }, [voicePreference]);
+  const setFontSize = (fontSize: 'small' | 'medium' | 'large') => {
+    setPreferences(prev => ({
+      ...prev,
+      fontSize,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, fontSize });
+    }
+  };
+  
+  const setVoicePreference = (voicePreference: string | undefined) => {
+    setPreferences(prev => ({
+      ...prev,
+      voicePreference,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, voicePreference });
+    }
+  };
+  
+  const setAutoPlay = (autoPlay: boolean) => {
+    setPreferences(prev => ({
+      ...prev,
+      autoPlay,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, autoPlay });
+    }
+  };
+  
+  const setShowTranslations = (showTranslations: boolean) => {
+    setPreferences(prev => ({
+      ...prev,
+      showTranslations,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, showTranslations });
+    }
+  };
+  
+  const setDailyGoal = (dailyGoal: number) => {
+    setPreferences(prev => ({
+      ...prev,
+      dailyGoal,
+    }));
+    
+    if (!isAuthenticated) {
+      storePreferencesLocally({ ...preferences, dailyGoal });
+    }
+  };
+  
+  const storePreferencesLocally = (prefs: typeof preferences) => {
+    localStorage.setItem('userPreferences', JSON.stringify(prefs));
+  };
+  
+  const savePreferences = async () => {
+    if (isAuthenticated) {
+      const success = await updateUserPreferences(preferences);
+      return success;
+    } else {
+      storePreferencesLocally(preferences);
+      return true;
+    }
+  };
   
   return (
-    <UserPreferencesContext.Provider 
+    <UserPreferencesContext.Provider
       value={{
-        theme,
+        ...preferences,
         setTheme,
-        preferredLanguage,
-        setPreferredLanguage,
-        autoPlayAudio,
-        setAutoPlayAudio,
-        voicePreference,
-        setVoicePreference
+        setFontSize,
+        setVoicePreference,
+        setAutoPlay,
+        setShowTranslations,
+        setDailyGoal,
+        savePreferences,
       }}
     >
       {children}
@@ -85,4 +161,10 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
   );
 };
 
-export const useUserPreferences = () => useContext(UserPreferencesContext);
+export const useUserPreferences = () => {
+  const context = useContext(UserPreferencesContext);
+  if (context === undefined) {
+    throw new Error('useUserPreferences must be used within a UserPreferencesProvider');
+  }
+  return context;
+};

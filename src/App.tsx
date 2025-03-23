@@ -34,11 +34,15 @@ import Vocabulary from '@/pages/learning/Vocabulary';
 import Grammar from '@/pages/learning/Grammar';
 import ReadingComprehension from '@/pages/learning/ReadingComprehension';
 import ListeningComprehension from '@/pages/learning/ListeningComprehension';
-import WritingPractice from '@/pages/practice/WritingPractice';
-import SpeakingPractice from '@/pages/practice/SpeakingPractice';
+import WritingPractice from '@/pages/Writing';
+import SpeakingPractice from '@/pages/Speaking';
 import MockExam from '@/pages/exams/MockExam';
 import ExamResults from '@/pages/exams/ExamResults';
 import { Loader2 } from 'lucide-react';
+import Flashcards from '@/pages/Flashcards';
+import MultipleChoice from '@/pages/MultipleChoice';
+import Listening from '@/pages/Listening';
+import SystemLogs from '@/pages/admin/SystemLogs';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -107,8 +111,8 @@ function App() {
           <UserPreferencesProvider>
             <BrowserRouter>
               <Helmet>
-                <title>CILS B2 Cittadinanza</title>
-                <meta name="description" content="Prepare for the CILS B2 Cittadinanza exam with comprehensive tools and resources." />
+                <title>CILS B1 Learning Platform</title>
+                <meta name="description" content="Prepare for the CILS B1 exam with comprehensive tools and resources." />
               </Helmet>
               
               <Routes>
@@ -137,7 +141,7 @@ function App() {
                   <Route path="vocabulary" element={<Vocabulary />} />
                   <Route path="grammar" element={<Grammar />} />
                   <Route path="reading" element={<ReadingComprehension />} />
-                  <Route path="listening" element={<ListeningComprehension />} />
+                  <Route path="listening" element={<Listening />} />
                   
                   {/* Practice routes */}
                   <Route path="writing" element={<WritingPractice />} />
@@ -145,6 +149,10 @@ function App() {
                   
                   {/* Question browser */}
                   <Route path="questions" element={<QuestionBrowser />} />
+                  
+                  {/* Interactive learning */}
+                  <Route path="flashcards" element={<Flashcards />} />
+                  <Route path="multiple-choice" element={<MultipleChoice />} />
                   
                   {/* Exam routes */}
                   <Route path="exams/mock" element={<MockExam />} />
@@ -166,6 +174,7 @@ function App() {
                   <Route path="support" element={<AdminSupportPage />} />
                   <Route path="guide" element={<AdminGuide />} />
                   <Route path="questions/editor" element={<QuestionEditor />} />
+                  <Route path="system-logs" element={<SystemLogs />} />
                 </Route>
                 
                 {/* Redirect old dashboard path to new one */}

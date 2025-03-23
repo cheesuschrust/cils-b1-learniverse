@@ -23,8 +23,8 @@ import { AuthService } from "@/services/AuthService";
 
 // Validation schema
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Please enter a valid email address").min(1, "Email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -84,28 +84,23 @@ const Login = () => {
       // Set loading state for the specific provider
       setIsSocialLoading(prev => ({ ...prev, [provider]: true }));
       
-      // In a real application, get the auth URL and redirect
-      try {
-        const { authUrl } = await AuthService.getAuthUrl(provider);
-        
-        // For demo purposes, simulate a social login with direct call
-        const success = await socialLogin(provider);
-        
-        if (success) {
-          toast({
-            title: "Login successful",
-            description: `Welcome! You're signed in with ${provider}.`,
-          });
-          navigate(from);
-        }
-      } catch (error) {
-        console.error(`${provider} login error:`, error);
+      // For demo purposes, simulate a social login with direct call
+      const success = await socialLogin(provider);
+      
+      if (success) {
         toast({
-          title: "Login failed",
-          description: `Could not log in with ${provider}. Please try again.`,
-          variant: "destructive"
+          title: "Login successful",
+          description: `Welcome! You're signed in with ${provider}.`,
         });
+        navigate(from);
       }
+    } catch (error) {
+      console.error(`${provider} login error:`, error);
+      toast({
+        title: "Login failed",
+        description: `Could not log in with ${provider}. Please try again.`,
+        variant: "destructive"
+      });
     } finally {
       setIsSocialLoading(prev => ({ ...prev, [provider]: false }));
     }
@@ -180,6 +175,7 @@ const Login = () => {
                         type="email"
                         placeholder="Enter your email"
                         autoComplete="email"
+                        required
                         {...field}
                       />
                     </FormControl>
@@ -208,6 +204,7 @@ const Login = () => {
                         type="password"
                         placeholder="••••••••"
                         autoComplete="current-password"
+                        required
                         {...field}
                       />
                     </FormControl>

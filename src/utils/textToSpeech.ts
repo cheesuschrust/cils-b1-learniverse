@@ -1,298 +1,139 @@
 
+// Text-to-speech utility functions
+
 /**
- * Text-to-speech utility for reading text aloud
+ * Check if the browser supports the Speech Synthesis API
  */
-
-// Browser's native speech synthesis
-const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
-
-// Cache for voice preferences
-let cachedVoices: SpeechSynthesisVoice[] = [];
-
-export interface VoicePreference {
-  italianVoiceURI: string | null;
-  englishVoiceURI: string | null;
-  voiceRate: number;
-  voicePitch: number;
-}
-
-// Default voice preferences
-const defaultVoicePreference: VoicePreference = {
-  italianVoiceURI: null,
-  englishVoiceURI: null,
-  voiceRate: 1.0,
-  voicePitch: 1.0
+export const isSpeechSupported = (): boolean => {
+  return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 };
 
-// Check if speech synthesis is supported
-const checkSpeechSupport = (): boolean => {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+/**
+ * Stop any currently speaking synthesis
+ */
+export const stopSpeaking = (): void => {
+  if (isSpeechSupported()) {
+    window.speechSynthesis.cancel();
+  }
 };
 
-// Get available voices
-export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
-  return new Promise((resolve) => {
-    if (!checkSpeechSupport()) {
-      console.warn('Speech synthesis not supported in this browser');
-      resolve([]);
+/**
+ * Get the best available voice for a given language
+ */
+export const getBestVoice = (language: string, voicePreference?: string): SpeechSynthesisVoice | null => {
+  if (!isSpeechSupported()) return null;
+  
+  const voices = window.speechSynthesis.getVoices();
+  
+  // If we have a specific voice preference, try to find it
+  if (voicePreference) {
+    const preferredVoice = voices.find(voice => 
+      voice.voiceURI.toLowerCase() === voicePreference.toLowerCase() ||
+      voice.name.toLowerCase() === voicePreference.toLowerCase()
+    );
+    if (preferredVoice) return preferredVoice;
+  }
+  
+  // If no preference or preferred voice not found, find best voice for language
+  const langCode = language === 'it' ? 'it-IT' : language === 'en' ? 'en-US' : language;
+  
+  // First try to find a native voice for the language
+  const nativeVoice = voices.find(voice => 
+    voice.lang.toLowerCase().startsWith(langCode.toLowerCase()) && 
+    voice.localService === true
+  );
+  if (nativeVoice) return nativeVoice;
+  
+  // Next, any voice for the language
+  const anyLangVoice = voices.find(voice => 
+    voice.lang.toLowerCase().startsWith(langCode.toLowerCase())
+  );
+  if (anyLangVoice) return anyLangVoice;
+  
+  // Default to first available voice
+  return voices.length > 0 ? voices[0] : null;
+};
+
+/**
+ * Speak text using the Speech Synthesis API
+ */
+export const speak = (text: string, language: 'it' | 'en' = 'it', voicePreference?: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!isSpeechSupported()) {
+      reject(new Error('Speech synthesis not supported'));
       return;
     }
     
-    if (cachedVoices.length > 0) {
-      resolve(cachedVoices);
-      return;
-    }
+    // Ensure any previous speech is stopped
+    stopSpeaking();
     
-    let voices = synth?.getVoices() || [];
-    
-    if (voices.length > 0) {
-      cachedVoices = voices;
-      resolve(voices);
-      return;
-    }
-    
-    // If voices aren't loaded yet, wait for them
-    const voicesChangedHandler = () => {
-      voices = synth?.getVoices() || [];
-      cachedVoices = voices;
-      resolve(voices);
-      synth?.removeEventListener('voiceschanged', voicesChangedHandler);
+    // Wait for voices to be loaded if needed
+    const synth = window.speechSynthesis;
+    const getVoicesAndSpeak = () => {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        const langCode = language === 'it' ? 'it-IT' : 'en-US';
+        utterance.lang = langCode;
+        
+        // Set a good default rate and pitch
+        utterance.rate = 0.9; // Slightly slower than default
+        utterance.pitch = 1.0;
+        
+        // Find the best voice
+        const voice = getBestVoice(language, voicePreference);
+        if (voice) {
+          utterance.voice = voice;
+          console.log(`Using voice: ${voice.name} (${voice.lang})`);
+        } else {
+          console.warn(`No voice found for language: ${language}, using default`);
+        }
+        
+        // Set up event handlers
+        utterance.onend = () => {
+          resolve();
+        };
+        
+        utterance.onerror = (event) => {
+          reject(new Error(`Speech synthesis error: ${event.error}`));
+        };
+        
+        // Speak the text
+        synth.speak(utterance);
+        
+        // Chrome bug workaround - if the speech doesn't start, restart it
+        setTimeout(() => {
+          if (synth.speaking && !synth.paused) {
+            // Speaking is working
+          } else {
+            // Try to restart
+            synth.cancel();
+            synth.speak(utterance);
+          }
+        }, 250);
+      } catch (error) {
+        reject(error);
+      }
     };
     
-    synth?.addEventListener('voiceschanged', voicesChangedHandler);
-    
-    // Fallback if event never fires
-    setTimeout(() => {
-      if (cachedVoices.length === 0) {
-        voices = synth?.getVoices() || [];
-        if (voices.length > 0) {
-          cachedVoices = voices;
-          resolve(voices);
-        } else {
-          console.warn('Voice list could not be loaded');
-          resolve([]);
-        }
-      }
-    }, 1000);
-  });
-};
-
-// Get voice by URI
-const getVoiceByURI = async (voiceURI: string | null): Promise<SpeechSynthesisVoice | null> => {
-  if (!voiceURI) return null;
-  
-  const voices = await getVoices();
-  return voices.find(voice => voice.voiceURI === voiceURI) || null;
-};
-
-// Get Italian voice by preference or fallback
-const getPreferredItalianVoice = async (preference?: VoicePreference): Promise<SpeechSynthesisVoice | null> => {
-  const voices = await getVoices();
-  
-  // First try to get the preferred voice by URI
-  if (preference?.italianVoiceURI) {
-    const preferredVoice = voices.find(voice => voice.voiceURI === preference.italianVoiceURI);
-    if (preferredVoice) return preferredVoice;
-  }
-  
-  // Fallback to any Italian voice
-  const italianVoice = voices.find(voice => 
-    voice.lang.includes('it') || // Italian language code
-    voice.name.toLowerCase().includes('italian') || 
-    voice.name.toLowerCase().includes('italia')
-  );
-  
-  return italianVoice || null;
-};
-
-// Get English voice by preference or fallback
-const getPreferredEnglishVoice = async (preference?: VoicePreference): Promise<SpeechSynthesisVoice | null> => {
-  const voices = await getVoices();
-  
-  // First try to get the preferred voice by URI
-  if (preference?.englishVoiceURI) {
-    const preferredVoice = voices.find(voice => voice.voiceURI === preference.englishVoiceURI);
-    if (preferredVoice) return preferredVoice;
-  }
-  
-  // Fallback to any English voice
-  const englishVoice = voices.find(voice => 
-    voice.lang.includes('en') || 
-    voice.name.toLowerCase().includes('english')
-  );
-  
-  return englishVoice || null;
-};
-
-// Speak text
-export const speak = async (
-  text: string, 
-  language: 'it' | 'en' = 'it', 
-  voicePreference?: VoicePreference
-): Promise<void> => {
-  if (!text) return;
-  
-  // Check for speech synthesis support
-  if (!checkSpeechSupport()) {
-    console.error('Speech synthesis not supported in this browser');
-    throw new Error('Speech synthesis not supported in this browser');
-  }
-  
-  try {
-    // Cancel any ongoing speech
-    if (synth?.speaking) {
-      synth.cancel();
-    }
-    
-    // Set up utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Apply rate and pitch if provided
-    if (voicePreference) {
-      utterance.rate = voicePreference.voiceRate || 1.0;
-      utterance.pitch = voicePreference.voicePitch || 1.0;
-    }
-    
-    // Get user's voice preference or use system default
-    const pref = voicePreference || getCurrentVoicePreference();
-    
-    // Select voice based on language
-    if (language === 'it') {
-      const italianVoice = await getPreferredItalianVoice(pref);
-      if (italianVoice) {
-        utterance.voice = italianVoice;
-        utterance.lang = italianVoice.lang;
-      } else {
-        // If no Italian voice, try to use any voice but set lang to Italian
-        utterance.lang = 'it-IT';
-      }
+    // Make sure we have voices loaded
+    if (synth.getVoices().length > 0) {
+      getVoicesAndSpeak();
     } else {
-      const englishVoice = await getPreferredEnglishVoice(pref);
-      if (englishVoice) {
-        utterance.voice = englishVoice;
-        utterance.lang = englishVoice.lang;
-      } else {
-        utterance.lang = 'en-US';
-      }
-    }
-    
-    // Debugging information
-    console.log(`Speaking with voice: ${utterance.voice?.name || 'default system voice'}`);
-    console.log(`Language: ${utterance.lang}, Rate: ${utterance.rate}, Pitch: ${utterance.pitch}`);
-    
-    // Speak
-    synth?.speak(utterance);
-    
-    // Return a promise that resolves when speech ends
-    return new Promise((resolve) => {
-      utterance.onend = () => {
-        resolve();
+      // Wait for voices to load
+      synth.onvoiceschanged = () => {
+        synth.onvoiceschanged = null; // Only run once
+        getVoicesAndSpeak();
       };
       
-      // Also resolve if there's an error
-      utterance.onerror = (e) => {
-        console.error('Speech synthesis error:', e);
-        resolve();
-      };
-      
-      // Fallback to resolve in case the event never fires
+      // Fallback in case onvoiceschanged doesn't fire
       setTimeout(() => {
-        if (synth?.speaking) {
-          resolve();
+        if (synth.getVoices().length > 0) {
+          getVoicesAndSpeak();
+        } else {
+          reject(new Error('Could not load speech synthesis voices'));
         }
-      }, 10000); // 10 second timeout
-    });
-  } catch (error) {
-    console.error('Text-to-speech error:', error);
-    throw error;
-  }
-};
-
-// Get a sample of a voice
-export const speakSample = async (voiceURI: string, language: 'it' | 'en'): Promise<void> => {
-  try {
-    const sampleText = language === 'it' 
-      ? "Ciao, questa è una prova della voce selezionata."
-      : "Hello, this is a test of the selected voice.";
-      
-    const voices = await getVoices();
-    const voice = voices.find(v => v.voiceURI === voiceURI);
-    
-    if (!voice) {
-      console.error('Voice not found:', voiceURI);
-      throw new Error('Voice not found');
+      }, 1000);
     }
-    
-    // Cancel any ongoing speech
-    if (synth?.speaking) {
-      synth.cancel();
-    }
-    
-    const utterance = new SpeechSynthesisUtterance(sampleText);
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-    console.log(`Testing voice: ${voice.name}, Lang: ${voice.lang}`);
-    
-    // Speak
-    synth?.speak(utterance);
-  } catch (error) {
-    console.error('Voice sample error:', error);
-    throw error;
-  }
-};
-
-// Check if text-to-speech is supported
-export const isSpeechSupported = (): boolean => {
-  return checkSpeechSupport();
-};
-
-// Get all available voices (for settings)
-export const getAllVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  return await getVoices();
-};
-
-// Get all Italian voices
-export const getItalianVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  const voices = await getVoices();
-  return voices.filter(voice => 
-    voice.lang.includes('it') || 
-    voice.name.toLowerCase().includes('italian') || 
-    voice.name.toLowerCase().includes('italia')
-  );
-};
-
-// Get all English voices
-export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  const voices = await getVoices();
-  return voices.filter(voice => 
-    voice.lang.includes('en') || 
-    voice.name.toLowerCase().includes('english')
-  );
-};
-
-// Stop any ongoing speech
-export const stopSpeaking = (): void => {
-  if (synth?.speaking) {
-    synth.cancel();
-  }
-};
-
-// Get current voice preferences
-export const getCurrentVoicePreference = (): VoicePreference => {
-  try {
-    const saved = localStorage.getItem('voicePreference');
-    return saved ? JSON.parse(saved) : defaultVoicePreference;
-  } catch (error) {
-    console.error('Error retrieving voice preference:', error);
-    return defaultVoicePreference;
-  }
-};
-
-// Save voice preferences
-export const saveVoicePreference = (preference: VoicePreference): void => {
-  try {
-    localStorage.setItem('voicePreference', JSON.stringify(preference));
-  } catch (error) {
-    console.error('Error saving voice preference:', error);
-  }
+  });
 };
