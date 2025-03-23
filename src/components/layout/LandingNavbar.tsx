@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
 import DesktopNavigation from "./DesktopNavigation";
@@ -8,6 +9,7 @@ import MobileMenu from "./MobileMenu";
 const LandingNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
   
   // Handle scroll events for navbar styling
   useEffect(() => {
@@ -30,6 +32,9 @@ const LandingNavbar = () => {
     setIsMenuOpen(!isMenuOpen);
   };
   
+  // Determine if this is the landing page
+  const isLandingPage = location.pathname === "/";
+  
   return (
     <header 
       className={cn(
@@ -40,7 +45,7 @@ const LandingNavbar = () => {
       <div className="container mx-auto flex justify-between items-center">
         <Logo />
         <DesktopNavigation />
-        <MobileMenu isMenuOpen={isMenuOpen} toggleMenu={toggleMenu} />
+        <MobileMenu isMenuOpen={isMenuOpen} toggleMenu={toggleMenu} isLandingPage={isLandingPage} />
       </div>
     </header>
   );

@@ -8,9 +8,12 @@ const Logo = () => {
       to="/" 
       className="flex items-center space-x-2"
     >
-      <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-italian-green via-italian-white to-italian-red">
-        CILS B1
-      </span>
+      <div className="relative">
+        <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-green-600 via-white to-red-600">
+          CILS B1
+        </span>
+        <div className="absolute -bottom-1 left-0 w-full h-[2px] bg-gradient-to-r from-green-600 via-white to-red-600"></div>
+      </div>
     </Link>
   );
 };
