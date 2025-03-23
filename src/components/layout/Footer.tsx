@@ -2,8 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { ExternalLink, Heart, Volume2, Languages } from "lucide-react";
-import SpeakableWord from "@/components/learning/SpeakableWord";
+import { ExternalLink, Heart } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -33,6 +32,7 @@ const Footer = () => {
               <li><Link to="/app/multiple-choice" className="text-gray-800 hover:text-[#009246] hover:underline transition-colors flex items-center"><span>Multiple Choice</span></Link></li>
               <li><Link to="/app/listening" className="text-gray-800 hover:text-[#009246] hover:underline transition-colors flex items-center"><span>Listening Practice</span></Link></li>
               <li><Link to="/app/writing" className="text-gray-800 hover:text-[#009246] hover:underline transition-colors flex items-center"><span>Writing Practice</span></Link></li>
+              <li><Link to="/app/speaking" className="text-gray-800 hover:text-[#009246] hover:underline transition-colors flex items-center"><span>Speaking Practice</span></Link></li>
             </ul>
           </div>
           
@@ -42,6 +42,7 @@ const Footer = () => {
               <li><Link to="/login" className="text-gray-800 hover:text-[#ce2b37] hover:underline transition-colors">Login</Link></li>
               <li><Link to="/signup" className="text-gray-800 hover:text-[#ce2b37] hover:underline transition-colors">Sign Up</Link></li>
               <li><Link to="/app/dashboard" className="text-gray-800 hover:text-[#ce2b37] hover:underline transition-colors">Dashboard</Link></li>
+              <li><Link to="/app/profile" className="text-gray-800 hover:text-[#ce2b37] hover:underline transition-colors">Profile Settings</Link></li>
             </ul>
           </div>
           
@@ -54,6 +55,10 @@ const Footer = () => {
               </Link></li>
               <li><Link to="/resources/certification" className="text-gray-800 hover:text-[#33A5EF] hover:underline transition-colors group flex items-center">
                 <span>CILS Certification</span>
+                <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link></li>
+              <li><Link to="/resources/study-guide" className="text-gray-800 hover:text-[#33A5EF] hover:underline transition-colors group flex items-center">
+                <span>Study Guide</span>
                 <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link></li>
             </ul>

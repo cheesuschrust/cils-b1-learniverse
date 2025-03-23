@@ -5,8 +5,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, XCircle, ArrowRight, Volume2, Languages } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, Languages } from "lucide-react";
 import SpeakableWord from "@/components/learning/SpeakableWord";
+import BilingualFeedback from "@/components/ui/BilingualFeedback";
 
 interface Question {
   id: string;
@@ -174,11 +175,11 @@ const MultipleChoice = () => {
                   className={`flex items-center space-x-2 p-3 rounded-lg border ${
                     isAnswered
                       ? option === questions[currentQuestion].correctAnswer
-                        ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                        ? "border-green-500 bg-green-50"
                         : option === selectedAnswer
-                        ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                        : "border-gray-300 dark:border-gray-800"
-                      : "border-gray-300 dark:border-gray-800"
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                      : "border-gray-300"
                   }`}
                 >
                   <RadioGroupItem value={option} id={option} />
@@ -208,10 +209,12 @@ const MultipleChoice = () => {
             {isAnswered && (
               <div className="bg-gray-100 p-4 rounded-lg border border-gray-200">
                 <p className="font-medium mb-1 text-gray-800">Explanation:</p>
-                <div className="text-gray-700">
-                  <SpeakableWord word={questions[currentQuestion].explanation} language="it" className="block" />
+                <div>
+                  <p className="text-gray-800 italic">
+                    {questions[currentQuestion].explanation}
+                  </p>
                   {showTranslations && questions[currentQuestion].explanationTranslation && (
-                    <div className="mt-2 text-sm italic">
+                    <div className="mt-2 text-gray-700">
                       {questions[currentQuestion].explanationTranslation}
                     </div>
                   )}
@@ -225,14 +228,14 @@ const MultipleChoice = () => {
               <Button
                 onClick={handleAnswer}
                 disabled={selectedAnswer === null}
-                className="w-full bg-[#009246] hover:bg-[#017f3c]"
+                className="w-full bg-[#009246] hover:bg-[#017f3c] text-white"
               >
                 Check Answer
               </Button>
             ) : currentQuestion < questions.length - 1 ? (
               <Button
                 onClick={handleNext}
-                className="w-full bg-[#ce2b37] hover:bg-[#b32530]"
+                className="w-full bg-[#ce2b37] hover:bg-[#b32530] text-white"
               >
                 Next Question
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -240,7 +243,7 @@ const MultipleChoice = () => {
             ) : (
               <Button
                 onClick={resetQuiz}
-                className="w-full bg-[#33A5EF] hover:bg-[#2895df]"
+                className="w-full bg-[#33A5EF] hover:bg-[#2895df] text-white"
               >
                 Restart Quiz
               </Button>

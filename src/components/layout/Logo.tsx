@@ -1,8 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Volume2, Languages } from "lucide-react";
-import SpeakableWord from "@/components/learning/SpeakableWord";
+import { BookOpen } from "lucide-react";
 
 const Logo = () => {
   return (
