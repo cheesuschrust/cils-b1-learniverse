@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, CheckCircle, ChevronRight, BookOpen, BookMarked, Bookmark, GraduationCap, Mic, Volume2, User, Settings, LineChart } from 'lucide-react';
+import { Search, CheckCircle, ChevronRight, BookOpen, BookMarked, Bookmark, GraduationCap, Mic, Volume2, User, Settings, LineChart, Mail } from 'lucide-react';
 
 interface SectionProps {
   title: string;
