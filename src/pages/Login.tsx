@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Key, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Key, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -38,7 +38,8 @@ const Login = () => {
     apple: boolean;
   }>({ google: false, apple: false });
   
-  const from = location.state?.from?.pathname || "/dashboard";
+  // Get the intended destination from location state, or default to /app/dashboard
+  const from = location.state?.from?.pathname || "/app/dashboard";
   
   // Define form with validation
   const form = useForm<LoginFormValues>({
@@ -52,7 +53,7 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard");
+      navigate("/app/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
@@ -64,7 +65,8 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
         });
-        navigate(from);
+        // Navigate to the dashboard with the correct path
+        navigate("/app/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);

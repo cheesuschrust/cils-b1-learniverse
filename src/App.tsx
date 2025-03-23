@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 
@@ -58,6 +58,9 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/password-reset" element={<PasswordReset />} />
+                
+                {/* Root redirect */}
+                <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>

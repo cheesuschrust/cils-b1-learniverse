@@ -5,6 +5,9 @@ import { useAuthManager } from "@/hooks/useAuthManager";
 import { LoginCredentials, RegisterData } from "@/services/AuthService";
 import { UpdateProfileData } from "@/services/UserService";
 
+// Export these types for use in other components
+export type { User, UserPreferences, LogCategory, LogEntry, EmailSettings };
+
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -103,6 +106,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sendVerificationEmail: async () => false,
     resendVerificationEmail: async () => false,
     getEmailSettings: () => ({ 
+      provider: 'smtp',
+      fromEmail: 'noreply@example.com',
+      fromName: 'CILS B2 Cittadinanza',
+      config: {
+        enableSsl: true,
+        host: "smtp.example.com",
+        port: 587,
+        username: "user@example.com",
+        password: "password123"
+      },
+      templates: {
+        verification: {
+          subject: 'Verify your email',
+          body: 'Please verify your email'
+        },
+        passwordReset: {
+          subject: 'Reset your password',
+          body: 'Reset your password'
+        },
+        welcome: {
+          subject: 'Welcome',
+          body: 'Welcome to our platform'
+        }
+      },
       dailyDigest: false,
       notifications: false,
       marketing: false,
