@@ -38,13 +38,19 @@ const SystemLogs = () => {
   
   useEffect(() => {
     const allLogs = getSystemLogs();
-    // Ensure the timestamp is handled as a string, not a Date object
-    setLogs(allLogs.map(log => ({
-      ...log,
-      timestamp: typeof log.timestamp === 'object' && log.timestamp !== null 
-        ? log.timestamp.toISOString() 
-        : log.timestamp || new Date().toISOString()
-    })));
+    const processedLogs = allLogs.map(log => {
+      const processedLog: SystemLog = {
+        ...log,
+        timestamp: log.timestamp 
+          ? (log.timestamp instanceof Date 
+              ? log.timestamp.toISOString() 
+              : String(log.timestamp))
+          : new Date().toISOString()
+      };
+      return processedLog;
+    });
+    
+    setLogs(processedLogs);
   }, []);
   
   useEffect(() => {
@@ -86,6 +92,10 @@ const SystemLogs = () => {
     
     try {
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
