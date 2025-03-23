@@ -1,6 +1,7 @@
 
 import { API } from "./api";
 import { User, UserPreferences } from "@/contexts/shared-types";
+import { VoicePreference } from "@/utils/textToSpeech";
 
 export interface UserProfileResponse {
   user: User;
@@ -15,6 +16,7 @@ export interface UpdateProfileData {
   address?: string;
   preferredLanguage?: "english" | "italian" | "both";
   preferences?: Partial<UserPreferences>;
+  voicePreference?: VoicePreference;
 }
 
 export class UserService {

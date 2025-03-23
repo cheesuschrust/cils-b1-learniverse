@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { VoicePreference } from '@/utils/textToSpeech';
 
 interface UserPreferencesContextType {
   theme: 'light' | 'dark' | 'system';
@@ -8,12 +9,23 @@ interface UserPreferencesContextType {
   setPreferredLanguage?: (language: 'english' | 'italian' | 'both') => void;
   autoPlayAudio: boolean;
   setAutoPlayAudio?: (autoPlay: boolean) => void;
+  voicePreference: VoicePreference;
+  setVoicePreference?: (preference: VoicePreference) => void;
 }
+
+// Default voice preference
+const defaultVoicePreference: VoicePreference = {
+  italianVoiceURI: '',
+  englishVoiceURI: '',
+  voiceRate: 1.0,
+  voicePitch: 1.0
+};
 
 const defaultPreferences: UserPreferencesContextType = {
   theme: 'system',
   preferredLanguage: 'both',
   autoPlayAudio: true,
+  voicePreference: defaultVoicePreference,
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
@@ -31,6 +43,13 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
     () => localStorage.getItem('autoPlayAudio') !== 'false'
   );
   
+  const [voicePreference, setVoicePreference] = useState<VoicePreference>(() => {
+    const savedPreference = localStorage.getItem('voicePreference');
+    return savedPreference 
+      ? JSON.parse(savedPreference) 
+      : defaultVoicePreference;
+  });
+  
   // Save preferences to localStorage when they change
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -44,6 +63,10 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
     localStorage.setItem('autoPlayAudio', String(autoPlayAudio));
   }, [autoPlayAudio]);
   
+  useEffect(() => {
+    localStorage.setItem('voicePreference', JSON.stringify(voicePreference));
+  }, [voicePreference]);
+  
   return (
     <UserPreferencesContext.Provider 
       value={{
@@ -52,7 +75,9 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
         preferredLanguage,
         setPreferredLanguage,
         autoPlayAudio,
-        setAutoPlayAudio
+        setAutoPlayAudio,
+        voicePreference,
+        setVoicePreference
       }}
     >
       {children}
