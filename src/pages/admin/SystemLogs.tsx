@@ -38,12 +38,9 @@ const SystemLogs = () => {
   
   useEffect(() => {
     const allLogs = getSystemLogs();
-    // Ensure the timestamp is handled as a string, not a Date object
     setLogs(allLogs.map(log => ({
       ...log,
-      timestamp: typeof log.timestamp === 'object' && log.timestamp !== null 
-        ? log.timestamp.toISOString() 
-        : log.timestamp || new Date().toISOString()
+      timestamp: new Date(log.timestamp)
     })));
   }, []);
   
@@ -81,23 +78,15 @@ const SystemLogs = () => {
     setCurrentPage(1);
   }, [logs, categoryFilter, levelFilter, dateRange, searchTerm]);
   
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'Unknown date';
-    
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    } catch (error) {
-      console.error("Invalid date format:", dateStr);
-      return 'Invalid date';
-    }
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
   
   const handleCopyLogId = (logId: string) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Key, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +18,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { AuthService } from "@/services/AuthService";
 
 // Validation schema
 const loginSchema = z.object({
@@ -30,7 +28,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login, isLoading, isAuthenticated, socialLogin } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -64,7 +62,7 @@ const Login = () => {
       if (success) {
         toast({
           title: "Login successful",
-          description: "Welcome back!",
+          description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
         });
         // Navigate to the dashboard with the correct path
         navigate("/app/dashboard");
@@ -84,28 +82,23 @@ const Login = () => {
       // Set loading state for the specific provider
       setIsSocialLoading(prev => ({ ...prev, [provider]: true }));
       
-      // In a real application, get the auth URL and redirect
-      try {
-        const { authUrl } = await AuthService.getAuthUrl(provider);
-        
-        // For demo purposes, simulate a social login with direct call
-        const success = await socialLogin(provider);
-        
-        if (success) {
-          toast({
-            title: "Login successful",
-            description: `Welcome! You're signed in with ${provider}.`,
-          });
-          navigate(from);
-        }
-      } catch (error) {
-        console.error(`${provider} login error:`, error);
+      // Call the social login method from AuthContext
+      const success = await login(`${provider}@example.com`, 'social-login-password');
+      
+      if (success) {
         toast({
-          title: "Login failed",
-          description: `Could not log in with ${provider}. Please try again.`,
-          variant: "destructive"
+          title: "Login successful",
+          description: `Welcome to CILS B2 Cittadinanza Question of the Day!`,
         });
+        navigate(from);
       }
+    } catch (error) {
+      console.error(`${provider} login error:`, error);
+      toast({
+        title: "Login failed",
+        description: `Could not log in with ${provider}. Please try again.`,
+        variant: "destructive"
+      });
     } finally {
       setIsSocialLoading(prev => ({ ...prev, [provider]: false }));
     }
@@ -117,7 +110,7 @@ const Login = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Enter your credentials to access your CILS B2 Cittadinanza account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -178,8 +171,7 @@ const Login = () => {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="Enter your email"
-                        autoComplete="email"
+                        placeholder="john.doe@example.com"
                         {...field}
                       />
                     </FormControl>
@@ -207,7 +199,6 @@ const Login = () => {
                         id="password"
                         type="password"
                         placeholder="••••••••"
-                        autoComplete="current-password"
                         {...field}
                       />
                     </FormControl>
@@ -240,9 +231,12 @@ const Login = () => {
       </Card>
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
-        <Link to="/privacy-policy" className="hover:underline">
-          Privacy Policy
-        </Link>
+        <p>Demo credentials: admin@italianlearning.app / Admin123!</p>
+        <p className="mt-1">
+          <Link to="/privacy-policy" className="hover:underline">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -1,299 +1,186 @@
 
-// Simple API service with common methods
-import { mockDatabase } from './MockDatabase';
-import { AdConfiguration, EmailSettings, LogEntry, SEOConfiguration, SalesConfiguration, User } from '@/contexts/shared-types';
+import { User, EmailSettings } from "@/contexts/shared-types";
+import { getDatabase, passwordHash } from "./MockDatabase";
+import bcrypt from 'bcryptjs';
 
-// Mock data for admin dashboard
-const mockAdminData = {
-  users: {
-    count: 250,
-    active: 180,
-    new: 35,
-  },
-  content: {
-    count: 500,
-    lessons: 320,
-    exercises: 180,
-  },
-  revenue: {
-    lastMonth: 2450.75,
-    thisMonth: 1890.50,
-    projected: 3200.25,
-  },
-  dailyUsers: Array.from({ length: 30 }, (_, i) => ({
-    date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    count: Math.floor(Math.random() * 100) + 50
-  })),
-  performanceData: [
-    { section: 'Reading', score: Math.floor(Math.random() * 40) + 60 },
-    { section: 'Writing', score: Math.floor(Math.random() * 40) + 60 },
-    { section: 'Listening', score: Math.floor(Math.random() * 40) + 60 },
-    { section: 'Speaking', score: Math.floor(Math.random() * 40) + 60 }
-  ]
-};
-
-// Mock email settings
-const mockEmailSettings: EmailSettings = {
-  provider: 'smtp',
-  fromEmail: 'no-reply@italianapp.com',
-  fromName: 'Italian Language App',
-  config: {
-    enableSsl: true,
-    host: 'smtp.example.com',
-    port: 587,
-    username: 'smtp-user',
-    password: 'smtp-password'
-  },
-  templates: {
-    verification: {
-      subject: 'Verify Your Email',
-      body: 'Hello {{name}}, please verify your email by clicking this link: {{verificationLink}}'
-    },
-    passwordReset: {
-      subject: 'Reset Your Password',
-      body: 'Hello {{name}}, click this link to reset your password: {{resetLink}}. This link will expire in {{expiry}} hours.'
-    },
-    welcome: {
-      subject: 'Welcome to Italian Language App',
-      body: 'Welcome {{name}}! We\'re excited to have you on board. Start learning today: {{loginLink}}'
+// Base API class for all API calls
+export class API {
+  static async handleRequest<T>(
+    endpoint: string,
+    method: string = "GET",
+    data?: any
+  ): Promise<T> {
+    try {
+      // For now, we're simulating API calls with local data
+      // In a real app, this would be replaced with actual fetch calls
+      return await this.simulateApiCall<T>(endpoint, method, data);
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error);
+      throw error;
     }
-  },
-  dailyDigest: true,
-  notifications: true,
-  marketing: false,
-  newFeatures: true
-};
-
-// Mock advertising settings
-const mockAdSettings: AdConfiguration = {
-  enabled: true,
-  provider: 'google',
-  adUnits: [
-    {
-      id: '1',
-      name: 'Header Banner',
-      type: 'banner',
-      placement: 'header',
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Sidebar Ad',
-      type: 'native',
-      placement: 'sidebar',
-      active: true
-    }
-  ],
-  settings: {
-    frequency: 3,
-    showToFreeUsers: true,
-    showToPremiumUsers: false
   }
-};
 
-// Mock SEO settings
-const mockSeoSettings: SEOConfiguration = {
-  defaultTitle: 'Italian Language Learning Platform',
-  defaultDescription: 'Learn Italian with interactive lessons, quizzes, and exercises.',
-  defaultKeywords: ['italian', 'language', 'learning', 'lessons', 'vocabulary', 'grammar'],
-  siteMap: {
-    enabled: true,
-    lastGenerated: new Date().toISOString(),
-  },
-  robotsTxt: {
-    enabled: true,
-    content: 'User-agent: *\nAllow: /'
-  },
-  analytics: {
-    provider: 'google',
-    trackingId: 'G-EXAMPLE123',
-    enabled: true
-  }
-};
-
-// Mock sales settings
-const mockSalesSettings: SalesConfiguration = {
-  products: [
-    {
-      id: '1',
-      name: 'Monthly Premium',
-      description: 'Unlimited access to all lessons and exercises',
-      price: 9.99,
-      currency: 'USD',
-      type: 'subscription',
-      features: ['Unlimited lessons', 'No ads', 'Premium content'],
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Annual Premium',
-      description: 'Unlimited access with 20% discount',
-      price: 95.88,
-      currency: 'USD',
-      type: 'subscription',
-      features: ['Everything in Monthly', 'Save 20%', 'Priority support'],
-      active: true
-    }
-  ],
-  discounts: [
-    {
-      id: '1',
-      name: 'Summer Sale',
-      code: 'SUMMER20',
-      amount: 20,
-      type: 'percentage',
-      validFrom: new Date().toISOString(),
-      validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      active: true
-    }
-  ],
-  paymentProviders: [
-    {
-      name: 'stripe',
-      enabled: true,
-      testMode: false
-    },
-    {
-      name: 'paypal',
-      enabled: true,
-      testMode: false
-    }
-  ]
-};
-
-export const API = {
-  // User-related endpoints
-  users: {
-    getCount: async (): Promise<number> => {
-      return mockAdminData.users.count;
-    },
-    getActive: async (): Promise<number> => {
-      return mockAdminData.users.active;
-    }
-  },
-  
-  // Content-related endpoints
-  content: {
-    getCount: async (): Promise<number> => {
-      return mockAdminData.content.count;
-    }
-  },
-  
-  // Analytics endpoints
-  analytics: {
-    getDailyUsers: async (): Promise<any[]> => {
-      return mockAdminData.dailyUsers;
-    },
-    
-    getPerformanceData: async (): Promise<any[]> => {
-      return mockAdminData.performanceData;
-    }
-  },
-  
-  // Generic request handler for all service functions
-  handleRequest: async <T>(endpoint: string, method: string, data?: any): Promise<T> => {
-    console.log(`API Request: ${method} ${endpoint}`, data);
-    
+  // This simulates API calls until real backend is implemented
+  private static async simulateApiCall<T>(
+    endpoint: string,
+    method: string,
+    data?: any
+  ): Promise<T> {
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     
-    // Auth endpoints
-    if (endpoint.includes('auth/login')) {
-      return {
-        user: mockDatabase.users[0]
-      } as unknown as T;
+    const db = await getDatabase();
+    
+    // Handle different endpoints
+    if (endpoint.startsWith("/auth")) {
+      return this.handleAuthEndpoints(endpoint, method, data, db) as unknown as T;
+    } else if (endpoint.startsWith("/user")) {
+      return this.handleUserEndpoints(endpoint, method, data, db) as unknown as T;
+    } else if (endpoint.startsWith("/content")) {
+      return this.handleContentEndpoints(endpoint, method, data) as unknown as T;
     }
     
-    if (endpoint.includes('auth/register')) {
-      const userData = data as any;
-      const newUser: User = {
-        ...mockDatabase.users[1],
-        id: String(Date.now()),
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-      };
-      return {
-        user: newUser
-      } as unknown as T;
-    }
-    
-    // User profile
-    if (endpoint.includes('user/profile')) {
-      return {
-        user: mockDatabase.users.find(user => user.id === data.userId) || mockDatabase.users[0]
-      } as unknown as T;
-    }
-    
-    // Admin email settings
-    if (endpoint.includes('admin/email/settings')) {
-      if (method === 'GET') {
-        return mockEmailSettings as unknown as T;
-      } else if (method === 'PUT') {
-        return {
-          ...mockEmailSettings,
-          ...data
-        } as unknown as T;
-      }
-    }
-    
-    // Admin advertising settings
-    if (endpoint.includes('admin/advertising/settings')) {
-      if (method === 'GET') {
-        return mockAdSettings as unknown as T;
-      } else if (method === 'PUT') {
-        return {
-          ...mockAdSettings,
-          ...data
-        } as unknown as T;
-      }
-    }
-    
-    // Admin SEO settings
-    if (endpoint.includes('admin/seo/settings')) {
-      if (method === 'GET') {
-        return mockSeoSettings as unknown as T;
-      } else if (method === 'PUT') {
-        return {
-          ...mockSeoSettings,
-          ...data
-        } as unknown as T;
-      }
-    }
-    
-    // Admin sales settings
-    if (endpoint.includes('admin/sales/settings')) {
-      if (method === 'GET') {
-        return mockSalesSettings as unknown as T;
-      } else if (method === 'PUT') {
-        return {
-          ...mockSalesSettings,
-          ...data
-        } as unknown as T;
-      }
-    }
-    
-    // System logs
-    if (endpoint.includes('admin/logs')) {
-      return {
-        logs: mockDatabase.logs
-      } as unknown as T;
-    }
-    
-    // Admin data request
-    if (endpoint.includes('admin/dashboard')) {
-      return {
-        users: mockAdminData.users,
-        content: mockAdminData.content,
-        revenue: mockAdminData.revenue,
-        dailyUsers: mockAdminData.dailyUsers,
-        performanceData: mockAdminData.performanceData
-      } as unknown as T;
-    }
-    
-    // Default response for other endpoints
-    return { success: true } as unknown as T;
+    throw new Error(`Endpoint not implemented: ${endpoint}`);
   }
-};
-
-export default API;
+  
+  private static async handleAuthEndpoints(
+    endpoint: string,
+    method: string,
+    data: any,
+    db: any
+  ) {
+    if (endpoint === "/auth/login" && method === "POST") {
+      const { email, password } = data;
+      const user = db.users.find((u: User) => u.email === email);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+      
+      const storedHash = passwordHash.get(email);
+      const isValid = await bcrypt.compare(password, storedHash || "");
+      
+      if (!isValid) {
+        throw new Error("Invalid credentials");
+      }
+      
+      // Update last login
+      user.lastLogin = new Date();
+      user.lastActive = new Date();
+      
+      return { user };
+    }
+    
+    if (endpoint === "/auth/register" && method === "POST") {
+      const { email, password, firstName, lastName } = data;
+      
+      // Check if user already exists
+      if (db.users.some((u: User) => u.email === email)) {
+        throw new Error("User already exists");
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create new user
+      const newUser: User = {
+        id: crypto.randomUUID(),
+        firstName,
+        lastName,
+        email,
+        role: "user",
+        isVerified: false,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        lastActive: new Date(),
+        preferences: {
+          theme: "system",
+          emailNotifications: true,
+          language: "en",
+          difficulty: "beginner",
+        },
+        subscription: "free",
+        status: "active",
+        preferredLanguage: "both",
+        dailyQuestionCounts: {
+          flashcards: 0,
+          multipleChoice: 0,
+          listening: 0,
+          writing: 0,
+          speaking: 0,
+        },
+        metrics: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          streak: 0,
+        }
+      };
+      
+      // Add user to database
+      db.users.push(newUser);
+      
+      return { user: newUser };
+    }
+    
+    throw new Error(`Auth endpoint not implemented: ${endpoint}`);
+  }
+  
+  private static async handleUserEndpoints(
+    endpoint: string,
+    method: string,
+    data: any,
+    db: any
+  ) {
+    if (endpoint === "/user/profile" && method === "GET") {
+      const { userId } = data;
+      const user = db.users.find((u: User) => u.id === userId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+      
+      return { user };
+    }
+    
+    if (endpoint === "/user/update" && method === "PUT") {
+      const { userId, userData } = data;
+      const userIndex = db.users.findIndex((u: User) => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Update user data
+      db.users[userIndex] = {
+        ...db.users[userIndex],
+        ...userData,
+        lastActive: new Date()
+      };
+      
+      return { user: db.users[userIndex] };
+    }
+    
+    throw new Error(`User endpoint not implemented: ${endpoint}`);
+  }
+  
+  private static async handleContentEndpoints(
+    endpoint: string,
+    method: string,
+    data: any
+  ) {
+    // This would be replaced with real API calls to content services
+    if (endpoint === "/content/flashcards" && method === "GET") {
+      return {
+        data: [
+          { id: crypto.randomUUID(), italian: "casa", english: "house", mastered: false },
+          { id: crypto.randomUUID(), italian: "cibo", english: "food", mastered: false },
+          { id: crypto.randomUUID(), italian: "acqua", english: "water", mastered: false },
+          { id: crypto.randomUUID(), italian: "cittadino", english: "citizen", mastered: false },
+          { id: crypto.randomUUID(), italian: "diritto", english: "right (legal)", mastered: false },
+        ]
+      };
+    }
+    
+    throw new Error(`Content endpoint not implemented: ${endpoint}`);
+  }
+}

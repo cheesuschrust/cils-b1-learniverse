@@ -1,198 +1,113 @@
 
+// Define log category
+export type LogCategory = 'content' | 'email' | 'system' | 'user' | 'auth' | 'ai';
+
+// Define log entry interface
+export interface LogEntry {
+  id: string;
+  timestamp: Date;
+  category: LogCategory;
+  action: string;
+  userId?: string;
+  details?: string;
+  level: 'info' | 'warning' | 'error';
+}
+
+// Define user roles
+export type UserRole = 'user' | 'admin';
+
+// User interface with all required properties
 export interface User {
   id: string;
-  email: string;
   firstName: string;
   lastName: string;
-  displayName?: string;
   username?: string;
-  role: 'user' | 'admin' | 'teacher';
-  createdAt: string;
-  updatedAt: string;
-  lastLogin?: string;
-  phoneNumber?: string;
-  address?: string;
-  isVerified?: boolean;
-  status?: 'active' | 'suspended' | 'pending';
-  subscription?: 'free' | 'basic' | 'premium';
+  email: string;
+  role: UserRole;
+  isVerified: boolean;
+  createdAt: Date;
+  lastLogin: Date;
+  lastActive: Date;
+  preferences: UserPreferences;
+  subscription: 'free' | 'premium';
+  status: 'active' | 'inactive' | 'suspended';
   preferredLanguage: 'english' | 'italian' | 'both';
-  profileImage?: string;
-  avatarUrl?: string;
-  emailVerified?: boolean;
   dailyQuestionCounts: {
-    grammar: number;
-    vocabulary: number;
-    listening: number;
-    reading: number;
-    writing: number;
     flashcards: number;
     multipleChoice: number;
+    listening: number;
+    writing: number;
     speaking: number;
+    [key: string]: number;
   };
+  displayName?: string;
+  phoneNumber?: string;
+  address?: string;
   metrics: {
     totalQuestions: number;
     correctAnswers: number;
-    wrongAnswers: number;
-    accuracy: number;
     streak: number;
   };
-  lastActive: string;
-  preferences?: UserPreferences;
 }
 
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'system';
-  fontSize: 'small' | 'medium' | 'large';
-  notifications: boolean;
   emailNotifications: boolean;
-  dailyReminders: boolean;
-  soundEffects: boolean;
-  autoPlayAudio: boolean;
-  contentDifficulty: 'beginner' | 'intermediate' | 'advanced';
-  bio?: string;
+  language: 'en' | 'it';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  fontSize?: number;
+  notificationsEnabled?: boolean;
+  animationsEnabled?: boolean;
+  preferredLanguage?: string;
+  voiceSpeed?: number;
+  autoPlayAudio?: boolean;
+  showProgressMetrics?: boolean;
+  aiEnabled?: boolean;
+  aiModelSize?: string;
+  aiProcessingOnDevice?: boolean;
+  confidenceScoreVisible?: boolean;
+  bio?: string; // Add the bio property
+}
+
+// Email settings
+export type EmailProvider = 'smtp' | 'mailgun' | 'sendgrid' | 'ses' | 'gmail' | 'temporaryEmail';
+
+export interface EmailTemplate {
+  subject: string;
+  body: string;
+}
+
+export interface EmailConfig {
+  enableSsl?: boolean; 
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  domain?: string;
+  region?: string;
+  accessKey?: string;
+  secretKey?: string;
 }
 
 export interface EmailSettings {
   provider: EmailProvider;
   fromEmail: string;
   fromName: string;
-  config: EmailProviderConfig;
+  config: EmailConfig;
   templates: {
-    verification: {
-      subject: string;
-      body: string;
-    };
-    passwordReset: {
-      subject: string;
-      body: string;
-    };
-    welcome: {
-      subject: string;
-      body: string;
-    };
+    verification: EmailTemplate;
+    passwordReset: EmailTemplate;
+    welcome: EmailTemplate;
   };
-  dailyDigest: boolean;
-  notifications: boolean;
-  marketing: boolean;
-  newFeatures: boolean;
-  temporaryInboxDuration?: number;
+  temporaryInboxDuration?: number; // Make this optional to resolve the type error
 }
 
-export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
-
-export interface EmailProviderConfig {
-  enableSsl: boolean;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  apiKey?: string;
-  domain?: string;
-  accessKey?: string;
-  secretKey?: string;
-  region?: string;
-}
-
-export type LogCategory = 
-  | 'auth' 
-  | 'user' 
-  | 'content' 
-  | 'system' 
-  | 'admin' 
-  | 'question'
-  | 'email'
-  | 'ai';
-
-export interface LogEntry {
-  id: string;
-  timestamp: string;
-  category: LogCategory;
-  action: string;
-  details?: string;
-  level: 'info' | 'warning' | 'error';
-  userId?: string;
-}
-
-export interface ContentItem {
-  id: string;
-  title: string;
-  description: string;
-  content: string;
-  type: 'lesson' | 'exercise' | 'quiz';
-  level: 'beginner' | 'intermediate' | 'advanced';
-  tags: string[];
-  author: string;
-  createdAt: string;
-  updatedAt: string;
-  status: 'draft' | 'published' | 'archived';
-}
-
+// Mock database
 export interface MockDatabase {
   users: User[];
   logs: LogEntry[];
-  content: ContentItem[];
-}
-
-export interface AdConfiguration {
-  enabled: boolean;
-  provider: 'google' | 'facebook' | 'custom';
-  adUnits: {
-    id: string;
-    name: string;
-    type: 'banner' | 'interstitial' | 'native';
-    placement: 'header' | 'footer' | 'sidebar' | 'content';
-    active: boolean;
-  }[];
-  settings: {
-    frequency: number;
-    showToFreeUsers: boolean;
-    showToPremiumUsers: boolean;
-  };
-}
-
-export interface SEOConfiguration {
-  defaultTitle: string;
-  defaultDescription: string;
-  defaultKeywords: string[];
-  siteMap: {
-    enabled: boolean;
-    lastGenerated: string;
-  };
-  robotsTxt: {
-    enabled: boolean;
-    content: string;
-  };
-  analytics: {
-    provider: 'google' | 'matomo' | 'custom';
-    trackingId: string;
-    enabled: boolean;
-  };
-}
-
-export interface SalesConfiguration {
-  products: {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    currency: string;
-    type: 'subscription' | 'one-time';
-    features: string[];
-    active: boolean;
-  }[];
-  discounts: {
-    id: string;
-    name: string;
-    code: string;
-    amount: number;
-    type: 'percentage' | 'fixed';
-    validFrom: string;
-    validTo: string;
-    active: boolean;
-  }[];
-  paymentProviders: {
-    name: 'stripe' | 'paypal' | 'other';
-    enabled: boolean;
-    testMode: boolean;
-  }[];
+  emailSettings: EmailSettings;
+  resetTokens: Map<string, { email: string; expires: Date }>;
+  verificationTokens: Map<string, { email: string; expires: Date }>;
 }

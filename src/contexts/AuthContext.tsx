@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode } from "react";
 import { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from "./shared-types";
 import { useAuthManager } from "@/hooks/useAuthManager";
@@ -93,31 +94,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ...auth,
     isAuthenticated: !!auth.user,
     
-    // Add improved implementations for methods
+    // Add stub implementations for methods not provided by useAuthManager
+    // These will be properly implemented as needed
     socialLogin: async (provider) => {
       console.log(`Social login with ${provider} attempted`);
+      // This is a stub that simulates social login
       try {
-        // Generate a unique email based on provider and timestamp to prevent duplicates
-        const timestamp = new Date().getTime();
-        const email = `${provider}_${timestamp}@example.com`;
-        const password = `social-login-${provider}-${timestamp}`;
-        
-        // Create a proper user record with minimal information
-        const data = {
-          firstName: provider === 'google' ? 'Google' : 'Apple',
-          lastName: 'User',
-          email,
-          password
-        };
-        
-        // Register a new account if this is first login
-        try {
-          await auth.register(data);
-          return true;
-        } catch (error) {
-          // If registration fails, try to login
-          return await auth.login(email, password);
-        }
+        const email = `${provider}@example.com`;
+        const password = 'social-login-password';
+        return await auth.login(email, password);
       } catch (error) {
         console.error(`Social login error: ${error}`);
         return false;
@@ -132,43 +117,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     completePasswordReset: async (token, newPassword) => {
       console.log(`Completing password reset with token ${token}`);
-      // Improved implementation
-      try {
-        // This would validate the token and update the password
-        // For now it's a stub implementation
-        return true;
-      } catch (error) {
-        console.error('Password reset error:', error);
-        return false;
-      }
+      // Stub implementation
+      return true;
     },
     
     verifyEmail: async (token) => {
       console.log(`Verifying email with token ${token}`);
-      // Improved implementation
-      try {
-        // This would validate the token and update the user's email verification status
-        // For now it's a stub implementation
-        return true;
-      } catch (error) {
-        console.error('Email verification error:', error);
-        return false;
-      }
+      // Stub implementation
+      return true;
     },
     
     refreshSession: async () => {
       console.log("Refreshing session");
-      // Check localStorage for a valid user session
-      try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.error('Session refresh error:', error);
-        return false;
-      }
+      return !!auth.user;
     },
     
     updateUser: async (updates) => {
@@ -199,29 +160,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     sendVerificationEmail: async (email) => {
       console.log(`Sending verification email to ${email}`);
-      // Improved implementation
-      try {
-        // This would send a verification email
-        // For now it's a stub implementation
-        return true;
-      } catch (error) {
-        console.error('Send verification email error:', error);
-        return false;
-      }
+      // Stub implementation
+      return true;
     },
     
     resendVerificationEmail: async (email) => {
       console.log(`Resending verification email to ${email}`);
-      // Improved implementation
-      try {
-        // This would resend a verification email
-        // For now it's a stub implementation
-        return true;
-      } catch (error) {
-        console.error('Resend verification email error:', error);
-        return false;
-      }
+      // Stub implementation
+      return true;
     },
+    
     getEmailSettings: () => ({ 
       provider: 'smtp',
       fromEmail: 'noreply@example.com',
@@ -340,19 +288,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signup: async (firstName, lastName, email, password, username) => {
       console.log(`Signing up user ${firstName} ${lastName} (${email})`);
       try {
-        // Improved implementation with username handling
         await auth.register({
           firstName,
           lastName,
           email,
           password
         });
-        
-        // If username was provided, update the profile after registration
-        if (username && auth.user) {
-          await auth.updateProfile({ username });
-        }
-        
         return true;
       } catch (error) {
         console.error("Signup error:", error);

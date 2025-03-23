@@ -1,66 +1,67 @@
 
-import { API } from './api';
-import { EmailSettings, EmailProvider, EmailProviderConfig } from '@/contexts/shared-types';
+// Email provider types
+export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
 
+// Config for email providers
+export interface EmailProviderConfig {
+  enableSsl?: boolean; // Make this optional to match the shared-types
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  domain?: string;
+  accessKey?: string;
+  secretKey?: string;
+  region?: string;
+}
+
+// Template interface
 export interface EmailTemplate {
   subject: string;
   body: string;
 }
 
-export interface SendEmailParams {
-  to: string | string[];
-  subject: string;
-  body: string;
-  attachments?: Array<{
-    filename: string;
-    content: string | Buffer;
-  }>;
-  cc?: string | string[];
-  bcc?: string | string[];
+// Email settings interface
+export interface EmailSettings {
+  provider: EmailProvider;
+  fromEmail: string;
+  fromName: string;
+  config: EmailProviderConfig;
+  templates: {
+    verification: EmailTemplate;
+    passwordReset: EmailTemplate;
+    welcome: EmailTemplate;
+  };
+  temporaryInboxDuration?: number;
 }
 
-export class EmailService {
-  static async getEmailSettings(): Promise<EmailSettings> {
-    return API.handleRequest<EmailSettings>('/admin/email/settings', 'GET');
-  }
-  
-  static async updateEmailSettings(settings: EmailSettings): Promise<EmailSettings> {
-    return API.handleRequest<EmailSettings>('/admin/email/settings', 'PUT', settings);
-  }
-  
-  static async sendEmail(params: SendEmailParams): Promise<{ success: boolean; messageId?: string }> {
-    return API.handleRequest<{ success: boolean; messageId?: string }>('/admin/email/send', 'POST', params);
-  }
-  
-  static async sendTestEmail(email: string): Promise<{ success: boolean }> {
-    return API.handleRequest<{ success: boolean }>('/admin/email/test', 'POST', { email });
-  }
-  
-  static async getTemplates(): Promise<Record<string, EmailTemplate>> {
-    return API.handleRequest<Record<string, EmailTemplate>>('/admin/email/templates', 'GET');
-  }
-  
-  static async updateTemplate(name: string, template: EmailTemplate): Promise<{ success: boolean }> {
-    return API.handleRequest<{ success: boolean }>(`/admin/email/templates/${name}`, 'PUT', template);
-  }
-  
-  static async getEmailStats(): Promise<{
-    sent: number;
-    delivered: number;
-    opened: number;
-    clicked: number;
-    bounced: number;
-    period: string;
-  }> {
-    return API.handleRequest<{
-      sent: number;
-      delivered: number;
-      opened: number;
-      clicked: number;
-      bounced: number;
-      period: string;
-    }>('/admin/email/stats', 'GET');
-  }
-}
+// Mock email sending service functions
+export const sendVerificationEmail = async (
+  email: string, 
+  name: string, 
+  token: string,
+  settings: EmailSettings
+): Promise<boolean> => {
+  console.log(`Sending verification email to ${email} with token ${token}`);
+  return true;
+};
 
-export default EmailService;
+export const sendPasswordResetEmail = async (
+  email: string, 
+  name: string, 
+  token: string,
+  settings: EmailSettings
+): Promise<boolean> => {
+  console.log(`Sending password reset email to ${email} with token ${token}`);
+  return true;
+};
+
+export const sendWelcomeEmail = async (
+  email: string, 
+  name: string,
+  settings: EmailSettings
+): Promise<boolean> => {
+  console.log(`Sending welcome email to ${email}`);
+  return true;
+};

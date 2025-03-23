@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speak, isSpeechSupported, stopSpeaking } from '@/utils/textToSpeech';
+import { speak, isSpeechSupported } from '@/utils/textToSpeech';
 import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
@@ -24,51 +24,23 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   autoPlay = false
 }) => {
   const { toast } = useToast();
-  const { voicePreference } = useUserPreferences();
+  const { voicePreference, autoPlayAudio } = useUserPreferences();
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   // Check if speech is supported
   const speechSupported = isSpeechSupported();
 
-  // Handle auto-play only if explicitly enabled
+  // Auto-play functionality
   useEffect(() => {
-    let isMounted = true;
-    
-    if (autoPlay && speechSupported && word && !disabled) {
-      const playAudio = async () => {
-        try {
-          setIsSpeaking(true);
-          await speak(word, language, voicePreference);
-          if (isMounted) {
-            setIsSpeaking(false);
-          }
-        } catch (error) {
-          console.error('Error auto-playing audio:', error);
-          if (isMounted) {
-            setIsSpeaking(false);
-          }
-        }
-      };
-      
-      // Add a small delay before auto-playing
-      const timer = setTimeout(() => {
-        playAudio();
-      }, 500);
-      
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-        stopSpeaking();
-      };
+    if (autoPlay || autoPlayAudio) {
+      handleSpeak(null);
     }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [autoPlay, word, language, disabled, speechSupported, voicePreference]);
-  
-  const handleSpeak = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick
+  }, [word, autoPlay, autoPlayAudio]);
+
+  const handleSpeak = async (e: React.MouseEvent | null) => {
+    if (e) {
+      e.stopPropagation(); // Prevent triggering the parent onClick
+    }
     
     if (!speechSupported) {
       toast({
@@ -79,13 +51,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       return;
     }
     
-    if (isSpeaking) {
-      stopSpeaking();
-      setIsSpeaking(false);
-      return;
-    }
-    
-    if (disabled) return;
+    if (isSpeaking || disabled) return;
     
     setIsSpeaking(true);
     
@@ -124,15 +90,11 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
         size="icon"
         variant="ghost"
         className={`ml-1 h-6 w-6 opacity-60 hover:opacity-100 focus:opacity-100 ${isSpeaking ? 'text-primary' : ''}`}
-        disabled={disabled}
+        disabled={disabled || isSpeaking}
         onClick={handleSpeak}
-        title={isSpeaking ? 'Stop pronunciation' : `Pronounce "${word}"`}
+        title={`Pronounce "${word}"`}
       >
-        {isSpeaking ? (
-          <VolumeX className="h-4 w-4 animate-pulse text-primary" />
-        ) : (
-          <Volume2 className="h-4 w-4" />
-        )}
+        <Volume2 className={`h-4 w-4 ${isSpeaking ? 'animate-pulse text-primary' : ''}`} />
       </Button>
     </span>
   );

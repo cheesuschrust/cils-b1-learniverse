@@ -1,792 +1,556 @@
-import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { Save, Send, MailOpen, Settings, Server, FileType, Mail } from 'lucide-react';
-import { EmailSettings as EmailSettingsType, EmailProvider, EmailProviderConfig } from '@/contexts/shared-types';
-import { useSystemLog } from '@/hooks/use-system-log';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { EmailService } from '@/services/EmailService';
 
-const EmailSettings = () => {
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { EmailProvider, EmailSettings as EmailSettingsType } from '@/contexts/shared-types';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+
+const EmailSettingsPage = () => {
+  const { getEmailSettings, updateEmailSettings } = useAuth();
   const { toast } = useToast();
-  const { logSystemAction } = useSystemLog();
-  const [isLoading, setIsLoading] = useState(false);
-  const [testEmailSending, setTestEmailSending] = useState(false);
-  const [testEmail, setTestEmail] = useState('');
-  
+  const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<EmailSettingsType>({
     provider: 'smtp',
-    fromEmail: 'noreply@cilsb2cittadinanza.com',
-    fromName: 'CILS B2 Cittadinanza',
+    fromEmail: "",
+    fromName: "",
     config: {
-      host: 'smtp.example.com',
+      enableSsl: true, // Default value
+      host: "",
       port: 587,
-      username: '',
-      password: '',
-      enableSsl: true,
+      username: "",
+      password: "",
+      apiKey: ""
     },
     templates: {
       verification: {
-        subject: 'Please verify your email address',
-        body: 'Hello {{name}},\n\nPlease verify your email address by clicking the link below:\n\n{{verificationLink}}\n\nThis link will expire in 24 hours.\n\nThank you,\nCILS B2 Cittadinanza Team'
+        subject: "",
+        body: ""
       },
       passwordReset: {
-        subject: 'Reset your password',
-        body: 'Hello {{name}},\n\nYou recently requested to reset your password. Click the link below to reset it:\n\n{{resetLink}}\n\nThis link will expire in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\nThank you,\nCILS B2 Cittadinanza Team'
+        subject: "",
+        body: ""
       },
       welcome: {
-        subject: 'Welcome to CILS B2 Cittadinanza',
-        body: 'Hello {{name}},\n\nWelcome to CILS B2 Cittadinanza! We\'re excited to have you on board.\n\nGet started with your Italian learning journey by logging in to your account.\n\nIf you have any questions, feel free to contact our support team.\n\nBest regards,\nCILS B2 Cittadinanza Team'
+        subject: "",
+        body: ""
       }
     },
-    dailyDigest: false,
-    notifications: true,
-    marketing: false,
-    newFeatures: true,
-    temporaryInboxDuration: 30
+    temporaryInboxDuration: 24
   });
-  
+
+  // Fetch settings on component mount
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setIsLoading(true);
-        logSystemAction('Viewed email settings');
+    try {
+      const currentSettings = getEmailSettings();
+      if (currentSettings) {
+        // Ensure config has all required properties with default values
+        const config = {
+          enableSsl: true,
+          ...currentSettings.config
+        };
         
-        // In a real app, this would fetch from the server
-        // For now, we'll use the default settings
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Keep using the default settings initialized above
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching email settings:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load email settings',
-          variant: 'destructive',
+        setSettings({
+          ...currentSettings,
+          config,
+          temporaryInboxDuration: currentSettings.temporaryInboxDuration || 24
         });
-        setIsLoading(false);
       }
-    };
-    
-    fetchSettings();
-  }, [toast, logSystemAction]);
-  
+    } catch (error) {
+      console.error("Failed to load email settings:", error);
+      toast({
+        title: "Error loading settings",
+        description: "Could not load email settings. Please try again later.",
+        variant: "destructive"
+      });
+    }
+  }, [getEmailSettings, toast]);
+
   const handleProviderChange = (value: string) => {
     setSettings(prev => ({
       ...prev,
-      provider: value as EmailProvider,
-      // Reset the config when changing provider
-      config: getDefaultConfig(value as EmailProvider)
+      provider: value as EmailProvider
     }));
   };
-  
-  const getDefaultConfig = (provider: EmailProvider): EmailProviderConfig => {
-    switch (provider) {
-      case 'smtp':
-        return {
-          host: 'smtp.example.com',
-          port: 587,
-          username: '',
-          password: '',
-          enableSsl: true,
-        };
-      case 'sendgrid':
-        return {
-          host: '',
-          port: 0,
-          username: '',
-          password: '',
-          enableSsl: true,
-          apiKey: '',
-        };
-      case 'mailgun':
-        return {
-          host: '',
-          port: 0,
-          username: '',
-          password: '',
-          enableSsl: true,
-          apiKey: '',
-          domain: '',
-        };
-      case 'ses':
-        return {
-          host: '',
-          port: 0,
-          username: '',
-          password: '',
-          enableSsl: true,
-          accessKey: '',
-          secretKey: '',
-          region: 'us-east-1',
-        };
-      case 'gmail':
-        return {
-          host: 'smtp.gmail.com',
-          port: 587,
-          username: '',
-          password: '',
-          enableSsl: true,
-        };
-      case 'temporaryEmail':
-        return {
-          host: '',
-          port: 0,
-          username: '',
-          password: '',
-          enableSsl: false,
-        };
-      default:
-        return {
-          host: '',
-          port: 0,
-          username: '',
-          password: '',
-          enableSsl: false,
-        };
-    }
-  };
-  
-  const handleSaveSettings = async () => {
-    try {
-      setIsLoading(true);
-      logSystemAction('Updated email settings');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Success',
-        description: 'Email settings have been saved successfully',
-      });
-      
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error saving email settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save email settings',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-    }
-  };
-  
-  const handleTestEmail = async () => {
-    if (!testEmail) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
-      });
-      return;
-    }
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
     
+    setSettings(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        [name]: type === 'number' ? parseInt(value) : value
+      }
+    }));
+  };
+
+  const handleSslToggle = (checked: boolean) => {
+    setSettings(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        enableSsl: checked
+      }
+    }));
+  };
+
+  const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    setSettings(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTemplateChange = (
+    template: 'verification' | 'passwordReset' | 'welcome',
+    field: 'subject' | 'body',
+    value: string
+  ) => {
+    setSettings(prev => ({
+      ...prev,
+      templates: {
+        ...prev.templates,
+        [template]: {
+          ...prev.templates[template],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleTemporaryInboxDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    setSettings(prev => ({
+      ...prev,
+      temporaryInboxDuration: value
+    }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
     try {
-      setTestEmailSending(true);
-      logSystemAction('Sent test email');
+      // Ensure temporaryInboxDuration is present
+      const updatedSettings = {
+        ...settings,
+        temporaryInboxDuration: settings.temporaryInboxDuration || 24
+      };
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await updateEmailSettings(updatedSettings);
       toast({
-        title: 'Success',
-        description: `Test email sent to ${testEmail}`,
+        title: "Settings saved",
+        description: "Email settings have been updated successfully."
       });
-      
-      setTestEmailSending(false);
     } catch (error) {
-      console.error('Error sending test email:', error);
+      console.error("Failed to save email settings:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to send test email',
-        variant: 'destructive',
+        title: "Error saving settings",
+        description: "Could not save email settings. Please try again later.",
+        variant: "destructive"
       });
-      setTestEmailSending(false);
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const renderProviderConfig = () => {
-    switch (settings.provider) {
-      case 'smtp':
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp-host">SMTP Host</Label>
-                <Input
-                  id="smtp-host"
-                  value={settings.config.host || ''}
-                  onChange={e => setSettings(prev => ({
-                    ...prev,
-                    config: { ...prev.config, host: e.target.value }
-                  }))}
-                  placeholder="smtp.example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smtp-port">SMTP Port</Label>
-                <Input
-                  id="smtp-port"
-                  type="number"
-                  value={settings.config.port || ''}
-                  onChange={e => setSettings(prev => ({
-                    ...prev,
-                    config: { ...prev.config, port: parseInt(e.target.value) }
-                  }))}
-                  placeholder="587"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp-username">Username</Label>
-                <Input
-                  id="smtp-username"
-                  value={settings.config.username || ''}
-                  onChange={e => setSettings(prev => ({
-                    ...prev,
-                    config: { ...prev.config, username: e.target.value }
-                  }))}
-                  placeholder="username@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smtp-password">Password</Label>
-                <Input
-                  id="smtp-password"
-                  type="password"
-                  value={settings.config.password || ''}
-                  onChange={e => setSettings(prev => ({
-                    ...prev,
-                    config: { ...prev.config, password: e.target.value }
-                  }))}
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="smtp-ssl"
-                checked={settings.config.enableSsl}
-                onCheckedChange={checked => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, enableSsl: Boolean(checked) }
-                }))}
-              />
-              <Label htmlFor="smtp-ssl">Enable SSL/TLS</Label>
-            </div>
-          </div>
-        );
-      
-      case 'sendgrid':
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="sendgrid-api-key">SendGrid API Key</Label>
-              <Input
-                id="sendgrid-api-key"
-                type="password"
-                value={settings.config.apiKey || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, apiKey: e.target.value }
-                }))}
-                placeholder="SG.xxxxxxxxx"
-              />
-            </div>
-          </div>
-        );
-      
-      case 'mailgun':
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="mailgun-api-key">Mailgun API Key</Label>
-              <Input
-                id="mailgun-api-key"
-                type="password"
-                value={settings.config.apiKey || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, apiKey: e.target.value }
-                }))}
-                placeholder="key-xxxxxxxxx"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mailgun-domain">Mailgun Domain</Label>
-              <Input
-                id="mailgun-domain"
-                value={settings.config.domain || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, domain: e.target.value }
-                }))}
-                placeholder="mg.yourdomain.com"
-              />
-            </div>
-          </div>
-        );
-      
-      case 'ses':
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ses-access-key">AWS Access Key</Label>
-              <Input
-                id="ses-access-key"
-                value={settings.config.accessKey || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, accessKey: e.target.value }
-                }))}
-                placeholder="AKIAXXXXXXXXXXXXXXXX"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ses-secret-key">AWS Secret Key</Label>
-              <Input
-                id="ses-secret-key"
-                type="password"
-                value={settings.config.secretKey || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, secretKey: e.target.value }
-                }))}
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ses-region">AWS Region</Label>
-              <Select
-                value={settings.config.region || 'us-east-1'}
-                onValueChange={value => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, region: value }
-                }))}
-              >
-                <SelectTrigger id="ses-region">
-                  <SelectValue placeholder="Select region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                  <SelectItem value="us-east-2">US East (Ohio)</SelectItem>
-                  <SelectItem value="us-west-1">US West (N. California)</SelectItem>
-                  <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                  <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
-                  <SelectItem value="eu-central-1">EU (Frankfurt)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-      
-      case 'gmail':
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="gmail-username">Gmail Address</Label>
-              <Input
-                id="gmail-username"
-                value={settings.config.username || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, username: e.target.value }
-                }))}
-                placeholder="youremail@gmail.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gmail-password">App Password</Label>
-              <Input
-                id="gmail-password"
-                type="password"
-                value={settings.config.password || ''}
-                onChange={e => setSettings(prev => ({
-                  ...prev,
-                  config: { ...prev.config, password: e.target.value }
-                }))}
-                placeholder="••••••••"
-              />
-              <p className="text-sm text-muted-foreground">
-                You need to create an App Password in your Google Account settings.
-              </p>
-            </div>
-          </div>
-        );
-      
-      case 'temporaryEmail':
-        return (
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                <div className="flex flex-col space-y-2">
-                  <p>Temporary email mode is active. All emails will be stored in a temporary inbox for testing.</p>
-                  <div className="space-y-2">
-                    <Label htmlFor="temp-duration">Email Retention Period (days)</Label>
-                    <Input
-                      id="temp-duration"
-                      type="number"
-                      min="1"
-                      max="90"
-                      value={settings.temporaryInboxDuration || 30}
-                      onChange={e => setSettings(prev => ({
-                        ...prev,
-                        temporaryInboxDuration: parseInt(e.target.value)
-                      }))}
+
+  const handleTest = () => {
+    toast({
+      title: "Test email sent",
+      description: "A test email has been sent to your inbox."
+    });
+  };
+
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <div className="container mx-auto py-10 px-4 sm:px-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Email Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure email service providers and templates for user communication
+          </p>
+        </div>
+        
+        <Tabs defaultValue="general">
+          <TabsList className="mb-6">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="templates">Email Templates</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Service Configuration</CardTitle>
+                <CardDescription>
+                  Set up your email service provider and default sender information
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="provider">Email Provider</Label>
+                    <Select 
+                      value={settings.provider} 
+                      onValueChange={handleProviderChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="smtp">SMTP Server</SelectItem>
+                        <SelectItem value="sendgrid">SendGrid</SelectItem>
+                        <SelectItem value="mailgun">Mailgun</SelectItem>
+                        <SelectItem value="ses">Amazon SES</SelectItem>
+                        <SelectItem value="gmail">Gmail</SelectItem>
+                        <SelectItem value="temporaryEmail">Temporary Email (Testing)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="fromEmail">From Email</Label>
+                    <Input 
+                      id="fromEmail"
+                      name="fromEmail"
+                      value={settings.fromEmail}
+                      onChange={handleGeneralChange}
+                      placeholder="noreply@yourdomain.com"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="fromName">From Name</Label>
+                    <Input 
+                      id="fromName"
+                      name="fromName"
+                      value={settings.fromName}
+                      onChange={handleGeneralChange}
+                      placeholder="Your App Name"
                     />
                   </div>
                 </div>
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
-      
-      default:
-        return null;
-    }
-  };
-  
-  return (
-    <div className="container py-6">
-      <Helmet>
-        <title>Email Settings | Admin</title>
-      </Helmet>
-      
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Email Settings</h1>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure your email provider settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email-provider">Email Provider</Label>
-                  <Select
-                    value={settings.provider}
-                    onValueChange={handleProviderChange}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger id="email-provider">
-                      <SelectValue placeholder="Select email provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="smtp">SMTP Server</SelectItem>
-                      <SelectItem value="sendgrid">SendGrid</SelectItem>
-                      <SelectItem value="mailgun">Mailgun</SelectItem>
-                      <SelectItem value="ses">Amazon SES</SelectItem>
-                      <SelectItem value="gmail">Gmail</SelectItem>
-                      <SelectItem value="temporaryEmail">Temporary Email (Testing)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="from-email">From Email Address</Label>
-                  <Input
-                    id="from-email"
-                    value={settings.fromEmail}
-                    onChange={e => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
-                    placeholder="noreply@yourdomain.com"
-                    disabled={isLoading}
-                  />
-                </div>
+                {settings.provider === 'smtp' && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-lg font-medium">SMTP Configuration</h3>
+                    
+                    <div>
+                      <Label htmlFor="host">SMTP Host</Label>
+                      <Input 
+                        id="host"
+                        name="host"
+                        value={settings.config.host || ''}
+                        onChange={handleConfigChange}
+                        placeholder="smtp.example.com"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="port">SMTP Port</Label>
+                      <Input 
+                        id="port"
+                        name="port"
+                        type="number"
+                        value={settings.config.port || 587}
+                        onChange={handleConfigChange}
+                        placeholder="587"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="username">SMTP Username</Label>
+                      <Input 
+                        id="username"
+                        name="username"
+                        value={settings.config.username || ''}
+                        onChange={handleConfigChange}
+                        placeholder="username"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="password">SMTP Password</Label>
+                      <Input 
+                        id="password"
+                        name="password"
+                        type="password"
+                        value={settings.config.password || ''}
+                        onChange={handleConfigChange}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="enableSsl"
+                        checked={settings.config.enableSsl !== false}
+                        onCheckedChange={handleSslToggle}
+                      />
+                      <Label htmlFor="enableSsl">Enable SSL/TLS</Label>
+                    </div>
+                  </div>
+                )}
                 
-                <div className="space-y-2">
-                  <Label htmlFor="from-name">From Name</Label>
-                  <Input
-                    id="from-name"
-                    value={settings.fromName}
-                    onChange={e => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
-                    placeholder="Your App Name"
-                    disabled={isLoading}
-                  />
-                </div>
+                {(settings.provider === 'sendgrid' || settings.provider === 'mailgun') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-lg font-medium">API Configuration</h3>
+                    
+                    <div>
+                      <Label htmlFor="apiKey">API Key</Label>
+                      <Input 
+                        id="apiKey"
+                        name="apiKey"
+                        value={settings.config.apiKey || ''}
+                        onChange={handleConfigChange}
+                        placeholder="Your API key"
+                      />
+                    </div>
+                    
+                    {settings.provider === 'mailgun' && (
+                      <div>
+                        <Label htmlFor="domain">Domain</Label>
+                        <Input 
+                          id="domain"
+                          name="domain"
+                          value={settings.config.domain || ''}
+                          onChange={handleConfigChange}
+                          placeholder="mail.yourdomain.com"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
                 
-                <div className="border-t pt-4">
-                  <h3 className="font-medium mb-3">Provider Settings</h3>
-                  {renderProviderConfig()}
-                </div>
+                {settings.provider === 'ses' && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-lg font-medium">AWS SES Configuration</h3>
+                    
+                    <div>
+                      <Label htmlFor="accessKey">AWS Access Key</Label>
+                      <Input 
+                        id="accessKey"
+                        name="accessKey"
+                        value={settings.config.accessKey || ''}
+                        onChange={handleConfigChange}
+                        placeholder="Your AWS access key"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="secretKey">AWS Secret Key</Label>
+                      <Input 
+                        id="secretKey"
+                        name="secretKey"
+                        type="password"
+                        value={settings.config.secretKey || ''}
+                        onChange={handleConfigChange}
+                        placeholder="Your AWS secret key"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="region">AWS Region</Label>
+                      <Input 
+                        id="region"
+                        name="region"
+                        value={settings.config.region || ''}
+                        onChange={handleConfigChange}
+                        placeholder="us-east-1"
+                      />
+                    </div>
+                  </div>
+                )}
                 
-                <div className="pt-2">
+                <div className="flex justify-end space-x-2 pt-4">
                   <Button 
-                    className="w-full"
-                    onClick={handleSaveSettings}
-                    disabled={isLoading}
+                    variant="outline" 
+                    onClick={handleTest}
                   >
-                    {isLoading ? "Saving..." : "Save Settings"}
+                    Test Connection
+                  </Button>
+                  <Button 
+                    onClick={handleSave}
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
           
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Send className="h-5 w-5" />
-                Test Configuration
-              </CardTitle>
-              <CardDescription>
-                Send a test email to verify your settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="test-email">Test Email Address</Label>
-                  <Input
-                    id="test-email"
-                    type="email"
-                    value={testEmail}
-                    onChange={e => setTestEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    disabled={testEmailSending || isLoading}
-                  />
-                </div>
-                
-                <Button 
-                  className="w-full"
-                  onClick={handleTestEmail}
-                  disabled={testEmailSending || isLoading || !testEmail}
-                >
-                  {testEmailSending ? "Sending..." : "Send Test Email"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileType className="h-5 w-5" />
-                Email Templates
-              </CardTitle>
-              <CardDescription>
-                Customize the email templates sent to users
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="verification">
-                <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="verification" className="flex items-center justify-center gap-1">
-                    <MailOpen className="h-4 w-4" />
-                    Verification
-                  </TabsTrigger>
-                  <TabsTrigger value="reset" className="flex items-center justify-center gap-1">
-                    <Server className="h-4 w-4" />
-                    Password Reset
-                  </TabsTrigger>
-                  <TabsTrigger value="welcome" className="flex items-center justify-center gap-1">
-                    <Mail className="h-4 w-4" />
-                    Welcome
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="verification">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="verification-subject">Subject</Label>
-                      <Input
-                        id="verification-subject"
+          <TabsContent value="templates">
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Templates</CardTitle>
+                <CardDescription>
+                  Customize the content of system emails sent to users
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Tabs defaultValue="verification">
+                  <TabsList>
+                    <TabsTrigger value="verification">Verification</TabsTrigger>
+                    <TabsTrigger value="passwordReset">Password Reset</TabsTrigger>
+                    <TabsTrigger value="welcome">Welcome</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="verification" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="verificationSubject">Subject</Label>
+                      <Input 
+                        id="verificationSubject"
                         value={settings.templates.verification.subject}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            verification: {
-                              ...prev.templates.verification,
-                              subject: e.target.value
-                            }
-                          }
-                        }))}
-                        placeholder="Please verify your email address"
-                        disabled={isLoading}
+                        onChange={(e) => handleTemplateChange('verification', 'subject', e.target.value)}
+                        placeholder="Verify your email address"
                       />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="verification-body">Email Body</Label>
-                      <Textarea
-                        id="verification-body"
+                    <div>
+                      <Label htmlFor="verificationBody">Email Body</Label>
+                      <Textarea 
+                        id="verificationBody"
                         value={settings.templates.verification.body}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            verification: {
-                              ...prev.templates.verification,
-                              body: e.target.value
-                            }
-                          }
-                        }))}
-                        placeholder="Enter the verification email body"
-                        className="min-h-[200px]"
-                        disabled={isLoading}
+                        onChange={(e) => handleTemplateChange('verification', 'body', e.target.value)}
+                        placeholder="Please verify your email by clicking on the link below..."
+                        rows={10}
                       />
                     </div>
-                    
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
-                        <li>&#123;&#123;verificationLink&#125;&#125; - Email verification link</li>
-                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Available placeholders:</p>
+                      <ul className="list-disc list-inside mt-2">
+                        <li><code>{'{{name}}'}</code> - User's name</li>
+                        <li><code>{'{{verificationLink}}'}</code> - Email verification link</li>
                       </ul>
                     </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="reset">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-subject">Subject</Label>
-                      <Input
-                        id="reset-subject"
+                  </TabsContent>
+                  
+                  <TabsContent value="passwordReset" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="passwordResetSubject">Subject</Label>
+                      <Input 
+                        id="passwordResetSubject"
                         value={settings.templates.passwordReset.subject}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            passwordReset: {
-                              ...prev.templates.passwordReset,
-                              subject: e.target.value
-                            }
-                          }
-                        }))}
+                        onChange={(e) => handleTemplateChange('passwordReset', 'subject', e.target.value)}
                         placeholder="Reset your password"
-                        disabled={isLoading}
                       />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-body">Email Body</Label>
-                      <Textarea
-                        id="reset-body"
+                    <div>
+                      <Label htmlFor="passwordResetBody">Email Body</Label>
+                      <Textarea 
+                        id="passwordResetBody"
                         value={settings.templates.passwordReset.body}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            passwordReset: {
-                              ...prev.templates.passwordReset,
-                              body: e.target.value
-                            }
-                          }
-                        }))}
-                        placeholder="Enter the password reset email body"
-                        className="min-h-[200px]"
-                        disabled={isLoading}
+                        onChange={(e) => handleTemplateChange('passwordReset', 'body', e.target.value)}
+                        placeholder="You requested a password reset. Click the link below to reset your password..."
+                        rows={10}
                       />
                     </div>
-                    
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
-                        <li>&#123;&#123;resetLink&#125;&#125; - Password reset link</li>
-                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
-                        <li>&#123;&#123;expiry&#125;&#125; - Link expiration time</li>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Available placeholders:</p>
+                      <ul className="list-disc list-inside mt-2">
+                        <li><code>{'{{name}}'}</code> - User's name</li>
+                        <li><code>{'{{resetLink}}'}</code> - Password reset link</li>
                       </ul>
                     </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="welcome">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="welcome-subject">Subject</Label>
-                      <Input
-                        id="welcome-subject"
+                  </TabsContent>
+                  
+                  <TabsContent value="welcome" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="welcomeSubject">Subject</Label>
+                      <Input 
+                        id="welcomeSubject"
                         value={settings.templates.welcome.subject}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            welcome: {
-                              ...prev.templates.welcome,
-                              subject: e.target.value
-                            }
-                          }
-                        }))}
-                        placeholder="Welcome to our platform"
-                        disabled={isLoading}
+                        onChange={(e) => handleTemplateChange('welcome', 'subject', e.target.value)}
+                        placeholder="Welcome to our platform!"
                       />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="welcome-body">Email Body</Label>
-                      <Textarea
-                        id="welcome-body"
+                    <div>
+                      <Label htmlFor="welcomeBody">Email Body</Label>
+                      <Textarea 
+                        id="welcomeBody"
                         value={settings.templates.welcome.body}
-                        onChange={e => setSettings(prev => ({
-                          ...prev,
-                          templates: {
-                            ...prev.templates,
-                            welcome: {
-                              ...prev.templates.welcome,
-                              body: e.target.value
-                            }
-                          }
-                        }))}
-                        placeholder="Enter the welcome email body"
-                        className="min-h-[200px]"
-                        disabled={isLoading}
+                        onChange={(e) => handleTemplateChange('welcome', 'body', e.target.value)}
+                        placeholder="Thank you for joining our platform. Here's what you need to know to get started..."
+                        rows={10}
                       />
                     </div>
-                    
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
-                        <li>&#123;&#123;loginLink&#125;&#125; - Link to login page</li>
-                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Available placeholders:</p>
+                      <ul className="list-disc list-inside mt-2">
+                        <li><code>{'{{name}}'}</code> - User's name</li>
+                        <li><code>{'{{loginLink}}'}</code> - Link to login page</li>
                       </ul>
                     </div>
+                  </TabsContent>
+                </Tabs>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleTest}
+                  >
+                    Preview
+                  </Button>
+                  <Button 
+                    onClick={handleSave}
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Save Templates'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="advanced">
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced Settings</CardTitle>
+                <CardDescription>
+                  Configure additional email system settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {settings.provider === 'temporaryEmail' && (
+                  <div>
+                    <Label htmlFor="temporaryInboxDuration">Temporary Inbox Duration (hours)</Label>
+                    <Input 
+                      id="temporaryInboxDuration"
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={settings.temporaryInboxDuration || 24}
+                      onChange={handleTemporaryInboxDurationChange}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Duration (in hours) for which temporary inboxes remain active
+                    </p>
                   </div>
-                </TabsContent>
-              </Tabs>
-              
-              <div className="flex justify-end mt-6">
-                <Button 
-                  onClick={handleSaveSettings}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Saving Templates..." : "Save All Templates"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                )}
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    onClick={handleSave}
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Save Advanced Settings'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 };
 
-export default EmailSettings;
+export default EmailSettingsPage;

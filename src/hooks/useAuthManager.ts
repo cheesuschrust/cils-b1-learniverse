@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { User } from "@/contexts/shared-types";
 import { AuthService, LoginCredentials, RegisterData } from "@/services/AuthService";
 import { UserService, UpdateProfileData } from "@/services/UserService";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 export const useAuthManager = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -98,17 +98,8 @@ export const useAuthManager = () => {
     setIsLoading(true);
     try {
       const response = await UserService.updateProfile(user.id, data);
-      
-      // Update local state and storage with new user data
       setUser(response.user);
       localStorage.setItem("user", JSON.stringify(response.user));
-      
-      // Show success toast
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
-      
       return response.user;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Profile update failed";

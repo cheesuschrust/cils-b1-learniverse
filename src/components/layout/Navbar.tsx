@@ -54,31 +54,30 @@ const Navbar = () => {
     };
   }, []);
 
-  // Updated with /app prefix
   const mainLinks: NavItem[] = [
     {
       name: "Flashcards",
-      href: "/app/flashcards",
+      href: "/flashcards",
       icon: <Book className="w-5 h-5 mr-2" />,
     },
     {
       name: "Multiple Choice",
-      href: "/app/multiple-choice",
+      href: "/multiple-choice",
       icon: <CheckSquare className="w-5 h-5 mr-2" />,
     },
     {
       name: "Listening",
-      href: "/app/listening",
+      href: "/listening",
       icon: <Headphones className="w-5 h-5 mr-2" />,
     },
     {
       name: "Writing",
-      href: "/app/writing",
+      href: "/writing",
       icon: <Pen className="w-5 h-5 mr-2" />,
     },
     {
       name: "Speaking",
-      href: "/app/speaking",
+      href: "/speaking",
       icon: <Mic className="w-5 h-5 mr-2" />,
     },
   ];
@@ -134,7 +133,7 @@ const Navbar = () => {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
-                    <Link to="/app/dashboard" className="flex w-full items-center">
+                    <Link to="/dashboard" className="flex w-full items-center">
                       <UserCircle className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
@@ -209,10 +208,10 @@ const Navbar = () => {
                 ))}
                 
                 <Link
-                  to="/app/dashboard"
+                  to="/dashboard"
                   className={cn(
                     "flex items-center text-sm font-medium p-2 rounded-md transition-colors",
-                    location.pathname === "/app/dashboard"
+                    location.pathname === "/dashboard"
                       ? "bg-secondary text-primary"
                       : "text-foreground hover:bg-secondary"
                   )}

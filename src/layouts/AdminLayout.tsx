@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import AdminHeader from "@/components/layout/AdminHeader";
-import AdminSidebar from "@/components/layout/AdminSidebar";
-import { Home, Users, Upload, Settings, FileUp, Brain, Mail, LineChart, CreditCard, Search } from "lucide-react";
+import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { Home, Users, Upload, Settings, FileUp, Brain } from "lucide-react";
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,10 +19,6 @@ const AdminLayout = () => {
     { to: "/admin/content", label: "Content Uploader", icon: <Upload className="h-4 w-4" /> },
     { to: "/admin/content-analysis", label: "AI Content Analysis", icon: <Brain className="h-4 w-4" /> },
     { to: "/admin/file-uploader", label: "File Uploader", icon: <FileUp className="h-4 w-4" /> },
-    { to: "/admin/email-settings", label: "Email Settings", icon: <Mail className="h-4 w-4" /> },
-    { to: "/admin/advertising", label: "Advertising", icon: <LineChart className="h-4 w-4" /> },
-    { to: "/admin/sales", label: "E-Commerce", icon: <CreditCard className="h-4 w-4" /> },
-    { to: "/admin/seo", label: "SEO Settings", icon: <Search className="h-4 w-4" /> },
     { to: "/admin/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ], []);
 
@@ -35,8 +31,8 @@ const AdminLayout = () => {
 
       <div className="flex-1 flex">
         <AdminSidebar 
-          isOpen={isSidebarOpen}
           links={sidebarLinks}
+          isOpen={isSidebarOpen}
         />
 
         <main className="flex-1 overflow-y-auto bg-background">
