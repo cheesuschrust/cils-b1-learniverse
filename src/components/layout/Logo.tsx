@@ -9,14 +9,14 @@ const Logo = () => {
       to="/" 
       className="flex items-center space-x-2 transition-transform hover:scale-105"
     >
-      <div className="bg-gradient-to-r from-[#26B887] to-[#33A5EF] p-2 rounded-lg text-white">
+      <div className="bg-gradient-to-r from-[#009246] to-[#ce2b37] p-2 rounded-lg text-white shadow-md">
         <BookOpen className="h-5 w-5" />
       </div>
       <div className="relative">
         <span className="font-bold text-xl tracking-tight">
-          <span className="text-[#26B887]">CILS</span>
-          <span className="text-[#FF6978]">B1</span>
-          <span className="text-gray-700 text-sm ml-1">Cittadinanza</span>
+          <span className="text-[#009246]">CILS</span>
+          <span className="text-[#ce2b37]">B1</span>
+          <span className="text-gray-700 text-sm ml-1 font-medium">Cittadinanza</span>
         </span>
       </div>
     </Link>
