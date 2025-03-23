@@ -5,13 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Logo from "@/components/layout/Logo";
 import Footer from "@/components/layout/Footer";
-import { BookOpen, CheckCircle, Headphones, PenTool, Calendar, User, Award } from "lucide-react";
+import { 
+  BookOpen, 
+  CheckCircle, 
+  Headphones, 
+  PenTool, 
+  Calendar, 
+  User, 
+  Award, 
+  ArrowRight,
+  Star
+} from "lucide-react";
 
 const Index = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Header */}
-      <header className="py-4 px-6 flex justify-between items-center border-b border-gray-100">
+      <header className="py-4 px-6 md:px-8 flex justify-between items-center border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-sm z-50">
         <Logo />
         <div className="flex items-center space-x-4">
           <Link to="/login">
@@ -20,18 +30,18 @@ const Index = () => {
             </Button>
           </Link>
           <Link to="/signup">
-            <Button className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white">Sign up</Button>
+            <Button className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white shadow-sm">Sign up</Button>
           </Link>
         </div>
       </header>
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-16 px-6">
+        <section className="py-16 px-6 md:py-20">
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-16">
-              <div className="md:w-1/2">
-                <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-sm text-gray-600 mb-6">
+            <div className="flex flex-col md:flex-row gap-8 md:gap-16 items-center">
+              <div className="md:w-1/2 animate-fade-up">
+                <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-sm text-blue-600 font-medium mb-6 shadow-sm">
                   Italian Citizenship Test Prep
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
@@ -44,19 +54,22 @@ const Index = () => {
                   and writing exercises.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button asChild className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white px-8 py-6 h-auto">
-                    <Link to="/signup">Start Practicing</Link>
+                  <Button asChild className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white px-8 py-6 h-auto shadow-md transition-all hover:shadow-lg group">
+                    <Link to="/signup" className="flex items-center">
+                      Start Practicing
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
                   </Button>
-                  <Button asChild variant="outline" className="border-gray-200 px-8 py-6 h-auto">
+                  <Button asChild variant="outline" className="border-gray-200 px-8 py-6 h-auto hover:bg-gray-50">
                     <Link to="/login">Log In</Link>
                   </Button>
                 </div>
               </div>
               
-              <div className="md:w-1/2">
-                <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+              <div className="md:w-1/2 animate-fade-up" style={{ animationDelay: "200ms" }}>
+                <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-100 transform hover:-translate-y-1 transition-transform duration-300">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="text-sm text-gray-500">Today's Question</div>
+                    <div className="text-sm font-medium text-[#33A5EF]">Today's Question</div>
                     <Calendar className="h-5 w-5 text-[#33A5EF]" />
                   </div>
                   <div className="font-semibold text-xl mb-4">Multiple Choice</div>
@@ -64,16 +77,16 @@ const Index = () => {
                     Quale di queste città è la capitale d'Italia?
                   </div>
                   <div className="space-y-2">
-                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] cursor-pointer">
+                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] hover:bg-blue-50/30 cursor-pointer transition-all">
                       Milano
                     </div>
-                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] cursor-pointer">
+                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] hover:bg-blue-50/30 cursor-pointer transition-all">
                       Firenze
                     </div>
-                    <div className="p-3 rounded-md border border-gray-200 bg-[#F3F9FE] border-[#33A5EF] cursor-pointer">
+                    <div className="p-3 rounded-md border border-gray-200 bg-[#F3F9FE] border-[#33A5EF] cursor-pointer transition-all">
                       Roma
                     </div>
-                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] cursor-pointer">
+                    <div className="p-3 rounded-md border border-gray-200 hover:border-[#33A5EF] hover:bg-blue-50/30 cursor-pointer transition-all">
                       Venezia
                     </div>
                   </div>
@@ -84,9 +97,9 @@ const Index = () => {
         </section>
 
         {/* Features Section */}
-        <section className="py-16 px-6 bg-[#F8F9FA]">
+        <section className="py-16 px-6 bg-[#F8F9FA] md:py-20">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12 animate-fade-up">
               <h2 className="text-3xl font-bold mb-4">Master Italian with Daily Practice</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Our app provides a comprehensive suite of tools to help you prepare for the CILS B1 Cittadinanza exam.
@@ -98,33 +111,37 @@ const Index = () => {
                 icon={<BookOpen className="h-6 w-6 text-[#33A5EF]" />}
                 title="Flashcards"
                 description="Build your vocabulary with interactive flashcards that include audio pronunciation."
+                delay={0}
               />
               
               <FeatureCard 
                 icon={<CheckCircle className="h-6 w-6 text-[#33A5EF]" />}
                 title="Multiple Choice"
                 description="Practice with questions similar to those on the actual citizenship test."
+                delay={100}
               />
               
               <FeatureCard 
                 icon={<Headphones className="h-6 w-6 text-[#33A5EF]" />}
                 title="Listening"
                 description="Improve your comprehension with audio exercises and questions."
+                delay={200}
               />
               
               <FeatureCard 
                 icon={<PenTool className="h-6 w-6 text-[#33A5EF]" />}
                 title="Writing"
                 description="Practice writing in Italian with AI-assisted feedback and corrections."
+                delay={300}
               />
             </div>
           </div>
         </section>
         
         {/* How It Works Section */}
-        <section className="py-16 px-6">
+        <section className="py-16 px-6 md:py-20">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12 animate-fade-up">
               <h2 className="text-3xl font-bold mb-4">How It Works</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Our streamlined approach helps you prepare effectively for the CILS B1 Cittadinanza exam.
@@ -152,7 +169,7 @@ const Index = () => {
                   icon: <Award className="h-6 w-6 text-[#33A5EF]" />
                 }
               ].map((item, index) => (
-                <div key={index} className="text-center">
+                <div key={index} className="text-center p-6 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all animate-fade-up" style={{ animationDelay: `${index * 100}ms` }}>
                   <div className="w-16 h-16 rounded-full bg-[#E7F4FD] text-[#33A5EF] flex items-center justify-center mx-auto mb-4">
                     {item.icon}
                   </div>
@@ -165,9 +182,9 @@ const Index = () => {
         </section>
 
         {/* Testimonials */}
-        <section className="py-16 px-6 bg-[#F8F9FA]">
+        <section className="py-16 px-6 bg-[#F8F9FA] md:py-20">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12 animate-fade-up">
               <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Hear from students who have successfully prepared for their citizenship test.
@@ -195,18 +212,14 @@ const Index = () => {
                   initials: "JB"
                 }
               ].map((testimonial, index) => (
-                <Card key={index} className="border-0 shadow-sm">
+                <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-all animate-fade-up" style={{ animationDelay: `${index * 100}ms` }}>
                   <CardContent className="pt-6">
                     <div className="flex mb-4">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <svg 
+                        <Star 
                           key={star}
-                          className="w-5 h-5 text-yellow-400" 
-                          fill="currentColor" 
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
+                          className="w-5 h-5 text-yellow-400 fill-yellow-400" 
+                        />
                       ))}
                     </div>
                     
@@ -229,20 +242,29 @@ const Index = () => {
         </section>
         
         {/* CTA Section */}
-        <section className="py-16 px-6 bg-white">
+        <section className="py-16 px-6 bg-white md:py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Start Your Journey?</h2>
-            <p className="text-gray-600 mb-8">
+            <div className="mb-6 animate-pulse-soft">
+              <span className="inline-block px-4 py-2 rounded-full bg-blue-50 text-blue-600 font-medium text-sm">Limited Time Offer</span>
+            </div>
+            <h2 className="text-3xl font-bold mb-4 animate-fade-up">Ready to Start Your Journey?</h2>
+            <p className="text-gray-600 mb-8 animate-fade-up" style={{ animationDelay: "100ms" }}>
               Join thousands of students preparing for the CILS B1 Cittadinanza exam with our effective learning tools.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button asChild size="lg" className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white px-8">
-                <Link to="/signup">Start Free Trial</Link>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+              <Button asChild size="lg" className="bg-[#33A5EF] hover:bg-[#2b8fd2] text-white px-8 shadow-md hover:shadow-lg transition-all">
+                <Link to="/signup" className="flex items-center">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-gray-200 px-8">
+              <Button asChild variant="outline" size="lg" className="border-gray-200 px-8 hover:bg-gray-50">
                 <Link to="/login">Learn More</Link>
               </Button>
             </div>
+            <p className="text-gray-500 text-sm mt-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
+              No credit card required. Cancel anytime.
+            </p>
           </div>
         </section>
       </main>
@@ -253,9 +275,16 @@ const Index = () => {
 };
 
 // Feature Card Component
-const FeatureCard = ({ icon, title, description }) => {
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  delay?: number;
+}
+
+const FeatureCard = ({ icon, title, description, delay = 0 }: FeatureCardProps) => {
   return (
-    <Card className="border-0 shadow-sm">
+    <Card className="border-0 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
       <CardContent className="pt-6">
         <div className="rounded-full bg-[#E7F4FD] p-4 w-14 h-14 flex items-center justify-center mb-4">
           {icon}
@@ -268,3 +297,4 @@ const FeatureCard = ({ icon, title, description }) => {
 };
 
 export default Index;
+
