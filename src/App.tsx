@@ -17,6 +17,7 @@ import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import AppLayout from '@/components/layout/AppLayout';
 import LandingPage from '@/pages/LandingPage';
+import Index from '@/pages/Index';
 import AdminLayout from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/admin/Dashboard';
 import UserManagement from '@/pages/admin/UserManagement';
@@ -111,13 +112,14 @@ function App() {
           <UserPreferencesProvider>
             <BrowserRouter>
               <Helmet>
-                <title>CILS B1 Learning Platform</title>
-                <meta name="description" content="Prepare for the CILS B1 exam with comprehensive tools and resources." />
+                <title>CILS B2 Cittadinanza - Italian Language Learning for Citizenship</title>
+                <meta name="description" content="Prepare for your Italian citizenship language exam with our comprehensive CILS B2 Cittadinanza learning platform." />
               </Helmet>
               
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<LandingPage />} />
+                <Route path="/" element={<Index />} />
+                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/reset-password" element={<ResetPassword />} />

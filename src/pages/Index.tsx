@@ -7,6 +7,8 @@ import FeaturesSection from "@/components/landing/FeaturesSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import CallToActionSection from "@/components/landing/CallToActionSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import ReviewsSection from "@/components/landing/ReviewsSection";
+import Footer from "@/components/layout/Footer";
 
 const Index = () => {
   return (
@@ -16,8 +18,10 @@ const Index = () => {
       <WordOfDaySection />
       <FeaturesSection />
       <HowItWorksSection />
-      <CallToActionSection />
       <TestimonialsSection />
+      <ReviewsSection />
+      <CallToActionSection />
+      <Footer />
     </div>
   );
 };
