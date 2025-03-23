@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { detectContentType, detectLanguage } from '@/utils/textAnalysis';
 import { useSystemLog } from '@/hooks/use-system-log';
@@ -220,7 +219,7 @@ export const useFileProcessor = () => {
   ]);
   
   // Make sure to clean up on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       cleanupTimers();
     };
