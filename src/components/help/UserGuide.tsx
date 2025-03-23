@@ -219,7 +219,7 @@ const UserGuide = () => {
                   You can select your preferred voice for both Italian and English in your profile settings:
                 </p>
                 <ol className="list-decimal list-inside space-y-1 pl-2">
-                  <li>Go to Profile > Voice Settings</li>
+                  <li>Go to Profile {'>'} Voice Settings</li>
                   <li>Choose from available voices for each language</li>
                   <li>Adjust speed and pitch to your preference</li>
                   <li>Test voices before saving your choices</li>
@@ -386,7 +386,7 @@ const UserGuide = () => {
                     
                     <h4 className="font-medium">Upload Process</h4>
                     <ol className="list-decimal list-inside space-y-1 pl-2">
-                      <li>Navigate to Admin > Content Analysis</li>
+                      <li>Navigate to Admin {'>'} Content Analysis</li>
                       <li>Select the "Upload Content" tab</li>
                       <li>Choose your file or paste text content</li>
                       <li>Click "Process Content" to begin analysis</li>
