@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
@@ -16,7 +15,6 @@ import Dashboard from '@/pages/Dashboard';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import AppLayout from '@/components/layout/AppLayout';
-import LandingPage from '@/pages/LandingPage';
 import Index from '@/pages/Index';
 import AdminLayout from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/admin/Dashboard';
@@ -119,7 +117,6 @@ function App() {
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
-                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
