@@ -1,8 +1,8 @@
 
 import React, { ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
-import LandingNavbar from './LandingNavbar';
-import Footer from './Footer';
+import LandingNavbar from '@/components/layout/LandingNavbar';
+import Footer from '@/components/layout/Footer';
 
 interface LayoutProps {
   children?: ReactNode;
