@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { User } from "@/contexts/shared-types";
 import { AuthService, LoginCredentials, RegisterData } from "@/services/AuthService";
 import { UserService, UpdateProfileData } from "@/services/UserService";
