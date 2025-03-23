@@ -32,14 +32,15 @@ export const useAuthManager = () => {
     checkAuth();
   }, []);
   
-  const login = useCallback(async (credentials: LoginCredentials) => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
+      const credentials: LoginCredentials = { email, password };
       const response = await AuthService.login(credentials);
       setUser(response.user);
       localStorage.setItem("user", JSON.stringify(response.user));
-      return response.user;
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
       setError(errorMessage);
@@ -48,7 +49,7 @@ export const useAuthManager = () => {
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      return false;
     } finally {
       setIsLoading(false);
     }

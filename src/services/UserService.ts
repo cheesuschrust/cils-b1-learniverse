@@ -14,6 +14,12 @@ export interface UpdateProfileData {
   phoneNumber?: string;
   address?: string;
   preferredLanguage?: "english" | "italian" | "both";
+  preferences?: {
+    bio?: string;
+    theme?: "light" | "dark" | "system";
+    emailNotifications?: boolean;
+    [key: string]: any;
+  };
 }
 
 export class UserService {
