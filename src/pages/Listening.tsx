@@ -76,21 +76,49 @@ const Listening = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    const audio = new Audio(listeningExercise.audioUrl);
-    audioRef.current = audio;
-    
-    audio.addEventListener("timeupdate", updateProgress);
-    audio.addEventListener("loadedmetadata", () => {
-      setDuration(audio.duration);
-    });
-    audio.addEventListener("ended", handleAudioEnd);
-    
-    return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", updateProgress);
-      audio.removeEventListener("loadedmetadata", () => {});
-      audio.removeEventListener("ended", handleAudioEnd);
-    };
+    try {
+      const audio = new Audio(listeningExercise.audioUrl);
+      audioRef.current = audio;
+      
+      audio.addEventListener("error", (e) => {
+        console.error("Audio error:", e);
+        toast({
+          title: "Audio Error",
+          description: "There was a problem playing the audio file. Please try again later.",
+          variant: "destructive",
+        });
+      });
+      
+      audio.addEventListener("timeupdate", updateProgress);
+      audio.addEventListener("loadedmetadata", () => {
+        setDuration(audio.duration || 0);
+      });
+      audio.addEventListener("ended", handleAudioEnd);
+      
+      if (!listeningExercise.audioUrl) {
+        console.error("Invalid or missing audio URL");
+        toast({
+          title: "Audio Error",
+          description: "Audio file not found or invalid",
+          variant: "destructive",
+        });
+      }
+      
+      return () => {
+        audio.pause();
+        audio.removeEventListener("timeupdate", updateProgress);
+        audio.removeEventListener("loadedmetadata", () => {});
+        audio.removeEventListener("ended", handleAudioEnd);
+        audio.removeEventListener("error", () => {});
+      };
+    } catch (error) {
+      console.error("Error initializing audio:", error);
+      toast({
+        title: "Audio Error",
+        description: "Failed to initialize audio player",
+        variant: "destructive",
+      });
+    }
   }, [currentExerciseIndex, exercises]);
   
   useEffect(() => {
@@ -123,15 +151,47 @@ const Listening = () => {
   
   const togglePlay = () => {
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-        if (playCount === 0) {
-          setPlayCount(1);
+      try {
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          if (audioRef.current.readyState >= 2) {
+            const playPromise = audioRef.current.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                console.error("Play error:", error);
+                toast({
+                  title: "Playback Error",
+                  description: "There was a problem playing the audio. Please try again.",
+                  variant: "destructive",
+                });
+                setIsPlaying(false);
+                return;
+              });
+            }
+            
+            if (playCount === 0) {
+              setPlayCount(1);
+            }
+          } else {
+            toast({
+              title: "Audio Not Ready",
+              description: "Audio is still loading. Please wait a moment.",
+              variant: "destructive",
+            });
+            return;
+          }
         }
+        setIsPlaying(!isPlaying);
+      } catch (error) {
+        console.error("Toggle play error:", error);
+        toast({
+          title: "Playback Error",
+          description: "An error occurred while trying to play the audio.",
+          variant: "destructive",
+        });
       }
-      setIsPlaying(!isPlaying);
     }
   };
   

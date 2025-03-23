@@ -4,7 +4,7 @@
  */
 
 // Browser's native speech synthesis
-const synth = window.speechSynthesis;
+const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
 // Cache for voice preferences
 let cachedVoices: SpeechSynthesisVoice[] = [];
@@ -24,15 +24,26 @@ const defaultVoicePreference: VoicePreference = {
   voicePitch: 1.0
 };
 
+// Check if speech synthesis is supported
+const checkSpeechSupport = (): boolean => {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+};
+
 // Get available voices
 export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
   return new Promise((resolve) => {
+    if (!checkSpeechSupport()) {
+      console.warn('Speech synthesis not supported in this browser');
+      resolve([]);
+      return;
+    }
+    
     if (cachedVoices.length > 0) {
       resolve(cachedVoices);
       return;
     }
     
-    let voices = synth.getVoices();
+    let voices = synth?.getVoices() || [];
     
     if (voices.length > 0) {
       cachedVoices = voices;
@@ -42,13 +53,21 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
     
     // If voices aren't loaded yet, wait for them
     const voicesChangedHandler = () => {
-      voices = synth.getVoices();
+      voices = synth?.getVoices() || [];
       cachedVoices = voices;
       resolve(voices);
-      synth.removeEventListener('voiceschanged', voicesChangedHandler);
+      synth?.removeEventListener('voiceschanged', voicesChangedHandler);
     };
     
-    synth.addEventListener('voiceschanged', voicesChangedHandler);
+    synth?.addEventListener('voiceschanged', voicesChangedHandler);
+    
+    // Fallback if event never fires
+    setTimeout(() => {
+      if (cachedVoices.length === 0) {
+        console.warn('Voice list could not be loaded');
+        resolve([]);
+      }
+    }, 1000);
   });
 };
 
@@ -107,9 +126,15 @@ export const speak = async (
 ): Promise<void> => {
   if (!text) return;
   
+  // Check for speech synthesis support
+  if (!checkSpeechSupport()) {
+    console.error('Speech synthesis not supported in this browser');
+    return;
+  }
+  
   try {
     // Cancel any ongoing speech
-    if (synth.speaking) {
+    if (synth?.speaking) {
       synth.cancel();
     }
     
@@ -141,7 +166,7 @@ export const speak = async (
     }
     
     // Speak
-    synth.speak(utterance);
+    synth?.speak(utterance);
     
     // Return a promise that resolves when speech ends
     return new Promise((resolve) => {
@@ -150,10 +175,17 @@ export const speak = async (
       };
       
       // Also resolve if there's an error
-      utterance.onerror = () => {
-        console.error('Speech synthesis error');
+      utterance.onerror = (e) => {
+        console.error('Speech synthesis error:', e);
         resolve();
       };
+      
+      // Fallback to resolve in case the event never fires
+      setTimeout(() => {
+        if (synth?.speaking) {
+          resolve();
+        }
+      }, 10000); // 10 second timeout
     });
   } catch (error) {
     console.error('Text-to-speech error:', error);
@@ -174,7 +206,7 @@ export const speakSample = async (voiceURI: string, language: 'it' | 'en'): Prom
   }
   
   // Cancel any ongoing speech
-  if (synth.speaking) {
+  if (synth?.speaking) {
     synth.cancel();
   }
   
@@ -183,12 +215,12 @@ export const speakSample = async (voiceURI: string, language: 'it' | 'en'): Prom
   utterance.lang = voice.lang;
   
   // Speak
-  synth.speak(utterance);
+  synth?.speak(utterance);
 };
 
 // Check if text-to-speech is supported
 export const isSpeechSupported = (): boolean => {
-  return 'speechSynthesis' in window;
+  return checkSpeechSupport();
 };
 
 // Get all available voices (for settings)
@@ -217,7 +249,7 @@ export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
 
 // Stop any ongoing speech
 export const stopSpeaking = (): void => {
-  if (synth.speaking) {
+  if (synth?.speaking) {
     synth.cancel();
   }
 };

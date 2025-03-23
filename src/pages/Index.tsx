@@ -13,6 +13,7 @@ import {
   Star,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import SpeakableWord from "@/components/learning/SpeakableWord";
 
 const Index = () => {
   return (
@@ -58,19 +59,24 @@ const Index = () => {
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 <h3 className="text-xl font-medium mb-4">Multiple Choice</h3>
-                <p className="mb-6">Quale di queste città è la capitale d'Italia?</p>
+                <p className="mb-6">
+                  <SpeakableWord 
+                    word="Quale di queste città è la capitale d'Italia?" 
+                    language="it"
+                  />
+                </p>
                 <div className="space-y-2">
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    Milano
+                    <SpeakableWord word="Milano" language="it" />
                   </div>
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    Firenze
+                    <SpeakableWord word="Firenze" language="it" />
                   </div>
                   <div className="p-3 rounded-lg border border-primary bg-accent/10 transition-colors cursor-pointer">
-                    Roma
+                    <SpeakableWord word="Roma" language="it" />
                   </div>
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    Venezia
+                    <SpeakableWord word="Venezia" language="it" />
                   </div>
                 </div>
               </div>
