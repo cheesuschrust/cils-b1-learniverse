@@ -41,17 +41,29 @@ const SystemLogs = () => {
     const processedLogs = allLogs.map(log => {
       const processedLog: SystemLog = {
         ...log,
-        timestamp: log.timestamp 
-          ? (log.timestamp instanceof Date 
-              ? log.timestamp.toISOString() 
-              : String(log.timestamp))
-          : new Date().toISOString()
+        timestamp: ensureTimestampString(log.timestamp)
       };
       return processedLog;
     });
     
     setLogs(processedLogs);
   }, []);
+  
+  const ensureTimestampString = (timestamp: any): string => {
+    if (!timestamp) {
+      return new Date().toISOString();
+    }
+    
+    if (typeof timestamp === 'string') {
+      return timestamp;
+    }
+    
+    if (typeof timestamp === 'object' && typeof timestamp.toISOString === 'function') {
+      return timestamp.toISOString();
+    }
+    
+    return String(timestamp);
+  };
   
   useEffect(() => {
     let filtered = [...logs];
