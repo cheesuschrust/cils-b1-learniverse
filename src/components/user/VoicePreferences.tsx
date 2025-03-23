@@ -1,109 +1,157 @@
 
-import React, { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Volume2, VolumeX, Play } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import { getAllVoices, speak } from '@/utils/textToSpeech';
+import { VoicePreference } from '@/utils/textToSpeech';
+import { useToast } from '@/components/ui/use-toast';
 
 const VoicePreferences = () => {
   const { voicePreference, setVoicePreference } = useUserPreferences();
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [italianVoices, setItalianVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [englishVoices, setEnglishVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [rate, setRate] = useState(voicePreference?.voiceRate || 1);
-  const [pitch, setPitch] = useState(voicePreference?.voicePitch || 1);
-  const [selectedItalianVoice, setSelectedItalianVoice] = useState(voicePreference?.italianVoiceURI || '');
-  const [selectedEnglishVoice, setSelectedEnglishVoice] = useState(voicePreference?.englishVoiceURI || '');
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
+  // Get available voices when component mounts
   useEffect(() => {
-    const loadVoices = async () => {
-      try {
-        const voices = await getAllVoices();
+    const loadVoices = () => {
+      // Get the available voices
+      const synth = window.speechSynthesis;
+      const voices = synth.getVoices();
+      
+      if (voices.length > 0) {
         setAvailableVoices(voices);
         
-        // Filter voices by language
-        const italian = voices.filter(voice => voice.lang.startsWith('it'));
-        const english = voices.filter(voice => voice.lang.startsWith('en'));
+        // Filter Italian and English voices
+        const itVoices = voices.filter(voice => voice.lang.includes('it-'));
+        const enVoices = voices.filter(voice => voice.lang.includes('en-'));
         
-        setItalianVoices(italian);
-        setEnglishVoices(english);
-        
-        // Set defaults if not already set
-        if (!selectedItalianVoice && italian.length > 0) {
-          setSelectedItalianVoice(italian[0].name);
-        }
-        
-        if (!selectedEnglishVoice && english.length > 0) {
-          setSelectedEnglishVoice(english[0].name);
-        }
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading voices:", error);
+        setItalianVoices(itVoices);
+        setEnglishVoices(enVoices);
         setIsLoading(false);
       }
     };
-    
-    loadVoices();
-  }, [selectedEnglishVoice, selectedItalianVoice]);
 
-  const savePreferences = () => {
+    // Load voices immediately
+    loadVoices();
+    
+    // Also set up the event listener for when voices change
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
+  }, []);
+
+  const handleVoiceChange = (language: 'italian' | 'english', voiceURI: string) => {
     if (setVoicePreference) {
-      setVoicePreference({
-        italianVoiceURI: selectedItalianVoice,
-        englishVoiceURI: selectedEnglishVoice,
-        voiceRate: rate,
-        voicePitch: pitch
+      const updatedPreference = { ...voicePreference };
+      
+      if (language === 'italian') {
+        updatedPreference.italianVoiceURI = voiceURI;
+      } else {
+        updatedPreference.englishVoiceURI = voiceURI;
+      }
+      
+      setVoicePreference(updatedPreference);
+      
+      toast({
+        title: "Voice Updated",
+        description: `${language.charAt(0).toUpperCase() + language.slice(1)} voice preference saved.`
       });
     }
   };
 
-  const testItalianVoice = () => {
-    const voice = availableVoices.find(v => v.name === selectedItalianVoice);
-    if (voice) {
-      speak("Buongiorno, come stai oggi?", voice, rate, pitch);
+  const handleRateChange = (value: number[]) => {
+    if (setVoicePreference) {
+      setVoicePreference({
+        ...voicePreference,
+        voiceRate: value[0]
+      });
     }
   };
 
-  const testEnglishVoice = () => {
-    const voice = availableVoices.find(v => v.name === selectedEnglishVoice);
-    if (voice) {
-      speak("Hello, how are you today?", voice, rate, pitch);
+  const handlePitchChange = (value: number[]) => {
+    if (setVoicePreference) {
+      setVoicePreference({
+        ...voicePreference,
+        voicePitch: value[0]
+      });
     }
   };
 
-  // Save whenever settings change
-  useEffect(() => {
-    savePreferences();
-  }, [selectedItalianVoice, selectedEnglishVoice, rate, pitch]);
+  const testVoice = (language: 'italian' | 'english') => {
+    if ('speechSynthesis' in window) {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance();
+      
+      // Set the text based on language
+      utterance.text = language === 'italian' 
+        ? 'Ciao, questa è una prova della voce italiana.' 
+        : 'Hello, this is a test of the English voice.';
+      
+      // Set the voice URI
+      const voiceURI = language === 'italian' 
+        ? voicePreference.italianVoiceURI 
+        : voicePreference.englishVoiceURI;
+      
+      // Find the voice object
+      const voice = availableVoices.find(v => v.voiceURI === voiceURI);
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+      } else {
+        // Use default voice for the language if preferred voice not found
+        const defaultVoice = language === 'italian' 
+          ? italianVoices[0] 
+          : englishVoices[0];
+        
+        if (defaultVoice) {
+          utterance.voice = defaultVoice;
+          utterance.lang = defaultVoice.lang;
+        }
+      }
+      
+      // Set rate and pitch
+      utterance.rate = voicePreference.voiceRate;
+      utterance.pitch = voicePreference.voicePitch;
+      
+      // Speak the text
+      synth.cancel(); // Cancel any ongoing speech
+      synth.speak(utterance);
+    }
+  };
 
   if (isLoading) {
-    return <div className="text-center py-4">Loading voice options...</div>;
+    return <div>Loading voice options...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Label className="text-base">Italian Voice</Label>
-          <div className="flex gap-2">
+      <div>
+        <h3 className="text-lg font-medium mb-4">Voice Preferences</h3>
+        
+        {/* Italian Voice Selection */}
+        <div className="mb-4">
+          <Label htmlFor="italian-voice" className="mb-2 block">Italian Voice</Label>
+          <div className="flex items-center space-x-2">
             <Select 
-              value={selectedItalianVoice} 
-              onValueChange={setSelectedItalianVoice}
-              disabled={italianVoices.length === 0}
+              value={voicePreference.italianVoiceURI || ''} 
+              onValueChange={(value) => handleVoiceChange('italian', value)}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger id="italian-voice" className="w-full">
                 <SelectValue placeholder="Select Italian voice" />
               </SelectTrigger>
               <SelectContent>
                 {italianVoices.length > 0 ? (
                   italianVoices.map(voice => (
-                    <SelectItem key={voice.name} value={voice.name}>
-                      {voice.name}
+                    <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                      {voice.name} ({voice.lang})
                     </SelectItem>
                   ))
                 ) : (
@@ -111,33 +159,33 @@ const VoicePreferences = () => {
                 )}
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={testItalianVoice}
-              disabled={!selectedItalianVoice || italianVoices.length === 0}
+            <button
+              type="button"
+              onClick={() => testVoice('italian')}
+              className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              disabled={!voicePreference.italianVoiceURI && italianVoices.length === 0}
             >
-              <Play className="h-4 w-4" />
-            </Button>
+              Test
+            </button>
           </div>
         </div>
         
-        <div className="flex justify-between items-center">
-          <Label className="text-base">English Voice</Label>
-          <div className="flex gap-2">
+        {/* English Voice Selection */}
+        <div className="mb-4">
+          <Label htmlFor="english-voice" className="mb-2 block">English Voice</Label>
+          <div className="flex items-center space-x-2">
             <Select 
-              value={selectedEnglishVoice} 
-              onValueChange={setSelectedEnglishVoice}
-              disabled={englishVoices.length === 0}
+              value={voicePreference.englishVoiceURI || ''} 
+              onValueChange={(value) => handleVoiceChange('english', value)}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger id="english-voice" className="w-full">
                 <SelectValue placeholder="Select English voice" />
               </SelectTrigger>
               <SelectContent>
                 {englishVoices.length > 0 ? (
                   englishVoices.map(voice => (
-                    <SelectItem key={voice.name} value={voice.name}>
-                      {voice.name}
+                    <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                      {voice.name} ({voice.lang})
                     </SelectItem>
                   ))
                 ) : (
@@ -145,48 +193,44 @@ const VoicePreferences = () => {
                 )}
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={testEnglishVoice}
-              disabled={!selectedEnglishVoice || englishVoices.length === 0}
+            <button
+              type="button"
+              onClick={() => testVoice('english')}
+              className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              disabled={!voicePreference.englishVoiceURI && englishVoices.length === 0}
             >
-              <Play className="h-4 w-4" />
-            </Button>
+              Test
+            </button>
           </div>
         </div>
-      </div>
-      
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <VolumeX className="h-4 w-4 text-muted-foreground" />
-              <Label>Voice Speed</Label>
-              <Volume2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <span className="text-sm font-medium">{rate.toFixed(1)}x</span>
-          </div>
-          <Slider 
-            value={[rate]} 
-            min={0.5} 
-            max={2} 
-            step={0.1} 
-            onValueChange={(values) => setRate(values[0])}
+        
+        {/* Rate Control */}
+        <div className="mb-4">
+          <Label htmlFor="rate-slider" className="mb-2 block">
+            Speech Rate: {voicePreference.voiceRate.toFixed(1)}
+          </Label>
+          <Slider
+            id="rate-slider"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={[voicePreference.voiceRate]}
+            onValueChange={handleRateChange}
           />
         </div>
         
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Voice Pitch</Label>
-            <span className="text-sm font-medium">{pitch.toFixed(1)}</span>
-          </div>
-          <Slider 
-            value={[pitch]} 
-            min={0.5} 
-            max={2} 
+        {/* Pitch Control */}
+        <div>
+          <Label htmlFor="pitch-slider" className="mb-2 block">
+            Speech Pitch: {voicePreference.voicePitch.toFixed(1)}
+          </Label>
+          <Slider
+            id="pitch-slider"
+            min={0.5}
+            max={2}
             step={0.1}
-            onValueChange={(values) => setPitch(values[0])}
+            value={[voicePreference.voicePitch]}
+            onValueChange={handlePitchChange}
           />
         </div>
       </div>
