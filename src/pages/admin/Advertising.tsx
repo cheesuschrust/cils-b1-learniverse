@@ -71,12 +71,15 @@ const Advertising = () => {
       // Handle nested fields with dot notation
       if (field.includes('.')) {
         const [parent, child] = field.split('.');
-        newConfig[parent as keyof AdConfiguration] = {
-          ...(newConfig[parent as keyof AdConfiguration] as any),
-          [child]: value
-        };
+        if (parent === 'settings') {
+          newConfig.settings = {
+            ...newConfig.settings,
+            [child]: value
+          };
+        }
       } else {
-        (newConfig as any)[field] = value;
+        // Type assertion to ensure TypeScript knows we're setting a valid field
+        (newConfig as Record<string, unknown>)[field] = value;
       }
       
       return newConfig;

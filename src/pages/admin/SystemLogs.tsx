@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogCategory, LogEntry } from "@/contexts/shared-types";
@@ -42,7 +41,9 @@ const SystemLogs = () => {
     // Ensure the timestamp is handled as a string, not a Date object
     setLogs(allLogs.map(log => ({
       ...log,
-      timestamp: typeof log.timestamp === 'object' ? log.timestamp.toISOString() : log.timestamp
+      timestamp: typeof log.timestamp === 'object' && log.timestamp !== null 
+        ? log.timestamp.toISOString() 
+        : log.timestamp || new Date().toISOString()
     })));
   }, []);
   
@@ -81,15 +82,22 @@ const SystemLogs = () => {
   }, [logs, categoryFilter, levelFilter, dateRange, searchTerm]);
   
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    if (!dateStr) return 'Unknown date';
+    
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      console.error("Invalid date format:", dateStr);
+      return 'Invalid date';
+    }
   };
   
   const handleCopyLogId = (logId: string) => {
