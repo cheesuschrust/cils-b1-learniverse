@@ -1,6 +1,6 @@
 
 import { API } from "./api";
-import { User } from "@/contexts/shared-types";
+import { User, UserPreferences } from "@/contexts/shared-types";
 
 export interface UserProfileResponse {
   user: User;
@@ -14,12 +14,7 @@ export interface UpdateProfileData {
   phoneNumber?: string;
   address?: string;
   preferredLanguage?: "english" | "italian" | "both";
-  preferences?: {
-    bio?: string;
-    theme?: "light" | "dark" | "system";
-    emailNotifications?: boolean;
-    [key: string]: any;
-  };
+  preferences?: Partial<UserPreferences>;
 }
 
 export class UserService {
@@ -35,7 +30,7 @@ export class UserService {
     return API.handleRequest<void>("/user/password", "PUT", { userId, currentPassword, newPassword });
   }
   
-  static async updatePreferences(userId: string, preferences: any): Promise<UserProfileResponse> {
+  static async updatePreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserProfileResponse> {
     return API.handleRequest<UserProfileResponse>("/user/preferences", "PUT", { userId, preferences });
   }
   

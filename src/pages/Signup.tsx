@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Key, User, Lock, AlertCircle } from "lucide-react";
+import { Mail, Key, User, Lock, AlertCircle, Loader2 } from "lucide-react";
 
 const Signup = () => {
-  const { signup, socialLogin, isLoading } = useAuth();
+  const { signup, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -22,6 +22,7 @@ const Signup = () => {
     confirmPassword: ""
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -57,8 +58,10 @@ const Signup = () => {
     
     if (!validate()) return;
     
+    setIsSubmitting(true);
+    
     try {
-      await signup(
+      const success = await signup(
         formData.firstName,
         formData.lastName,
         formData.email,
@@ -66,20 +69,41 @@ const Signup = () => {
         formData.username || undefined
       );
       
-      // The auth context will handle the redirect
+      if (success) {
+        toast({
+          title: "Account Created",
+          description: "Your account has been created successfully. Welcome to CILS B2 Cittadinanza!",
+        });
+        navigate("/app/dashboard");
+      }
     } catch (error) {
       console.error("Signup error:", error);
+      toast({
+        title: "Registration Failed",
+        description: "There was a problem creating your account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
   const handleSocialLogin = async (provider: "google" | "apple") => {
     try {
-      await socialLogin(provider);
+      const { socialLogin } = useAuth();
+      if (socialLogin) {
+        await socialLogin(provider);
+        toast({
+          title: "Account Created",
+          description: `Your account has been created with ${provider}. Welcome to CILS B2 Cittadinanza!`,
+        });
+        navigate("/app/dashboard");
+      }
     } catch (error) {
-      console.error(`${provider} login error:`, error);
+      console.error(`${provider} signup error:`, error);
       toast({
-        title: "Error",
-        description: `Failed to login with ${provider}. Please try again.`,
+        title: "Registration Failed",
+        description: `Failed to create account with ${provider}. Please try again.`,
         variant: "destructive",
       });
     }

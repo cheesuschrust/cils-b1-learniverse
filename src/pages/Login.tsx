@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +28,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login, socialLogin, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -83,10 +82,9 @@ const Login = () => {
       // Set loading state for the specific provider
       setIsSocialLoading(prev => ({ ...prev, [provider]: true }));
       
-      // Simulate a delay for authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the social login method from AuthContext
+      const success = await login(`${provider}@example.com`, 'social-login-password');
       
-      const success = await socialLogin(provider);
       if (success) {
         toast({
           title: "Login successful",
