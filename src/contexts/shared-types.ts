@@ -9,6 +9,9 @@ export interface UserPreferences {
   dailyGoal?: number;
   autoPlayAudio?: boolean;
   showTranslations?: boolean;
+  emailNotifications?: boolean;
+  theme?: "light" | "dark" | "system";
+  bio?: string;
 }
 
 export interface EmailTemplate {
@@ -38,6 +41,10 @@ export interface EmailSettings {
     welcome: EmailTemplate;
   };
   temporaryInboxDuration?: number;
+  dailyDigest?: boolean;
+  notifications?: boolean;
+  marketing?: boolean;
+  newFeatures?: boolean;
 }
 
 export interface User {
@@ -52,10 +59,31 @@ export interface User {
   subscription: "free" | "premium" | "trial";
   createdAt: string;
   lastLogin?: string;
+  lastLoginAt?: string;
+  lastActive?: string;
   phoneNumber?: string;
   address?: string;
   preferences: UserPreferences;
   voicePreference?: VoicePreference;
+  preferredLanguage?: "english" | "italian" | "both";
+  dailyQuestionCounts?: {
+    flashcards: number;
+    multipleChoice: number;
+    listening: number;
+    writing: number;
+    speaking: number;
+    [key: string]: number;
+  };
+  isAdmin?: boolean;
+  emailVerified?: boolean;
+  isVerified?: boolean;
+  avatarUrl?: string;
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+    [key: string]: number;
+  };
 }
 
 export interface UserPreferencesContextType {
@@ -89,4 +117,25 @@ export interface AuthContextType {
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'apple') => Promise<boolean>;
+}
+
+// Added missing log-related types
+export type LogCategory = 'user' | 'system' | 'auth' | 'content' | 'email' | 'ai';
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  category: LogCategory;
+  action: string;
+  details?: string;
+  level: 'info' | 'warning' | 'error';
+  userId?: string;
+}
+
+// Add missing MockDatabase interface
+export interface MockDatabase {
+  users: User[];
+  logs: LogEntry[];
+  emailSettings: EmailSettings;
+  resetTokens: Map<string, string>;
+  verificationTokens: Map<string, string>;
 }

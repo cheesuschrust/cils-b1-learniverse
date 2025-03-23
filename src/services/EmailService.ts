@@ -1,67 +1,52 @@
 
-// Email provider types
-export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
+import { EmailSettings, EmailTemplate } from '@/contexts/shared-types';
 
-// Config for email providers
-export interface EmailProviderConfig {
-  enableSsl?: boolean; // Make this optional to match the shared-types
-  host?: string;
-  port?: number;
-  username?: string;
-  password?: string;
-  apiKey?: string;
-  domain?: string;
-  accessKey?: string;
-  secretKey?: string;
-  region?: string;
+export class EmailService {
+  static async getEmailSettings(): Promise<EmailSettings> {
+    // Mock implementation
+    return {
+      provider: 'smtp',
+      fromEmail: 'noreply@example.com',
+      fromName: 'CILS B2 Cittadinanza',
+      config: {
+        host: 'smtp.example.com',
+        port: 587,
+        username: 'user@example.com',
+        password: 'password',
+        enableSsl: true
+      },
+      templates: {
+        verification: {
+          subject: 'Verify your email',
+          body: 'Please verify your email'
+        },
+        passwordReset: {
+          subject: 'Reset your password',
+          body: 'Please reset your password'
+        },
+        welcome: {
+          subject: 'Welcome to CILS B2 Cittadinanza',
+          body: 'Welcome to our platform'
+        }
+      }
+    };
+  }
+
+  static async updateEmailSettings(settings: EmailSettings): Promise<boolean> {
+    console.log('Updating email settings:', settings);
+    return true;
+  }
+
+  static async sendEmail(to: string, template: EmailTemplate, data: Record<string, string>): Promise<boolean> {
+    console.log(`Sending email to ${to} with template:`, template);
+    console.log('Template data:', data);
+    return true;
+  }
+
+  static async sendTestEmail(to: string, settings: EmailSettings): Promise<boolean> {
+    console.log(`Sending test email to ${to} with settings:`, settings);
+    return true;
+  }
 }
 
-// Template interface
-export interface EmailTemplate {
-  subject: string;
-  body: string;
-}
-
-// Email settings interface
-export interface EmailSettings {
-  provider: EmailProvider;
-  fromEmail: string;
-  fromName: string;
-  config: EmailProviderConfig;
-  templates: {
-    verification: EmailTemplate;
-    passwordReset: EmailTemplate;
-    welcome: EmailTemplate;
-  };
-  temporaryInboxDuration?: number;
-}
-
-// Mock email sending service functions
-export const sendVerificationEmail = async (
-  email: string, 
-  name: string, 
-  token: string,
-  settings: EmailSettings
-): Promise<boolean> => {
-  console.log(`Sending verification email to ${email} with token ${token}`);
-  return true;
-};
-
-export const sendPasswordResetEmail = async (
-  email: string, 
-  name: string, 
-  token: string,
-  settings: EmailSettings
-): Promise<boolean> => {
-  console.log(`Sending password reset email to ${email} with token ${token}`);
-  return true;
-};
-
-export const sendWelcomeEmail = async (
-  email: string, 
-  name: string,
-  settings: EmailSettings
-): Promise<boolean> => {
-  console.log(`Sending welcome email to ${email}`);
-  return true;
-};
+export default EmailService;
