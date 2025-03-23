@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -106,19 +105,19 @@ const Login = () => {
   };
 
   return (
-    <div className="container max-w-md mx-auto py-16 px-4 bg-white">
-      <Card className="shadow-lg border border-gray-100 bg-white">
-        <CardHeader className="space-y-1 bg-white">
-          <CardTitle className="text-2xl font-bold text-gray-800">Sign in</CardTitle>
-          <CardDescription className="text-gray-600">
+    <div className="container max-w-md mx-auto py-16 px-4">
+      <Card className="shadow-lg border-opacity-50">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
+          <CardDescription>
             Enter your credentials to access your CILS B2 Cittadinanza account
           </CardDescription>
         </CardHeader>
-        <CardContent className="bg-white">
+        <CardContent>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <Button 
               variant="outline" 
-              className="w-full bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              className="w-full"
               onClick={() => handleSocialLogin("google")}
               disabled={isLoading || isSocialLoading.google}
             >
@@ -133,7 +132,7 @@ const Login = () => {
             </Button>
             <Button 
               variant="outline" 
-              className="w-full bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              className="w-full"
               onClick={() => handleSocialLogin("apple")}
               disabled={isLoading || isSocialLoading.apple}
             >
@@ -150,10 +149,10 @@ const Login = () => {
           
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <Separator className="bg-gray-200" />
+              <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
           
@@ -164,8 +163,8 @@ const Login = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center text-gray-700">
-                      <Mail className="w-4 h-4 mr-2 text-gray-500" />
+                    <FormLabel className="flex items-center">
+                      <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
                       Email
                     </FormLabel>
                     <FormControl>
@@ -173,11 +172,10 @@ const Login = () => {
                         id="email"
                         type="email"
                         placeholder="john.doe@example.com"
-                        className="bg-white border-gray-200"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-red-500" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -188,8 +186,8 @@ const Login = () => {
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel className="flex items-center text-gray-700">
-                        <Key className="w-4 h-4 mr-2 text-gray-500" />
+                      <FormLabel className="flex items-center">
+                        <Key className="w-4 h-4 mr-2 text-muted-foreground" />
                         Password
                       </FormLabel>
                       <Link to="/reset-password" className="text-sm text-primary hover:underline">
@@ -201,16 +199,15 @@ const Login = () => {
                         id="password"
                         type="password"
                         placeholder="••••••••"
-                        className="bg-white border-gray-200"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-red-500" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
               
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -223,8 +220,8 @@ const Login = () => {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="bg-white">
-          <p className="text-sm text-center w-full text-gray-600">
+        <CardFooter>
+          <p className="text-sm text-center w-full">
             Don't have an account?{" "}
             <Link to="/signup" className="text-primary hover:underline font-medium">
               Sign up
@@ -233,10 +230,10 @@ const Login = () => {
         </CardFooter>
       </Card>
       
-      <div className="mt-6 text-center text-sm text-gray-500">
+      <div className="mt-6 text-center text-sm text-muted-foreground">
         <p>Demo credentials: admin@italianlearning.app / Admin123!</p>
         <p className="mt-1">
-          <Link to="/privacy-policy" className="hover:underline text-gray-600">
+          <Link to="/privacy-policy" className="hover:underline">
             Privacy Policy
           </Link>
         </p>

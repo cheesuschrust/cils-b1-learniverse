@@ -1,15 +1,14 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { User } from "@/contexts/shared-types";
 import { AuthService, LoginCredentials, RegisterData } from "@/services/AuthService";
 import { UserService, UpdateProfileData } from "@/services/UserService";
 import { useToast } from "@/components/ui/use-toast";
 
 export const useAuthManager = () => {
-  // Explicitly use React.useState to ensure we're accessing the correct function
-  const [user, setUser] = React.useState<User | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Check if user is already logged in (from localStorage)

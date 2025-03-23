@@ -22,9 +22,9 @@ const defaultVoicePreference: VoicePreference = {
 };
 
 const defaultPreferences: UserPreferencesContextType = {
-  theme: 'light',
+  theme: 'system',
   preferredLanguage: 'both',
-  autoPlayAudio: false, // Changed from true to false to disable auto-reading
+  autoPlayAudio: true,
   voicePreference: defaultVoicePreference,
 };
 
@@ -32,7 +32,7 @@ const UserPreferencesContext = createContext<UserPreferencesContextType>(default
 
 export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
-    () => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'light'
+    () => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
   );
   
   const [preferredLanguage, setPreferredLanguage] = useState<'english' | 'italian' | 'both'>(
@@ -40,11 +40,7 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
   );
   
   const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(
-    () => {
-      const saved = localStorage.getItem('autoPlayAudio');
-      // Default to false (auto-reading off) if not set
-      return saved === 'true' ? true : false;
-    }
+    () => localStorage.getItem('autoPlayAudio') !== 'false'
   );
   
   const [voicePreference, setVoicePreference] = useState<VoicePreference>(() => {
