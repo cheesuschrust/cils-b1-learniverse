@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -59,8 +58,19 @@ function App() {
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/password-reset" element={<PasswordReset />} />
                 
-                {/* Root redirect */}
+                {/* Root redirects - handle all old routes */}
                 <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/flashcards" element={<Navigate to="/app/flashcards" replace />} />
+                <Route path="/multiple-choice" element={<Navigate to="/app/multiple-choice" replace />} />
+                <Route path="/listening" element={<Navigate to="/app/listening" replace />} />
+                <Route path="/writing" element={<Navigate to="/app/writing" replace />} />
+                <Route path="/speaking" element={<Navigate to="/app/speaking" replace />} />
+                <Route path="/calendar" element={<Navigate to="/app/calendar" replace />} />
+                <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+                <Route path="/communities" element={<Navigate to="/app/communities" replace />} />
+                <Route path="/progress" element={<Navigate to="/app/progress" replace />} />
+                <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+                <Route path="/support" element={<Navigate to="/app/support" replace />} />
                 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>

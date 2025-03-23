@@ -2,7 +2,8 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import SpeakableWord from './SpeakableWord';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface WordOfTheDayProps {
   word: string;
@@ -31,7 +32,7 @@ const WordOfTheDay: React.FC<WordOfTheDayProps> = ({
         <CardDescription>{formattedDate}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center">
             <SpeakableWord 
               word={word} 
@@ -40,13 +41,27 @@ const WordOfTheDay: React.FC<WordOfTheDayProps> = ({
               autoPlay={false}
             />
           </div>
-          <p className="text-muted-foreground">{meaning}</p>
+          
+          <div className="flex justify-between items-center">
+            <p className="text-muted-foreground">{meaning}</p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="flex items-center gap-1 text-xs"
+              onClick={() => window.open(`https://context.reverso.net/translation/italian-english/${encodeURIComponent(word)}`, '_blank')}
+            >
+              <ExternalLink className="h-3 w-3" />
+              More
+            </Button>
+          </div>
+          
           <div className="pt-2 border-t border-border/30">
             <p className="text-sm italic">
               <SpeakableWord 
                 word={example} 
                 language="it"
                 className="inline"
+                autoPlay={false}
               />
             </p>
           </div>

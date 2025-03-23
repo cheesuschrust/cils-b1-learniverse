@@ -27,6 +27,7 @@ export const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
                       : "hover:bg-muted"
                   }`
                 }
+                end={link.to === "/admin" || link.to === "/admin/dashboard"}
               >
                 {link.icon}
                 <span>{link.label}</span>
@@ -38,3 +39,5 @@ export const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
     </aside>
   );
 };
+
+export default AdminSidebar;

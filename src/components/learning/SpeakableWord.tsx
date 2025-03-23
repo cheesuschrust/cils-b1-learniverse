@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speak, isSpeechSupported } from '@/utils/textToSpeech';
@@ -24,23 +24,17 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   autoPlay = false
 }) => {
   const { toast } = useToast();
-  const { voicePreference, autoPlayAudio } = useUserPreferences();
+  const { voicePreference } = useUserPreferences();
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   // Check if speech is supported
   const speechSupported = isSpeechSupported();
 
-  // Auto-play functionality
-  useEffect(() => {
-    if (autoPlay || autoPlayAudio) {
-      handleSpeak(null);
-    }
-  }, [word, autoPlay, autoPlayAudio]);
+  // Explicitly remove auto-play functionality
+  // The component will only speak when the button is clicked
 
-  const handleSpeak = async (e: React.MouseEvent | null) => {
-    if (e) {
-      e.stopPropagation(); // Prevent triggering the parent onClick
-    }
+  const handleSpeak = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
     
     if (!speechSupported) {
       toast({

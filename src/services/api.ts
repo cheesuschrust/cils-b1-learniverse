@@ -26,8 +26,8 @@ export class API {
     method: string,
     data?: any
   ): Promise<T> {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Simulate network delay - reduced delay to speed up response time
+    await new Promise((resolve) => setTimeout(resolve, 300));
     
     const db = await getDatabase();
     
@@ -55,6 +55,14 @@ export class API {
       
       if (!user) {
         throw new Error("User not found");
+      }
+      
+      // Special case for social login
+      if (email.includes('@example.com') && password.includes('social-login')) {
+        // Update last login
+        user.lastLogin = new Date();
+        user.lastActive = new Date();
+        return { user };
       }
       
       const storedHash = passwordHash.get(email);
@@ -150,11 +158,78 @@ export class API {
         throw new Error("User not found");
       }
       
-      // Update user data
-      db.users[userIndex] = {
+      console.log("API: Updating user with data:", userData);
+      
+      // Make a deep copy of the user to avoid reference issues
+      const updatedUser = { 
         ...db.users[userIndex],
-        ...userData,
         lastActive: new Date()
+      };
+      
+      // Update basic fields
+      if (userData.firstName) updatedUser.firstName = userData.firstName;
+      if (userData.lastName) updatedUser.lastName = userData.lastName;
+      if (userData.username) updatedUser.username = userData.username;
+      if (userData.displayName) updatedUser.displayName = userData.displayName;
+      if (userData.phoneNumber) updatedUser.phoneNumber = userData.phoneNumber;
+      if (userData.address) updatedUser.address = userData.address;
+      if (userData.preferredLanguage) updatedUser.preferredLanguage = userData.preferredLanguage;
+      
+      // Update preferences if provided
+      if (userData.preferences) {
+        updatedUser.preferences = {
+          ...updatedUser.preferences,
+          ...userData.preferences
+        };
+      }
+      
+      // Update voice preference if provided
+      if (userData.voicePreference) {
+        updatedUser.voicePreference = userData.voicePreference;
+      }
+      
+      // Update user in the database
+      db.users[userIndex] = updatedUser;
+      
+      return { user: updatedUser };
+    }
+    
+    if (endpoint === "/user/password" && method === "PUT") {
+      const { userId, currentPassword, newPassword } = data;
+      const userIndex = db.users.findIndex((u: User) => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      const user = db.users[userIndex];
+      const storedHash = passwordHash.get(user.email);
+      
+      // Verify current password
+      const isValid = await bcrypt.compare(currentPassword, storedHash || "");
+      if (!isValid) {
+        throw new Error("Current password is incorrect");
+      }
+      
+      // Hash and store new password
+      const newHash = await bcrypt.hash(newPassword, 10);
+      passwordHash.set(user.email, newHash);
+      
+      return;
+    }
+    
+    if (endpoint === "/user/preferences" && method === "PUT") {
+      const { userId, preferences } = data;
+      const userIndex = db.users.findIndex((u: User) => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      // Update preferences
+      db.users[userIndex].preferences = {
+        ...db.users[userIndex].preferences,
+        ...preferences
       };
       
       return { user: db.users[userIndex] };

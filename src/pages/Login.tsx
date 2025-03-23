@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +63,7 @@ const Login = () => {
       if (success) {
         toast({
           title: "Login successful",
-          description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
+          description: "Welcome back!",
         });
         // Navigate to the dashboard with the correct path
         navigate("/app/dashboard");
@@ -88,7 +89,7 @@ const Login = () => {
       if (success) {
         toast({
           title: "Login successful",
-          description: `Welcome to CILS B2 Cittadinanza Question of the Day!`,
+          description: `Welcome!`,
         });
         navigate(from);
       }
@@ -110,7 +111,7 @@ const Login = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
           <CardDescription>
-            Enter your credentials to access your CILS B2 Cittadinanza account
+            Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -171,7 +172,7 @@ const Login = () => {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="john.doe@example.com"
+                        placeholder="Enter your email"
                         {...field}
                       />
                     </FormControl>
@@ -231,12 +232,9 @@ const Login = () => {
       </Card>
       
       <div className="mt-6 text-center text-sm text-muted-foreground">
-        <p>Demo credentials: admin@italianlearning.app / Admin123!</p>
-        <p className="mt-1">
-          <Link to="/privacy-policy" className="hover:underline">
-            Privacy Policy
-          </Link>
-        </p>
+        <Link to="/privacy-policy" className="hover:underline">
+          Privacy Policy
+        </Link>
       </div>
     </div>
   );

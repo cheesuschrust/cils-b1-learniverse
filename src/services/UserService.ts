@@ -25,6 +25,7 @@ export class UserService {
   }
   
   static async updateProfile(userId: string, userData: UpdateProfileData): Promise<UserProfileResponse> {
+    console.log("Updating user profile with data:", userData);
     return API.handleRequest<UserProfileResponse>("/user/update", "PUT", { userId, userData });
   }
   
