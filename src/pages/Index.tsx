@@ -14,12 +14,16 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import SpeakableWord from "@/components/learning/SpeakableWord";
+import LandingNavbar from "@/components/layout/LandingNavbar";
+import WordOfTheDay from "@/components/learning/WordOfTheDay";
 
 const Index = () => {
   return (
     <div className="flex flex-col min-h-screen">
+      <LandingNavbar />
+      
       {/* Hero Section */}
-      <section className="relative py-24 md:py-32 overflow-hidden">
+      <section className="relative py-24 md:py-32 mt-16 overflow-hidden" id="home">
         <div className="absolute inset-0 bg-gradient-radial from-accent/30 to-transparent" />
         
         <div className="container mx-auto px-6 relative z-10">
@@ -63,20 +67,21 @@ const Index = () => {
                   <SpeakableWord 
                     word="Quale di queste città è la capitale d'Italia?" 
                     language="it"
+                    autoPlay={false}
                   />
                 </p>
                 <div className="space-y-2">
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    <SpeakableWord word="Milano" language="it" />
+                    <SpeakableWord word="Milano" language="it" autoPlay={false} />
                   </div>
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    <SpeakableWord word="Firenze" language="it" />
+                    <SpeakableWord word="Firenze" language="it" autoPlay={false} />
                   </div>
                   <div className="p-3 rounded-lg border border-primary bg-accent/10 transition-colors cursor-pointer">
-                    <SpeakableWord word="Roma" language="it" />
+                    <SpeakableWord word="Roma" language="it" autoPlay={false} />
                   </div>
                   <div className="p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/10 transition-colors cursor-pointer">
-                    <SpeakableWord word="Venezia" language="it" />
+                    <SpeakableWord word="Venezia" language="it" autoPlay={false} />
                   </div>
                 </div>
               </div>
@@ -85,8 +90,21 @@ const Index = () => {
         </div>
       </section>
       
+      {/* Word of the Day Section */}
+      <section className="py-12 bg-accent/10">
+        <div className="container mx-auto px-6">
+          <div className="max-w-md mx-auto">
+            <WordOfTheDay 
+              word="Buongiorno" 
+              meaning="Good morning / Good day" 
+              example="Buongiorno, come stai oggi?" 
+            />
+          </div>
+        </div>
+      </section>
+      
       {/* Features */}
-      <section className="py-20 bg-secondary/50">
+      <section className="py-20 bg-secondary/50" id="features">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16 animate-fade-up">
             <h2 className="text-3xl font-bold mb-4">Master Italian with Daily Practice</h2>
@@ -148,7 +166,7 @@ const Index = () => {
       </section>
       
       {/* How it Works */}
-      <section className="py-20">
+      <section className="py-20" id="how-it-works">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">How It Works</h2>
@@ -216,7 +234,7 @@ const Index = () => {
       </section>
       
       {/* Testimonials */}
-      <section className="py-20">
+      <section className="py-20" id="testimonials">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>

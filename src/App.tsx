@@ -13,6 +13,7 @@ import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import NotFound from '@/pages/NotFound';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import Index from '@/pages/Index';
 
 // Import pages
 import {
@@ -53,13 +54,14 @@ function App() {
             <NotificationsProvider>
               <Routes>
                 {/* Public Routes */}
+                <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/password-reset" element={<PasswordReset />} />
                 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
-                  <Route path="/" element={<DashboardLayout />}>
+                  <Route path="/app" element={<DashboardLayout />}>
                     <Route index element={<Dashboard />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="flashcards" element={<Flashcards />} />
