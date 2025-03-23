@@ -1,295 +1,385 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, XCircle, ArrowRight, Languages } from "lucide-react";
-import SpeakableWord from "@/components/learning/SpeakableWord";
-import BilingualFeedback from "@/components/ui/BilingualFeedback";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  HelpCircle,
+  BookOpen,
+  Clock,
+  Award,
+  BarChart,
+} from "lucide-react";
 
-interface Question {
-  id: string;
-  question: string;
-  translation?: string;
-  options: string[];
-  translations?: string[];
-  correctAnswer: string;
-  explanation: string;
-  explanationTranslation?: string;
-}
-
-const questions: Question[] = [
+// Sample question data
+const sampleQuestions = [
   {
-    id: "q1",
-    question: "Qual è la capitale d'Italia?",
-    translation: "What is the capital of Italy?",
-    options: ["Milano", "Roma", "Napoli", "Firenze"],
-    translations: ["Milan", "Rome", "Naples", "Florence"],
+    id: 1,
+    question: "Quale di queste città è la capitale d'Italia?",
+    options: ["Milano", "Firenze", "Roma", "Venezia"],
     correctAnswer: "Roma",
-    explanation: "Roma è la capitale d'Italia dal 1871.",
-    explanationTranslation: "Rome has been the capital of Italy since 1871."
+    explanation:
+      "Roma è la capitale d'Italia dal 1871. Prima di Roma, la capitale è stata Torino e poi Firenze.",
   },
   {
-    id: "q2",
-    question: "Come si dice 'goodbye' in italiano?",
-    translation: "How do you say 'goodbye' in Italian?",
-    options: ["Buongiorno", "Ciao", "Arrivederci", "Grazie"],
-    translations: ["Good morning", "Hello/Bye (informal)", "Goodbye (formal)", "Thank you"],
-    correctAnswer: "Arrivederci",
-    explanation: "'Arrivederci' è il modo formale per dire goodbye. 'Ciao' può essere usato informalmente.",
-    explanationTranslation: "'Arrivederci' is the formal way to say goodbye. 'Ciao' can be used informally."
+    id: 2,
+    question: "Cosa rappresentano i tre colori della bandiera italiana?",
+    options: [
+      "Libertà, Uguaglianza, Fraternità",
+      "Passato, Presente, Futuro",
+      "Mare, Pianura, Montagne",
+      "Speranza, Fede, Carità",
+    ],
+    correctAnswer: "Speranza, Fede, Carità",
+    explanation:
+      "I tre colori della bandiera italiana simboleggiano la Speranza (verde), la Fede (bianco) e la Carità (rosso).",
   },
   {
-    id: "q3",
-    question: "Quale di questi è un verbo irregolare?",
-    translation: "Which of these is an irregular verb?",
-    options: ["Parlare", "Andare", "Mangiare", "Studiare"],
-    translations: ["To speak", "To go", "To eat", "To study"],
-    correctAnswer: "Andare",
-    explanation: "'Andare' è un verbo irregolare che non segue il modello di coniugazione standard.",
-    explanationTranslation: "'Andare' is an irregular verb that doesn't follow the standard conjugation pattern."
+    id: 3,
+    question: "Chi è stato il primo presidente della Repubblica Italiana?",
+    options: [
+      "Alcide De Gasperi",
+      "Enrico De Nicola",
+      "Luigi Einaudi",
+      "Giuseppe Saragat",
+    ],
+    correctAnswer: "Enrico De Nicola",
+    explanation:
+      "Enrico De Nicola è stato il primo presidente della Repubblica Italiana dal 1946 al 1948, sebbene inizialmente con il titolo di Capo Provvisorio dello Stato.",
   },
-  {
-    id: "q4",
-    question: "Quale colore NON è presente nella bandiera italiana?",
-    translation: "Which color is NOT present in the Italian flag?",
-    options: ["Verde", "Bianco", "Rosso", "Blu"],
-    translations: ["Green", "White", "Red", "Blue"],
-    correctAnswer: "Blu",
-    explanation: "La bandiera italiana ha tre colori: verde, bianco e rosso.",
-    explanationTranslation: "The Italian flag has three colors: green, white, and red."
-  },
-  {
-    id: "q5",
-    question: "Come si dice '20' in italiano?",
-    translation: "How do you say '20' in Italian?",
-    options: ["Dieci", "Venti", "Trenta", "Quindici"],
-    translations: ["Ten", "Twenty", "Thirty", "Fifteen"],
-    correctAnswer: "Venti",
-    explanation: "'Venti' è il numero 20 in italiano.",
-    explanationTranslation: "'Venti' is the number 20 in Italian."
-  }
 ];
 
+// Component
 const MultipleChoice = () => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [showTranslations, setShowTranslations] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [incorrectAnswers, setIncorrectAnswers] = useState(0);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [quizFinished, setQuizFinished] = useState(false);
   
-  const handleAnswer = () => {
-    if (selectedAnswer === null) return;
-    
-    setIsAnswered(true);
-    if (selectedAnswer === questions[currentQuestion].correctAnswer) {
-      setScore(score + 1);
+  const { toast } = useToast();
+  
+  const currentQuestion = sampleQuestions[currentQuestionIndex];
+  
+  const handleOptionSelect = (option: string) => {
+    if (isSubmitted) return;
+    setSelectedOption(option);
+  };
+  
+  const handleSubmit = () => {
+    if (!selectedOption) {
+      toast({
+        title: "Please select an answer",
+        description: "You need to choose an option before submitting",
+        variant: "destructive",
+      });
+      return;
     }
-    setProgress(((currentQuestion + 1) / questions.length) * 100);
+    
+    setIsSubmitted(true);
+    
+    if (selectedOption === currentQuestion.correctAnswer) {
+      setCorrectAnswers(correctAnswers + 1);
+      // Play success sound in a real app
+    } else {
+      setIncorrectAnswers(incorrectAnswers + 1);
+      // Play error sound in a real app
+    }
   };
   
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-      setIsAnswered(false);
+    if (currentQuestionIndex < sampleQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedOption(null);
+      setIsSubmitted(false);
+      setShowExplanation(false);
+    } else {
+      setQuizFinished(true);
     }
   };
   
-  const resetQuiz = () => {
-    setCurrentQuestion(0);
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setScore(0);
-    setProgress(0);
+  const handleStartQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    setShowExplanation(false);
+    setCorrectAnswers(0);
+    setIncorrectAnswers(0);
+    setQuizFinished(false);
+    // setTimeLeft(60); // Start a 60-second timer for timed quizzes
   };
   
-  const toggleTranslations = () => {
-    setShowTranslations(!showTranslations);
+  const toggleExplanation = () => {
+    setShowExplanation(!showExplanation);
   };
   
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Multiple Choice</h1>
-        <p className="text-gray-700 font-medium">Test your knowledge with multiple choice questions</p>
-      </div>
-      
-      <div className="max-w-3xl mx-auto">
-        <Card className="w-full border-2 border-gray-200 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-[#009246]/10 to-[#ce2b37]/10">
-            <div className="flex justify-between items-center">
+  // Function to render the question card
+  const renderQuestionCard = () => (
+    <Card className="w-full max-w-3xl mx-auto backdrop-blur-sm border-accent/20 animate-fade-up">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl">Multiple Choice Question</CardTitle>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Clock className="h-4 w-4 mr-1" />
+            Question {currentQuestionIndex + 1} of {sampleQuestions.length}
+          </div>
+        </div>
+        <CardDescription>
+          Test your knowledge of Italian citizenship
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="bg-secondary/30 p-4 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">{currentQuestion.question}</h3>
+          <div className="space-y-3">
+            {currentQuestion.options.map((option, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                  selectedOption === option
+                    ? isSubmitted
+                      ? option === currentQuestion.correctAnswer
+                        ? "border-green-500 bg-green-50"
+                        : "border-red-500 bg-red-50"
+                      : "border-primary bg-primary/5"
+                    : isSubmitted && option === currentQuestion.correctAnswer
+                    ? "border-green-500 bg-green-50"
+                    : "border-border hover:border-primary hover:bg-accent/10"
+                }`}
+                onClick={() => handleOptionSelect(option)}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{option}</span>
+                  {isSubmitted && option === currentQuestion.correctAnswer && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  )}
+                  {isSubmitted &&
+                    selectedOption === option &&
+                    option !== currentQuestion.correctAnswer && (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {isSubmitted && (
+          <div
+            className={`p-4 rounded-lg border ${
+              selectedOption === currentQuestion.correctAnswer
+                ? "border-green-200 bg-green-50"
+                : "border-red-200 bg-red-50"
+            }`}
+          >
+            <div className="flex items-start">
+              {selectedOption === currentQuestion.correctAnswer ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+              )}
               <div>
-                <CardTitle className="text-gray-800">Quiz di Italiano</CardTitle>
-                <CardDescription className="text-gray-700">Basic Italian language quiz</CardDescription>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-gray-800">
-                  Question {currentQuestion + 1} of {questions.length}
+                <p className="font-medium">
+                  {selectedOption === currentQuestion.correctAnswer
+                    ? "Correct!"
+                    : "Incorrect!"}
                 </p>
-                <p className="text-sm text-gray-700">
-                  Score: {score}/{currentQuestion + (isAnswered ? 1 : 0)}
+                <p className="text-sm text-muted-foreground">
+                  {selectedOption === currentQuestion.correctAnswer
+                    ? "Well done! You selected the right answer."
+                    : `The correct answer is "${currentQuestion.correctAnswer}".`}
                 </p>
-              </div>
-            </div>
-            <Progress value={progress} className="h-2 mt-4 bg-gray-200" />
-          </CardHeader>
-          
-          <CardContent className="space-y-6 pt-6">
-            <div className="flex justify-between items-center">
-              <div className="text-xl font-medium text-gray-800">
-                <SpeakableWord 
-                  word={questions[currentQuestion].question}
-                  language="it"
-                  className="block"
-                />
-                {showTranslations && questions[currentQuestion].translation && (
-                  <div className="mt-2 text-sm italic text-gray-700">
-                    {questions[currentQuestion].translation}
+                
+                {showExplanation ? (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded-md text-sm">
+                    <p>{currentQuestion.explanation}</p>
                   </div>
+                ) : (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="px-0 text-primary mt-1"
+                    onClick={toggleExplanation}
+                  >
+                    <HelpCircle className="h-4 w-4 mr-1" />
+                    Show explanation
+                  </Button>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleTranslations}
-                className="flex items-center gap-1 border-[#33A5EF] text-[#33A5EF]"
-              >
-                <Languages className="h-4 w-4" />
-                {showTranslations ? "Hide" : "Show"} Translation
-              </Button>
             </div>
-            
-            <RadioGroup 
-              value={selectedAnswer || ""} 
-              onValueChange={setSelectedAnswer}
-              className="space-y-3"
-              disabled={isAnswered}
-            >
-              {questions[currentQuestion].options.map((option, index) => (
-                <div 
-                  key={option} 
-                  className={`flex items-center space-x-2 p-3 rounded-lg border ${
-                    isAnswered
-                      ? option === questions[currentQuestion].correctAnswer
-                        ? "border-green-500 bg-green-50"
-                        : option === selectedAnswer
-                        ? "border-red-500 bg-red-50"
-                        : "border-gray-300"
-                      : "border-gray-300"
-                  }`}
-                >
-                  <RadioGroupItem value={option} id={option} />
-                  <Label 
-                    htmlFor={option} 
-                    className="flex-1 cursor-pointer font-medium text-gray-800"
-                  >
-                    <div className="flex items-center justify-between">
-                      <SpeakableWord word={option} language="it" />
-                      {showTranslations && questions[currentQuestion].translations && (
-                        <span className="text-sm italic text-gray-600 ml-2">
-                          ({questions[currentQuestion].translations[index]})
-                        </span>
-                      )}
-                    </div>
-                  </Label>
-                  {isAnswered && option === questions[currentQuestion].correctAnswer && (
-                    <CheckCircle2 className="text-green-500 h-5 w-5" />
-                  )}
-                  {isAnswered && option === selectedAnswer && option !== questions[currentQuestion].correctAnswer && (
-                    <XCircle className="text-red-500 h-5 w-5" />
-                  )}
-                </div>
-              ))}
-            </RadioGroup>
-            
-            {isAnswered && (
-              <div className="bg-gray-100 p-4 rounded-lg border border-gray-200">
-                <p className="font-medium mb-1 text-gray-800">Explanation:</p>
-                <div>
-                  <p className="text-gray-800 italic">
-                    {questions[currentQuestion].explanation}
-                  </p>
-                  {showTranslations && questions[currentQuestion].explanationTranslation && (
-                    <div className="mt-2 text-gray-700">
-                      {questions[currentQuestion].explanationTranslation}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-          
-          <CardFooter className="flex justify-between">
-            {!isAnswered ? (
-              <Button
-                onClick={handleAnswer}
-                disabled={selectedAnswer === null}
-                className="w-full bg-[#009246] hover:bg-[#017f3c] text-white"
-              >
-                Check Answer
-              </Button>
-            ) : currentQuestion < questions.length - 1 ? (
-              <Button
-                onClick={handleNext}
-                className="w-full bg-[#ce2b37] hover:bg-[#b32530] text-white"
-              >
-                Next Question
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={resetQuiz}
-                className="w-full bg-[#33A5EF] hover:bg-[#2895df] text-white"
-              >
-                Restart Quiz
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-        
-        {isAnswered && currentQuestion === questions.length - 1 && (
-          <Card className="mt-6 border-2 border-gray-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-[#009246]/10 to-[#ce2b37]/10">
-              <CardTitle className="text-gray-800">Quiz Complete!</CardTitle>
-              <CardDescription className="text-gray-700">Your final results</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <p className="text-4xl font-bold mb-2 text-gray-800">
-                  {score}/{questions.length}
-                </p>
-                <p className="text-xl font-medium mb-4 text-gray-700">
-                  {score === questions.length
-                    ? "Perfect score! Excellent job! 🎉"
-                    : score >= questions.length * 0.7
-                    ? "Great job! Very good! 👏"
-                    : score >= questions.length * 0.5
-                    ? "Good effort! Keep practicing! 👍"
-                    : "Keep practicing! You'll improve! 💪"}
-                </p>
-                <Progress 
-                  value={(score / questions.length) * 100} 
-                  className="h-3 bg-gray-200"
-                  // Color based on score
-                  style={{
-                    "--progress-foreground": score === questions.length 
-                      ? "#009246" 
-                      : score >= questions.length * 0.7
-                      ? "#33A5EF"
-                      : score >= questions.length * 0.5
-                      ? "#FFB800"
-                      : "#ce2b37"
-                  } as React.CSSProperties}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         )}
-      </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <div className="flex items-center text-sm text-muted-foreground">
+          {isSubmitted && (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
+              <span className="mr-3">{correctAnswers} correct</span>
+              <XCircle className="h-4 w-4 text-red-500 mr-1" />
+              <span>{incorrectAnswers} incorrect</span>
+            </>
+          )}
+        </div>
+        <div className="space-x-2">
+          {!isSubmitted ? (
+            <Button onClick={handleSubmit} disabled={!selectedOption}>
+              Submit Answer
+            </Button>
+          ) : (
+            <Button onClick={handleNext}>
+              {currentQuestionIndex < sampleQuestions.length - 1
+                ? "Next Question"
+                : "Finish Quiz"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+  
+  // Function to render the results card
+  const renderResultsCard = () => (
+    <Card className="w-full max-w-3xl mx-auto backdrop-blur-sm border-accent/20 animate-fade-up">
+      <CardHeader>
+        <CardTitle className="text-xl flex items-center">
+          <Award className="h-5 w-5 mr-2 text-primary" />
+          Quiz Results
+        </CardTitle>
+        <CardDescription>
+          You've completed the multiple choice questions
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-col md:flex-row items-center justify-center md:justify-around p-6 bg-secondary/30 rounded-lg">
+          <div className="text-center mb-4 md:mb-0">
+            <div className="text-3xl font-bold text-primary">
+              {correctAnswers}/{sampleQuestions.length}
+            </div>
+            <p className="text-sm text-muted-foreground">Correct Answers</p>
+          </div>
+          
+          <div className="text-center mb-4 md:mb-0">
+            <div className="text-3xl font-bold">
+              {Math.round((correctAnswers / sampleQuestions.length) * 100)}%
+            </div>
+            <p className="text-sm text-muted-foreground">Accuracy</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="relative w-24 h-24">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle
+                  className="text-secondary/80 stroke-current"
+                  strokeWidth="10"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                ></circle>
+                <circle
+                  className="text-primary stroke-current"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                  strokeDasharray={`${2 * Math.PI * 40}`}
+                  strokeDashoffset={`${
+                    2 *
+                    Math.PI *
+                    40 *
+                    (1 - correctAnswers / sampleQuestions.length)
+                  }`}
+                  style={{
+                    transformOrigin: "center",
+                    transform: "rotate(-90deg)",
+                  }}
+                ></circle>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <BarChart className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <h3 className="font-medium">Question Summary</h3>
+          {sampleQuestions.map((question, index) => (
+            <div
+              key={question.id}
+              className="p-3 border border-border rounded-lg"
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-1">
+                  {index < correctAnswers ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className="font-medium">{question.question}</p>
+                  <p className="text-sm text-primary">
+                    Correct answer: {question.correctAnswer}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="bg-accent/20 p-4 rounded-lg">
+          <div className="flex items-start">
+            <BookOpen className="h-5 w-5 text-primary mt-0.5 mr-2" />
+            <div>
+              <h3 className="font-medium">AI Feedback</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {correctAnswers === sampleQuestions.length
+                  ? "Excellent work! You've demonstrated a strong understanding of Italian citizenship knowledge. Keep it up!"
+                  : correctAnswers >= sampleQuestions.length / 2
+                  ? "Good effort! You're making progress, but there's still room for improvement. Focus on reviewing the questions you missed."
+                  : "You need more practice with Italian citizenship topics. Consider reviewing the basic information about Italy's government, history, and culture."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={handleStartQuiz}>
+          Try Again
+        </Button>
+        <Button>Continue Learning</Button>
+      </CardFooter>
+    </Card>
+  );
+  
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
+        Multiple Choice Questions
+      </h1>
+      <p className="text-muted-foreground mb-8 animate-fade-in">
+        Test your knowledge of Italian citizenship with daily questions
+      </p>
+      
+      {quizFinished ? renderResultsCard() : renderQuestionCard()}
     </div>
   );
 };

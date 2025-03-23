@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
@@ -15,7 +16,7 @@ import Dashboard from '@/pages/Dashboard';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import AppLayout from '@/components/layout/AppLayout';
-import Index from '@/pages/Index';
+import LandingPage from '@/pages/LandingPage';
 import AdminLayout from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/admin/Dashboard';
 import UserManagement from '@/pages/admin/UserManagement';
@@ -33,15 +34,11 @@ import Vocabulary from '@/pages/learning/Vocabulary';
 import Grammar from '@/pages/learning/Grammar';
 import ReadingComprehension from '@/pages/learning/ReadingComprehension';
 import ListeningComprehension from '@/pages/learning/ListeningComprehension';
-import WritingPractice from '@/pages/Writing';
-import SpeakingPractice from '@/pages/Speaking';
+import WritingPractice from '@/pages/practice/WritingPractice';
+import SpeakingPractice from '@/pages/practice/SpeakingPractice';
 import MockExam from '@/pages/exams/MockExam';
 import ExamResults from '@/pages/exams/ExamResults';
 import { Loader2 } from 'lucide-react';
-import Flashcards from '@/pages/Flashcards';
-import MultipleChoice from '@/pages/MultipleChoice';
-import Listening from '@/pages/Listening';
-import SystemLogs from '@/pages/admin/SystemLogs';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -110,13 +107,13 @@ function App() {
           <UserPreferencesProvider>
             <BrowserRouter>
               <Helmet>
-                <title>CILS B2 Cittadinanza - Italian Language Learning for Citizenship</title>
-                <meta name="description" content="Prepare for your Italian citizenship language exam with our comprehensive CILS B2 Cittadinanza learning platform." />
+                <title>CILS B2 Cittadinanza</title>
+                <meta name="description" content="Prepare for the CILS B2 Cittadinanza exam with comprehensive tools and resources." />
               </Helmet>
               
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
@@ -140,7 +137,7 @@ function App() {
                   <Route path="vocabulary" element={<Vocabulary />} />
                   <Route path="grammar" element={<Grammar />} />
                   <Route path="reading" element={<ReadingComprehension />} />
-                  <Route path="listening" element={<Listening />} />
+                  <Route path="listening" element={<ListeningComprehension />} />
                   
                   {/* Practice routes */}
                   <Route path="writing" element={<WritingPractice />} />
@@ -148,10 +145,6 @@ function App() {
                   
                   {/* Question browser */}
                   <Route path="questions" element={<QuestionBrowser />} />
-                  
-                  {/* Interactive learning */}
-                  <Route path="flashcards" element={<Flashcards />} />
-                  <Route path="multiple-choice" element={<MultipleChoice />} />
                   
                   {/* Exam routes */}
                   <Route path="exams/mock" element={<MockExam />} />
@@ -173,7 +166,6 @@ function App() {
                   <Route path="support" element={<AdminSupportPage />} />
                   <Route path="guide" element={<AdminGuide />} />
                   <Route path="questions/editor" element={<QuestionEditor />} />
-                  <Route path="system-logs" element={<SystemLogs />} />
                 </Route>
                 
                 {/* Redirect old dashboard path to new one */}

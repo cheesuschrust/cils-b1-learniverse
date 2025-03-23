@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import { Volume2, Settings as SettingsIcon, Save, User, Bell, Moon, RotateCcw } 
 import UserPreferences from "@/components/user/UserPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
-import { getAllVoices, speak, VoicePreference } from "@/utils/textToSpeech";
+import { getAllVoices, speak } from "@/utils/textToSpeech";
 import { useTheme } from "@/components/ui/theme-provider";
 
 const Settings = () => {
@@ -105,14 +104,12 @@ const Settings = () => {
   };
   
   const handleVoiceUpdate = () => {
-    const newVoicePreference: VoicePreference = {
+    setVoicePreference({
       italianVoiceURI: selectedItalianVoice,
       englishVoiceURI: selectedEnglishVoice,
       voiceRate: voiceSpeed,
       voicePitch: voicePitch
-    };
-    
-    setVoicePreference(newVoicePreference);
+    });
     
     toast({
       title: "Voice Settings Updated",
@@ -128,14 +125,12 @@ const Settings = () => {
         ? "Ciao, questo è un esempio di come suonerà la voce italiana." 
         : "Hello, this is an example of how the English voice will sound.";
       
-      const testVoicePreference: VoicePreference = {
+      await speak(text, language, {
         italianVoiceURI: selectedItalianVoice,
         englishVoiceURI: selectedEnglishVoice,
         voiceRate: voiceSpeed,
         voicePitch: voicePitch
-      };
-      
-      await speak(text, language, testVoicePreference);
+      });
     } catch (error) {
       console.error("Error testing voice:", error);
       toast({

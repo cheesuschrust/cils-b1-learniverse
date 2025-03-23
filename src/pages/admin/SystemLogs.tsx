@@ -38,32 +38,14 @@ const SystemLogs = () => {
   
   useEffect(() => {
     const allLogs = getSystemLogs();
-    const processedLogs = allLogs.map(log => {
-      const processedLog: SystemLog = {
-        ...log,
-        timestamp: ensureTimestampString(log.timestamp)
-      };
-      return processedLog;
-    });
-    
-    setLogs(processedLogs);
+    // Ensure the timestamp is handled as a string, not a Date object
+    setLogs(allLogs.map(log => ({
+      ...log,
+      timestamp: typeof log.timestamp === 'object' && log.timestamp !== null 
+        ? log.timestamp.toISOString() 
+        : log.timestamp || new Date().toISOString()
+    })));
   }, []);
-  
-  const ensureTimestampString = (timestamp: any): string => {
-    if (!timestamp) {
-      return new Date().toISOString();
-    }
-    
-    if (typeof timestamp === 'string') {
-      return timestamp;
-    }
-    
-    if (typeof timestamp === 'object' && typeof timestamp.toISOString === 'function') {
-      return timestamp.toISOString();
-    }
-    
-    return String(timestamp);
-  };
   
   useEffect(() => {
     let filtered = [...logs];
@@ -104,10 +86,6 @@ const SystemLogs = () => {
     
     try {
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',

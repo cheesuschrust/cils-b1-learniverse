@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Book,
@@ -13,7 +13,6 @@ import {
   Mic,
   UserCircle,
   Settings,
-  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,7 +35,6 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   
   // Handle scroll events for navbar styling
@@ -88,17 +86,12 @@ const Navbar = () => {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
   
   return (
     <header 
       className={cn(
         "fixed top-0 left-0 w-full py-4 px-6 z-50 transition-all duration-300",
-        isScrolled ? "bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       )}
     >
       <div className="container mx-auto flex justify-between items-center">
@@ -106,7 +99,7 @@ const Navbar = () => {
           to="/" 
           className="flex items-center space-x-2"
         >
-          <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-green-600 via-white to-red-600">
+          <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-italian-green via-italian-white to-italian-red">
             CILS B1
           </span>
         </Link>
@@ -140,20 +133,14 @@ const Navbar = () => {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem>
                     <Link to="/app/dashboard" className="flex w-full items-center">
                       <UserCircle className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/app/profile" className="flex w-full items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
                   {user?.role === "admin" && (
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem>
                       <Link to="/admin/dashboard" className="flex w-full items-center">
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Admin</span>
@@ -161,7 +148,7 @@ const Navbar = () => {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
+                  <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>
                   </DropdownMenuItem>
@@ -200,7 +187,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-16 inset-x-0 p-4 glass shadow-lg animate-fade-in backdrop-blur-md bg-white/90 dark:bg-gray-900/90">
+        <div className="md:hidden absolute top-16 inset-x-0 p-4 glass shadow-lg animate-fade-in">
           <nav className="flex flex-col space-y-4 p-4">
             {isAuthenticated && (
               <>
@@ -235,20 +222,6 @@ const Navbar = () => {
                   <span>Dashboard</span>
                 </Link>
                 
-                <Link
-                  to="/app/profile"
-                  className={cn(
-                    "flex items-center text-sm font-medium p-2 rounded-md transition-colors",
-                    location.pathname === "/app/profile"
-                      ? "bg-secondary text-primary"
-                      : "text-foreground hover:bg-secondary"
-                  )}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <User className="w-5 h-5 mr-2" />
-                  <span>Profile</span>
-                </Link>
-                
                 {user?.role === "admin" && (
                   <Link
                     to="/admin/dashboard"
@@ -269,7 +242,7 @@ const Navbar = () => {
                   variant="ghost" 
                   className="flex items-center justify-start text-sm w-full"
                   onClick={() => {
-                    handleLogout();
+                    logout();
                     setIsMenuOpen(false);
                   }}
                 >
@@ -286,11 +259,9 @@ const Navbar = () => {
                     Login
                   </Button>
                 </Link>
-                <div className="mt-2">
-                  <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full">Sign Up</Button>
-                  </Link>
-                </div>
+                <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full">Sign up</Button>
+                </Link>
               </div>
             )}
           </nav>
