@@ -19,6 +19,21 @@ export interface UpdateProfileData {
   voicePreference?: VoicePreference;
 }
 
+export interface ActivityLogItem {
+  id: string;
+  userId: string;
+  action: string;
+  details: string;
+  timestamp: string;
+  category: string;
+  metadata?: any;
+}
+
+export interface ActivityLogResponse {
+  logs: ActivityLogItem[];
+  total: number;
+}
+
 export class UserService {
   static async getUserProfile(userId: string): Promise<UserProfileResponse> {
     return API.handleRequest<UserProfileResponse>("/user/profile", "GET", { userId });
@@ -37,7 +52,32 @@ export class UserService {
     return API.handleRequest<UserProfileResponse>("/user/preferences", "PUT", { userId, preferences });
   }
   
-  static async getActivityLog(userId: string): Promise<any> {
-    return API.handleRequest<any>("/user/activity", "GET", { userId });
+  static async updateVoicePreferences(userId: string, voicePreference: VoicePreference): Promise<UserProfileResponse> {
+    return API.handleRequest<UserProfileResponse>("/user/voice-preferences", "PUT", { userId, voicePreference });
+  }
+  
+  static async getActivityLog(userId: string, options: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    startDate?: string;
+    endDate?: string;
+  } = {}): Promise<ActivityLogResponse> {
+    return API.handleRequest<ActivityLogResponse>("/user/activity", "GET", { 
+      userId,
+      page: options.page || 1,
+      limit: options.limit || 20,
+      category: options.category,
+      startDate: options.startDate,
+      endDate: options.endDate
+    });
+  }
+  
+  static async getSystemSettings(): Promise<any> {
+    return API.handleRequest<any>("/user/system-settings", "GET");
+  }
+  
+  static async updateSystemSettings(settings: any): Promise<any> {
+    return API.handleRequest<any>("/user/system-settings", "PUT", { settings });
   }
 }

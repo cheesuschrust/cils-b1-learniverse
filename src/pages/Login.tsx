@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Key, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { AuthService } from "@/services/AuthService";
 
 // Validation schema
 const loginSchema = z.object({
@@ -29,7 +30,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading, isAuthenticated, socialLogin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -83,23 +84,28 @@ const Login = () => {
       // Set loading state for the specific provider
       setIsSocialLoading(prev => ({ ...prev, [provider]: true }));
       
-      // Call the social login method from AuthContext
-      const success = await login(`${provider}@example.com`, 'social-login-password');
-      
-      if (success) {
+      // In a real application, get the auth URL and redirect
+      try {
+        const { authUrl } = await AuthService.getAuthUrl(provider);
+        
+        // For demo purposes, simulate a social login with direct call
+        const success = await socialLogin(provider);
+        
+        if (success) {
+          toast({
+            title: "Login successful",
+            description: `Welcome! You're signed in with ${provider}.`,
+          });
+          navigate(from);
+        }
+      } catch (error) {
+        console.error(`${provider} login error:`, error);
         toast({
-          title: "Login successful",
-          description: `Welcome!`,
+          title: "Login failed",
+          description: `Could not log in with ${provider}. Please try again.`,
+          variant: "destructive"
         });
-        navigate(from);
       }
-    } catch (error) {
-      console.error(`${provider} login error:`, error);
-      toast({
-        title: "Login failed",
-        description: `Could not log in with ${provider}. Please try again.`,
-        variant: "destructive"
-      });
     } finally {
       setIsSocialLoading(prev => ({ ...prev, [provider]: false }));
     }
@@ -173,6 +179,7 @@ const Login = () => {
                         id="email"
                         type="email"
                         placeholder="Enter your email"
+                        autoComplete="email"
                         {...field}
                       />
                     </FormControl>
@@ -200,6 +207,7 @@ const Login = () => {
                         id="password"
                         type="password"
                         placeholder="••••••••"
+                        autoComplete="current-password"
                         {...field}
                       />
                     </FormControl>

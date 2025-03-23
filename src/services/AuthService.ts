@@ -43,4 +43,12 @@ export class AuthService {
   static async verifyEmail(token: string): Promise<void> {
     return API.handleRequest<void>("/auth/verify-email", "POST", { token });
   }
+  
+  static async socialLogin(provider: 'google' | 'apple'): Promise<AuthResponse> {
+    return API.handleRequest<AuthResponse>("/auth/social-login", "POST", { provider });
+  }
+  
+  static async getAuthUrl(provider: 'google' | 'apple'): Promise<{authUrl: string}> {
+    return API.handleRequest<{authUrl: string}>("/auth/get-auth-url", "GET", { provider });
+  }
 }

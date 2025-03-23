@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AdminNotificationCenter from '@/components/admin/AdminNotificationCenter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,27 +8,65 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FileText, Users, Bell, BarChart3, Calendar, Clock, CheckCircle, Info, AlertTriangle, ServerCrash } from 'lucide-react';
 import HelpTooltip from '@/components/help/HelpTooltip';
 import { useSystemLog } from '@/hooks/use-system-log';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { UserService } from '@/services/UserService';
 
 const AdminDashboard = () => {
-  const { getAllUsers, getSystemLogs } = useAuth();
+  const { user } = useAuth();
   const { logSystemAction } = useSystemLog();
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    premiumUsers: 0,
+    totalLogs: 0,
+    errorLogs: 0,
+    warningLogs: 0,
+    infoLogs: 0,
+    recentLogs: []
+  });
   
-  const users = getAllUsers();
-  const logs = getSystemLogs();
-  
-  // Calculate dashboard stats
-  const activeUsersCount = users.filter(user => user.status === 'active').length;
-  const inactiveUsersCount = users.filter(user => user.status === 'inactive').length;
-  const premiumUsersCount = users.filter(user => user.subscription === 'premium').length;
-  
-  const errorLogsCount = logs.filter(log => log.level === 'error').length;
-  const warningLogsCount = logs.filter(log => log.level === 'warning').length;
-  const infoLogsCount = logs.filter(log => log.level === 'info').length;
-  
-  const recentLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
-  
-  // Log dashboard view
-  React.useEffect(() => {
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { getAllUsers, getSystemLogs } = useAuth();
+        const users = getAllUsers();
+        const logs = getSystemLogs();
+        
+        const activeUsersCount = users.filter(user => user.status === 'active').length;
+        const inactiveUsersCount = users.filter(user => user.status === 'inactive').length;
+        const premiumUsersCount = users.filter(user => user.subscription === 'premium').length;
+        
+        const errorLogsCount = logs.filter(log => log.level === 'error').length;
+        const warningLogsCount = logs.filter(log => log.level === 'warning').length;
+        const infoLogsCount = logs.filter(log => log.level === 'info').length;
+        
+        const recentLogs = logs
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 5);
+        
+        setStats({
+          totalUsers: users.length,
+          activeUsers: activeUsersCount,
+          inactiveUsers: inactiveUsersCount,
+          premiumUsers: premiumUsersCount,
+          totalLogs: logs.length,
+          errorLogs: errorLogsCount,
+          warningLogs: warningLogsCount,
+          infoLogs: infoLogsCount,
+          recentLogs: recentLogs
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStats();
     logSystemAction('Viewed admin dashboard');
   }, []);
   
@@ -50,7 +87,7 @@ const AdminDashboard = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
+        <Card className={isLoading ? "opacity-70" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Users
@@ -58,15 +95,15 @@ const AdminDashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-500 font-medium">{activeUsersCount} active</span> • 
-              <span className="text-yellow-500 font-medium ml-1">{inactiveUsersCount} inactive</span>
+              <span className="text-green-500 font-medium">{stats.activeUsers} active</span> • 
+              <span className="text-yellow-500 font-medium ml-1">{stats.inactiveUsers} inactive</span>
             </p>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={isLoading ? "opacity-70" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Premium Subscriptions
@@ -74,14 +111,14 @@ const AdminDashboard = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{premiumUsersCount}</div>
+            <div className="text-2xl font-bold">{stats.premiumUsers}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {Math.round((premiumUsersCount / users.length) * 100)}% of users
+              {stats.totalUsers > 0 ? Math.round((stats.premiumUsers / stats.totalUsers) * 100) : 0}% of users
             </p>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={isLoading ? "opacity-70" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               System Logs
@@ -89,11 +126,11 @@ const AdminDashboard = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{logs.length}</div>
+            <div className="text-2xl font-bold">{stats.totalLogs}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-red-500 font-medium">{errorLogsCount} errors</span> • 
-              <span className="text-yellow-500 font-medium ml-1">{warningLogsCount} warnings</span> • 
-              <span className="text-blue-500 font-medium ml-1">{infoLogsCount} info</span>
+              <span className="text-red-500 font-medium">{stats.errorLogs} errors</span> • 
+              <span className="text-yellow-500 font-medium ml-1">{stats.warningLogs} warnings</span> • 
+              <span className="text-blue-500 font-medium ml-1">{stats.infoLogs} info</span>
             </p>
           </CardContent>
         </Card>
@@ -145,39 +182,49 @@ const AdminDashboard = () => {
               </TabsList>
               
               <TabsContent value="all">
-                <div className="space-y-4">
-                  {recentLogs.length > 0 ? (
-                    recentLogs.map((log) => (
-                      <div key={log.id} className="flex items-start space-x-3">
-                        {log.level === 'error' ? (
-                          <ServerCrash className="h-5 w-5 text-red-500 mt-0.5" />
-                        ) : log.level === 'warning' ? (
-                          <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
-                        ) : (
-                          <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-                        )}
-                        <div className="space-y-1">
-                          <div className="font-medium">{log.action}</div>
-                          <div className="text-sm text-muted-foreground">{log.details}</div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="secondary">{log.category}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(log.timestamp).toLocaleString()}
-                            </span>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {stats.recentLogs.length > 0 ? (
+                      stats.recentLogs.map((log: any) => (
+                        <div key={log.id} className="flex items-start space-x-3">
+                          {log.level === 'error' ? (
+                            <ServerCrash className="h-5 w-5 text-red-500 mt-0.5" />
+                          ) : log.level === 'warning' ? (
+                            <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                          ) : (
+                            <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                          )}
+                          <div className="space-y-1">
+                            <div className="font-medium">{log.action}</div>
+                            <div className="text-sm text-muted-foreground">{log.details}</div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="secondary">{log.category}</Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(log.timestamp).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">No logs found</div>
-                  )}
-                </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">No logs found</div>
+                    )}
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="warnings">
-                <div className="space-y-4">
-                  {logs.filter(log => log.level === 'warning').slice(0, 5).length > 0 ? (
-                    logs.filter(log => log.level === 'warning').slice(0, 5).map((log) => (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                ) : (
+                  stats.recentLogs.filter((log: any) => log.level === 'warning').length > 0 ? (
+                    stats.recentLogs.filter((log: any) => log.level === 'warning').map((log: any) => (
                       <div key={log.id} className="flex items-start space-x-3">
                         <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
                         <div className="space-y-1">
@@ -194,14 +241,18 @@ const AdminDashboard = () => {
                     ))
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">No warning logs found</div>
-                  )}
-                </div>
+                  )
+                )}
               </TabsContent>
               
               <TabsContent value="errors">
-                <div className="space-y-4">
-                  {logs.filter(log => log.level === 'error').slice(0, 5).length > 0 ? (
-                    logs.filter(log => log.level === 'error').slice(0, 5).map((log) => (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                ) : (
+                  stats.recentLogs.filter((log: any) => log.level === 'error').length > 0 ? (
+                    stats.recentLogs.filter((log: any) => log.level === 'error').map((log: any) => (
                       <div key={log.id} className="flex items-start space-x-3">
                         <ServerCrash className="h-5 w-5 text-red-500 mt-0.5" />
                         <div className="space-y-1">
@@ -218,8 +269,8 @@ const AdminDashboard = () => {
                     ))
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">No error logs found</div>
-                  )}
-                </div>
+                  )
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
