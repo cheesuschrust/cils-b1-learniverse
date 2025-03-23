@@ -3,7 +3,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, Users, FileText, Upload, Mail, Settings, 
-  HelpCircle, BookOpen, Edit, ChevronRight, LogOut
+  HelpCircle, BookOpen, Edit, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';

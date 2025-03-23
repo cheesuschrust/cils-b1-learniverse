@@ -1,52 +1,4 @@
 
-import { VoicePreference } from "@/utils/textToSpeech";
-
-export interface UserPreferences {
-  darkMode: boolean;
-  notifications: boolean;
-  language: "english" | "italian" | "both";
-  fontSize?: "small" | "medium" | "large";
-  dailyGoal?: number;
-  autoPlayAudio?: boolean;
-  showTranslations?: boolean;
-  emailNotifications?: boolean;
-  theme?: "light" | "dark" | "system";
-  bio?: string;
-}
-
-export interface EmailTemplate {
-  subject: string;
-  body: string;
-}
-
-export interface EmailSettings {
-  provider: 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
-  fromEmail: string;
-  fromName: string;
-  config: {
-    host?: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    apiKey?: string;
-    domain?: string;
-    accessKey?: string;
-    secretKey?: string;
-    region?: string;
-    enableSsl?: boolean;
-  };
-  templates: {
-    verification: EmailTemplate;
-    passwordReset: EmailTemplate;
-    welcome: EmailTemplate;
-  };
-  temporaryInboxDuration?: number;
-  dailyDigest?: boolean;
-  notifications?: boolean;
-  marketing?: boolean;
-  newFeatures?: boolean;
-}
-
 export interface User {
   id: string;
   email: string;
@@ -54,73 +6,87 @@ export interface User {
   lastName: string;
   displayName?: string;
   username?: string;
-  role: "user" | "admin";
-  status: "active" | "inactive" | "suspended";
-  subscription: "free" | "premium" | "trial";
+  role: 'user' | 'admin' | 'teacher';
   createdAt: string;
+  updatedAt: string;
   lastLogin?: string;
-  lastLoginAt?: string;
-  lastActive?: string;
   phoneNumber?: string;
   address?: string;
-  preferences: UserPreferences;
-  voicePreference?: VoicePreference;
-  preferredLanguage?: "english" | "italian" | "both";
-  dailyQuestionCounts?: {
-    flashcards: number;
-    multipleChoice: number;
-    listening: number;
-    writing: number;
-    speaking: number;
-    [key: string]: number;
-  };
-  isAdmin?: boolean;
-  emailVerified?: boolean;
   isVerified?: boolean;
+  status?: 'active' | 'suspended' | 'pending';
+  subscription?: 'free' | 'basic' | 'premium';
+  preferredLanguage: 'english' | 'italian' | 'both';
+  profileImage?: string;
   avatarUrl?: string;
-  metrics?: {
+  emailVerified?: boolean;
+  dailyQuestionCounts: {
+    grammar: number;
+    vocabulary: number;
+    listening: number;
+    reading: number;
+    writing: number;
+  };
+  metrics: {
     totalQuestions: number;
     correctAnswers: number;
+    wrongAnswers: number;
+    accuracy: number;
     streak: number;
-    [key: string]: number;
   };
+  lastActive: string;
 }
 
-export interface UserPreferencesContextType {
-  darkMode: boolean;
-  toggleDarkMode: () => void;
-  language: "english" | "italian" | "both";
-  setLanguage: (language: "english" | "italian" | "both") => void;
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
   notifications: boolean;
-  toggleNotifications: () => void;
-  fontSize: "small" | "medium" | "large";
-  setFontSize: (size: "small" | "medium" | "large") => void;
-  voicePreference: VoicePreference;
-  setVoicePreference: (preference: VoicePreference) => void;
+  emailNotifications: boolean;
+  dailyReminders: boolean;
+  soundEffects: boolean;
   autoPlayAudio: boolean;
-  toggleAutoPlayAudio: () => void;
-  showTranslations: boolean;
-  toggleShowTranslations: () => void;
-  dailyGoal: number;
-  setDailyGoal: (goal: number) => void;
-  resetPreferences: () => void;
+  contentDifficulty: 'beginner' | 'intermediate' | 'advanced';
+  bio?: string;
 }
 
-export interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-  signup: (firstName: string, lastName: string, email: string, password: string, username?: string) => Promise<boolean>;
-  updateProfile: (data: any) => Promise<User>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  socialLogin: (provider: 'google' | 'apple') => Promise<boolean>;
+export interface EmailSettings {
+  provider: 'smtp' | 'sendgrid' | 'mailgun';
+  fromEmail: string;
+  fromName: string;
+  config: {
+    enableSsl: boolean;
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  };
+  templates: {
+    verification: {
+      subject: string;
+      body: string;
+    };
+    passwordReset: {
+      subject: string;
+      body: string;
+    };
+    welcome: {
+      subject: string;
+      body: string;
+    };
+  };
+  dailyDigest: boolean;
+  notifications: boolean;
+  marketing: boolean;
+  newFeatures: boolean;
 }
 
-// Added missing log-related types
-export type LogCategory = 'user' | 'system' | 'auth' | 'content' | 'email' | 'ai';
+export type LogCategory = 
+  | 'auth' 
+  | 'user' 
+  | 'content' 
+  | 'system' 
+  | 'admin' 
+  | 'question';
+
 export interface LogEntry {
   id: string;
   timestamp: string;
@@ -131,11 +97,86 @@ export interface LogEntry {
   userId?: string;
 }
 
-// Add missing MockDatabase interface
+export interface ContentItem {
+  id: string;
+  title: string;
+  description: string;
+  content: string;
+  type: 'lesson' | 'exercise' | 'quiz';
+  level: 'beginner' | 'intermediate' | 'advanced';
+  tags: string[];
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+  status: 'draft' | 'published' | 'archived';
+}
+
 export interface MockDatabase {
   users: User[];
   logs: LogEntry[];
-  emailSettings: EmailSettings;
-  resetTokens: Map<string, string>;
-  verificationTokens: Map<string, string>;
+  content: ContentItem[];
+}
+
+export interface AdConfiguration {
+  enabled: boolean;
+  provider: 'google' | 'facebook' | 'custom';
+  adUnits: {
+    id: string;
+    name: string;
+    type: 'banner' | 'interstitial' | 'native';
+    placement: 'header' | 'footer' | 'sidebar' | 'content';
+    active: boolean;
+  }[];
+  settings: {
+    frequency: number;
+    showToFreeUsers: boolean;
+    showToPremiumUsers: boolean;
+  };
+}
+
+export interface SEOConfiguration {
+  defaultTitle: string;
+  defaultDescription: string;
+  defaultKeywords: string[];
+  siteMap: {
+    enabled: boolean;
+    lastGenerated: string;
+  };
+  robotsTxt: {
+    enabled: boolean;
+    content: string;
+  };
+  analytics: {
+    provider: 'google' | 'matomo' | 'custom';
+    trackingId: string;
+    enabled: boolean;
+  };
+}
+
+export interface SalesConfiguration {
+  products: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    type: 'subscription' | 'one-time';
+    features: string[];
+    active: boolean;
+  }[];
+  discounts: {
+    id: string;
+    name: string;
+    code: string;
+    amount: number;
+    type: 'percentage' | 'fixed';
+    validFrom: string;
+    validTo: string;
+    active: boolean;
+  }[];
+  paymentProviders: {
+    name: 'stripe' | 'paypal' | 'other';
+    enabled: boolean;
+    testMode: boolean;
+  }[];
 }

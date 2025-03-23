@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import AdminSidebar from "@/components/layout/AdminSidebar";
 import { Home, Users, Upload, Settings, FileUp, Brain } from "lucide-react";
 
 const AdminLayout = () => {
