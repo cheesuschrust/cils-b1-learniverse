@@ -25,6 +25,9 @@ export interface User {
     listening: number;
     reading: number;
     writing: number;
+    flashcards: number;
+    multipleChoice: number;
+    speaking: number;
   };
   metrics: {
     totalQuestions: number;
@@ -34,6 +37,7 @@ export interface User {
     streak: number;
   };
   lastActive: string;
+  preferences?: UserPreferences;
 }
 
 export interface UserPreferences {
@@ -49,16 +53,10 @@ export interface UserPreferences {
 }
 
 export interface EmailSettings {
-  provider: 'smtp' | 'sendgrid' | 'mailgun';
+  provider: EmailProvider;
   fromEmail: string;
   fromName: string;
-  config: {
-    enableSsl: boolean;
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-  };
+  config: EmailProviderConfig;
   templates: {
     verification: {
       subject: string;
@@ -77,6 +75,22 @@ export interface EmailSettings {
   notifications: boolean;
   marketing: boolean;
   newFeatures: boolean;
+  temporaryInboxDuration?: number;
+}
+
+export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun' | 'ses' | 'gmail' | 'temporaryEmail';
+
+export interface EmailProviderConfig {
+  enableSsl: boolean;
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  apiKey?: string;
+  domain?: string;
+  accessKey?: string;
+  secretKey?: string;
+  region?: string;
 }
 
 export type LogCategory = 
@@ -85,7 +99,9 @@ export type LogCategory =
   | 'content' 
   | 'system' 
   | 'admin' 
-  | 'question';
+  | 'question'
+  | 'email'
+  | 'ai';
 
 export interface LogEntry {
   id: string;

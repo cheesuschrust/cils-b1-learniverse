@@ -1,9 +1,18 @@
 
-import { generateRandomSeed } from '@/utils/textAnalysis';
 import { User, LogEntry, ContentItem } from '@/contexts/shared-types';
 
 // This is a mock database for development purposes
 // In a real application, this would be replaced with a backend database
+
+// Function to generate random text for demo purposes
+const generateRandomSeed = (length: number): string => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+};
 
 // Create some mock users
 const mockUsers: User[] = [
@@ -26,7 +35,10 @@ const mockUsers: User[] = [
       vocabulary: 3,
       listening: 1,
       reading: 4,
-      writing: 2
+      writing: 2,
+      flashcards: 2,
+      multipleChoice: 3,
+      speaking: 1
     },
     metrics: {
       totalQuestions: 250,
@@ -35,7 +47,18 @@ const mockUsers: User[] = [
       accuracy: 80,
       streak: 12
     },
-    lastActive: new Date().toISOString()
+    lastActive: new Date().toISOString(),
+    preferences: {
+      theme: 'dark',
+      fontSize: 'medium',
+      notifications: true,
+      emailNotifications: true,
+      dailyReminders: true,
+      soundEffects: true,
+      autoPlayAudio: true,
+      contentDifficulty: 'intermediate',
+      bio: 'Language learning enthusiast and administrator'
+    }
   },
   {
     id: '2',
@@ -55,7 +78,10 @@ const mockUsers: User[] = [
       vocabulary: 1,
       listening: 0,
       reading: 3,
-      writing: 0
+      writing: 0,
+      flashcards: 1,
+      multipleChoice: 0,
+      speaking: 1
     },
     metrics: {
       totalQuestions: 85,
@@ -64,7 +90,18 @@ const mockUsers: User[] = [
       accuracy: 70.5,
       streak: 3
     },
-    lastActive: new Date().toISOString()
+    lastActive: new Date().toISOString(),
+    preferences: {
+      theme: 'light',
+      fontSize: 'large',
+      notifications: false,
+      emailNotifications: false,
+      dailyReminders: false,
+      soundEffects: true,
+      autoPlayAudio: true,
+      contentDifficulty: 'beginner',
+      bio: 'New to Italian, excited to learn!'
+    }
   }
 ];
 

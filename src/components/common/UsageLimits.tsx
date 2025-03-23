@@ -61,22 +61,22 @@ const UsageLimits: React.FC<UsageLimitsProps> = ({ showUpgradeButton = true }) =
       <CardContent className="space-y-3">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Flashcards</span>
-            <Badge variant={getUsagePercentage("flashcards") === 100 ? "destructive" : "outline"}>
-              {user.dailyQuestionCounts.flashcards}/1
+            <span>Grammar</span>
+            <Badge variant={getUsagePercentage("grammar") === 100 ? "destructive" : "outline"}>
+              {user.dailyQuestionCounts.grammar}/1
             </Badge>
           </div>
-          <Progress value={getUsagePercentage("flashcards")} className="h-1" />
+          <Progress value={getUsagePercentage("grammar")} className="h-1" />
         </div>
         
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Multiple Choice</span>
-            <Badge variant={getUsagePercentage("multipleChoice") === 100 ? "destructive" : "outline"}>
-              {user.dailyQuestionCounts.multipleChoice}/1
+            <span>Vocabulary</span>
+            <Badge variant={getUsagePercentage("vocabulary") === 100 ? "destructive" : "outline"}>
+              {user.dailyQuestionCounts.vocabulary}/1
             </Badge>
           </div>
-          <Progress value={getUsagePercentage("multipleChoice")} className="h-1" />
+          <Progress value={getUsagePercentage("vocabulary")} className="h-1" />
         </div>
         
         <div className="space-y-2">

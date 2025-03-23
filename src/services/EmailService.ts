@@ -1,16 +1,6 @@
 
 import { API } from './api';
-import { EmailSettings } from '@/contexts/shared-types';
-
-export type EmailProvider = 'smtp' | 'sendgrid' | 'mailgun';
-
-export interface EmailProviderConfig {
-  enableSsl: boolean;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-}
+import { EmailSettings, EmailProvider, EmailProviderConfig } from '@/contexts/shared-types';
 
 export interface EmailTemplate {
   subject: string;

@@ -195,12 +195,12 @@ const UserProfile = () => {
       <CardFooter className="flex justify-between border-t pt-4">
         <div className="text-xs text-muted-foreground">
           <p>Member since: {new Date(user.createdAt).toLocaleDateString()}</p>
-          <p>Last login: {new Date(user.lastLoginAt).toLocaleDateString()}</p>
+          <p>Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
         </div>
         <div className="flex items-center gap-1 text-xs">
           <Check className="h-3 w-3 text-green-500" />
           <span className="text-green-500">
-            {user.emailVerified ? 'Email verified' : 'Email not verified'}
+            {user.isVerified ? 'Email verified' : 'Email not verified'}
           </span>
         </div>
       </CardFooter>
