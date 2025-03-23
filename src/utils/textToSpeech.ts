@@ -1,6 +1,13 @@
 
 // Text-to-speech utility functions
 
+export interface VoicePreference {
+  italianVoiceURI?: string;
+  englishVoiceURI?: string;
+  voiceRate: number;
+  voicePitch: number;
+}
+
 /**
  * Check if the browser supports the Speech Synthesis API
  */
@@ -18,20 +25,113 @@ export const stopSpeaking = (): void => {
 };
 
 /**
+ * Get all available voices
+ */
+export const getAllVoices = (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    if (!isSpeechSupported()) {
+      resolve([]);
+      return;
+    }
+    
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+      return;
+    }
+    
+    // If no voices are available, wait for them to load
+    const onVoicesChanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      resolve(window.speechSynthesis.getVoices());
+    };
+    
+    window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+    
+    // Fallback if onvoiceschanged never fires
+    setTimeout(() => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        resolve(voices);
+      } else {
+        resolve([]);
+      }
+    }, 1000);
+  });
+};
+
+/**
+ * Get Italian voices
+ */
+export const getItalianVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAllVoices();
+  return voices.filter(voice => voice.lang.toLowerCase().startsWith('it'));
+};
+
+/**
+ * Get English voices
+ */
+export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAllVoices();
+  return voices.filter(voice => voice.lang.toLowerCase().startsWith('en'));
+};
+
+/**
+ * Play a sample of the selected voice
+ */
+export const speakSample = async (voiceURI: string, language: 'it' | 'en'): Promise<void> => {
+  const text = language === 'it' 
+    ? "Ciao, questo è un esempio di come suonerà la voce italiana." 
+    : "Hello, this is an example of how the English voice will sound.";
+  
+  const voices = await getAllVoices();
+  const voice = voices.find(v => v.voiceURI === voiceURI || v.name === voiceURI);
+  
+  if (!voice) {
+    throw new Error(`Voice not found: ${voiceURI}`);
+  }
+  
+  return new Promise((resolve, reject) => {
+    try {
+      stopSpeaking();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      
+      utterance.onend = () => resolve();
+      utterance.onerror = (event) => reject(new Error(`Speech error: ${event.error}`));
+      
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+/**
  * Get the best available voice for a given language
  */
-export const getBestVoice = (language: string, voicePreference?: string): SpeechSynthesisVoice | null => {
+export const getBestVoice = (language: string, voicePreference?: VoicePreference): SpeechSynthesisVoice | null => {
   if (!isSpeechSupported()) return null;
   
   const voices = window.speechSynthesis.getVoices();
   
   // If we have a specific voice preference, try to find it
   if (voicePreference) {
-    const preferredVoice = voices.find(voice => 
-      voice.voiceURI.toLowerCase() === voicePreference.toLowerCase() ||
-      voice.name.toLowerCase() === voicePreference.toLowerCase()
-    );
-    if (preferredVoice) return preferredVoice;
+    const preferredVoiceURI = language === 'it' ? 
+      voicePreference.italianVoiceURI : 
+      voicePreference.englishVoiceURI;
+      
+    if (preferredVoiceURI) {
+      const preferredVoice = voices.find(voice => 
+        voice.voiceURI === preferredVoiceURI ||
+        voice.name === preferredVoiceURI
+      );
+      if (preferredVoice) return preferredVoice;
+    }
   }
   
   // If no preference or preferred voice not found, find best voice for language
@@ -57,7 +157,7 @@ export const getBestVoice = (language: string, voicePreference?: string): Speech
 /**
  * Speak text using the Speech Synthesis API
  */
-export const speak = (text: string, language: 'it' | 'en' = 'it', voicePreference?: string): Promise<void> => {
+export const speak = (text: string, language: 'it' | 'en' = 'it', voicePreference?: VoicePreference): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (!isSpeechSupported()) {
       reject(new Error('Speech synthesis not supported'));
@@ -76,9 +176,15 @@ export const speak = (text: string, language: 'it' | 'en' = 'it', voicePreferenc
         const langCode = language === 'it' ? 'it-IT' : 'en-US';
         utterance.lang = langCode;
         
-        // Set a good default rate and pitch
-        utterance.rate = 0.9; // Slightly slower than default
-        utterance.pitch = 1.0;
+        // Set rate and pitch if provided in voicePreference
+        if (voicePreference) {
+          utterance.rate = voicePreference.voiceRate || 0.9;
+          utterance.pitch = voicePreference.voicePitch || 1.0;
+        } else {
+          // Set a good default rate and pitch
+          utterance.rate = 0.9; // Slightly slower than default
+          utterance.pitch = 1.0;
+        }
         
         // Find the best voice
         const voice = getBestVoice(language, voicePreference);

@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -11,7 +10,9 @@ export interface User {
   updatedAt: string;
   lastLogin?: string;
   phoneNumber?: string;
+  phone?: string;
   address?: string;
+  location?: string;
   isVerified?: boolean;
   status?: 'active' | 'suspended' | 'pending';
   subscription?: 'free' | 'basic' | 'premium';
@@ -38,6 +39,7 @@ export interface User {
   };
   lastActive: string;
   preferences?: UserPreferences;
+  bio?: string;
 }
 
 export interface UserPreferences {
@@ -50,6 +52,13 @@ export interface UserPreferences {
   autoPlayAudio: boolean;
   contentDifficulty: 'beginner' | 'intermediate' | 'advanced';
   bio?: string;
+  voicePreference?: {
+    italianVoiceURI?: string;
+    englishVoiceURI?: string;
+    voiceRate: number;
+    voicePitch: number;
+  };
+  preferredLanguage?: 'english' | 'italian' | 'both';
 }
 
 export interface EmailSettings {

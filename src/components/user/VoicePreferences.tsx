@@ -34,6 +34,16 @@ const VoicePreferences: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSample, setActiveSample] = useState<string | null>(null);
   
+  // Default voice preferences with fallbacks if needed
+  const defaultVoicePreference: VoicePreference = {
+    italianVoiceURI: '',
+    englishVoiceURI: '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  };
+  
+  const safeVoicePreference = voicePreference || defaultVoicePreference;
+  
   // Load available voices
   useEffect(() => {
     const loadVoices = async () => {
@@ -97,7 +107,9 @@ const VoicePreferences: React.FC = () => {
   
   // Handle voice selection
   const handleVoiceChange = (voiceURI: string, language: 'italian' | 'english') => {
-    const updatedPreference: VoicePreference = { ...voicePreference };
+    const updatedPreference: VoicePreference = { 
+      ...safeVoicePreference
+    };
     
     if (language === 'italian') {
       updatedPreference.italianVoiceURI = voiceURI;
@@ -111,7 +123,7 @@ const VoicePreferences: React.FC = () => {
   // Handle voice rate change
   const handleRateChange = (value: number[]) => {
     setVoicePreference({
-      ...voicePreference,
+      ...safeVoicePreference,
       voiceRate: value[0]
     });
   };
@@ -119,7 +131,7 @@ const VoicePreferences: React.FC = () => {
   // Handle voice pitch change
   const handlePitchChange = (value: number[]) => {
     setVoicePreference({
-      ...voicePreference,
+      ...safeVoicePreference,
       voicePitch: value[0]
     });
   };
@@ -131,7 +143,7 @@ const VoicePreferences: React.FC = () => {
         <div className="grid grid-cols-3 gap-2 items-center">
           <div className="col-span-2">
             <Select
-              value={voicePreference.italianVoiceURI || ''}
+              value={safeVoicePreference.italianVoiceURI || ''}
               onValueChange={value => handleVoiceChange(value, 'italian')}
               disabled={isLoading || italianVoices.length === 0}
             >
@@ -151,7 +163,7 @@ const VoicePreferences: React.FC = () => {
             </Select>
           </div>
           <div className="flex justify-end">
-            {activeSample === voicePreference.italianVoiceURI ? (
+            {activeSample === safeVoicePreference.italianVoiceURI ? (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -165,9 +177,9 @@ const VoicePreferences: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => voicePreference.italianVoiceURI && 
-                  handlePlaySample(voicePreference.italianVoiceURI, 'it')}
-                disabled={!voicePreference.italianVoiceURI || isLoading}
+                onClick={() => safeVoicePreference.italianVoiceURI && 
+                  handlePlaySample(safeVoicePreference.italianVoiceURI, 'it')}
+                disabled={!safeVoicePreference.italianVoiceURI || isLoading}
                 className="flex items-center gap-1"
               >
                 <Play className="h-4 w-4" />
@@ -186,7 +198,7 @@ const VoicePreferences: React.FC = () => {
         <div className="grid grid-cols-3 gap-2 items-center">
           <div className="col-span-2">
             <Select
-              value={voicePreference.englishVoiceURI || ''}
+              value={safeVoicePreference.englishVoiceURI || ''}
               onValueChange={value => handleVoiceChange(value, 'english')}
               disabled={isLoading || englishVoices.length === 0}
             >
@@ -206,7 +218,7 @@ const VoicePreferences: React.FC = () => {
             </Select>
           </div>
           <div className="flex justify-end">
-            {activeSample === voicePreference.englishVoiceURI ? (
+            {activeSample === safeVoicePreference.englishVoiceURI ? (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -220,9 +232,9 @@ const VoicePreferences: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => voicePreference.englishVoiceURI && 
-                  handlePlaySample(voicePreference.englishVoiceURI, 'en')}
-                disabled={!voicePreference.englishVoiceURI || isLoading}
+                onClick={() => safeVoicePreference.englishVoiceURI && 
+                  handlePlaySample(safeVoicePreference.englishVoiceURI, 'en')}
+                disabled={!safeVoicePreference.englishVoiceURI || isLoading}
                 className="flex items-center gap-1"
               >
                 <Play className="h-4 w-4" />
@@ -240,11 +252,11 @@ const VoicePreferences: React.FC = () => {
         <div>
           <div className="flex items-center justify-between">
             <Label htmlFor="voice-rate" className="text-base font-medium">Voice Speed</Label>
-            <span className="text-sm font-medium">{voicePreference.voiceRate.toFixed(1)}x</span>
+            <span className="text-sm font-medium">{safeVoicePreference.voiceRate.toFixed(1)}x</span>
           </div>
           <Slider 
             id="voice-rate"
-            value={[voicePreference.voiceRate]} 
+            value={[safeVoicePreference.voiceRate]} 
             min={0.5} 
             max={2.0} 
             step={0.1} 
@@ -259,11 +271,11 @@ const VoicePreferences: React.FC = () => {
         <div>
           <div className="flex items-center justify-between">
             <Label htmlFor="voice-pitch" className="text-base font-medium">Voice Pitch</Label>
-            <span className="text-sm font-medium">{voicePreference.voicePitch.toFixed(1)}</span>
+            <span className="text-sm font-medium">{safeVoicePreference.voicePitch.toFixed(1)}</span>
           </div>
           <Slider 
             id="voice-pitch"
-            value={[voicePreference.voicePitch]} 
+            value={[safeVoicePreference.voicePitch]} 
             min={0.5} 
             max={2.0} 
             step={0.1} 
