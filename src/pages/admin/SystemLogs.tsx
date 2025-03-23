@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogCategory, LogEntry } from "@/contexts/shared-types";
@@ -38,9 +39,10 @@ const SystemLogs = () => {
   
   useEffect(() => {
     const allLogs = getSystemLogs();
+    // Ensure the timestamp is handled as a string, not a Date object
     setLogs(allLogs.map(log => ({
       ...log,
-      timestamp: new Date(log.timestamp)
+      timestamp: typeof log.timestamp === 'object' ? log.timestamp.toISOString() : log.timestamp
     })));
   }, []);
   
@@ -78,7 +80,8 @@ const SystemLogs = () => {
     setCurrentPage(1);
   }, [logs, categoryFilter, levelFilter, dateRange, searchTerm]);
   
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',

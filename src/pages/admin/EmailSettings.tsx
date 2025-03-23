@@ -10,11 +10,11 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Send, MailOpen, Settings, Server, FileType, Mail } from 'lucide-react';
-import { EmailSettings as EmailSettingsType } from '@/contexts/shared-types';
+import { EmailSettings as EmailSettingsType, EmailProvider, EmailProviderConfig } from '@/contexts/shared-types';
 import { useSystemLog } from '@/hooks/use-system-log';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { EmailService, EmailProvider, EmailProviderConfig } from '@/services/EmailService';
+import { EmailService } from '@/services/EmailService';
 
 const EmailSettings = () => {
   const { toast } = useToast();
@@ -48,6 +48,10 @@ const EmailSettings = () => {
         body: 'Hello {{name}},\n\nWelcome to CILS B2 Cittadinanza! We\'re excited to have you on board.\n\nGet started with your Italian learning journey by logging in to your account.\n\nIf you have any questions, feel free to contact our support team.\n\nBest regards,\nCILS B2 Cittadinanza Team'
       }
     },
+    dailyDigest: false,
+    notifications: true,
+    marketing: false,
+    newFeatures: true,
     temporaryInboxDuration: 30
   });
   
@@ -100,28 +104,58 @@ const EmailSettings = () => {
         };
       case 'sendgrid':
         return {
+          host: '',
+          port: 0,
+          username: '',
+          password: '',
+          enableSsl: true,
           apiKey: '',
         };
       case 'mailgun':
         return {
+          host: '',
+          port: 0,
+          username: '',
+          password: '',
+          enableSsl: true,
           apiKey: '',
           domain: '',
         };
       case 'ses':
         return {
+          host: '',
+          port: 0,
+          username: '',
+          password: '',
+          enableSsl: true,
           accessKey: '',
           secretKey: '',
           region: 'us-east-1',
         };
       case 'gmail':
         return {
+          host: 'smtp.gmail.com',
+          port: 587,
           username: '',
           password: '',
+          enableSsl: true,
         };
       case 'temporaryEmail':
-        return {};
+        return {
+          host: '',
+          port: 0,
+          username: '',
+          password: '',
+          enableSsl: false,
+        };
       default:
-        return {};
+        return {
+          host: '',
+          port: 0,
+          username: '',
+          password: '',
+          enableSsl: false,
+        };
     }
   };
   
@@ -621,9 +655,9 @@ const EmailSettings = () => {
                     <div className="bg-muted/50 p-3 rounded-md">
                       <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
                       <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>{{name}} - User's name</li>
-                        <li>{{verificationLink}} - Email verification link</li>
-                        <li>{{appName}} - Application name</li>
+                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
+                        <li>&#123;&#123;verificationLink&#125;&#125; - Email verification link</li>
+                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
                       </ul>
                     </div>
                   </div>
@@ -675,10 +709,10 @@ const EmailSettings = () => {
                     <div className="bg-muted/50 p-3 rounded-md">
                       <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
                       <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>{{name}} - User's name</li>
-                        <li>{{resetLink}} - Password reset link</li>
-                        <li>{{appName}} - Application name</li>
-                        <li>{{expiry}} - Link expiration time</li>
+                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
+                        <li>&#123;&#123;resetLink&#125;&#125; - Password reset link</li>
+                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
+                        <li>&#123;&#123;expiry&#125;&#125; - Link expiration time</li>
                       </ul>
                     </div>
                   </div>
@@ -730,9 +764,9 @@ const EmailSettings = () => {
                     <div className="bg-muted/50 p-3 rounded-md">
                       <h4 className="text-sm font-medium mb-1">Available Variables:</h4>
                       <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>{{name}} - User's name</li>
-                        <li>{{loginLink}} - Link to login page</li>
-                        <li>{{appName}} - Application name</li>
+                        <li>&#123;&#123;name&#125;&#125; - User's name</li>
+                        <li>&#123;&#123;loginLink&#125;&#125; - Link to login page</li>
+                        <li>&#123;&#123;appName&#125;&#125; - Application name</li>
                       </ul>
                     </div>
                   </div>
@@ -756,4 +790,3 @@ const EmailSettings = () => {
 };
 
 export default EmailSettings;
-

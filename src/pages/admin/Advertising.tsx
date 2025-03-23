@@ -11,6 +11,9 @@ import { AdConfiguration } from '@/contexts/shared-types';
 import { API } from '@/services/api';
 import { Plus, Trash2, LineChart, AlertCircle, DollarSign, LayoutGrid } from 'lucide-react';
 
+// Type-safe setter for adConfig state
+type AdConfigSetter = React.Dispatch<React.SetStateAction<AdConfiguration>>;
+
 const Advertising = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
