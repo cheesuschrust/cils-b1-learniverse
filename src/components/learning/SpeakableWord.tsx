@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speak, isSpeechSupported } from '@/utils/textToSpeech';
@@ -12,6 +12,7 @@ interface SpeakableWordProps {
   className?: string;
   onClick?: () => void;
   disabled?: boolean;
+  autoPlay?: boolean;
 }
 
 const SpeakableWord: React.FC<SpeakableWordProps> = ({
@@ -19,17 +20,27 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   language = 'it',
   className = '',
   onClick,
-  disabled = false
+  disabled = false,
+  autoPlay = false
 }) => {
   const { toast } = useToast();
-  const { voicePreference } = useUserPreferences();
+  const { voicePreference, autoPlayAudio } = useUserPreferences();
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   // Check if speech is supported
   const speechSupported = isSpeechSupported();
 
-  const handleSpeak = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick
+  // Auto-play functionality
+  useEffect(() => {
+    if (autoPlay || autoPlayAudio) {
+      handleSpeak(null);
+    }
+  }, [word, autoPlay, autoPlayAudio]);
+
+  const handleSpeak = async (e: React.MouseEvent | null) => {
+    if (e) {
+      e.stopPropagation(); // Prevent triggering the parent onClick
+    }
     
     if (!speechSupported) {
       toast({
@@ -40,9 +51,12 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       return;
     }
     
+    if (isSpeaking || disabled) return;
+    
     setIsSpeaking(true);
     
     try {
+      console.log(`Speaking word: "${word}" in ${language} language`);
       await speak(word, language, voicePreference);
     } catch (error) {
       console.error('Error speaking word:', error);

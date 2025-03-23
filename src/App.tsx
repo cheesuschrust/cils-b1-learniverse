@@ -35,7 +35,8 @@ import {
   ContentUploader,
   FileUploader,
   AdminSettings,
-  ContentAnalysis
+  ContentAnalysis,
+  MultipleChoice
 } from '@/pages/imports';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
@@ -60,7 +61,9 @@ function App() {
                 <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                   <Route path="/" element={<DashboardLayout />}>
                     <Route index element={<Dashboard />} />
+                    <Route path="dashboard" element={<Dashboard />} />
                     <Route path="flashcards" element={<Flashcards />} />
+                    <Route path="multiple-choice" element={<MultipleChoice />} />
                     <Route path="lessons" element={<Lessons />} />
                     <Route path="speaking" element={<SpeakingPractice />} />
                     <Route path="listening" element={<ListeningExercises />} />

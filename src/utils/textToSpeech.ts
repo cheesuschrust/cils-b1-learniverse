@@ -64,8 +64,14 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
     // Fallback if event never fires
     setTimeout(() => {
       if (cachedVoices.length === 0) {
-        console.warn('Voice list could not be loaded');
-        resolve([]);
+        voices = synth?.getVoices() || [];
+        if (voices.length > 0) {
+          cachedVoices = voices;
+          resolve(voices);
+        } else {
+          console.warn('Voice list could not be loaded');
+          resolve([]);
+        }
       }
     }, 1000);
   });
@@ -85,7 +91,7 @@ const getPreferredItalianVoice = async (preference?: VoicePreference): Promise<S
   
   // First try to get the preferred voice by URI
   if (preference?.italianVoiceURI) {
-    const preferredVoice = await getVoiceByURI(preference.italianVoiceURI);
+    const preferredVoice = voices.find(voice => voice.voiceURI === preference.italianVoiceURI);
     if (preferredVoice) return preferredVoice;
   }
   
@@ -105,7 +111,7 @@ const getPreferredEnglishVoice = async (preference?: VoicePreference): Promise<S
   
   // First try to get the preferred voice by URI
   if (preference?.englishVoiceURI) {
-    const preferredVoice = await getVoiceByURI(preference.englishVoiceURI);
+    const preferredVoice = voices.find(voice => voice.voiceURI === preference.englishVoiceURI);
     if (preferredVoice) return preferredVoice;
   }
   
@@ -129,7 +135,7 @@ export const speak = async (
   // Check for speech synthesis support
   if (!checkSpeechSupport()) {
     console.error('Speech synthesis not supported in this browser');
-    return;
+    throw new Error('Speech synthesis not supported in this browser');
   }
   
   try {
@@ -147,23 +153,32 @@ export const speak = async (
       utterance.pitch = voicePreference.voicePitch || 1.0;
     }
     
+    // Get user's voice preference or use system default
+    const pref = voicePreference || getCurrentVoicePreference();
+    
     // Select voice based on language
     if (language === 'it') {
-      const italianVoice = await getPreferredItalianVoice(voicePreference);
+      const italianVoice = await getPreferredItalianVoice(pref);
       if (italianVoice) {
         utterance.voice = italianVoice;
+        utterance.lang = italianVoice.lang;
       } else {
         // If no Italian voice, try to use any voice but set lang to Italian
         utterance.lang = 'it-IT';
       }
     } else {
-      const englishVoice = await getPreferredEnglishVoice(voicePreference);
+      const englishVoice = await getPreferredEnglishVoice(pref);
       if (englishVoice) {
         utterance.voice = englishVoice;
+        utterance.lang = englishVoice.lang;
       } else {
         utterance.lang = 'en-US';
       }
     }
+    
+    // Debugging information
+    console.log(`Speaking with voice: ${utterance.voice?.name || 'default system voice'}`);
+    console.log(`Language: ${utterance.lang}, Rate: ${utterance.rate}, Pitch: ${utterance.pitch}`);
     
     // Speak
     synth?.speak(utterance);
@@ -189,33 +204,41 @@ export const speak = async (
     });
   } catch (error) {
     console.error('Text-to-speech error:', error);
+    throw error;
   }
 };
 
 // Get a sample of a voice
 export const speakSample = async (voiceURI: string, language: 'it' | 'en'): Promise<void> => {
-  const sampleText = language === 'it' 
-    ? "Ciao, questa è una prova della voce selezionata."
-    : "Hello, this is a test of the selected voice.";
+  try {
+    const sampleText = language === 'it' 
+      ? "Ciao, questa è una prova della voce selezionata."
+      : "Hello, this is a test of the selected voice.";
+      
+    const voices = await getVoices();
+    const voice = voices.find(v => v.voiceURI === voiceURI);
     
-  const voice = await getVoiceByURI(voiceURI);
-  
-  if (!voice) {
-    console.error('Voice not found');
-    return;
+    if (!voice) {
+      console.error('Voice not found:', voiceURI);
+      throw new Error('Voice not found');
+    }
+    
+    // Cancel any ongoing speech
+    if (synth?.speaking) {
+      synth.cancel();
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(sampleText);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    console.log(`Testing voice: ${voice.name}, Lang: ${voice.lang}`);
+    
+    // Speak
+    synth?.speak(utterance);
+  } catch (error) {
+    console.error('Voice sample error:', error);
+    throw error;
   }
-  
-  // Cancel any ongoing speech
-  if (synth?.speaking) {
-    synth.cancel();
-  }
-  
-  const utterance = new SpeechSynthesisUtterance(sampleText);
-  utterance.voice = voice;
-  utterance.lang = voice.lang;
-  
-  // Speak
-  synth?.speak(utterance);
 };
 
 // Check if text-to-speech is supported
