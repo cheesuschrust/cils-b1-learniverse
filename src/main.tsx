@@ -7,7 +7,11 @@ import * as AuthService from './services/AuthService';
 
 // Add global reference to authService for testing purposes
 // This is a workaround for SystemTester.tsx which is read-only
-(window as any).authService = AuthService;
+interface WindowWithAuthService extends Window {
+  authService: typeof AuthService;
+}
+
+(window as WindowWithAuthService).authService = AuthService;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

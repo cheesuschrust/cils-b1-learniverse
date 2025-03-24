@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useMultipleChoice } from '@/hooks/useMultipleChoice';
@@ -31,6 +32,8 @@ const MultipleChoice = () => {
     currentQuestion
   } = useMultipleChoice();
 
+  const [activeTab, setActiveTab] = useState<string>("sets");
+
   return (
     <div className="container mx-auto py-6">
       <Helmet>
@@ -49,7 +52,7 @@ const MultipleChoice = () => {
         </div>
       </div>
 
-      <Tabs defaultActiveKey="sets" className="w-full mb-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="sets" className="flex-1 sm:flex-none">
             Available Sets

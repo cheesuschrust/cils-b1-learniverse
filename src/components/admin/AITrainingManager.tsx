@@ -1,2 +1,3 @@
-// This is a read-only file, so we're creating a wrapper component instead
-// See AITrainingManagerWrapper.tsx
+
+// Export the AITrainingManagerWrapper as the default export
+export { default } from './AITrainingManagerWrapper';

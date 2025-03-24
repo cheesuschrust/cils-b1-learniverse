@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFileProcessor } from '@/hooks/useFileProcessor';
 import DropzoneUploader from '@/components/content/DropzoneUploader';
 import ContentAnalysis from '@/components/content/ContentAnalysis';
-import AITrainingManager from '@/components/admin/AITrainingManager';
+import AITrainingManagerWrapper from '@/components/admin/AITrainingManagerWrapper';
 
 const ContentUploader = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'training'>('upload');
@@ -85,7 +85,7 @@ const ContentUploader = () => {
           />
         </>
       ) : (
-        <AITrainingManager />
+        <AITrainingManagerWrapper />
       )}
     </div>
   );
