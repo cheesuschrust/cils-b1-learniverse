@@ -1,133 +1,130 @@
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Cpu, Check, AlertTriangle, HelpCircle } from 'lucide-react';
-import { useAI } from '@/hooks/useAI';
-import { Skeleton } from '@/components/ui/skeleton';
+import React from 'react';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import { Cpu, AlertCircle, CheckCircle2, MonitorSmartphone, Server, Info } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import AISettings from "./AISettings";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AIStatusProps {
-  modelType?: string;
   showDetails?: boolean;
-  className?: string;
+  minimal?: boolean;
 }
 
-const AIStatus = ({ modelType = 'text-generation', showDetails = false, className = '' }: AIStatusProps) => {
-  const { isModelLoaded, isProcessing, error, loadModel } = useAI();
-  const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Initializing AI...');
-
-  useEffect(() => {
-    if (!isModelLoaded && !isProcessing && !error) {
-      // Model not yet loaded or initialized
-      setStatusMessage('Ready to initialize AI');
-      setProgress(0);
-    } else if (isProcessing) {
-      // Model is loading
-      setStatusMessage('Loading AI model...');
-      
-      // Simulate progress for better UX
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(interval);
-            return 95;
-          }
-          return prev + (Math.random() * 15);
-        });
-      }, 500);
-      
-      return () => clearInterval(interval);
-    } else if (error) {
-      // Error loading model
-      setStatusMessage(`Error: ${error}`);
-      setProgress(100);
-    } else if (isModelLoaded) {
-      // Model successfully loaded
-      setStatusMessage('AI model loaded and ready');
-      setProgress(100);
+const AIStatus = ({ showDetails = false, minimal = false }: AIStatusProps) => {
+  const { aiPreference } = useUserPreferences();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showSettings, setShowSettings] = React.useState(false);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+  
+  // Simulate loading state
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  const handleSettingsClick = () => {
+    if (minimal) {
+      navigate('/app/settings');
+    } else {
+      setShowSettings(true);
     }
-  }, [isModelLoaded, isProcessing, error]);
-
-  // Reset progress when completed
-  useEffect(() => {
-    if (progress === 100) {
-      const timeout = setTimeout(() => {
-        if (!isProcessing) {
-          setProgress(0);
-        }
-      }, 2000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [progress, isProcessing]);
-
-  const getIcon = () => {
-    if (error) return <AlertTriangle className="h-4 w-4 text-destructive" />;
-    if (isModelLoaded) return <Check className="h-4 w-4 text-green-500" />;
-    if (isProcessing) return <Cpu className="h-4 w-4 text-primary animate-pulse" />;
-    return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
   };
-
-  if (!showDetails) {
-    // Simplified display for inline usage
+  
+  if (minimal) {
     return (
-      <div className={`flex items-center ${className}`}>
-        {getIcon()}
-        <span className="ml-2 text-xs">
-          {isModelLoaded ? 'AI Ready' : isProcessing ? 'Loading AI...' : error ? 'AI Error' : 'AI Standby'}
-        </span>
-      </div>
+      <Badge 
+        variant={aiPreference.enabled ? "default" : "outline"}
+        className="cursor-pointer transition-colors hover:bg-secondary"
+        onClick={handleSettingsClick}
+      >
+        <Cpu className="h-3 w-3 mr-1" />
+        {aiPreference.enabled ? 'AI On' : 'AI Off'}
+      </Badge>
     );
   }
-
+  
   return (
-    <Card className={className}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center">
-            <Cpu className="h-5 w-5 mr-2 text-primary" />
-            <span className="font-medium">AI Status</span>
-          </div>
-          <div className="flex items-center">
-            {getIcon()}
-            <span className="ml-1 text-sm">
-              {isModelLoaded ? 'Ready' : isProcessing ? 'Loading' : error ? 'Error' : 'Standby'}
-            </span>
-          </div>
-        </div>
-        
-        {(isProcessing || progress > 0) && (
-          <Progress value={progress} className="h-1 mb-2" />
-        )}
-        
-        <p className="text-xs text-muted-foreground">{statusMessage}</p>
-        
-        {!isModelLoaded && !isProcessing && (
-          <button
-            onClick={() => loadModel(modelType as any)}
-            className="mt-2 text-xs text-primary hover:underline"
+    <>
+      <Popover open={showSettings} onOpenChange={setShowSettings}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className={`gap-1 ${!aiPreference.enabled ? 'text-muted-foreground' : ''}`}
           >
-            Initialize AI
-          </button>
-        )}
-        
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Model:</span>
-            {isModelLoaded ? (
-              <span className="text-xs">{modelType}</span>
+            <Cpu className={`h-4 w-4 ${aiPreference.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
+            {!isLoaded ? (
+              <Skeleton className="h-4 w-16" />
             ) : (
-              <Skeleton className="h-3 w-20" />
+              <>
+                {aiPreference.enabled ? (
+                  <>AI Enabled <CheckCircle2 className="h-3 w-3 text-green-500" /></>
+                ) : (
+                  <>AI Disabled <AlertCircle className="h-3 w-3 text-amber-500" /></>
+                )}
+              </>
             )}
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Processing:</span>
-            <span className="text-xs">Browser-based</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80" align="end">
+          {showDetails ? (
+            <AISettings onClose={() => setShowSettings(false)} isAdmin={user?.role === 'admin'} />
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="font-medium flex items-center">
+                  <Cpu className="h-4 w-4 mr-2" />
+                  AI Status
+                </div>
+                <Badge variant={aiPreference.enabled ? "default" : "outline"}>
+                  {aiPreference.enabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+              
+              {aiPreference.enabled && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center">
+                      <Info className="h-3 w-3 mr-1" /> Model Size:
+                    </span>
+                    <span className="font-medium capitalize">{aiPreference.modelSize}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center">
+                      <Info className="h-3 w-3 mr-1" /> Processing:
+                    </span>
+                    <span className="font-medium flex items-center">
+                      {aiPreference.processOnDevice ? (
+                        <>
+                          <MonitorSmartphone className="h-3 w-3 mr-1" /> On-Device
+                        </>
+                      ) : (
+                        <>
+                          <Server className="h-3 w-3 mr-1" /> Cloud
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <Button size="sm" className="w-full" onClick={handleSettingsClick}>
+                Manage AI Settings
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </>
   );
 };
 

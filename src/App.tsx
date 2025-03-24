@@ -44,6 +44,7 @@ import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
 import SystemLogs from '@/pages/admin/SystemLogs';
 import SupportTickets from '@/pages/admin/SupportTickets';
 import Support from '@/pages/Support';
+import AIManagement from '@/pages/admin/AIManagement';
 
 function App() {
   return (
@@ -89,6 +90,7 @@ function App() {
                     <Route path="content" element={<ContentUploader />} />
                     <Route path="content-analysis" element={<ContentAnalysis />} />
                     <Route path="file-uploader" element={<FileUploader />} />
+                    <Route path="ai-management" element={<AIManagement />} />
                     <Route path="settings" element={<AdminSettings />} />
                     <Route path="logs" element={<SystemLogs />} />
                     <Route path="support-tickets" element={<SupportTickets />} />

@@ -8,6 +8,14 @@ export interface VoicePreference {
   voicePitch: number;
 }
 
+export interface AIPreference {
+  enabled: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  processOnDevice: boolean;
+  showConfidenceScores: boolean;
+  fallbackToManual: boolean;
+}
+
 interface UserPreferencesContextType {
   theme: 'light' | 'dark' | 'system';
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -17,6 +25,8 @@ interface UserPreferencesContextType {
   setAutoPlayAudio: (autoPlay: boolean) => void;
   voicePreference: VoicePreference;
   setVoicePreference: (preference: VoicePreference) => void;
+  aiPreference: AIPreference;
+  setAIPreference: (preference: AIPreference) => void;
 }
 
 // Default voice preference
@@ -27,6 +37,15 @@ const defaultVoicePreference: VoicePreference = {
   voicePitch: 1.0
 };
 
+// Default AI preference
+const defaultAIPreference: AIPreference = {
+  enabled: true,
+  modelSize: 'medium',
+  processOnDevice: true,
+  showConfidenceScores: true,
+  fallbackToManual: true
+};
+
 const defaultPreferences: UserPreferencesContextType = {
   theme: 'light', // Changed from 'light' to reinforce default
   setTheme: () => {},
@@ -35,7 +54,9 @@ const defaultPreferences: UserPreferencesContextType = {
   autoPlayAudio: false, // Default to false to prevent auto-play
   setAutoPlayAudio: () => {},
   voicePreference: defaultVoicePreference,
-  setVoicePreference: () => {}
+  setVoicePreference: () => {},
+  aiPreference: defaultAIPreference,
+  setAIPreference: () => {}
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
@@ -59,6 +80,13 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
     return savedPreference 
       ? JSON.parse(savedPreference) 
       : defaultVoicePreference;
+  });
+  
+  const [aiPreference, setAIPreference] = useState<AIPreference>(() => {
+    const savedPreference = localStorage.getItem('aiPreference');
+    return savedPreference 
+      ? JSON.parse(savedPreference) 
+      : defaultAIPreference;
   });
   
   // Save preferences to localStorage when they change
@@ -91,6 +119,10 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
     localStorage.setItem('voicePreference', JSON.stringify(voicePreference));
   }, [voicePreference]);
   
+  useEffect(() => {
+    localStorage.setItem('aiPreference', JSON.stringify(aiPreference));
+  }, [aiPreference]);
+  
   return (
     <UserPreferencesContext.Provider 
       value={{
@@ -101,7 +133,9 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
         autoPlayAudio,
         setAutoPlayAudio,
         voicePreference,
-        setVoicePreference
+        setVoicePreference,
+        aiPreference,
+        setAIPreference
       }}
     >
       {children}

@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import * as AIService from '@/services/AIService';
 import { ContentType, ContentTypeUI, convertContentType } from '@/utils/textAnalysis';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
 export type AIState = {
   isModelLoaded: boolean;
   isProcessing: boolean;
   error: string | null;
+  isEnabled: boolean;
   loadModel: (modelType: AIService.AIModelType, modelName?: string) => Promise<void>;
   generateText: (prompt: string, options?: any) => Promise<AIService.AITextGenerationResult>;
   answerQuestion: (question: string, context: string) => Promise<AIService.AIQuestionAnsweringResult>;
@@ -15,37 +17,83 @@ export type AIState = {
   transcribeAudio: (audioData: string | Blob | ArrayBuffer) => Promise<AIService.AISpeechRecognitionResult>;
   generateFeedback: (userInput: string, expectedAnswer: string, language?: "english" | "italian" | "both") => Promise<string>;
   generateQuestions: (content: string, type: ContentTypeUI, count?: number, difficulty?: "Beginner" | "Intermediate" | "Advanced") => Promise<any[]>;
+  toggleAI: (enabled: boolean) => void;
 }
 
 export function useAI(): AIState {
+  const { aiPreference, setAIPreference } = useUserPreferences();
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Pre-load the most commonly used model on mount
-    const preloadModel = async () => {
-      try {
-        await AIService.initModel({ 
-          modelType: 'text-generation',
-          modelName: 'Xenova/distilgpt2'
-        });
-        setIsModelLoaded(true);
-        console.log("Default model pre-loaded successfully");
-      } catch (err) {
-        console.error("Error pre-loading model:", err);
-      }
-    };
+    // Only pre-load the model if AI is enabled
+    if (aiPreference.enabled) {
+      const preloadModel = async () => {
+        try {
+          const modelSize = aiPreference.modelSize;
+          let modelName = 'Xenova/distilgpt2'; // small
+          
+          if (modelSize === 'medium') {
+            modelName = 'Xenova/gpt2';
+          } else if (modelSize === 'large') {
+            modelName = 'Xenova/gpt2-large';
+          }
+          
+          await AIService.initModel({ 
+            modelType: 'text-generation',
+            modelName: modelName,
+            useCache: true
+          });
+          
+          setIsModelLoaded(true);
+          console.log("Default model pre-loaded successfully");
+        } catch (err) {
+          console.error("Error pre-loading model:", err);
+          // Don't show toast on initial load failure to prevent annoying the user
+        }
+      };
 
-    preloadModel();
-  }, []);
+      preloadModel();
+    }
+  }, [aiPreference.enabled, aiPreference.modelSize]);
+
+  const toggleAI = (enabled: boolean) => {
+    setAIPreference({
+      ...aiPreference,
+      enabled
+    });
+    
+    if (enabled && !isModelLoaded) {
+      toast({
+        title: "AI Enabled",
+        description: "Loading AI models in the background...",
+      });
+    }
+  };
 
   const loadModel = async (modelType: AIService.AIModelType, modelName?: string) => {
+    if (!aiPreference.enabled) {
+      setError("AI is currently disabled in preferences");
+      toast({
+        title: "AI is disabled",
+        description: "Please enable AI in settings to use this feature",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
-      await AIService.initModel({ modelType, modelName });
+      await AIService.initModel({ 
+        modelType, 
+        modelName,
+        useCache: true,
+        // Only use WebGPU if processOnDevice is enabled
+        forceWebGPU: aiPreference.processOnDevice
+      });
       setIsModelLoaded(true);
       setIsProcessing(false);
     } catch (err: any) {
@@ -60,6 +108,10 @@ export function useAI(): AIState {
   };
 
   const generateText = async (prompt: string, options?: any): Promise<AIService.AITextGenerationResult> => {
+    if (!aiPreference.enabled) {
+      throw new Error("AI is currently disabled in preferences");
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -74,6 +126,10 @@ export function useAI(): AIState {
   };
 
   const answerQuestion = async (question: string, context: string): Promise<AIService.AIQuestionAnsweringResult> => {
+    if (!aiPreference.enabled) {
+      throw new Error("AI is currently disabled in preferences");
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -88,6 +144,10 @@ export function useAI(): AIState {
   };
 
   const classifyText = async (text: string): Promise<AIService.AITextClassificationResult[]> => {
+    if (!aiPreference.enabled) {
+      throw new Error("AI is currently disabled in preferences");
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -102,6 +162,10 @@ export function useAI(): AIState {
   };
 
   const transcribeAudio = async (audioData: string | Blob | ArrayBuffer): Promise<AIService.AISpeechRecognitionResult> => {
+    if (!aiPreference.enabled) {
+      throw new Error("AI is currently disabled in preferences");
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -120,6 +184,13 @@ export function useAI(): AIState {
     expectedAnswer: string, 
     language: "english" | "italian" | "both" = "both"
   ): Promise<string> => {
+    if (!aiPreference.enabled) {
+      // Return simple feedback when AI is disabled
+      return userInput.toLowerCase() === expectedAnswer.toLowerCase()
+        ? "Correct!" 
+        : `Incorrect. The correct answer is: ${expectedAnswer}`;
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -129,7 +200,11 @@ export function useAI(): AIState {
     } catch (err: any) {
       setError(err.message || "Failed to generate feedback");
       setIsProcessing(false);
-      throw err;
+      
+      // Fallback to simple feedback in case of error
+      return userInput.toLowerCase() === expectedAnswer.toLowerCase()
+        ? "Correct!" 
+        : `Incorrect. The correct answer is: ${expectedAnswer}`;
     }
   };
 
@@ -139,6 +214,20 @@ export function useAI(): AIState {
     count: number = 5,
     difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
   ): Promise<any[]> => {
+    if (!aiPreference.enabled) {
+      if (aiPreference.fallbackToManual) {
+        // Return dummy data for testing when AI is disabled
+        return Array(count).fill(0).map((_, i) => ({
+          question: `Sample ${type} question ${i + 1}`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswerIndex: Math.floor(Math.random() * 4),
+          explanation: "This is a sample explanation."
+        }));
+      } else {
+        throw new Error("AI is currently disabled in preferences");
+      }
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -150,6 +239,17 @@ export function useAI(): AIState {
     } catch (err: any) {
       setError(err.message || "Failed to generate questions");
       setIsProcessing(false);
+      
+      if (aiPreference.fallbackToManual) {
+        // Fallback to dummy data in case of error
+        return Array(count).fill(0).map((_, i) => ({
+          question: `Sample ${type} question ${i + 1}`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswerIndex: Math.floor(Math.random() * 4),
+          explanation: "This is a sample explanation."
+        }));
+      }
+      
       throw err;
     }
   };
@@ -157,6 +257,7 @@ export function useAI(): AIState {
   return {
     isModelLoaded,
     isProcessing,
+    isEnabled: aiPreference.enabled,
     error,
     loadModel,
     generateText,
@@ -164,6 +265,7 @@ export function useAI(): AIState {
     classifyText,
     transcribeAudio,
     generateFeedback,
-    generateQuestions
+    generateQuestions,
+    toggleAI
   };
 }

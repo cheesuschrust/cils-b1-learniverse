@@ -13,6 +13,7 @@ import { Settings, Volume2, Monitor, BellRing, Languages, Moon, Sun, Cpu } from 
 import VoicePreferences from "./VoicePreferences";
 import { useTheme } from "@/components/ui/theme-provider";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import AISettings from "@/components/ai/AISettings";
 
 interface UserPreferencesProps {
   onClose?: () => void;
@@ -38,12 +39,6 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
     voiceSpeed: 1.0,
     autoPlayAudio: userPreferences.autoPlayAudio || true,
     showProgressMetrics: true,
-    
-    // AI settings
-    aiEnabled: true,
-    aiModelSize: "small", // small, medium, large
-    aiProcessingOnDevice: true,
-    confidenceScoreVisible: true,
     
     // Required fields from the User interface
     emailNotifications: true,
@@ -147,7 +142,7 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
       
       <Tabs defaultValue="display">
         <div className="px-6">
-          <TabsList className="grid grid-cols-4 mb-4">
+          <TabsList className="grid grid-cols-5 mb-4">
             <TabsTrigger value="display" className="flex items-center gap-1">
               <Monitor className="h-4 w-4" />
               <span className="hidden sm:inline">Display</span>
@@ -163,6 +158,10 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
             <TabsTrigger value="ai" className="flex items-center gap-1">
               <Cpu className="h-4 w-4" />
               <span className="hidden sm:inline">AI</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-1">
+              <BellRing className="h-4 w-4" />
+              <span className="hidden sm:inline">Alerts</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -291,62 +290,53 @@ const UserPreferences = ({ onClose }: UserPreferencesProps) => {
             <VoicePreferences />
           </TabsContent>
           
-          <TabsContent value="ai" className="space-y-4 mt-0">
+          <TabsContent value="ai" className="mt-0">
+            <AISettings onClose={() => {}} />
+          </TabsContent>
+          
+          <TabsContent value="notifications" className="space-y-4 mt-0">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">AI Features</Label>
-                  <p className="text-sm text-muted-foreground">Enable AI-powered features</p>
+                  <Label className="text-base">Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Receive updates via email</p>
                 </div>
                 <Switch 
-                  checked={preferences.aiEnabled}
-                  onCheckedChange={handleToggleChange("aiEnabled")}
-                />
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div className="space-y-0.5">
-                  <Label className="text-base">AI Model Size</Label>
-                  <p className="text-sm text-muted-foreground">Larger models are more capable but slower</p>
-                </div>
-                <Select
-                  value={preferences.aiModelSize}
-                  onValueChange={handleSelectChange("aiModelSize")}
-                  disabled={!preferences.aiEnabled}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select model size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="small">Small (Fast)</SelectItem>
-                    <SelectItem value="medium">Medium (Balanced)</SelectItem>
-                    <SelectItem value="large">Large (Quality)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Process On-Device</Label>
-                  <p className="text-sm text-muted-foreground">Run models directly in your browser</p>
-                </div>
-                <Switch 
-                  checked={preferences.aiProcessingOnDevice}
-                  onCheckedChange={handleToggleChange("aiProcessingOnDevice")}
-                  disabled={!preferences.aiEnabled}
+                  checked={preferences.emailNotifications}
+                  onCheckedChange={handleToggleChange("emailNotifications")}
                 />
               </div>
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Show Confidence</Label>
-                  <p className="text-sm text-muted-foreground">Display confidence scores for AI responses</p>
+                  <Label className="text-base">Learning Reminders</Label>
+                  <p className="text-sm text-muted-foreground">Daily practice reminders</p>
                 </div>
-                <Switch 
-                  checked={preferences.confidenceScoreVisible}
-                  onCheckedChange={handleToggleChange("confidenceScoreVisible")}
-                  disabled={!preferences.aiEnabled}
-                />
+                <Switch defaultChecked />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">New Content Alerts</Label>
+                  <p className="text-sm text-muted-foreground">Get notified about new lessons</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Community Messages</Label>
+                  <p className="text-sm text-muted-foreground">Receive community messages</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Marketing Updates</Label>
+                  <p className="text-sm text-muted-foreground">Receive promotional content</p>
+                </div>
+                <Switch />
               </div>
             </div>
           </TabsContent>
