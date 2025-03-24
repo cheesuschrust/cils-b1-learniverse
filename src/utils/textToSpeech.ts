@@ -1,5 +1,10 @@
 
-import { VoicePreference } from '@/contexts/UserPreferencesContext';
+export interface VoicePreference {
+  italianVoiceURI: string;
+  englishVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
 
 export const isSpeechSupported = (): boolean => {
   return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;

@@ -43,6 +43,8 @@ export interface User {
   displayName?: string;
   phoneNumber?: string;
   address?: string;
+  profileImage?: string; // Added this property
+  photoURL?: string; // Added this property
   metrics: {
     totalQuestions: number;
     correctAnswers: number;

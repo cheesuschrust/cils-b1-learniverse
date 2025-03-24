@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import UserPreferences from '@/components/user/UserPreferences';
-import { User, Mail, Calendar, MapPin, Briefcase, GraduationCap, Languages } from 'lucide-react';
+import { User, Mail, Calendar, MapPin, Briefcase, GraduationCap, Languages, Settings } from 'lucide-react';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -22,7 +21,6 @@ const Profile = () => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   
-  // Mock user profile data
   const mockUser = {
     id: '1',
     name: user?.displayName || 'John Doe',
@@ -43,7 +41,6 @@ const Profile = () => {
   
   const handleSaveProfile = () => {
     setIsSaving(true);
-    // Simulate API call
     setTimeout(() => {
       setIsSaving(false);
       setIsEditing(false);

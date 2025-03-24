@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useFileProcessor } from '@/hooks/useFileProcessor';
 import { useAI } from '@/hooks/useAI';
-import { FileText, Upload, AlertCircle, CheckCircle, FileUp, Info, FileQuestion, RefreshCcw, Database, BarChart4 } from 'lucide-react';
+import { FileText, Upload, AlertCircle, CheckCircle, FileUp, Info, FileQuestion, RefreshCcw, Database, BarChart4, FileAudio } from 'lucide-react';
 import DropzoneUploader from '@/components/content/DropzoneUploader';
 import ContentAnalysis from '@/components/content/ContentAnalysis';
 import { useSystemLog } from '@/hooks/use-system-log';

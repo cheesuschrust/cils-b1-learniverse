@@ -1,17 +1,30 @@
-
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { 
+  AlertCircle, 
+  Boxes, 
+  FileText, 
+  Globe, 
+  Languages, 
+  Server, 
+  Settings, 
+  Shield, 
+  Mail 
+} from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, MailCheck, Database, Braces, Lock, BellRing } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const SystemSettings = () => {
   const { toast } = useToast();
@@ -135,7 +148,7 @@ const SystemSettings = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MailCheck className="h-5 w-5" />
+                <Mail className="h-5 w-5" />
                 Email Configuration
               </CardTitle>
               <CardDescription>
