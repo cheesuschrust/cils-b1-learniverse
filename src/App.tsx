@@ -45,6 +45,7 @@ import SystemLogs from '@/pages/admin/SystemLogs';
 import SupportTickets from '@/pages/admin/SupportTickets';
 import Support from '@/pages/Support';
 import AIManagement from '@/pages/admin/AIManagement';
+import SystemTests from '@/pages/admin/SystemTests';
 
 function App() {
   return (
@@ -93,6 +94,7 @@ function App() {
                     <Route path="ai-management" element={<AIManagement />} />
                     <Route path="settings" element={<AdminSettings />} />
                     <Route path="logs" element={<SystemLogs />} />
+                    <Route path="system-tests" element={<SystemTests />} />
                     <Route path="support-tickets" element={<SupportTickets />} />
                   </Route>
                 </Route>

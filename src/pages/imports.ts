@@ -26,3 +26,4 @@ export { default as ContentAnalysis } from './admin/ContentAnalysis';
 export { default as FileUploader } from './admin/FileUploader';
 export { default as AdminSettings } from './admin/AdminSettings';
 export { default as AIManagement } from './admin/AIManagement';
+export { default as SystemTests } from './admin/SystemTests';
