@@ -80,15 +80,18 @@ export const useAI = (options?: AIServiceProps) => {
     }
   };
 
+  // Ensure we're using the right ContentType for both input and output
   const generateQuestions = async (
     content: string,
-    contentType: ContentType,
+    contentType: ContentType | "multipleChoice",
     count: number = 5,
     difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
   ) => {
     setIsProcessing(true);
     try {
-      const result = await AIService.generateQuestions(content, contentType, count, difficulty);
+      // Convert multipleChoice to multiple-choice for AIService
+      const convertedType: ContentType = contentType === "multipleChoice" ? "multiple-choice" : contentType as ContentType;
+      const result = await AIService.generateQuestions(content, convertedType, count, difficulty);
       return result;
     } catch (err: any) {
       setError(err.message || 'Failed to generate questions');

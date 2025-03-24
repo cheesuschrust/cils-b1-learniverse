@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +123,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     };
   }, [isProcessing, generatingQuestions, loadingProgress]);
 
-  // Cleanup function to handle timeouts and reset state
   useEffect(() => {
     return () => {
       if (processingTimeoutRef.current) {
@@ -136,12 +134,10 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
-    // Reset any previous errors
     setProcessingError(null);
     
     const selectedFile = e.target.files[0];
     
-    // Check file size
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
@@ -174,7 +170,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 
   const extractContentFromFile = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      // Set a timeout to prevent hanging
       const timeout = window.setTimeout(() => {
         reject(new Error("Processing took too long. Please try a smaller file or different format."));
       }, PROCESS_TIMEOUT);
@@ -207,7 +202,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
         window.clearTimeout(timeout);
         const text = e.target?.result as string;
         
-        // Limit text size to prevent browser freezing
         const maxLength = 100000; // ~100KB of text
         const truncatedText = text && text.length > maxLength 
           ? text.substring(0, maxLength) + "\n\n[Content truncated due to size...]" 
@@ -293,18 +287,14 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 
   const detectContentCategories = async (content: string): Promise<ContentCategory[]> => {
     try {
-      // Limit content size for classification to prevent freezing
       const contentForClassification = content.length > 5000 ? content.substring(0, 5000) : content;
       
-      // Skip AI classification for large files
       if (content.length > 20000) {
         return inferContentType(content);
       }
       
       try {
         const classifications = await classifyText(contentForClassification);
-        // Use the AI classifications if available
-        // If not, fall back to basic inference
       } catch (error) {
         console.error("Error with AI classification:", error);
       }
@@ -319,7 +309,6 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     }
   };
   
-  // Simple inference without AI to prevent freezing
   const inferContentType = (content: string): ContentCategory[] => {
     let categories: ContentCategory[] = [];
     const contentLower = content.toLowerCase();
@@ -396,14 +385,17 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
     setGeneratingQuestions(true);
     
     try {
-      // Limit content for question generation
       const contentForGeneration = extractedContent.length > 5000 
         ? extractedContent.substring(0, 5000) + "\n\n[Content truncated for processing...]" 
         : extractedContent;
       
+      const contentTypeForAPI: ContentType = 
+        selectedCategoryType === "multiple-choice" ? "multiple-choice" : 
+        selectedCategoryType as ContentType;
+      
       const questions = await generateQuestions(
         contentForGeneration,
-        selectedCategoryType === "multiple-choice" ? "multipleChoice" : selectedCategoryType,
+        contentTypeForAPI,
         5,
         difficulty
       );
@@ -828,3 +820,4 @@ const FileProcessor = ({ onExerciseAdded }: FileProcessorProps) => {
 };
 
 export default FileProcessor;
+

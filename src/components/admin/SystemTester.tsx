@@ -19,13 +19,11 @@ const SystemTester = () => {
   const { logSystemAction } = useSystemLog();
   const { isModelLoaded, loadModel } = useAI();
   
-  // Run initial basic tests on mount
   useEffect(() => {
     runBasicTests();
   }, []);
   
   const runBasicTests = async () => {
-    // Simple browser capability tests
     const results = {
       webgl: hasWebGL(),
       localStorage: hasLocalStorage(),
@@ -52,19 +50,15 @@ const SystemTester = () => {
     setTestProgress(0);
     
     try {
-      // Test API connectivity
       setTestProgress(10);
       const apiTest = await testAPIConnectivity();
       
-      // Test download speed
       setTestProgress(30);
       const downloadTest = await testDownloadSpeed();
       
-      // Test upload speed
       setTestProgress(60);
       const uploadTest = await testUploadSpeed();
       
-      // Test latency
       setTestProgress(80);
       const latencyTest = await testLatency();
       
@@ -105,19 +99,15 @@ const SystemTester = () => {
     setTestProgress(0);
     
     try {
-      // Test database connection
       setTestProgress(20);
       const connectionTest = await testDatabaseConnection();
       
-      // Test read operations
       setTestProgress(40);
       const readTest = await testDatabaseRead();
       
-      // Test write operations
       setTestProgress(60);
       const writeTest = await testDatabaseWrite();
       
-      // Test query performance
       setTestProgress(80);
       const performanceTest = await testDatabasePerformance();
       
@@ -158,15 +148,12 @@ const SystemTester = () => {
     setTestProgress(0);
     
     try {
-      // Test authentication service
       setTestProgress(25);
       const authServiceTest = await testAuthService();
       
-      // Test token validation
       setTestProgress(50);
       const tokenTest = await testTokenValidation();
       
-      // Test permissions
       setTestProgress(75);
       const permissionsTest = await testPermissions();
       
@@ -206,19 +193,15 @@ const SystemTester = () => {
     setTestProgress(0);
     
     try {
-      // Test AI model loading
       setTestProgress(20);
       const modelLoadTest = await testAIModelLoading();
       
-      // Test text generation
       setTestProgress(40);
       const textGenTest = await testTextGeneration();
       
-      // Test classification
       setTestProgress(60);
       const classificationTest = await testClassification();
       
-      // Test question answering
       setTestProgress(80);
       const qaTest = await testQuestionAnswering();
       
@@ -254,7 +237,6 @@ const SystemTester = () => {
     }
   };
   
-  // Test implementation functions
   const hasWebGL = () => {
     try {
       const canvas = document.createElement('canvas');
@@ -351,7 +333,6 @@ const SystemTester = () => {
   
   const testUploadSpeed = async () => {
     try {
-      // Create a file of random data to upload
       const sizeInBytes = 1024 * 1024; // 1MB
       const randomData = new Uint8Array(sizeInBytes);
       for (let i = 0; i < sizeInBytes; i++) {
@@ -568,7 +549,6 @@ const SystemTester = () => {
     try {
       const startTime = performance.now();
       
-      // Use the global authService reference
       const authServiceTest = window.authService ? 
         await window.authService.testConnection() : 
         { success: false, message: 'Auth service not available' };
@@ -600,9 +580,6 @@ const SystemTester = () => {
         }
       });
       const endTime = performance.now();
-      
-      // We expect this to fail since we're using a test token
-      // But we want to make sure the endpoint is responding
       
       return {
         success: true,
@@ -677,7 +654,6 @@ const SystemTester = () => {
     try {
       const startTime = performance.now();
       
-      // Mock text generation for testing
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const endTime = performance.now();
@@ -701,7 +677,6 @@ const SystemTester = () => {
     try {
       const startTime = performance.now();
       
-      // Mock classification for testing
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const endTime = performance.now();
@@ -725,7 +700,6 @@ const SystemTester = () => {
     try {
       const startTime = performance.now();
       
-      // Mock question answering for testing
       await new Promise(resolve => setTimeout(resolve, 400));
       
       const endTime = performance.now();
