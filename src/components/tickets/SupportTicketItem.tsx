@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { Mail, MessageCircle, Calendar, UserCircle, Check, Clock, AlertTriangle } from 'lucide-react';
@@ -15,8 +14,8 @@ export interface SupportTicketProps {
   id: string;
   subject: string;
   message: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
   status: SupportTicketStatus;
   priority: SupportTicketPriority;
   category: string;
@@ -27,7 +26,7 @@ export interface SupportTicketProps {
   responses?: {
     id: string;
     message: string;
-    createdAt: Date;
+    createdAt: string | Date;
     userId: string;
     userName: string;
     isAdmin: boolean;
@@ -96,6 +95,13 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
     }
   };
 
+  const formatDate = (date: string | Date) => {
+    if (typeof date === 'string') {
+      return format(new Date(date), 'MMM dd, yyyy HH:mm');
+    }
+    return format(date, 'MMM dd, yyyy HH:mm');
+  };
+
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
@@ -157,11 +163,11 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
         <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
           <div className="flex items-center">
             <Calendar className="h-3 w-3 mr-1" />
-            Created: {format(createdAt, 'MMM dd, yyyy HH:mm')}
+            Created: {formatDate(createdAt)}
           </div>
           <div className="flex items-center">
             <Calendar className="h-3 w-3 mr-1" />
-            Updated: {format(updatedAt, 'MMM dd, yyyy HH:mm')}
+            Updated: {formatDate(updatedAt)}
           </div>
         </div>
 
@@ -180,7 +186,7 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
                       {response.isAdmin && <Badge variant="secondary">Admin</Badge>}
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {format(response.createdAt, 'MMM dd, yyyy HH:mm')}
+                      {formatDate(response.createdAt)}
                     </span>
                   </div>
                   <div className="bg-muted p-3 rounded-md text-sm ml-8">

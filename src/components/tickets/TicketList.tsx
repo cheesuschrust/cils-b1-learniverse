@@ -72,7 +72,7 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, selectedTicketId, onSe
   const closedTicketsCount = tickets.filter(t => t.status === 'closed').length;
 
   const handleReply = (ticketId: string) => {
-    setSelectedTicketId(ticketId);
+    onSelectTicket(ticketId);
     setReplyDialogOpen(true);
   };
 
@@ -127,7 +127,6 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, selectedTicketId, onSe
       });
       
       setReplyDialogOpen(false);
-      setSelectedTicketId(null);
       setReplyMessage('');
     } catch (error) {
       console.error("Error submitting reply:", error);
@@ -403,4 +402,3 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, selectedTicketId, onSe
 };
 
 export default TicketList;
-

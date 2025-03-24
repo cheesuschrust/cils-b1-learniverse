@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import TicketList from '@/components/tickets/TicketList';
 import { Input } from '@/components/ui/input';
+import { SupportTicketProps } from '@/components/tickets/SupportTicketItem';
 
 const SupportTickets = () => {
   const [activeTab, setActiveTab] = useState('all');
@@ -24,7 +25,7 @@ const SupportTickets = () => {
   const [isReplying, setIsReplying] = useState(false);
   
   // Modified ticket data to match SupportTicketProps expected by TicketList
-  const tickets = [
+  const tickets: SupportTicketProps[] = [
     {
       id: "ticket-1",
       subject: "Audio pronunciation not working",
@@ -43,23 +44,29 @@ const SupportTickets = () => {
         email: "john.doe@example.com",
         avatar: "https://github.com/shadcn.png"
       },
-      messages: [
+      responses: [
         {
           id: "msg-1",
-          content: "I'm having issues with the audio pronunciation feature. When I click on the speaker icon, nothing happens.",
-          timestamp: "2023-09-15T14:30:00Z",
+          message: "I'm having issues with the audio pronunciation feature. When I click on the speaker icon, nothing happens.",
+          createdAt: "2023-09-15T14:30:00Z",
+          userId: "user-1",
+          userName: "John Doe",
           isAdmin: false
         },
         {
           id: "msg-2",
-          content: "Thank you for reporting this issue. Could you please provide more information about your browser and device?",
-          timestamp: "2023-09-15T15:20:00Z",
+          message: "Thank you for reporting this issue. Could you please provide more information about your browser and device?",
+          createdAt: "2023-09-15T15:20:00Z",
+          userId: "admin-1",
+          userName: "Admin User",
           isAdmin: true
         },
         {
           id: "msg-3",
-          content: "I'm using Chrome 116 on Windows 11. This issue started happening after the latest update.",
-          timestamp: "2023-09-15T16:45:00Z",
+          message: "I'm using Chrome 116 on Windows 11. This issue started happening after the latest update.",
+          createdAt: "2023-09-15T16:45:00Z",
+          userId: "user-1",
+          userName: "John Doe",
           isAdmin: false
         }
       ]
@@ -68,7 +75,7 @@ const SupportTickets = () => {
       id: "ticket-2",
       subject: "Premium subscription payment failed",
       message: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
-      status: "pending",
+      status: "in-progress",
       priority: "medium",
       category: "billing",
       createdAt: "2023-09-14T10:15:00Z",
@@ -82,17 +89,21 @@ const SupportTickets = () => {
         email: "jane.smith@example.com",
         avatar: ""
       },
-      messages: [
+      responses: [
         {
           id: "msg-1",
-          content: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
-          timestamp: "2023-09-14T10:15:00Z",
+          message: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
+          createdAt: "2023-09-14T10:15:00Z",
+          userId: "user-2",
+          userName: "Jane Smith",
           isAdmin: false
         },
         {
           id: "msg-2",
-          content: "I apologize for the inconvenience. Let me check your account and the payment gateway status.",
-          timestamp: "2023-09-14T11:30:00Z",
+          message: "I apologize for the inconvenience. Let me check your account and the payment gateway status.",
+          createdAt: "2023-09-14T11:30:00Z",
+          userId: "admin-1",
+          userName: "Admin User",
           isAdmin: true
         }
       ]
@@ -115,17 +126,21 @@ const SupportTickets = () => {
         email: "robert.j@example.com",
         avatar: ""
       },
-      messages: [
+      responses: [
         {
           id: "msg-1",
-          content: "I'd love to see more advanced grammar exercises, particularly focusing on subjunctive mood.",
-          timestamp: "2023-09-10T09:45:00Z",
+          message: "I'd love to see more advanced grammar exercises, particularly focusing on subjunctive mood.",
+          createdAt: "2023-09-10T09:45:00Z",
+          userId: "user-3",
+          userName: "Robert Johnson",
           isAdmin: false
         },
         {
           id: "msg-2",
-          content: "Thank you for your suggestion! We're actually working on expanding our grammar section and will include more exercises on the subjunctive mood in our next update.",
-          timestamp: "2023-09-11T14:20:00Z",
+          message: "Thank you for your suggestion! We're actually working on expanding our grammar section and will include more exercises on the subjunctive mood in our next update.",
+          createdAt: "2023-09-11T14:20:00Z",
+          userId: "admin-1",
+          userName: "Admin User",
           isAdmin: true
         }
       ]
@@ -147,7 +162,7 @@ const SupportTickets = () => {
     setIsReplying(false);
   };
 
-  const handleUpdateTicket = (ticketId: string, updates: any) => {
+  const handleUpdateTicket = (ticketId: string, updates: Partial<SupportTicketProps>) => {
     // This would update the ticket in a real application
     console.log('Updating ticket:', ticketId, updates);
   };
