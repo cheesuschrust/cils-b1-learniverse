@@ -105,6 +105,78 @@ export const useFlashcards = () => {
     return updateFlashcard(id, { mastered: !card.mastered });
   };
   
+  const importFlashcards = async (fileContent: string, format: 'csv' | 'json' = 'csv') => {
+    try {
+      setIsLoading(true);
+      const importedCards = await ContentService.importFlashcards(fileContent, format);
+      
+      if (importedCards.length > 0) {
+        await fetchFlashcards(); // Refresh the full list
+        
+        toast({
+          title: "Import Success",
+          description: `Successfully imported ${importedCards.length} flashcards.`,
+        });
+        return true;
+      } else {
+        toast({
+          title: "Import Warning",
+          description: "No flashcards were found to import.",
+          variant: "warning",
+        });
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to import flashcards";
+      toast({
+        title: "Import Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const exportFlashcards = async (format: 'csv' | 'json' = 'csv', onlyMastered = false) => {
+    try {
+      setIsLoading(true);
+      const exportData = await ContentService.exportFlashcards(format, onlyMastered);
+      
+      // Create a downloadable file
+      const blob = new Blob([exportData], { 
+        type: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8' 
+      });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a download link and trigger it
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flashcards_${onlyMastered ? 'mastered_' : ''}${new Date().toISOString().split('T')[0]}.${format}`;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Success",
+        description: `Flashcards exported successfully as ${format.toUpperCase()}.`,
+      });
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to export flashcards";
+      toast({
+        title: "Export Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return {
     flashcards,
     isLoading,
@@ -113,6 +185,8 @@ export const useFlashcards = () => {
     updateFlashcard,
     deleteFlashcard,
     toggleMastered,
+    importFlashcards,
+    exportFlashcards,
     refreshFlashcards: fetchFlashcards,
   };
 };

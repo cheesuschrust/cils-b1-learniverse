@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,38 +16,57 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Plus,
   X,
-  Volume2,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
   Download,
   Upload,
   Check,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
-
-// Sample flashcards data
-const sampleFlashcards = [
-  { id: 1, italian: "casa", english: "house", mastered: false },
-  { id: 2, italian: "cibo", english: "food", mastered: false },
-  { id: 3, italian: "acqua", english: "water", mastered: true },
-  { id: 4, italian: "cittadino", english: "citizen", mastered: false },
-  { id: 5, italian: "diritto", english: "right (legal)", mastered: false },
-];
+import { useFlashcards } from "@/hooks/useFlashcards";
+import SpeakableWord from "@/components/learning/SpeakableWord";
 
 const Flashcards = () => {
-  const [flashcards, setFlashcards] = useState(sampleFlashcards);
+  const {
+    flashcards,
+    isLoading,
+    error,
+    addFlashcard,
+    toggleMastered,
+    deleteFlashcard,
+    importFlashcards,
+    exportFlashcards,
+    refreshFlashcards,
+  } = useFlashcards();
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [newItalian, setNewItalian] = useState("");
   const [newEnglish, setNewEnglish] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [filterMastered, setFilterMastered] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [exportMasteredOnly, setExportMasteredOnly] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -94,20 +113,11 @@ const Flashcards = () => {
     }
   };
   
-  const handleMastered = (id: number) => {
-    setFlashcards((prevCards) =>
-      prevCards.map((card) =>
-        card.id === id ? { ...card, mastered: !card.mastered } : card
-      )
-    );
-    
-    toast({
-      title: "Card updated",
-      description: "Flashcard mastery status updated",
-    });
+  const handleMastered = async (id: string) => {
+    await toggleMastered(id);
   };
   
-  const handleAddCard = () => {
+  const handleAddCard = async () => {
     if (!newItalian || !newEnglish) {
       toast({
         title: "Error",
@@ -117,60 +127,60 @@ const Flashcards = () => {
       return;
     }
     
-    setIsLoading(true);
+    setIsSubmitting(true);
+    const success = await addFlashcard(newItalian, newEnglish);
     
-    // Simulate API translation verification
-    setTimeout(() => {
-      const newCard = {
-        id: flashcards.length + 1,
-        italian: newItalian,
-        english: newEnglish,
-        mastered: false,
-      };
-      
-      setFlashcards((prevCards) => [...prevCards, newCard]);
+    if (success) {
       setNewItalian("");
       setNewEnglish("");
       setShowAddCard(false);
-      
-      toast({
-        title: "Success",
-        description: "New flashcard added successfully",
-      });
-      
-      setIsLoading(false);
-    }, 1000);
+    }
+    setIsSubmitting(false);
   };
   
-  const handleDelete = (id: number) => {
-    setFlashcards((prevCards) => prevCards.filter((card) => card.id !== id));
+  const handleDelete = async (id: string) => {
+    await deleteFlashcard(id);
+  };
+  
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     
-    toast({
-      title: "Card deleted",
-      description: "Flashcard removed successfully",
-    });
-  };
-  
-  const handleSpeak = (text: string, language: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === "italian" ? "it-IT" : "en-US";
-    window.speechSynthesis.speak(utterance);
+    const reader = new FileReader();
+    
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        const format = file.name.endsWith('.json') ? 'json' : 'csv';
+        await importFlashcards(content, format);
+      }
+      
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+    
+    reader.onerror = () => {
+      toast({
+        title: "File Error",
+        description: "Failed to read the file. Please try again.",
+        variant: "destructive",
+      });
+    };
+    
+    reader.readAsText(file);
   };
   
   const handleImport = () => {
-    // This would be connected to a file upload in a real application
-    toast({
-      title: "Import feature",
-      description: "This feature will be available soon",
-    });
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
   
-  const handleExport = () => {
-    // This would generate and download a file in a real application
-    toast({
-      title: "Export feature",
-      description: "This feature will be available soon",
-    });
+  const handleExport = async () => {
+    await exportFlashcards(exportFormat, exportMasteredOnly);
+    setIsFileDialogOpen(false);
   };
   
   const currentCard = filteredCards[currentIndex];
@@ -184,6 +194,13 @@ const Flashcards = () => {
         Build your Italian vocabulary with interactive flashcards
       </p>
       
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <Tabs defaultValue="practice" className="animate-fade-up">
         <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-8">
           <TabsTrigger value="practice">Practice</TabsTrigger>
@@ -193,7 +210,11 @@ const Flashcards = () => {
         
         <TabsContent value="practice">
           <div className="flex flex-col items-center justify-center">
-            {filteredCards.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredCards.length === 0 ? (
               <Card className="w-full max-w-md backdrop-blur-sm border-accent/20">
                 <CardContent className="pt-6 pb-6 text-center">
                   <p className="mb-4">No flashcards available.</p>
@@ -229,39 +250,25 @@ const Flashcards = () => {
                   <Card className="flashcard-front absolute w-full h-full bg-gradient-to-br from-accent/20 to-primary/5 backdrop-blur-sm border-accent/20">
                     <CardContent className="flex flex-col items-center justify-center h-full p-6">
                       <h2 className="text-2xl font-bold mb-2">
-                        {currentCard.italian}
+                        <SpeakableWord 
+                          word={currentCard.italian} 
+                          language="it"
+                          autoPlay={false}
+                        />
                       </h2>
                       <p className="text-muted-foreground">Click to flip</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSpeak(currentCard.italian, "italian");
-                        }}
-                      >
-                        <Volume2 className="h-5 w-5" />
-                      </Button>
                     </CardContent>
                   </Card>
                   <Card className="flashcard-back absolute w-full h-full bg-gradient-to-bl from-primary/10 to-accent/30 backdrop-blur-sm border-accent/20">
                     <CardContent className="flex flex-col items-center justify-center h-full p-6">
                       <h2 className="text-2xl font-bold mb-2">
-                        {currentCard.english}
+                        <SpeakableWord 
+                          word={currentCard.english} 
+                          language="en"
+                          autoPlay={false}
+                        />
                       </h2>
                       <p className="text-muted-foreground">Click to flip back</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSpeak(currentCard.english, "english");
-                        }}
-                      >
-                        <Volume2 className="h-5 w-5" />
-                      </Button>
                     </CardContent>
                   </Card>
                 </div>
@@ -370,96 +377,97 @@ const Flashcards = () => {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleAddCard} disabled={isLoading}>
-                    {isLoading ? "Adding..." : "Add Card"}
+                  <Button onClick={handleAddCard} disabled={isSubmitting || !newItalian || !newEnglish}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      "Add Card"
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
             )}
             
-            <div className="space-y-4">
-              {flashcards.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">
-                  No flashcards yet. Add your first card to get started.
-                </p>
-              ) : (
-                flashcards.map((card) => (
-                  <Card
-                    key={card.id}
-                    className={`transition-all hover:shadow-md ${
-                      card.mastered ? "bg-green-50" : ""
-                    } backdrop-blur-sm border-accent/20`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="grid grid-cols-2 gap-4 flex-grow">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              Italian
-                            </p>
-                            <div className="flex items-center">
-                              <p className="font-semibold">{card.italian}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 ml-2"
-                                onClick={() =>
-                                  handleSpeak(card.italian, "italian")
-                                }
-                              >
-                                <Volume2 className="h-4 w-4" />
-                              </Button>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {flashcards.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">
+                    No flashcards yet. Add your first card to get started.
+                  </p>
+                ) : (
+                  flashcards.map((card) => (
+                    <Card
+                      key={card.id}
+                      className={`transition-all hover:shadow-md ${
+                        card.mastered ? "bg-secondary/20" : ""
+                      } backdrop-blur-sm border-accent/20`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="grid grid-cols-2 gap-4 flex-grow">
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground mb-1">
+                                Italian
+                              </p>
+                              <div className="flex items-center">
+                                <SpeakableWord 
+                                  word={card.italian} 
+                                  language="it"
+                                  className="font-semibold" 
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground mb-1">
+                                English
+                              </p>
+                              <div className="flex items-center">
+                                <SpeakableWord 
+                                  word={card.english} 
+                                  language="en"
+                                  className="font-semibold" 
+                                />
+                              </div>
                             </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              English
-                            </p>
-                            <div className="flex items-center">
-                              <p className="font-semibold">{card.english}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 ml-2"
-                                onClick={() =>
-                                  handleSpeak(card.english, "english")
-                                }
-                              >
-                                <Volume2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant={card.mastered ? "default" : "outline"}
+                              size="sm"
+                              className="h-8"
+                              onClick={() => handleMastered(card.id)}
+                            >
+                              {card.mastered ? (
+                                <>
+                                  <Check className="h-4 w-4 mr-1" /> Mastered
+                                </>
+                              ) : (
+                                "Mark Mastered"
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDelete(card.id)}
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant={card.mastered ? "default" : "outline"}
-                            size="sm"
-                            className="h-8"
-                            onClick={() => handleMastered(card.id)}
-                          >
-                            {card.mastered ? (
-                              <>
-                                <Check className="h-4 w-4 mr-1" /> Mastered
-                              </>
-                            ) : (
-                              "Mark Mastered"
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDelete(card.id)}
-                          >
-                            <X className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </TabsContent>
         
@@ -469,11 +477,18 @@ const Flashcards = () => {
               <CardHeader>
                 <CardTitle>Import Flashcards</CardTitle>
                 <CardDescription>
-                  Upload a CSV or text file with your flashcards
+                  Upload a CSV or JSON file with your flashcards
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-2 border-dashed border-muted rounded-md p-6 text-center">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept=".csv,.json,.txt"
+                    className="hidden"
+                  />
                   <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Drag and drop a file, or click to browse
@@ -483,49 +498,155 @@ const Flashcards = () => {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Supported formats: CSV, TXT. Maximum file size: 5MB
+                  Supported formats: CSV, JSON. Maximum file size: 5MB
                 </p>
+                <div className="bg-secondary/20 p-4 rounded-md">
+                  <p className="text-sm font-semibold mb-2">CSV Format Example:</p>
+                  <pre className="text-xs overflow-x-auto p-2 bg-background/50 rounded">
+                    italian,english,mastered<br />
+                    casa,house,false<br />
+                    gatto,cat,false
+                  </pre>
+                </div>
+                <div className="bg-secondary/20 p-4 rounded-md">
+                  <p className="text-sm font-semibold mb-2">JSON Format Example:</p>
+                  <pre className="text-xs overflow-x-auto p-2 bg-background/50 rounded">
+                    {`[
+  {"italian":"casa","english":"house","mastered":false},
+  {"italian":"gatto","english":"cat","mastered":false}
+]`}
+                  </pre>
+                </div>
               </CardContent>
             </Card>
             
-            <Card className="backdrop-blur-sm border-accent/20">
-              <CardHeader>
-                <CardTitle>Export Flashcards</CardTitle>
-                <CardDescription>
-                  Download your flashcards for backup or sharing
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">All Flashcards</p>
-                    <p className="text-sm text-muted-foreground">
-                      {flashcards.length} cards total
-                    </p>
+            <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
+              <DialogTrigger asChild>
+                <Card className="backdrop-blur-sm border-accent/20 cursor-pointer hover:bg-accent/10 transition-colors">
+                  <CardHeader>
+                    <CardTitle>Export Flashcards</CardTitle>
+                    <CardDescription>
+                      Download your flashcards for backup or sharing
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">All Flashcards</p>
+                        <p className="text-sm text-muted-foreground">
+                          {flashcards.length} cards total
+                        </p>
+                      </div>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </DialogTrigger>
+              
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Export Flashcards</DialogTitle>
+                  <DialogDescription>
+                    Choose your export format and options
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-6 py-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Export Format</p>
+                    <div className="flex gap-4">
+                      <Button 
+                        variant={exportFormat === 'csv' ? "default" : "outline"}
+                        onClick={() => setExportFormat('csv')}
+                        className="flex-1"
+                      >
+                        CSV
+                      </Button>
+                      <Button 
+                        variant={exportFormat === 'json' ? "default" : "outline"}
+                        onClick={() => setExportFormat('json')}
+                        className="flex-1"
+                      >
+                        JSON
+                      </Button>
+                    </div>
                   </div>
-                  <Button onClick={handleExport} variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">Mastered Cards Only</p>
-                    <p className="text-sm text-muted-foreground">
-                      {flashcards.filter((card) => card.mastered).length} cards
-                      mastered
-                    </p>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Cards to Export</p>
+                    <div className="flex gap-4">
+                      <Button 
+                        variant={!exportMasteredOnly ? "default" : "outline"}
+                        onClick={() => setExportMasteredOnly(false)}
+                        className="flex-1"
+                      >
+                        All Cards
+                      </Button>
+                      <Button 
+                        variant={exportMasteredOnly ? "default" : "outline"}
+                        onClick={() => setExportMasteredOnly(true)}
+                        className="flex-1"
+                      >
+                        Mastered Only
+                      </Button>
+                    </div>
                   </div>
-                  <Button onClick={handleExport} variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+                
+                <DialogFooter className="sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsFileDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleExport} disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </TabsContent>
       </Tabs>
+      
+      <style jsx>{`
+        .perspective-1000 {
+          perspective: 1000px;
+          position: relative;
+        }
+        
+        .flashcard-front,
+        .flashcard-back {
+          backface-visibility: hidden;
+          transition: transform 0.6s ease;
+        }
+        
+        .flashcard-back {
+          transform: rotateY(180deg);
+        }
+        
+        .flashcard.flipped .flashcard-front {
+          transform: rotateY(180deg);
+        }
+        
+        .flashcard.flipped .flashcard-back {
+          transform: rotateY(0);
+        }
+      `}</style>
     </div>
   );
 };

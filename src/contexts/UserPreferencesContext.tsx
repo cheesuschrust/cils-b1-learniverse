@@ -1,35 +1,28 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { VoicePreference } from '@/utils/textToSpeech';
 
-export interface VoicePreference {
-  italianVoiceURI: string;
-  englishVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
-}
-
-export interface AIPreference {
-  enabled: boolean;
+interface AIPreference {
   modelSize: 'small' | 'medium' | 'large';
   processOnDevice: boolean;
-  showConfidenceScores: boolean;
-  fallbackToManual: boolean;
+  dataCollection: boolean;
+  assistanceLevel: number;
 }
 
 interface UserPreferencesContextType {
   theme: 'light' | 'dark' | 'system';
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  preferredLanguage: 'english' | 'italian' | 'both';
-  setPreferredLanguage: (language: 'english' | 'italian' | 'both') => void;
+  setTheme?: (theme: 'light' | 'dark' | 'system') => void;
   autoPlayAudio: boolean;
-  setAutoPlayAudio: (autoPlay: boolean) => void;
+  setAutoPlayAudio?: (autoPlay: boolean) => void;
+  preferredLanguage: 'english' | 'italian' | 'both';
+  setPreferredLanguage?: (language: 'english' | 'italian' | 'both') => void;
   voicePreference: VoicePreference;
-  setVoicePreference: (preference: VoicePreference) => void;
+  setVoicePreference: (preferences: VoicePreference) => void;
   aiPreference: AIPreference;
-  setAIPreference: (preference: AIPreference) => void;
+  setAIPreference: (preferences: AIPreference) => void;
 }
 
-// Default voice preference
 const defaultVoicePreference: VoicePreference = {
   italianVoiceURI: '',
   englishVoiceURI: '',
@@ -37,110 +30,138 @@ const defaultVoicePreference: VoicePreference = {
   voicePitch: 1.0
 };
 
-// Default AI preference
 const defaultAIPreference: AIPreference = {
-  enabled: true,
   modelSize: 'medium',
-  processOnDevice: true,
-  showConfidenceScores: true,
-  fallbackToManual: true
+  processOnDevice: false,
+  dataCollection: true,
+  assistanceLevel: 5
 };
 
-const defaultPreferences: UserPreferencesContextType = {
-  theme: 'light', // Changed from 'light' to reinforce default
-  setTheme: () => {},
+const defaultUserPreferences: UserPreferencesContextType = {
+  theme: 'system',
+  autoPlayAudio: false,
   preferredLanguage: 'both',
-  setPreferredLanguage: () => {},
-  autoPlayAudio: false, // Default to false to prevent auto-play
-  setAutoPlayAudio: () => {},
   voicePreference: defaultVoicePreference,
   setVoicePreference: () => {},
   aiPreference: defaultAIPreference,
   setAIPreference: () => {}
 };
 
-const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
+const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultUserPreferences);
 
-export const UserPreferencesProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(
-    () => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'light'
+export const useUserPreferences = () => useContext(UserPreferencesContext);
+
+export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [storedTheme, setStoredTheme] = useLocalStorage<'light' | 'dark' | 'system'>(
+    'theme',
+    'system'
   );
   
-  const [preferredLanguage, setPreferredLanguage] = useState<'english' | 'italian' | 'both'>(
-    () => (localStorage.getItem('preferredLanguage') as 'english' | 'italian' | 'both') || 'both'
+  const [storedAutoPlayAudio, setStoredAutoPlayAudio] = useLocalStorage<boolean>(
+    'autoPlayAudio',
+    false
   );
   
-  // Default autoPlayAudio to false
-  const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(
-    () => localStorage.getItem('autoPlayAudio') === 'true' ? true : false
+  const [storedPreferredLanguage, setStoredPreferredLanguage] = useLocalStorage<'english' | 'italian' | 'both'>(
+    'preferredLanguage',
+    'both'
   );
   
-  const [voicePreference, setVoicePreference] = useState<VoicePreference>(() => {
-    const savedPreference = localStorage.getItem('voicePreference');
-    return savedPreference 
-      ? JSON.parse(savedPreference) 
-      : defaultVoicePreference;
-  });
+  const [storedVoicePreference, setStoredVoicePreference] = useLocalStorage<VoicePreference>(
+    'voicePreference',
+    defaultVoicePreference
+  );
   
-  const [aiPreference, setAIPreference] = useState<AIPreference>(() => {
-    const savedPreference = localStorage.getItem('aiPreference');
-    return savedPreference 
-      ? JSON.parse(savedPreference) 
-      : defaultAIPreference;
-  });
+  const [storedAIPreference, setStoredAIPreference] = useLocalStorage<AIPreference>(
+    'aiPreference',
+    defaultAIPreference
+  );
   
-  // Save preferences to localStorage when they change
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(storedTheme);
+  const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(storedAutoPlayAudio);
+  const [preferredLanguage, setPreferredLanguage] = useState<'english' | 'italian' | 'both'>(storedPreferredLanguage);
+  const [voicePreference, setVoicePreference] = useState<VoicePreference>(storedVoicePreference);
+  const [aiPreference, setAIPreference] = useState<AIPreference>(storedAIPreference);
+  
+  // Update localStorage when preferences change
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    setStoredTheme(theme);
+  }, [theme, setStoredTheme]);
+  
+  useEffect(() => {
+    setStoredAutoPlayAudio(autoPlayAudio);
+  }, [autoPlayAudio, setStoredAutoPlayAudio]);
+  
+  useEffect(() => {
+    setStoredPreferredLanguage(preferredLanguage);
+  }, [preferredLanguage, setStoredPreferredLanguage]);
+  
+  useEffect(() => {
+    setStoredVoicePreference(voicePreference);
+  }, [voicePreference, setStoredVoicePreference]);
+  
+  useEffect(() => {
+    setStoredAIPreference(aiPreference);
+  }, [aiPreference, setStoredAIPreference]);
+  
+  // Handle system theme changes
+  useEffect(() => {
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      if (theme === 'system') {
+        document.documentElement.classList.toggle('dark', event.matches);
+      }
+    };
     
-    // Apply light/dark mode to the document
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else if (theme === 'system') {
-      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      isDarkMode 
-        ? document.documentElement.classList.add('dark') 
-        : document.documentElement.classList.remove('dark');
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    
+    // Apply theme
+    if (theme === 'system') {
+      document.documentElement.classList.toggle('dark', mediaQuery.matches);
+    } else {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
     }
+    
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    };
   }, [theme]);
   
-  useEffect(() => {
-    localStorage.setItem('preferredLanguage', preferredLanguage);
-  }, [preferredLanguage]);
+  const handleSetTheme = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    
+    if (newTheme === 'system') {
+      const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', systemIsDark);
+    } else {
+      document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    }
+  };
   
-  useEffect(() => {
-    localStorage.setItem('autoPlayAudio', String(autoPlayAudio));
-  }, [autoPlayAudio]);
+  const handleSetVoicePreference = (newPreferences: VoicePreference) => {
+    setVoicePreference(newPreferences);
+  };
   
-  useEffect(() => {
-    localStorage.setItem('voicePreference', JSON.stringify(voicePreference));
-  }, [voicePreference]);
-  
-  useEffect(() => {
-    localStorage.setItem('aiPreference', JSON.stringify(aiPreference));
-  }, [aiPreference]);
+  const handleSetAIPreference = (newPreferences: AIPreference) => {
+    setAIPreference(newPreferences);
+  };
   
   return (
-    <UserPreferencesContext.Provider 
+    <UserPreferencesContext.Provider
       value={{
         theme,
-        setTheme,
-        preferredLanguage,
-        setPreferredLanguage,
+        setTheme: handleSetTheme,
         autoPlayAudio,
         setAutoPlayAudio,
+        preferredLanguage,
+        setPreferredLanguage,
         voicePreference,
-        setVoicePreference,
+        setVoicePreference: handleSetVoicePreference,
         aiPreference,
-        setAIPreference
+        setAIPreference: handleSetAIPreference
       }}
     >
       {children}
     </UserPreferencesContext.Provider>
   );
 };
-
-export const useUserPreferences = () => useContext(UserPreferencesContext);
