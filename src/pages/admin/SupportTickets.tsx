@@ -1,327 +1,340 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import TicketList from '@/components/tickets/TicketList';
-import { Input } from '@/components/ui/input';
-import { SupportTicketProps } from '@/components/tickets/SupportTicketItem';
+import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { MessageCircle, UserCircle, Search, Filter, PlusCircle, Send, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import TicketList, { SupportTicketProps, SupportTicketStatus, SupportTicketPriority } from '@/components/tickets/TicketList';
 
 const SupportTickets = () => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-  const [isReplying, setIsReplying] = useState(false);
+  const { toast } = useToast();
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setStatusPriority] = useState<string>("all");
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Modified ticket data to match SupportTicketProps expected by TicketList
-  const tickets: SupportTicketProps[] = [
+  // Mock tickets for demo
+  const [tickets, setTickets] = useState<SupportTicketProps[]>([
     {
-      id: "ticket-1",
-      subject: "Audio pronunciation not working",
-      message: "I'm having issues with the audio pronunciation feature. When I click on the speaker icon, nothing happens.",
-      status: "open",
+      id: "ticket-001",
+      subject: "Problem with lesson audio",
+      message: "I can't hear the audio in the listening exercises. I've tried multiple browsers.",
+      status: "pending",
       priority: "high",
-      category: "technical",
-      createdAt: "2023-09-15T14:30:00Z",
-      updatedAt: "2023-09-15T16:45:00Z",
-      userId: "user-1",
+      category: "Technical",
+      createdAt: new Date(2023, 3, 15).toISOString(),
+      updatedAt: new Date(2023, 3, 15).toISOString(),
+      userId: "user-001",
       userEmail: "john.doe@example.com",
       userName: "John Doe",
       user: {
-        id: "user-1",
+        id: "user-001",
         name: "John Doe",
         email: "john.doe@example.com",
-        avatar: "https://github.com/shadcn.png"
+        avatar: "https://github.com/shadcn.png",
       },
-      responses: [
+      messages: [
         {
-          id: "msg-1",
-          message: "I'm having issues with the audio pronunciation feature. When I click on the speaker icon, nothing happens.",
-          createdAt: "2023-09-15T14:30:00Z",
-          userId: "user-1",
-          userName: "John Doe",
-          isAdmin: false
+          id: "msg-001",
+          content: "I can't hear the audio in the listening exercises. I've tried multiple browsers.",
+          timestamp: new Date(2023, 3, 15).toISOString(),
+          isAdmin: false,
         },
-        {
-          id: "msg-2",
-          message: "Thank you for reporting this issue. Could you please provide more information about your browser and device?",
-          createdAt: "2023-09-15T15:20:00Z",
-          userId: "admin-1",
-          userName: "Admin User",
-          isAdmin: true
-        },
-        {
-          id: "msg-3",
-          message: "I'm using Chrome 116 on Windows 11. This issue started happening after the latest update.",
-          createdAt: "2023-09-15T16:45:00Z",
-          userId: "user-1",
-          userName: "John Doe",
-          isAdmin: false
-        }
-      ]
+      ],
     },
     {
-      id: "ticket-2",
-      subject: "Premium subscription payment failed",
-      message: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
+      id: "ticket-002",
+      subject: "Subscription charge issue",
+      message: "I was charged twice for my monthly subscription. Can you please check?",
       status: "in-progress",
-      priority: "medium",
-      category: "billing",
-      createdAt: "2023-09-14T10:15:00Z",
-      updatedAt: "2023-09-14T11:30:00Z",
-      userId: "user-2",
+      priority: "urgent",
+      category: "Billing",
+      createdAt: new Date(2023, 3, 18).toISOString(),
+      updatedAt: new Date(2023, 3, 20).toISOString(),
+      userId: "user-002",
       userEmail: "jane.smith@example.com",
       userName: "Jane Smith",
       user: {
-        id: "user-2",
+        id: "user-002",
         name: "Jane Smith",
         email: "jane.smith@example.com",
-        avatar: ""
+        avatar: "",
       },
-      responses: [
+      messages: [
         {
-          id: "msg-1",
-          message: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
-          createdAt: "2023-09-14T10:15:00Z",
-          userId: "user-2",
-          userName: "Jane Smith",
-          isAdmin: false
+          id: "msg-002",
+          content: "I was charged twice for my monthly subscription. Can you please check?",
+          timestamp: new Date(2023, 3, 18).toISOString(),
+          isAdmin: false,
         },
         {
-          id: "msg-2",
-          message: "I apologize for the inconvenience. Let me check your account and the payment gateway status.",
-          createdAt: "2023-09-14T11:30:00Z",
-          userId: "admin-1",
-          userName: "Admin User",
-          isAdmin: true
-        }
-      ]
+          id: "msg-003",
+          content: "We're looking into this issue for you. We'll need to check with our payment processor.",
+          timestamp: new Date(2023, 3, 20).toISOString(),
+          isAdmin: true,
+        },
+      ],
     },
     {
-      id: "ticket-3",
-      subject: "Feature request: More grammar exercises",
-      message: "I'd love to see more advanced grammar exercises, particularly focusing on subjunctive mood.",
-      status: "closed",
-      priority: "low",
-      category: "feature",
-      createdAt: "2023-09-10T09:45:00Z",
-      updatedAt: "2023-09-11T14:20:00Z",
-      userId: "user-3",
-      userEmail: "robert.j@example.com",
+      id: "ticket-003",
+      subject: "Request for advanced grammar lessons",
+      message: "I'd like to see more advanced Italian grammar lessons, especially covering the subjunctive mood.",
+      status: "resolved",
+      priority: "medium",
+      category: "Content",
+      createdAt: new Date(2023, 3, 10).toISOString(),
+      updatedAt: new Date(2023, 3, 12).toISOString(),
+      userId: "user-003",
+      userEmail: "robert.johnson@example.com",
       userName: "Robert Johnson",
       user: {
-        id: "user-3",
+        id: "user-003",
         name: "Robert Johnson",
-        email: "robert.j@example.com",
-        avatar: ""
+        email: "robert.johnson@example.com",
+        avatar: "",
       },
-      responses: [
+      messages: [
         {
-          id: "msg-1",
-          message: "I'd love to see more advanced grammar exercises, particularly focusing on subjunctive mood.",
-          createdAt: "2023-09-10T09:45:00Z",
-          userId: "user-3",
-          userName: "Robert Johnson",
-          isAdmin: false
+          id: "msg-004",
+          content: "I'd like to see more advanced Italian grammar lessons, especially covering the subjunctive mood.",
+          timestamp: new Date(2023, 3, 10).toISOString(),
+          isAdmin: false,
         },
         {
-          id: "msg-2",
-          message: "Thank you for your suggestion! We're actually working on expanding our grammar section and will include more exercises on the subjunctive mood in our next update.",
-          createdAt: "2023-09-11T14:20:00Z",
-          userId: "admin-1",
-          userName: "Admin User",
-          isAdmin: true
-        }
-      ]
+          id: "msg-005",
+          content: "Thanks for the suggestion! We're working on expanding our advanced grammar section.",
+          timestamp: new Date(2023, 3, 11).toISOString(),
+          isAdmin: true,
+        },
+        {
+          id: "msg-006",
+          content: "We've added new lessons on the subjunctive mood. Please check them out and let us know what you think!",
+          timestamp: new Date(2023, 3, 12).toISOString(),
+          isAdmin: true,
+        },
+      ],
+    },
+  ]);
+  
+  const handleSelectTicket = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+  };
+  
+  const selectedTicket = tickets.find(ticket => ticket.id === selectedTicketId);
+  
+  const getStatusIcon = (status: SupportTicketStatus) => {
+    switch (status) {
+      case "pending":
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case "in-progress":
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+      case "resolved":
+      case "closed":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      default:
+        return null;
     }
-  ];
+  };
   
   const filteredTickets = tickets.filter(ticket => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'open') return ticket.status === 'open';
-    if (activeTab === 'pending') return ticket.status === 'pending';
-    if (activeTab === 'closed') return ticket.status === 'closed';
-    return true;
+    // Apply search query
+    const matchesSearch = 
+      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Apply status filter
+    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+    
+    // Apply priority filter
+    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
   });
   
-  const ticket = tickets.find(t => t.id === selectedTicket) || null;
-  
-  const handleReply = () => {
-    // Handle reply submission
-    setIsReplying(false);
+  const updateTicketStatus = (status: SupportTicketStatus) => {
+    if (!selectedTicketId) return;
+    
+    setTickets(prev => prev.map(ticket => 
+      ticket.id === selectedTicketId 
+        ? {...ticket, status, updatedAt: new Date().toISOString()} 
+        : ticket
+    ));
+    
+    toast({
+      title: "Ticket Updated",
+      description: `Ticket status changed to ${status}`,
+    });
   };
-
-  const handleUpdateTicket = (ticketId: string, updates: Partial<SupportTicketProps>) => {
-    // This would update the ticket in a real application
-    console.log('Updating ticket:', ticketId, updates);
+  
+  const sendReply = () => {
+    if (!selectedTicketId || !replyText.trim()) return;
+    
+    const newMessage = {
+      id: `msg-${Date.now()}`,
+      content: replyText,
+      timestamp: new Date().toISOString(),
+      isAdmin: true,
+    };
+    
+    setTickets(prev => prev.map(ticket => 
+      ticket.id === selectedTicketId 
+        ? {
+            ...ticket, 
+            messages: [...(ticket.messages || []), newMessage],
+            updatedAt: new Date().toISOString(),
+            status: ticket.status === "pending" ? "in-progress" as const : ticket.status
+          } 
+        : ticket
+    ));
+    
+    setReplyText("");
+    
+    toast({
+      title: "Reply Sent",
+      description: "Your response has been sent to the user",
+    });
+  };
+  
+  const createNewTicket = () => {
+    toast({
+      title: "Feature Coming Soon",
+      description: "Creating new support tickets will be available in a future update.",
+    });
+  };
+  
+  const formatDate = (date: string | Date) => {
+    if (!date) return '';
+    const parsedDate = typeof date === 'string' ? new Date(date) : date;
+    return formatDistanceToNow(parsedDate, { addSuffix: true });
   };
   
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Support Tickets</h1>
-          <p className="text-muted-foreground">Manage and respond to user support requests</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">Export</Button>
-          <Button>New Ticket</Button>
-        </div>
+    <div className="container py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Support Tickets</h1>
+        <Button onClick={createNewTicket}>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          New Ticket
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Ticket Management</CardTitle>
-              <CardDescription>
-                {filteredTickets.length} tickets found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-4 mb-4">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="open">Open</TabsTrigger>
-                  <TabsTrigger value="pending">Pending</TabsTrigger>
-                  <TabsTrigger value="closed">Closed</TabsTrigger>
-                </TabsList>
-                
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Select defaultValue="newest">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="newest">Newest first</SelectItem>
-                          <SelectItem value="oldest">Oldest first</SelectItem>
-                          <SelectItem value="priority">Priority</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex-1">
-                      <Select defaultValue="all">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Filter by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Categories</SelectItem>
-                          <SelectItem value="technical">Technical</SelectItem>
-                          <SelectItem value="billing">Billing</SelectItem>
-                          <SelectItem value="feature">Feature Request</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="border rounded-md">
-                    <TicketList 
-                      tickets={filteredTickets}
-                      selectedTicketId={selectedTicket}
-                      onSelectTicket={setSelectedTicket}
-                      onUpdateTicket={handleUpdateTicket}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Select defaultValue="10">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Per page" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10 per page</SelectItem>
-                        <SelectItem value="20">20 per page</SelectItem>
-                        <SelectItem value="50">50 per page</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="icon" disabled>
-                        1
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        2
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        3
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Tabs>
-            </CardContent>
-          </Card>
+        <div className="lg:col-span-1 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search tickets..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[130px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <TicketList 
+            tickets={filteredTickets}
+            onSelectTicket={handleSelectTicket}
+            selectedTicketId={selectedTicketId || undefined}
+          />
         </div>
         
         <div className="lg:col-span-2">
-          {ticket ? (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
+          {selectedTicket ? (
+            <Card className="h-full">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between">
                   <div>
-                    <CardTitle>{ticket.subject}</CardTitle>
+                    <CardTitle>{selectedTicket.subject}</CardTitle>
                     <CardDescription>
-                      Ticket #{ticket.id} • Opened on {new Date(ticket.createdAt).toLocaleDateString()}
+                      Ticket #{selectedTicket.id} • {formatDate(selectedTicket.createdAt)}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Badge variant={ticket.status === 'open' ? 'default' : ticket.status === 'pending' ? 'outline' : 'secondary'}>
-                      {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
-                    </Badge>
-                    <Badge variant="outline" className="capitalize">{ticket.category}</Badge>
-                    <Badge variant={
-                      ticket.priority === 'high' ? 'destructive' : 
-                      ticket.priority === 'medium' ? 'default' : 'secondary'
-                    } className="capitalize">{ticket.priority}</Badge>
+                    <Select 
+                      defaultValue={selectedTicket.status}
+                      onValueChange={(value) => updateTicketStatus(value as SupportTicketStatus)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        {getStatusIcon(selectedTicket.status)}
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge variant="outline">{selectedTicket.category}</Badge>
+                  <Badge variant="outline">{selectedTicket.priority}</Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              
+              <CardContent className="pt-0">
                 <div className="flex items-center gap-2 mb-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={ticket.user.avatar} alt={ticket.user.name} />
-                    <AvatarFallback>{ticket.user.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{ticket.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{ticket.user.email}</p>
+                  <UserCircle className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">{selectedTicket.user?.name}</span> ({selectedTicket.user?.email})
                   </div>
                 </div>
                 
-                <Separator className="my-4" />
-                
-                <div className="space-y-4">
-                  {ticket.messages.map((message) => (
-                    <div key={message.id} className={`flex gap-4 ${message.isAdmin ? 'justify-end' : ''}`}>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto p-1">
+                  {selectedTicket.messages?.map((message) => (
+                    <div 
+                      key={message.id}
+                      className={`flex gap-3 ${message.isAdmin ? 'justify-end' : 'justify-start'}`}
+                    >
                       {!message.isAdmin && (
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={ticket.user.avatar} alt={ticket.user.name} />
-                          <AvatarFallback>{ticket.user.name.charAt(0)}</AvatarFallback>
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={selectedTicket.user?.avatar} alt={selectedTicket.user?.name} />
+                          <AvatarFallback>{selectedTicket.user?.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`border rounded-lg px-4 py-3 max-w-[70%] ${message.isAdmin ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="text-sm font-medium">{message.isAdmin ? 'Support Agent' : ticket.user.name}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(message.timestamp).toLocaleString()}</p>
-                        </div>
-                        <p className="text-sm">{message.content}</p>
+                      
+                      <div className={`max-w-[80%] rounded-lg p-3 
+                        ${message.isAdmin 
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                        }`}
+                      >
+                        <div className="text-sm">{message.content}</div>
+                        <div className="text-xs mt-1 opacity-70">{formatDate(message.timestamp)}</div>
                       </div>
+                      
                       {message.isAdmin && (
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src="https://github.com/shadcn.png" alt="Admin" />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="/admin-avatar.png" alt="Admin" />
                           <AvatarFallback>A</AvatarFallback>
                         </Avatar>
                       )}
@@ -329,115 +342,33 @@ const SupportTickets = () => {
                   ))}
                 </div>
                 
-                {isReplying ? (
-                  <div className="mt-6 space-y-4">
-                    <Textarea placeholder="Type your reply here..." className="min-h-[120px]" />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setIsReplying(false)}>Cancel</Button>
-                      <Button onClick={handleReply}>Send Reply</Button>
-                    </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Label htmlFor="reply" className="sr-only">Reply</Label>
+                  <div className="flex gap-2">
+                    <Textarea 
+                      id="reply" 
+                      placeholder="Type your reply..." 
+                      className="min-h-[80px]"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                    />
+                    <Button 
+                      className="self-end" 
+                      onClick={sendReply}
+                      disabled={!replyText.trim()}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </Button>
                   </div>
-                ) : (
-                  <div className="mt-6">
-                    {ticket.status !== 'closed' && (
-                      <Button onClick={() => setIsReplying(true)} className="w-full">Reply to Ticket</Button>
-                    )}
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
-                <div className="rounded-full bg-muted p-6 mb-4">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-10 h-10 text-muted-foreground"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No Ticket Selected</h3>
-                <p className="text-muted-foreground mb-6">
-                  Select a ticket from the list to view details and respond
-                </p>
-                <Button variant="outline">Create New Ticket</Button>
-              </CardContent>
-            </Card>
-          )}
-          
-          {ticket && (
-            <Card className="mt-6">
-              <CardHeader className="pb-3">
-                <CardTitle>Ticket Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="status">
-                      Status
-                    </Label>
-                    <Select defaultValue={ticket.status}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="priority">
-                      Priority
-                    </Label>
-                    <Select defaultValue={ticket.priority}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="assignee">
-                      Assign To
-                    </Label>
-                    <Select defaultValue="current">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select agent" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="current">Current User</SelectItem>
-                        <SelectItem value="agent1">Support Agent 1</SelectItem>
-                        <SelectItem value="agent2">Support Agent 2</SelectItem>
-                        <SelectItem value="agent3">Support Agent 3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm">Add Note</Button>
-                  <Button variant="outline" size="sm">Add Tags</Button>
-                  <Button variant="outline" size="sm">Merge Tickets</Button>
-                  <Button variant="destructive" size="sm">Close Ticket</Button>
-                </div>
-              </CardContent>
+            <Card className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+              <MessageCircle className="h-12 w-12 mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Ticket Selected</h3>
+              <p>Select a ticket from the list to view details and respond.</p>
             </Card>
           )}
         </div>

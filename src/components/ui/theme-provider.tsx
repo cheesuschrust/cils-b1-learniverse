@@ -16,7 +16,7 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: "light", // Changed from "system" to "light"
   setTheme: () => null,
 };
 
@@ -24,7 +24,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "light", // Changed from "system" to "light"
   storageKey = "ui-theme",
   ...props
 }: ThemeProviderProps) {
@@ -38,7 +38,7 @@ export function ThemeProvider({
       // Then check user preferences
       if (userPrefs.theme) return userPrefs.theme;
       
-      // Fall back to default theme
+      // Fall back to default theme (now light)
       return defaultTheme;
     }
   );

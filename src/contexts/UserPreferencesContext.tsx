@@ -28,7 +28,7 @@ const defaultVoicePreference: VoicePreference = {
 };
 
 const defaultPreferences: UserPreferencesContextType = {
-  theme: 'light',
+  theme: 'light', // Changed from 'light' to reinforce default
   setTheme: () => {},
   preferredLanguage: 'both',
   setPreferredLanguage: () => {},

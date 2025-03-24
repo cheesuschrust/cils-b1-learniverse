@@ -1,402 +1,167 @@
+
 import React, { useState } from 'react';
-import { Search, Filter, Inbox, Clock, CheckCircle, X, ChevronDown } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SupportTicketItem, { SupportTicketProps } from './SupportTicketItem';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { useSystemLog } from '@/hooks/use-system-log';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CheckCircle, Clock, AlertCircle, MessageCircle, ChevronRight } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+
+export interface SupportTicketMessageProps {
+  id: string;
+  content: string;
+  timestamp: string;
+  isAdmin: boolean;
+}
+
+export interface SupportTicketUserProps {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+}
+
+export interface SupportTicketProps {
+  id: string;
+  subject: string;
+  message: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  category: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  user?: SupportTicketUserProps;
+  messages?: SupportTicketMessageProps[];
+}
+
+export type SupportTicketStatus = 'pending' | 'in-progress' | 'resolved' | 'closed';
+export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 interface TicketListProps {
   tickets: SupportTicketProps[];
-  selectedTicketId: string | null;
   onSelectTicket: (ticketId: string) => void;
-  onUpdateTicket?: (ticketId: string, updates: Partial<SupportTicketProps>) => void;
+  selectedTicketId?: string;
 }
 
-const TicketList: React.FC<TicketListProps> = ({ tickets, selectedTicketId, onSelectTicket, onUpdateTicket }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
-  const [currentTab, setCurrentTab] = useState('all');
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [replyMessage, setReplyMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  const { logUserAction } = useSystemLog();
-
-  const handleUpdateTicket = (ticketId: string, updates: Partial<SupportTicketProps>) => {
-    if (onUpdateTicket) {
-      onUpdateTicket(ticketId, updates);
+const TicketList: React.FC<TicketListProps> = ({ 
+  tickets, 
+  onSelectTicket,
+  selectedTicketId
+}) => {
+  const getStatusIcon = (status: SupportTicketStatus) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'in-progress':
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+      case 'resolved':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'closed':
+        return <CheckCircle className="h-4 w-4 text-gray-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-yellow-500" />;
     }
   };
-
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = 
-      searchQuery === '' || 
-      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.userName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter.length === 0 || statusFilter.includes(ticket.status);
-    
-    const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(ticket.priority);
-    
-    const matchesTab = 
-      currentTab === 'all' || 
-      (currentTab === 'open' && ticket.status === 'open') ||
-      (currentTab === 'in-progress' && ticket.status === 'in-progress') ||
-      (currentTab === 'resolved' && ticket.status === 'resolved') ||
-      (currentTab === 'closed' && ticket.status === 'closed');
-    
-    return matchesSearch && matchesStatus && matchesPriority && matchesTab;
-  });
-
-  const openTicketsCount = tickets.filter(t => t.status === 'open').length;
-  const inProgressTicketsCount = tickets.filter(t => t.status === 'in-progress').length;
-  const resolvedTicketsCount = tickets.filter(t => t.status === 'resolved').length;
-  const closedTicketsCount = tickets.filter(t => t.status === 'closed').length;
-
-  const handleReply = (ticketId: string) => {
-    onSelectTicket(ticketId);
-    setReplyDialogOpen(true);
-  };
-
-  const handleClose = (ticketId: string) => {
-    handleUpdateTicket(ticketId, { status: 'closed', updatedAt: new Date() });
-    logUserAction(`Closed ticket ${ticketId}`);
-    toast({
-      title: "Ticket closed",
-      description: "The ticket has been closed successfully",
-    });
-  };
-
-  const handleReopen = (ticketId: string) => {
-    handleUpdateTicket(ticketId, { status: 'open', updatedAt: new Date() });
-    logUserAction(`Reopened ticket ${ticketId}`);
-    toast({
-      title: "Ticket reopened",
-      description: "The ticket has been reopened successfully",
-    });
-  };
-
-  const submitReply = () => {
-    if (!selectedTicketId || !replyMessage.trim()) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const ticket = tickets.find(t => t.id === selectedTicketId);
-      if (!ticket) return;
-      
-      const newResponse = {
-        id: Date.now().toString(),
-        message: replyMessage,
-        createdAt: new Date(),
-        userId: 'admin-user',
-        userName: 'Admin User',
-        isAdmin: true,
-      };
-      
-      const updatedResponses = [...(ticket.responses || []), newResponse];
-      handleUpdateTicket(selectedTicketId, { 
-        responses: updatedResponses,
-        status: 'in-progress',
-        updatedAt: new Date()
-      });
-      
-      logUserAction(`Replied to ticket ${selectedTicketId}`);
-      
-      toast({
-        title: "Reply sent",
-        description: "Your reply has been sent successfully",
-      });
-      
-      setReplyDialogOpen(false);
-      setReplyMessage('');
-    } catch (error) {
-      console.error("Error submitting reply:", error);
-      toast({
-        title: "Failed to send reply",
-        description: "Please try again later",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  
+  const getStatusColor = (status: SupportTicketStatus) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'in-progress':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'resolved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'closed':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return '';
     }
   };
-
-  const handleReset = () => {
-    setSearchQuery('');
-    setStatusFilter([]);
-    setPriorityFilter([]);
+  
+  const getPriorityColor = (priority: SupportTicketPriority) => {
+    switch (priority) {
+      case 'low':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'high':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+      case 'urgent':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default:
+        return '';
+    }
   };
-
+  
+  const formatDate = (date: string | Date) => {
+    if (!date) return '';
+    const parsedDate = typeof date === 'string' ? new Date(date) : date;
+    return formatDistanceToNow(parsedDate, { addSuffix: true });
+  };
+  
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="relative flex-grow max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tickets..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                <Filter className="h-4 w-4" />
-                Filter
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-              <DropdownMenuCheckboxItem
-                checked={statusFilter.includes('open')}
-                onCheckedChange={(checked) => {
-                  setStatusFilter(checked 
-                    ? [...statusFilter, 'open'] 
-                    : statusFilter.filter(s => s !== 'open')
-                  );
-                }}
-              >
-                Open
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={statusFilter.includes('in-progress')}
-                onCheckedChange={(checked) => {
-                  setStatusFilter(checked 
-                    ? [...statusFilter, 'in-progress'] 
-                    : statusFilter.filter(s => s !== 'in-progress')
-                  );
-                }}
-              >
-                In Progress
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={statusFilter.includes('resolved')}
-                onCheckedChange={(checked) => {
-                  setStatusFilter(checked 
-                    ? [...statusFilter, 'resolved'] 
-                    : statusFilter.filter(s => s !== 'resolved')
-                  );
-                }}
-              >
-                Resolved
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={statusFilter.includes('closed')}
-                onCheckedChange={(checked) => {
-                  setStatusFilter(checked 
-                    ? [...statusFilter, 'closed'] 
-                    : statusFilter.filter(s => s !== 'closed')
-                  );
-                }}
-              >
-                Closed
-              </DropdownMenuCheckboxItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuLabel>Filter by Priority</DropdownMenuLabel>
-              <DropdownMenuCheckboxItem
-                checked={priorityFilter.includes('low')}
-                onCheckedChange={(checked) => {
-                  setPriorityFilter(checked 
-                    ? [...priorityFilter, 'low'] 
-                    : priorityFilter.filter(p => p !== 'low')
-                  );
-                }}
-              >
-                Low
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={priorityFilter.includes('medium')}
-                onCheckedChange={(checked) => {
-                  setPriorityFilter(checked 
-                    ? [...priorityFilter, 'medium'] 
-                    : priorityFilter.filter(p => p !== 'medium')
-                  );
-                }}
-              >
-                Medium
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={priorityFilter.includes('high')}
-                onCheckedChange={(checked) => {
-                  setPriorityFilter(checked 
-                    ? [...priorityFilter, 'high'] 
-                    : priorityFilter.filter(p => p !== 'high')
-                  );
-                }}
-              >
-                High
-              </DropdownMenuCheckboxItem>
-              
-              <DropdownMenuSeparator />
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full justify-start font-normal" 
-                onClick={handleReset}
-              >
-                Reset Filters
-              </Button>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid grid-cols-4 mb-4">
-          <TabsTrigger value="all" className="flex items-center justify-center gap-1">
-            <Inbox className="h-4 w-4" />
-            All
-            <Badge variant="secondary" className="ml-1">{tickets.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="open" className="flex items-center justify-center gap-1">
-            <Clock className="h-4 w-4" />
-            Open
-            <Badge variant="secondary" className="ml-1">{openTicketsCount}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="in-progress" className="flex items-center justify-center gap-1">
-            <Clock className="h-4 w-4" />
-            In Progress
-            <Badge variant="secondary" className="ml-1">{inProgressTicketsCount}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="resolved" className="flex items-center justify-center gap-1">
-            <CheckCircle className="h-4 w-4" />
-            Resolved
-            <Badge variant="secondary" className="ml-1">{resolvedTicketsCount}</Badge>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="m-0">
-          {filteredTickets.length > 0 ? (
-            <ScrollArea className="h-[600px]">
-              {filteredTickets.map((ticket) => (
-                <SupportTicketItem
-                  key={ticket.id}
-                  {...ticket}
-                  onReply={handleReply}
-                  onClose={handleClose}
-                  onReopen={handleReopen}
-                />
-              ))}
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No tickets found.
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="open" className="m-0">
-          {filteredTickets.length > 0 ? (
-            <ScrollArea className="h-[600px]">
-              {filteredTickets.map((ticket) => (
-                <SupportTicketItem
-                  key={ticket.id}
-                  {...ticket}
-                  onReply={handleReply}
-                  onClose={handleClose}
-                />
-              ))}
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No open tickets found.
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="in-progress" className="m-0">
-          {filteredTickets.length > 0 ? (
-            <ScrollArea className="h-[600px]">
-              {filteredTickets.map((ticket) => (
-                <SupportTicketItem
-                  key={ticket.id}
-                  {...ticket}
-                  onReply={handleReply}
-                  onClose={handleClose}
-                />
-              ))}
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No in-progress tickets found.
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="resolved" className="m-0">
-          {filteredTickets.length > 0 ? (
-            <ScrollArea className="h-[600px]">
-              {filteredTickets.map((ticket) => (
-                <SupportTicketItem
-                  key={ticket.id}
-                  {...ticket}
-                  onClose={handleClose}
-                />
-              ))}
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No resolved tickets found.
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-      
-      <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reply to Ticket</DialogTitle>
-          </DialogHeader>
-          
-          <Textarea
-            placeholder="Type your reply here..."
-            value={replyMessage}
-            onChange={(e) => setReplyMessage(e.target.value)}
-            rows={6}
-          />
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setReplyDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={submitReply} 
-              disabled={isSubmitting || !replyMessage.trim()}
-            >
-              {isSubmitting ? 'Sending...' : 'Send Reply'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <div className="space-y-3 pr-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+      {tickets.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            No tickets found
+          </CardContent>
+        </Card>
+      ) : (
+        tickets.map((ticket) => (
+          <Card 
+            key={ticket.id}
+            className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+              selectedTicketId === ticket.id ? 'border-primary/50 bg-muted/30' : ''
+            }`}
+            onClick={() => onSelectTicket(ticket.id)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4">
+                  <Avatar className="h-10 w-10 mt-1">
+                    <AvatarImage src={ticket.user?.avatar} alt={ticket.userName} />
+                    <AvatarFallback>{ticket.userName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">{ticket.subject}</div>
+                    <div className="text-sm text-muted-foreground line-clamp-1">
+                      {ticket.message}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={getStatusColor(ticket.status)}>
+                        {getStatusIcon(ticket.status)}
+                        <span className="ml-1">{ticket.status}</span>
+                      </Badge>
+                      <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
+                        {ticket.priority}
+                      </Badge>
+                      <Badge variant="outline">{ticket.category}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(ticket.createdAt)}
+                  </div>
+                  {ticket.messages && ticket.messages.length > 0 && (
+                    <Badge variant="secondary" className="flex items-center">
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      {ticket.messages.length}
+                    </Badge>
+                  )}
+                  <Button variant="ghost" size="icon" className="ml-auto">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 };
