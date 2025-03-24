@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import * as AIService from '@/services/AIService';
@@ -43,8 +42,7 @@ export function useAI(): AIState {
           
           await AIService.initModel({ 
             modelType: 'text-generation',
-            modelName: modelName,
-            useCache: true
+            modelName: modelName
           });
           
           setIsModelLoaded(true);
@@ -90,8 +88,6 @@ export function useAI(): AIState {
       await AIService.initModel({ 
         modelType, 
         modelName,
-        useCache: true,
-        // Only use WebGPU if processOnDevice is enabled
         forceWebGPU: aiPreference.processOnDevice
       });
       setIsModelLoaded(true);

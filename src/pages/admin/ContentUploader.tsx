@@ -31,6 +31,13 @@ const ContentUploader = () => {
   const { isProcessing: aiIsProcessing } = useAI();
   const { user } = useAuth();
   
+  // Modified drop handler for DropzoneUploader
+  const handleFileDrop = (acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      processFile(acceptedFiles[0]);
+    }
+  };
+  
   return (
     <div className="container mx-auto py-6">
       <Helmet>
@@ -61,7 +68,7 @@ const ContentUploader = () => {
                   language={language}
                   isProcessing={isProcessing}
                   uploadProgress={uploadProgress}
-                  onDrop={processFile}
+                  onDrop={handleFileDrop}
                   onReset={resetState}
                   aiIsProcessing={aiIsProcessing}
                 />

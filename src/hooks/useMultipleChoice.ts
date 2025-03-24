@@ -284,9 +284,11 @@ export function useMultipleChoice() {
         const endTime = new Date();
         const timeSpent = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
         
+        const userId = typeof user === 'object' && user !== null ? (user.id || 'anonymous') : 'anonymous';
+        
         const newAttempt: QuizAttempt = {
-          id: `${user.uid}-${currentSet.id}-${Date.now()}`,
-          userId: user.uid,
+          id: `${userId}-${currentSet.id}-${Date.now()}`,
+          userId: userId,
           questionSetId: currentSet.id,
           score: correctAnswers,
           totalQuestions: currentSet.questions.length,

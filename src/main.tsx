@@ -1,10 +1,15 @@
 
-import { createRoot } from 'react-dom/client'
 import React from 'react';
-import App from './App.tsx'
-import './index.css'
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+import * as AuthService from './services/AuthService';
 
-createRoot(document.getElementById("root")!).render(
+// Add global reference to authService for testing purposes
+// This is a workaround for SystemTester.tsx which is read-only
+(window as any).authService = AuthService;
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
