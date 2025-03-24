@@ -52,14 +52,14 @@ export const convertContentType = (type: ContentType | ContentTypeUI): ContentTy
   return type;
 };
 
-// Detect content type based on keywords and patterns using AI when available
+// Detect content type based on keywords and patterns using AI
 export const detectContentType = async (content: string, fileType: string): Promise<{
   type: ContentType;
   confidence: number;
 }> => {
   // Try to use AI for detection
   try {
-    const classifications = await classifyText(content);
+    const classifications = await classifyText(content.substring(0, 5000)); // Limit length for performance
     
     // Map classifications to content types
     if (classifications.some(c => c.label.includes("listening") || c.label.includes("audio"))) {

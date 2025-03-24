@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { Home, Users, Upload, Settings, FileUp, Brain } from "lucide-react";
+import AdminSidebar from "@/components/layout/AdminSidebar";
+import { Home, Users, Upload, Settings, FileUp, Brain, BarChart, MessageSquare } from "lucide-react";
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -16,9 +16,10 @@ const AdminLayout = () => {
   const sidebarLinks = useMemo(() => [
     { to: "/admin/dashboard", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
     { to: "/admin/users", label: "User Management", icon: <Users className="h-4 w-4" /> },
-    { to: "/admin/content", label: "Content Uploader", icon: <Upload className="h-4 w-4" /> },
+    { to: "/admin/file-uploader", label: "Content Uploader", icon: <Upload className="h-4 w-4" /> },
     { to: "/admin/content-analysis", label: "AI Content Analysis", icon: <Brain className="h-4 w-4" /> },
-    { to: "/admin/file-uploader", label: "File Uploader", icon: <FileUp className="h-4 w-4" /> },
+    { to: "/admin/logs", label: "System Logs", icon: <BarChart className="h-4 w-4" /> },
+    { to: "/admin/tickets", label: "Support Tickets", icon: <MessageSquare className="h-4 w-4" /> },
     { to: "/admin/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ], []);
 
@@ -35,8 +36,8 @@ const AdminLayout = () => {
           isOpen={isSidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto bg-background">
-          <div className="min-h-full pt-16 pb-12">
+        <main className="flex-1 overflow-y-auto bg-background pt-16">
+          <div className="min-h-full p-6">
             <Outlet />
           </div>
         </main>

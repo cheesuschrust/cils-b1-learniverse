@@ -11,7 +11,7 @@ type AdminSidebarProps = {
   isOpen: boolean;
 };
 
-export const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
+const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
   return (
     <aside className={`fixed left-0 top-16 z-20 h-[calc(100vh-4rem)] w-56 border-r bg-background overflow-y-auto ${isOpen ? 'block' : 'hidden'} md:block`}>
       <div className="py-4">
@@ -38,3 +38,5 @@ export const AdminSidebar = ({ links, isOpen }: AdminSidebarProps) => {
     </aside>
   );
 };
+
+export default AdminSidebar;

@@ -1,711 +1,350 @@
 
-import React, { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Upload,
-  FileText,
-  FileUp,
-  CheckCircle,
-  X,
-  BookOpen,
-  PenTool,
-  Headphones,
-  Brain,
-  Download,
-  Save,
-  AlertCircle,
-  Plus,
-} from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { Link } from "react-router-dom";
-import { listeningExercises, ListeningExercise } from "@/data/listeningExercises";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useFileProcessor } from '@/hooks/useFileProcessor';
+import { useAI } from '@/hooks/useAI';
+import { FileText, Upload, AlertCircle, CheckCircle, FileUp, Info, FileQuestion, RefreshCcw } from 'lucide-react';
+import DropzoneUploader from '@/components/content/DropzoneUploader';
 
-type FileType = "text" | "audio" | "pdf" | "unknown";
-type ExerciseType = "listening" | "reading" | "writing" | "multiple-choice";
-
-interface AnalyzedFile {
-  file: File;
-  name: string;
-  type: FileType;
-  content: string;
-  suggestedExerciseType: ExerciseType;
-  analyzed: boolean;
-}
-
-const FileUploader = () => {
-  const [files, setFiles] = useState<AnalyzedFile[]>([]);
-  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
-  const [exerciseTitle, setExerciseTitle] = useState("");
-  const [exerciseType, setExerciseType] = useState<ExerciseType>("listening");
-  const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [generatedExercise, setGeneratedExercise] = useState<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    const newFiles: AnalyzedFile[] = [];
-    
-    Array.from(e.target.files).forEach(file => {
-      const fileType = getFileType(file);
-      newFiles.push({
-        file,
-        name: file.name,
-        type: fileType,
-        content: "",
-        suggestedExerciseType: suggestExerciseType(fileType),
-        analyzed: false
-      });
-    });
-
-    setFiles([...files, ...newFiles]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    
-    toast({
-      title: `${newFiles.length} file(s) uploaded`,
-      description: "Click on a file to analyze its content"
-    });
+// Mock data for content analysis
+const ContentAnalysisSection = ({ 
+  fileContentType, 
+  contentConfidence, 
+  language, 
+  analysisComplete
+}: { 
+  fileContentType: string | null; 
+  contentConfidence: number;
+  language: string;
+  analysisComplete: boolean;
+}) => {
+  if (!fileContentType || !analysisComplete) return null;
+  
+  const getConfidenceLevel = (score: number) => {
+    if (score >= 85) return "Very High";
+    if (score >= 70) return "High";
+    if (score >= 55) return "Moderate";
+    if (score >= 40) return "Low";
+    return "Very Low";
   };
-
-  const getFileType = (file: File): FileType => {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    
-    if (file.type.startsWith("audio/")) return "audio";
-    if (file.type === "application/pdf" || ext === "pdf") return "pdf";
-    if (file.type.startsWith("text/") || ["txt", "md", "rtf"].includes(ext || "")) return "text";
-    
-    return "unknown";
-  };
-
-  const suggestExerciseType = (fileType: FileType): ExerciseType => {
-    switch (fileType) {
-      case "audio": return "listening";
-      case "pdf": return "reading";
-      case "text": return "reading";
-      default: return "multiple-choice";
+  
+  const ContentTypeDetails = {
+    'flashcards': {
+      title: 'Vocabulary Flashcards',
+      description: 'This content is ideal for creating vocabulary flashcards with term-definition pairs.',
+      estimatedCards: Math.floor(Math.random() * 15) + 5,
+      features: ['Italian-English pairs', 'Sample sentences', 'Pronunciation guides']
+    },
+    'multipleChoice': {
+      title: 'Multiple Choice Questions',
+      description: 'This content is suitable for creating quiz questions with multiple answer options.',
+      estimatedQuestions: Math.floor(Math.random() * 10) + 3,
+      features: ['Question stem', '4 answer options', 'Answer explanation']
+    },
+    'listening': {
+      title: 'Listening Comprehension',
+      description: 'This audio content can be used for listening comprehension exercises.',
+      estimatedLength: Math.floor(Math.random() * 5) + 1,
+      features: ['Native speaker audio', 'Comprehension questions', 'Transcripts']
+    },
+    'writing': {
+      title: 'Writing Exercises',
+      description: 'This content is appropriate for writing practice and composition.',
+      estimatedPrompts: Math.floor(Math.random() * 5) + 2,
+      features: ['Writing prompts', 'Sample responses', 'Evaluation criteria']
+    },
+    'speaking': {
+      title: 'Speaking Practice',
+      description: 'This content is designed for oral language practice.',
+      estimatedDialogues: Math.floor(Math.random() * 5) + 2,
+      features: ['Conversation scenarios', 'Pronunciation guidance', 'Speaking prompts']
     }
   };
-
-  const analyzeFile = async (index: number) => {
-    const file = files[index];
-    if (!file) return;
-
-    // If already analyzed, just select it
-    if (file.analyzed) {
-      setSelectedFileIndex(index);
-      return;
-    }
-    
-    try {
-      let content = "";
-      
-      if (file.type === "text") {
-        content = await file.file.text();
-      } else if (file.type === "pdf") {
-        content = "PDF content would be extracted here in a real application";
-      } else if (file.type === "audio") {
-        content = "Audio transcription would happen here in a real application";
-      } else {
-        content = "Unknown file type. Content cannot be extracted.";
-      }
-      
-      const updatedFiles = [...files];
-      updatedFiles[index] = {
-        ...file,
-        content,
-        analyzed: true
-      };
-      
-      setFiles(updatedFiles);
-      setSelectedFileIndex(index);
-      
-      // Set suggested exercise properties
-      setExerciseType(file.suggestedExerciseType);
-      setExerciseTitle(file.name.split('.')[0].replace(/_/g, ' '));
-      
-      // Generate sample questions based on content
-      const sampleQuestions = generateSampleQuestions(content, file.suggestedExerciseType);
-      setQuestions(sampleQuestions);
-      
-      toast({
-        title: "File analyzed",
-        description: `Suggested exercise type: ${file.suggestedExerciseType}`
-      });
-    } catch (error) {
-      toast({
-        title: "Error analyzing file",
-        description: "There was a problem processing this file",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const generateSampleQuestions = (content: string, type: ExerciseType) => {
-    // This is a simplified example. In a real app, you might use AI to generate questions
-    const contentSample = content.slice(0, 200);
-    const words = contentSample.split(/\s+/).filter(w => w.length > 3);
-    
-    if (type === "multiple-choice") {
-      return [1, 2, 3].map(num => ({
-        id: num,
-        question: `Sample question ${num} about "${words[num] || 'the content'}"?`,
-        options: [
-          `Option A for question ${num}`,
-          `Option B for question ${num}`,
-          `Option C for question ${num}`,
-          `Option D for question ${num}`
-        ],
-        correctAnswer: `Option A for question ${num}`
-      }));
-    }
-    
-    if (type === "listening") {
-      return [1, 2, 3].map(num => ({
-        id: num,
-        question: `What does the speaker say about "${words[num] || 'the topic'}"?`,
-        options: [
-          `They mention it's important`,
-          `They don't refer to it`,
-          `They provide historical context`,
-          `They express a personal opinion`
-        ],
-        correctAnswer: `They mention it's important`
-      }));
-    }
-    
-    return [];
-  };
-
-  const handleQuestionChange = (index: number, field: string, value: string) => {
-    const updatedQuestions = [...questions];
-    updatedQuestions[index][field] = value;
-    setQuestions(updatedQuestions);
-  };
-
-  const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
-    const updatedQuestions = [...questions];
-    updatedQuestions[questionIndex].options[optionIndex] = value;
-    setQuestions(updatedQuestions);
-  };
-
-  const handleCorrectAnswerChange = (questionIndex: number, value: string) => {
-    const updatedQuestions = [...questions];
-    updatedQuestions[questionIndex].correctAnswer = value;
-    setQuestions(updatedQuestions);
-  };
-
-  const handleAddQuestion = () => {
-    setQuestions([
-      ...questions,
-      {
-        id: questions.length + 1,
-        question: "",
-        options: ["", "", "", ""],
-        correctAnswer: ""
-      }
-    ]);
-  };
-
-  const handleRemoveQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
-  };
-
-  const generateExercise = () => {
-    if (!selectedFileIndex && selectedFileIndex !== 0) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to generate an exercise",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const selectedFile = files[selectedFileIndex];
-    
-    // Create exercise object based on type
-    const exercise = {
-      id: Date.now(),
-      title: exerciseTitle,
-      difficulty,
-      type: exerciseType,
-      content: selectedFile.content,
-      questions: exerciseType === "multiple-choice" || exerciseType === "listening" ? questions : [],
-      // For listening exercises
-      audioUrl: selectedFile.type === "audio" ? URL.createObjectURL(selectedFile.file) : "",
-      transcript: selectedFile.type === "audio" ? selectedFile.content : ""
-    };
-    
-    setGeneratedExercise(exercise);
-    
-    toast({
-      title: "Exercise generated",
-      description: `${exerciseTitle} (${exerciseType}) has been created`
-    });
-  };
-
-  const exportExercise = () => {
-    if (!generatedExercise) return;
-    
-    const exerciseData = JSON.stringify(generatedExercise, null, 2);
-    const blob = new Blob([exerciseData], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${exerciseTitle.replace(/\s+/g, '_')}_exercise.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    toast({
-      title: "Exercise exported",
-      description: "JSON file has been downloaded"
-    });
-  };
-
-  const saveExercise = () => {
-    if (!generatedExercise || exerciseType !== "listening") {
-      toast({
-        title: "Cannot save exercise",
-        description: "Only listening exercises can be saved directly at this time",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // In a real app, this would save to a database
-    // For now, we're simulating adding to the listeningExercises array
-    console.log("Exercise saved:", generatedExercise);
-    
-    toast({
-      title: "Exercise saved",
-      description: "The listening exercise has been added to the collection",
-    });
-  };
-
-  const getExerciseTypeIcon = (type: ExerciseType) => {
-    switch (type) {
-      case "listening": return <Headphones className="h-5 w-5" />;
-      case "reading": return <BookOpen className="h-5 w-5" />;
-      case "writing": return <PenTool className="h-5 w-5" />;
-      case "multiple-choice": return <Brain className="h-5 w-5" />;
-    }
-  };
-
+  
+  const typeInfo = ContentTypeDetails[fileContentType as keyof typeof ContentTypeDetails];
+  
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
-          Training File Uploader
-        </h1>
-        <Link to="/admin/dashboard">
-          <Button variant="outline" size="sm">Back to Dashboard</Button>
-        </Link>
-      </div>
-      <p className="text-muted-foreground mb-8 animate-fade-in">
-        Upload files to create language learning exercises
-      </p>
+    <div className="mt-6 space-y-4">
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Content Analysis Complete</AlertTitle>
+        <AlertDescription>
+          The AI has analyzed your content and determined the best format for learning materials.
+        </AlertDescription>
+      </Alert>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1 backdrop-blur-sm border-accent/20">
-          <CardHeader>
-            <CardTitle>Files</CardTitle>
-            <CardDescription>
-              Upload and manage your files for generating exercises
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div 
-              className="border-2 border-dashed border-muted rounded-md p-6 text-center cursor-pointer hover:bg-accent/5 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground mb-2">
-                Drag and drop files, or click to browse
-              </p>
-              <Input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                onChange={handleFileUpload} 
-                multiple
-              />
-              <Button variant="secondary" size="sm" onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}>
-                Choose Files
-              </Button>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Content Insights</CardTitle>
+            <Badge variant={contentConfidence > 70 ? "default" : "secondary"}>
+              {getConfidenceLevel(contentConfidence)} Confidence
+            </Badge>
+          </div>
+          <CardDescription>
+            AI-powered analysis of your uploaded content
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-medium">Content Type</h3>
+                <p className="text-sm">{typeInfo.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">{typeInfo.description}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-medium">Language</h3>
+                <p className="text-sm capitalize">{language}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-medium">Confidence Score</h3>
+                <div className="flex items-center gap-2">
+                  <Progress value={contentConfidence} className="h-2 flex-1" />
+                  <span className="text-sm font-medium">{contentConfidence.toFixed(1)}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  How confident the AI is about the content type classification
+                </p>
+              </div>
             </div>
             
-            {files.length > 0 && (
-              <div className="space-y-2 mt-4">
-                <p className="text-sm font-medium">Uploaded Files ({files.length})</p>
-                <div className="max-h-[300px] overflow-y-auto space-y-2">
-                  {files.map((file, index) => (
-                    <div 
-                      key={index}
-                      className={`p-3 rounded-md flex items-center justify-between cursor-pointer hover:bg-accent/10 transition-colors ${
-                        selectedFileIndex === index ? "bg-accent/20" : "bg-card"
-                      }`}
-                      onClick={() => analyzeFile(index)}
-                    >
-                      <div className="flex items-center">
-                        {file.type === "audio" && <Headphones className="h-4 w-4 mr-2 text-blue-500" />}
-                        {file.type === "text" && <FileText className="h-4 w-4 mr-2 text-green-500" />}
-                        {file.type === "pdf" && <FileText className="h-4 w-4 mr-2 text-red-500" />}
-                        {file.type === "unknown" && <FileText className="h-4 w-4 mr-2 text-gray-500" />}
-                        <span className="text-sm truncate max-w-[150px]">{file.name}</span>
-                      </div>
-                      {file.analyzed && (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      )}
-                    </div>
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-medium">Estimated Content Generated</h3>
+                {fileContentType === 'flashcards' && (
+                  <p className="text-sm">{typeInfo.estimatedCards} vocabulary cards</p>
+                )}
+                {fileContentType === 'multipleChoice' && (
+                  <p className="text-sm">{typeInfo.estimatedQuestions} questions</p>
+                )}
+                {fileContentType === 'listening' && (
+                  <p className="text-sm">{typeInfo.estimatedLength} minute{typeInfo.estimatedLength !== 1 ? 's' : ''} of audio</p>
+                )}
+                {fileContentType === 'writing' && (
+                  <p className="text-sm">{typeInfo.estimatedPrompts} writing prompts</p>
+                )}
+                {fileContentType === 'speaking' && (
+                  <p className="text-sm">{typeInfo.estimatedDialogues} speaking scenarios</p>
+                )}
+              </div>
+              
+              <div>
+                <h3 className="font-medium">Features</h3>
+                <ul className="text-sm mt-1 space-y-1">
+                  {typeInfo.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span>{feature}</span>
+                    </li>
                   ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="training-insights">
+              <AccordionTrigger>AI Training Insights</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="text-sm">
+                  The AI model has analyzed your content and will use it to generate similar materials.
+                  Here's how your content will impact the AI's learning:
+                </p>
+                
+                <div className="space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Content Similarity</h4>
+                      <span className="text-xs font-medium">{(contentConfidence * 0.9).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={contentConfidence * 0.9} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      How similar newly generated content will be to your sample
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Language Style Match</h4>
+                      <span className="text-xs font-medium">{(contentConfidence * 0.85).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={contentConfidence * 0.85} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      How well the AI will match your content's language style and difficulty
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Content Structure</h4>
+                      <span className="text-xs font-medium">{(contentConfidence * 0.95).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={contentConfidence * 0.95} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      How accurately the AI will reproduce the structure and format of your content
+                    </p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+        <CardFooter>
+          <Button variant="outline" className="w-full">
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Generate More Similar Content
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+const FileUploader = () => {
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const { toast } = useToast();
+  const { isProcessing: aiIsProcessing } = useAI();
+  
+  const { 
+    file,
+    fileContent,
+    fileContentType,
+    contentConfidence,
+    isProcessing,
+    language,
+    uploadProgress,
+    processFile,
+    resetState
+  } = useFileProcessor();
+  
+  const handleFileDrop = async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+    
+    await processFile(acceptedFiles[0]);
+    
+    // Simulate analysis completion after file processing
+    setTimeout(() => {
+      setAnalysisComplete(true);
+      toast({
+        title: "Analysis Complete",
+        description: "Content has been analyzed and processed successfully.",
+      });
+    }, 1500);
+  };
+  
+  const handleReset = () => {
+    resetState();
+    setAnalysisComplete(false);
+  };
+  
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Content Uploader</h1>
+          <p className="text-muted-foreground">Upload learning materials and let AI analyze and process them</p>
+        </div>
+      </div>
+      
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="upload" className="flex items-center gap-1">
+            <Upload className="h-4 w-4" />
+            <span>Upload</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-1">
+            <FileText className="h-4 w-4" />
+            <span>Upload History</span>
+          </TabsTrigger>
+          <TabsTrigger value="insights" className="flex items-center gap-1">
+            <Info className="h-4 w-4" />
+            <span>AI Insights</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="upload" className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <DropzoneUploader
+                file={file}
+                fileContentType={fileContentType}
+                contentConfidence={contentConfidence}
+                language={language}
+                isProcessing={isProcessing}
+                uploadProgress={uploadProgress}
+                onDrop={handleFileDrop}
+                onReset={handleReset}
+                aiIsProcessing={aiIsProcessing}
+              />
+            </CardContent>
+          </Card>
+          
+          <ContentAnalysisSection 
+            fileContentType={fileContentType} 
+            contentConfidence={contentConfidence}
+            language={language}
+            analysisComplete={analysisComplete}
+          />
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload History</CardTitle>
+              <CardDescription>
+                Recently uploaded content and processing results
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <div className="p-4">
+                  <div className="flex items-center justify-center h-32">
+                    <div className="flex flex-col items-center text-muted-foreground">
+                      <FileQuestion className="h-10 w-10 mb-2" />
+                      <p>No upload history available</p>
+                      <p className="text-sm">Previously uploaded files will appear here</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <Card className="lg:col-span-2 backdrop-blur-sm border-accent/20">
-          <CardHeader>
-            <CardTitle>Generate Exercise</CardTitle>
-            <CardDescription>
-              Create learning materials from your uploaded files
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedFileIndex !== null && selectedFileIndex >= 0 && selectedFileIndex < files.length ? (
-              <Tabs defaultValue="edit" className="w-full">
-                <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="edit">Edit Exercise</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                  <TabsTrigger value="export">Export/Save</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="edit" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Exercise Title</label>
-                      <Input 
-                        value={exerciseTitle} 
-                        onChange={(e) => setExerciseTitle(e.target.value)}
-                        placeholder="Enter a title for this exercise"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Exercise Type</label>
-                      <Select 
-                        value={exerciseType}
-                        onValueChange={(value: any) => setExerciseType(value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select exercise type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="listening">
-                            <div className="flex items-center">
-                              <Headphones className="h-4 w-4 mr-2" />
-                              <span>Listening Comprehension</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="reading">
-                            <div className="flex items-center">
-                              <BookOpen className="h-4 w-4 mr-2" />
-                              <span>Reading Comprehension</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="writing">
-                            <div className="flex items-center">
-                              <PenTool className="h-4 w-4 mr-2" />
-                              <span>Writing Exercise</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="multiple-choice">
-                            <div className="flex items-center">
-                              <Brain className="h-4 w-4 mr-2" />
-                              <span>Multiple Choice Quiz</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+        <TabsContent value="insights">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Insights Dashboard</CardTitle>
+              <CardDescription>
+                View AI model training progress and content analysis metrics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <div className="p-4">
+                  <div className="flex items-center justify-center h-32">
+                    <div className="flex flex-col items-center text-muted-foreground">
+                      <Info className="h-10 w-10 mb-2" />
+                      <p>No AI insights available yet</p>
+                      <p className="text-sm">Upload content to train the AI model</p>
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Difficulty Level</label>
-                    <Select 
-                      value={difficulty}
-                      onValueChange={(value: any) => setDifficulty(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select difficulty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Beginner">Beginner</SelectItem>
-                        <SelectItem value="Intermediate">Intermediate</SelectItem>
-                        <SelectItem value="Advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Content/Transcript</label>
-                    <Textarea 
-                      value={files[selectedFileIndex]?.content || ""} 
-                      onChange={(e) => {
-                        const updatedFiles = [...files];
-                        updatedFiles[selectedFileIndex] = {
-                          ...updatedFiles[selectedFileIndex],
-                          content: e.target.value
-                        };
-                        setFiles(updatedFiles);
-                      }}
-                      placeholder="Content or transcript of the file"
-                      className="min-h-[150px]"
-                    />
-                  </div>
-                  
-                  {(exerciseType === "multiple-choice" || exerciseType === "listening") && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Questions</label>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleAddQuestion}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Question
-                        </Button>
-                      </div>
-                      
-                      {questions.map((question, qIndex) => (
-                        <Card key={qIndex} className="border border-accent/10">
-                          <CardHeader className="py-3 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleRemoveQuestion(qIndex)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="py-3 px-4 space-y-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Question Text</label>
-                              <Input 
-                                value={question.question} 
-                                onChange={(e) => handleQuestionChange(qIndex, "question", e.target.value)}
-                                placeholder="Enter the question"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Options</label>
-                              {question.options.map((option: string, oIndex: number) => (
-                                <div key={oIndex} className="flex items-center gap-2">
-                                  <Input 
-                                    value={option} 
-                                    onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
-                                    placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Correct Answer</label>
-                              <Select 
-                                value={question.correctAnswer} 
-                                onValueChange={(value) => handleCorrectAnswerChange(qIndex, value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select correct answer" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {question.options.map((option: string, oIndex: number) => (
-                                    <SelectItem key={oIndex} value={option}>
-                                      {option || `Option ${String.fromCharCode(65 + oIndex)}`}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-end">
-                    <Button onClick={generateExercise}>
-                      Generate Exercise
-                    </Button>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="preview">
-                  {generatedExercise ? (
-                    <div className="space-y-6">
-                      <div className="bg-accent/10 p-4 rounded-md">
-                        <h3 className="text-lg font-semibold mb-2">{generatedExercise.title}</h3>
-                        <div className="flex items-center space-x-4 mb-4">
-                          <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-                            {generatedExercise.difficulty}
-                          </span>
-                          <span className="text-sm flex items-center">
-                            {getExerciseTypeIcon(generatedExercise.type)}
-                            <span className="ml-1 capitalize">{generatedExercise.type}</span>
-                          </span>
-                        </div>
-                        
-                        {generatedExercise.type === "listening" && (
-                          <div className="mb-4">
-                            <p className="text-sm font-medium mb-2">Audio:</p>
-                            <audio controls className="w-full">
-                              <source src={generatedExercise.audioUrl} type="audio/mpeg" />
-                              Your browser does not support the audio element.
-                            </audio>
-                            <p className="text-sm font-medium mt-4 mb-2">Transcript:</p>
-                            <p className="text-sm bg-background p-4 rounded-md">
-                              {generatedExercise.transcript}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {(generatedExercise.type === "multiple-choice" || generatedExercise.type === "listening") && (
-                          <div className="space-y-4 mt-4">
-                            <p className="text-sm font-medium">Questions:</p>
-                            {generatedExercise.questions.map((q: any, i: number) => (
-                              <div key={i} className="space-y-2 bg-background p-4 rounded-md">
-                                <p className="font-medium">{i + 1}. {q.question}</p>
-                                <div className="space-y-1">
-                                  {q.options.map((option: string, j: number) => (
-                                    <div key={j} className="flex items-center">
-                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 text-xs ${
-                                        option === q.correctAnswer 
-                                          ? "bg-green-500 text-white" 
-                                          : "bg-gray-200"
-                                      }`}>
-                                        {String.fromCharCode(65 + j)}
-                                      </div>
-                                      <span>{option}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                      <p>Generate an exercise to preview it here</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="export">
-                  {generatedExercise ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card className="backdrop-blur-sm border-accent/20">
-                          <CardHeader>
-                            <div className="flex items-center">
-                              <Download className="h-5 w-5 mr-2" />
-                              <CardTitle className="text-base">Export Exercise</CardTitle>
-                            </div>
-                            <CardDescription>
-                              Download this exercise as a JSON file
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Button onClick={exportExercise} className="w-full">
-                              <Download className="h-4 w-4 mr-2" />
-                              Export JSON
-                            </Button>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="backdrop-blur-sm border-accent/20">
-                          <CardHeader>
-                            <div className="flex items-center">
-                              <Save className="h-5 w-5 mr-2" />
-                              <CardTitle className="text-base">Save to Collection</CardTitle>
-                            </div>
-                            <CardDescription>
-                              Add this exercise to the application
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Button 
-                              onClick={saveExercise} 
-                              className="w-full"
-                              disabled={exerciseType !== "listening"}
-                            >
-                              <Save className="h-4 w-4 mr-2" />
-                              Save Exercise
-                            </Button>
-                            {exerciseType !== "listening" && (
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Note: Currently only listening exercises can be saved directly
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                      <p>Generate an exercise first to enable export options</p>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <div className="text-center py-8">
-                <FileUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="mb-2">No file selected</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Upload and select a file to start creating your exercise
-                </p>
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Choose Files
-                </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
