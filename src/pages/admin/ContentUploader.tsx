@@ -10,7 +10,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFileProcessor } from '@/hooks/useFileProcessor';
 import DropzoneUploader from '@/components/content/DropzoneUploader';
 import ContentAnalysis from '@/components/content/ContentAnalysis';
-import AITrainingManagerWrapper from '@/components/admin/AITrainingManagerWrapper';
+import AITrainingManagerWrapper from '@/components/ai/AITrainingManagerWrapper';
+import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 const ContentUploader = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'training'>('upload');
@@ -29,6 +32,7 @@ const ContentUploader = () => {
   
   const { toast } = useToast();
   const { isProcessing: aiIsProcessing } = useAI();
+  const { isAIEnabled } = useAIUtils();
   const { user } = useAuth();
   
   // Modified drop handler for DropzoneUploader
@@ -48,6 +52,16 @@ const ContentUploader = () => {
         <h1 className="text-3xl font-bold">Content Uploader</h1>
         <AIStatus showDetails={true} />
       </div>
+      
+      {!isAIEnabled && (
+        <Alert className="mb-6" variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>AI functionality is disabled</AlertTitle>
+          <AlertDescription>
+            Some features on this page require AI to be enabled. You can enable AI in the AI settings.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'upload' | 'training')} className="w-full mb-6">
         <TabsList className="w-full sm:w-auto">

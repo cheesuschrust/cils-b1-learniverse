@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AISettings from "./AISettings";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAIUtils } from '@/contexts/AIUtilsContext';
 
 interface AIStatusProps {
   showDetails?: boolean;
@@ -17,6 +18,7 @@ interface AIStatusProps {
 
 const AIStatus = ({ showDetails = false, minimal = false }: AIStatusProps) => {
   const { aiPreference } = useUserPreferences();
+  const { isAIEnabled } = useAIUtils();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = React.useState(false);
@@ -42,12 +44,12 @@ const AIStatus = ({ showDetails = false, minimal = false }: AIStatusProps) => {
   if (minimal) {
     return (
       <Badge 
-        variant={aiPreference.enabled ? "default" : "outline"}
+        variant={isAIEnabled ? "default" : "outline"}
         className="cursor-pointer transition-colors hover:bg-secondary"
         onClick={handleSettingsClick}
       >
         <Cpu className="h-3 w-3 mr-1" />
-        {aiPreference.enabled ? 'AI On' : 'AI Off'}
+        {isAIEnabled ? 'AI On' : 'AI Off'}
       </Badge>
     );
   }
@@ -59,14 +61,14 @@ const AIStatus = ({ showDetails = false, minimal = false }: AIStatusProps) => {
           <Button 
             variant="outline" 
             size="sm"
-            className={`gap-1 ${!aiPreference.enabled ? 'text-muted-foreground' : ''}`}
+            className={`gap-1 ${!isAIEnabled ? 'text-muted-foreground' : ''}`}
           >
-            <Cpu className={`h-4 w-4 ${aiPreference.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
+            <Cpu className={`h-4 w-4 ${isAIEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
             {!isLoaded ? (
               <Skeleton className="h-4 w-16" />
             ) : (
               <>
-                {aiPreference.enabled ? (
+                {isAIEnabled ? (
                   <>AI Enabled <CheckCircle2 className="h-3 w-3 text-green-500" /></>
                 ) : (
                   <>AI Disabled <AlertCircle className="h-3 w-3 text-amber-500" /></>
@@ -85,12 +87,12 @@ const AIStatus = ({ showDetails = false, minimal = false }: AIStatusProps) => {
                   <Cpu className="h-4 w-4 mr-2" />
                   AI Status
                 </div>
-                <Badge variant={aiPreference.enabled ? "default" : "outline"}>
-                  {aiPreference.enabled ? 'Enabled' : 'Disabled'}
+                <Badge variant={isAIEnabled ? "default" : "outline"}>
+                  {isAIEnabled ? 'Enabled' : 'Disabled'}
                 </Badge>
               </div>
               
-              {aiPreference.enabled && (
+              {isAIEnabled && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground flex items-center">

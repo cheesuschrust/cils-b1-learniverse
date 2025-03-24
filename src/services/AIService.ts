@@ -112,7 +112,7 @@ export const recognizeSpeech = async (
   // Wait for 1-2 seconds to simulate processing
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
-  const mockResponses = {
+  const mockResponses: Record<string, string[]> = {
     it: [
       "Buongiorno, come stai oggi?",
       "Mi piace studiare l'italiano",
@@ -214,7 +214,7 @@ export const generateSpeechExercises = async (
   // Mock implementation
   console.log(`Generating ${count} ${level} speech exercises in ${language}`);
   
-  const exercises = {
+  const exercises: Record<string, Record<string, { text: string; translation: string }[]>> = {
     it: {
       beginner: [
         { text: "Buongiorno, come stai?", translation: "Good morning, how are you?" },
@@ -242,17 +242,36 @@ export const generateSpeechExercises = async (
         { text: "La politica economica del governo mira a ridurre l'inflazione e aumentare l'occupazione.", translation: "The government's economic policy aims to reduce inflation and increase employment." },
         { text: "La sostenibilità ambientale dovrebbe essere una priorità per le aziende moderne.", translation: "Environmental sustainability should be a priority for modern companies." }
       ]
+    },
+    en: {
+      beginner: [
+        { text: "Good morning, how are you?", translation: "Buongiorno, come stai?" },
+        { text: "My name is Marco. And you?", translation: "Mi chiamo Marco. E tu?" },
+        { text: "I would like a coffee, please.", translation: "Vorrei un caffè, per favore." },
+        { text: "What a beautiful day today!", translation: "Che bella giornata oggi!" },
+        { text: "Where is the train station?", translation: "Dove si trova la stazione?" },
+        { text: "How much does this book cost?", translation: "Quanto costa questo libro?" },
+        { text: "I really like Italy.", translation: "Mi piace molto l'Italia." },
+        { text: "Thank you very much for your help.", translation: "Grazie mille per il tuo aiuto." }
+      ],
+      intermediate: [
+        { text: "I've been studying Italian for three years.", translation: "Sto studiando l'italiano da tre anni." },
+        { text: "I would like to book a table for two people.", translation: "Vorrei prenotare un tavolo per due persone." },
+        { text: "What is the typical dish of this region?", translation: "Qual è il piatto tipico di questa regione?" },
+        { text: "Could you recommend a good wine?", translation: "Mi potresti consigliare un buon vino?" },
+        { text: "Tomorrow I have to get up early to go to work.", translation: "Domani devo alzarmi presto per andare al lavoro." },
+        { text: "I don't understand why you said this.", translation: "Non capisco perché hai detto questo." },
+        { text: "Could I have the bill, please?", translation: "Potrei avere il conto, per favore?" }
+      ],
+      advanced: [
+        { text: "If I had known you were coming, I would have prepared something special.", translation: "Se avessi saputo che saresti venuto, avrei preparato qualcosa di speciale." },
+        { text: "Despite the difficulties, we managed to complete the project on time.", translation: "Nonostante le difficoltà, siamo riusciti a completare il progetto in tempo." },
+        { text: "It is essential that all citizens respect the laws and contribute to the common good.", translation: "È fondamentale che tutti i cittadini rispettino le leggi e contribuiscano al bene comune." },
+        { text: "The government's economic policy aims to reduce inflation and increase employment.", translation: "La politica economica del governo mira a ridurre l'inflazione e aumentare l'occupazione." },
+        { text: "Environmental sustainability should be a priority for modern companies.", translation: "La sostenibilità ambientale dovrebbe essere una priorità per le aziende moderne." }
+      ]
     }
   };
-  
-  // If English is requested, swap text and translation
-  if (language === 'en') {
-    exercises.en = {
-      beginner: exercises.it.beginner.map(e => ({ text: e.translation, translation: e.text })),
-      intermediate: exercises.it.intermediate.map(e => ({ text: e.translation, translation: e.text })),
-      advanced: exercises.it.advanced.map(e => ({ text: e.translation, translation: e.text }))
-    };
-  }
   
   // Select random exercises from the appropriate list
   const selectedExercises = exercises[language][level];

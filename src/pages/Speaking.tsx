@@ -9,11 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Mic, MicOff, Play, Volume2, VolumeX, SkipForward } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { recognizeSpeech, evaluateSpeech, generateSpeechExercises } from '@/services/AIService';
+import { useAI } from '@/hooks/useAI';
 import { speak } from '@/utils/textToSpeech';
 import SpeakableWord from '@/components/learning/SpeakableWord';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { useAIUtils } from '@/contexts/AIUtilsContext';
 
 const Speaking = () => {
   const [activeTab, setActiveTab] = useState('practice');
@@ -34,6 +35,8 @@ const Speaking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { voicePreference } = useUserPreferences();
+  const { recognizeSpeech, evaluateSpeech, generateSpeechExercises } = useAI();
+  const { isAIEnabled } = useAIUtils();
   
   // Load exercises when component mounts or difficulty changes
   useEffect(() => {
@@ -55,7 +58,7 @@ const Speaking = () => {
     };
     
     loadExercises();
-  }, [difficulty, toast]);
+  }, [difficulty, toast, generateSpeechExercises]);
   
   // Set up and clean up recording timer
   useEffect(() => {
@@ -78,6 +81,15 @@ const Speaking = () => {
   }, [isRecording]);
   
   const startRecording = async () => {
+    if (!isAIEnabled) {
+      toast({
+        title: "AI is disabled",
+        description: "Please enable AI in settings to use speech recognition features.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Reset previous recording state
       setRecordingTime(0);

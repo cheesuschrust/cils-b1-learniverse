@@ -80,18 +80,16 @@ export const useAI = (options?: AIServiceProps) => {
     }
   };
 
-  // Ensure we're using the right ContentType for both input and output
+  // Update to ensure ContentType is properly used
   const generateQuestions = async (
     content: string,
-    contentType: ContentType | "multipleChoice",
+    contentType: ContentType,
     count: number = 5,
     difficulty: "Beginner" | "Intermediate" | "Advanced" = "Intermediate"
   ) => {
     setIsProcessing(true);
     try {
-      // Convert multipleChoice to multiple-choice for AIService
-      const convertedType: ContentType = contentType === "multipleChoice" ? "multiple-choice" : contentType as ContentType;
-      const result = await AIService.generateQuestions(content, convertedType, count, difficulty);
+      const result = await AIService.generateQuestions(content, contentType, count, difficulty);
       return result;
     } catch (err: any) {
       setError(err.message || 'Failed to generate questions');
@@ -181,6 +179,74 @@ export const useAI = (options?: AIServiceProps) => {
     }
   };
 
+  // Add speech recognition capabilities
+  const recognizeSpeech = async (
+    audioBlob: Blob,
+    language: 'it' | 'en' = 'it'
+  ) => {
+    setIsProcessing(true);
+    try {
+      const result = await AIService.recognizeSpeech(audioBlob, language);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Failed to recognize speech');
+      toast({
+        title: 'Speech Recognition Failed',
+        description: err.message || 'Could not process speech input',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Add speech evaluation capabilities
+  const evaluateSpeech = async (
+    spokenText: string,
+    referenceText: string,
+    language: 'it' | 'en' = 'it'
+  ) => {
+    setIsProcessing(true);
+    try {
+      const result = await AIService.evaluateSpeech(spokenText, referenceText, language);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Failed to evaluate speech');
+      toast({
+        title: 'Speech Evaluation Failed',
+        description: err.message || 'Could not evaluate speech quality',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Generate speech exercises
+  const generateSpeechExercises = async (
+    level: 'beginner' | 'intermediate' | 'advanced',
+    count: number = 5,
+    language: 'it' | 'en' = 'it'
+  ) => {
+    setIsProcessing(true);
+    try {
+      const result = await AIService.generateSpeechExercises(level, count, language);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate speech exercises');
+      toast({
+        title: 'Speech Exercise Generation Failed',
+        description: err.message || 'Could not generate speech exercises',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return {
     status,
     error,
@@ -197,5 +263,8 @@ export const useAI = (options?: AIServiceProps) => {
     processImage,
     toggleAI,
     isEnabled: isModelLoaded,
+    recognizeSpeech,
+    evaluateSpeech,
+    generateSpeechExercises
   };
 };

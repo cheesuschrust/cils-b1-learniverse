@@ -47,10 +47,8 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
 
     setIsLoading(true);
     try {
-      // Convert content type if needed
-      const contentTypeForAPI: ContentType = 
-        contentType === "multipleChoice" ? "multiple-choice" : 
-        contentType as ContentType;
+      // Convert content type if needed - we now handle this properly with type safety
+      let contentTypeForAPI: ContentType = contentType;
 
       const generatedQuestions = await generateQuestions(
         editableContent,
@@ -159,7 +157,7 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
         <div className="text-xs text-muted-foreground mt-2">
           <p className="flex items-center">
             <FileText className="h-3 w-3 mr-1" />
-            Content type: {contentType === "multiple-choice" ? "Multiple Choice" : contentType}
+            Content type: {contentType.replace('-', ' ')}
           </p>
         </div>
       </CardContent>

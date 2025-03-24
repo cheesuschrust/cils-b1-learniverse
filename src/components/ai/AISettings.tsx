@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Cpu, Gauge, HardDrive, Server, MonitorSmartphone, BarChart3, ToggleLeft } from "lucide-react";
 import { useUserPreferences, AIPreference } from "@/contexts/UserPreferencesContext";
+import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { ContentType } from '@/utils/textAnalysis';
 
 interface AISettingsProps {
   onClose?: () => void;
@@ -16,11 +20,16 @@ interface AISettingsProps {
 
 const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
   const { aiPreference, setAIPreference } = useUserPreferences();
+  const { isAIEnabled, toggleAI, modelSize, setModelSize, confidenceScores } = useAIUtils();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [preferences, setPreferences] = React.useState<AIPreference>({...aiPreference});
   
   const handleToggleChange = (key: keyof AIPreference) => (checked: boolean) => {
+    if (key === 'enabled') {
+      toggleAI();
+    }
+    
     setPreferences(prev => ({
       ...prev,
       [key]: checked
@@ -28,6 +37,10 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
   };
   
   const handleSelectChange = (key: keyof AIPreference) => (value: string) => {
+    if (key === 'modelSize') {
+      setModelSize(value as 'small' | 'medium' | 'large');
+    }
+    
     setPreferences(prev => ({
       ...prev,
       [key]: value
@@ -60,6 +73,14 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
     }
   };
   
+  const contentTypes: { value: ContentType; label: string }[] = [
+    { value: 'multiple-choice', label: 'Multiple Choice' },
+    { value: 'flashcards', label: 'Flashcards' },
+    { value: 'writing', label: 'Writing' },
+    { value: 'speaking', label: 'Speaking' },
+    { value: 'listening', label: 'Listening' }
+  ];
+  
   return (
     <Card className="w-full">
       <CardHeader>
@@ -79,7 +100,7 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
             <p className="text-sm text-muted-foreground">Use AI for content generation and analysis</p>
           </div>
           <Switch 
-            checked={preferences.enabled}
+            checked={isAIEnabled}
             onCheckedChange={handleToggleChange("enabled")}
           />
         </div>
@@ -90,9 +111,9 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
             <p className="text-sm text-muted-foreground">Larger models are more capable but slower</p>
           </div>
           <Select
-            value={preferences.modelSize}
+            value={modelSize}
             onValueChange={handleSelectChange("modelSize")}
-            disabled={!preferences.enabled}
+            disabled={!isAIEnabled}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select model size" />
@@ -122,7 +143,7 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
           <Switch 
             checked={preferences.processOnDevice}
             onCheckedChange={handleToggleChange("processOnDevice")}
-            disabled={!preferences.enabled}
+            disabled={!isAIEnabled}
           />
         </div>
         
@@ -134,7 +155,7 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
           <Switch 
             checked={preferences.showConfidenceScores}
             onCheckedChange={handleToggleChange("showConfidenceScores")}
-            disabled={!preferences.enabled}
+            disabled={!isAIEnabled}
           />
         </div>
         
@@ -150,39 +171,58 @@ const AISettings = ({ onClose, isAdmin = false }: AISettingsProps) => {
         </div>
         
         {isAdmin && (
-          <div className="mt-6 pt-6 border-t">
-            <h3 className="text-sm font-medium mb-4">Advanced Settings (Admin Only)</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">API Endpoint</Label>
-                  <p className="text-sm text-muted-foreground">Custom API endpoint for AI services</p>
-                </div>
-                <Select
-                  defaultValue="default"
-                  disabled={!preferences.enabled}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select endpoint" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default (Cloud)</SelectItem>
-                    <SelectItem value="local">Local Server</SelectItem>
-                    <SelectItem value="custom">Custom Endpoint</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Cache Results</Label>
-                  <p className="text-sm text-muted-foreground">Store AI results for faster responses</p>
-                </div>
-                <Switch defaultChecked={true} disabled={!preferences.enabled} />
+          <>
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-sm font-medium mb-4">Model Confidence Scores</h3>
+              <div className="space-y-4">
+                {contentTypes.map((type) => (
+                  <div key={type.value} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{type.label}</span>
+                      <Badge variant={confidenceScores[type.value] > 80 ? "default" : "outline"}>
+                        {confidenceScores[type.value]}%
+                      </Badge>
+                    </div>
+                    <Progress value={confidenceScores[type.value]} className="h-2" />
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+            
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-sm font-medium mb-4">Advanced Settings (Admin Only)</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">API Endpoint</Label>
+                    <p className="text-sm text-muted-foreground">Custom API endpoint for AI services</p>
+                  </div>
+                  <Select
+                    defaultValue="default"
+                    disabled={!isAIEnabled}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select endpoint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default (Cloud)</SelectItem>
+                      <SelectItem value="local">Local Server</SelectItem>
+                      <SelectItem value="custom">Custom Endpoint</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Cache Results</Label>
+                    <p className="text-sm text-muted-foreground">Store AI results for faster responses</p>
+                  </div>
+                  <Switch defaultChecked={true} disabled={!isAIEnabled} />
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </CardContent>
       
