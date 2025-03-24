@@ -23,16 +23,20 @@ const SupportTickets = () => {
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [isReplying, setIsReplying] = useState(false);
   
-  // Mock ticket data
+  // Modified ticket data to match SupportTicketProps expected by TicketList
   const tickets = [
     {
       id: "ticket-1",
       subject: "Audio pronunciation not working",
+      message: "I'm having issues with the audio pronunciation feature. When I click on the speaker icon, nothing happens.",
       status: "open",
       priority: "high",
       category: "technical",
       createdAt: "2023-09-15T14:30:00Z",
       updatedAt: "2023-09-15T16:45:00Z",
+      userId: "user-1",
+      userEmail: "john.doe@example.com",
+      userName: "John Doe",
       user: {
         id: "user-1",
         name: "John Doe",
@@ -63,11 +67,15 @@ const SupportTickets = () => {
     {
       id: "ticket-2",
       subject: "Premium subscription payment failed",
+      message: "I tried to upgrade to premium but my payment was declined, even though my card is valid.",
       status: "pending",
       priority: "medium",
       category: "billing",
       createdAt: "2023-09-14T10:15:00Z",
       updatedAt: "2023-09-14T11:30:00Z",
+      userId: "user-2",
+      userEmail: "jane.smith@example.com",
+      userName: "Jane Smith",
       user: {
         id: "user-2",
         name: "Jane Smith",
@@ -92,11 +100,15 @@ const SupportTickets = () => {
     {
       id: "ticket-3",
       subject: "Feature request: More grammar exercises",
+      message: "I'd love to see more advanced grammar exercises, particularly focusing on subjunctive mood.",
       status: "closed",
       priority: "low",
       category: "feature",
       createdAt: "2023-09-10T09:45:00Z",
       updatedAt: "2023-09-11T14:20:00Z",
+      userId: "user-3",
+      userEmail: "robert.j@example.com",
+      userName: "Robert Johnson",
       user: {
         id: "user-3",
         name: "Robert Johnson",
@@ -133,6 +145,11 @@ const SupportTickets = () => {
   const handleReply = () => {
     // Handle reply submission
     setIsReplying(false);
+  };
+
+  const handleUpdateTicket = (ticketId: string, updates: any) => {
+    // This would update the ticket in a real application
+    console.log('Updating ticket:', ticketId, updates);
   };
   
   return (
@@ -200,6 +217,7 @@ const SupportTickets = () => {
                       tickets={filteredTickets}
                       selectedTicketId={selectedTicket}
                       onSelectTicket={setSelectedTicket}
+                      onUpdateTicket={handleUpdateTicket}
                     />
                   </div>
                   
@@ -349,7 +367,7 @@ const SupportTickets = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="status" className="block text-sm font-medium mb-2">
+                    <Label htmlFor="status">
                       Status
                     </Label>
                     <Select defaultValue={ticket.status}>
@@ -365,7 +383,7 @@ const SupportTickets = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="priority" className="block text-sm font-medium mb-2">
+                    <Label htmlFor="priority">
                       Priority
                     </Label>
                     <Select defaultValue={ticket.priority}>
@@ -381,7 +399,7 @@ const SupportTickets = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="assignee" className="block text-sm font-medium mb-2">
+                    <Label htmlFor="assignee">
                       Assign To
                     </Label>
                     <Select defaultValue="current">

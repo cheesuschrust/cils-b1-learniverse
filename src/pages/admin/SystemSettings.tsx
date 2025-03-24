@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,10 @@ import {
   Server, 
   Settings, 
   Shield, 
-  Mail 
+  Mail,
+  Lock,
+  BellRing,
+  Braces
 } from 'lucide-react';
 import { 
   Select,
@@ -25,6 +29,16 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
 
 const SystemSettings = () => {
   const { toast } = useToast();
@@ -223,7 +237,7 @@ const SystemSettings = () => {
                         <Label htmlFor="template-name" className="text-right col-span-1">
                           Template
                         </Label>
-                        <Select defaultValue="welcome" className="col-span-4">
+                        <Select defaultValue="welcome">
                           <SelectTrigger id="template-name">
                             <SelectValue placeholder="Select template" />
                           </SelectTrigger>
@@ -427,7 +441,7 @@ const SystemSettings = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
+                <Server className="h-5 w-5" />
                 Database Configuration
               </CardTitle>
               <CardDescription>

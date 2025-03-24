@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Inbox, Clock, CheckCircle, X, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -18,28 +17,34 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useSystemLog } from '@/hooks/use-system-log';
 
 interface TicketListProps {
   tickets: SupportTicketProps[];
-  onUpdateTicket: (ticketId: string, updates: Partial<SupportTicketProps>) => void;
+  selectedTicketId: string | null;
+  onSelectTicket: (ticketId: string) => void;
+  onUpdateTicket?: (ticketId: string, updates: Partial<SupportTicketProps>) => void;
 }
 
-const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
+const TicketList: React.FC<TicketListProps> = ({ tickets, selectedTicketId, onSelectTicket, onUpdateTicket }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [currentTab, setCurrentTab] = useState('all');
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { logUserAction } = useSystemLog();
 
+  const handleUpdateTicket = (ticketId: string, updates: Partial<SupportTicketProps>) => {
+    if (onUpdateTicket) {
+      onUpdateTicket(ticketId, updates);
+    }
+  };
+
   const filteredTickets = tickets.filter(ticket => {
-    // Apply search query
     const matchesSearch = 
       searchQuery === '' || 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,13 +52,10 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
       ticket.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.userName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Apply status filter
     const matchesStatus = statusFilter.length === 0 || statusFilter.includes(ticket.status);
     
-    // Apply priority filter
     const matchesPriority = priorityFilter.length === 0 || priorityFilter.includes(ticket.priority);
     
-    // Apply tab filter
     const matchesTab = 
       currentTab === 'all' || 
       (currentTab === 'open' && ticket.status === 'open') ||
@@ -75,7 +77,7 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
   };
 
   const handleClose = (ticketId: string) => {
-    onUpdateTicket(ticketId, { status: 'closed', updatedAt: new Date() });
+    handleUpdateTicket(ticketId, { status: 'closed', updatedAt: new Date() });
     logUserAction(`Closed ticket ${ticketId}`);
     toast({
       title: "Ticket closed",
@@ -84,7 +86,7 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
   };
 
   const handleReopen = (ticketId: string) => {
-    onUpdateTicket(ticketId, { status: 'open', updatedAt: new Date() });
+    handleUpdateTicket(ticketId, { status: 'open', updatedAt: new Date() });
     logUserAction(`Reopened ticket ${ticketId}`);
     toast({
       title: "Ticket reopened",
@@ -101,21 +103,19 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
       const ticket = tickets.find(t => t.id === selectedTicketId);
       if (!ticket) return;
       
-      // Create a new response
       const newResponse = {
         id: Date.now().toString(),
         message: replyMessage,
         createdAt: new Date(),
-        userId: 'admin-user', // In a real app, this would be the current user's ID
-        userName: 'Admin User', // In a real app, this would be the current user's name
+        userId: 'admin-user',
+        userName: 'Admin User',
         isAdmin: true,
       };
       
-      // Update the ticket
       const updatedResponses = [...(ticket.responses || []), newResponse];
-      onUpdateTicket(selectedTicketId, { 
+      handleUpdateTicket(selectedTicketId, { 
         responses: updatedResponses,
-        status: 'in-progress', 
+        status: 'in-progress',
         updatedAt: new Date()
       });
       
@@ -126,7 +126,6 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
         description: "Your reply has been sent successfully",
       });
       
-      // Close the dialog and reset state
       setReplyDialogOpen(false);
       setSelectedTicketId(null);
       setReplyMessage('');
@@ -370,7 +369,6 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
         </TabsContent>
       </Tabs>
       
-      {/* Reply Dialog */}
       <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -405,3 +403,4 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, onUpdateTicket }) => {
 };
 
 export default TicketList;
+
