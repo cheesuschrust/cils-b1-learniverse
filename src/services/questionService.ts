@@ -39,7 +39,8 @@ Return only JSON in this exact format:
     // Parse the JSON response
     try {
       // Extract the JSON part from the response
-      const jsonMatch = result.generated_text.match(/\[.*\]/s);
+      // Fix: The AIService's generateText returns a string, not an object with generated_text
+      const jsonMatch = result.match(/\[.*\]/s);
       if (!jsonMatch) {
         throw new Error("No valid JSON found in the response");
       }
@@ -50,7 +51,7 @@ Return only JSON in this exact format:
       return questions.slice(0, count); // Ensure we only return the requested number
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError);
-      console.log("Raw AI response:", result.generated_text);
+      console.log("Raw AI response:", result);
       throw new Error("Failed to parse the generated questions");
     }
   } catch (error) {
@@ -82,7 +83,8 @@ Keep your response under 150 words.
       temperature: 0.7
     });
 
-    return result.generated_text.trim();
+    // Fix: The AIService's generateText returns a string directly
+    return result.trim();
   } catch (error) {
     console.error("Error generating feedback:", error);
     return language === 'italian'
@@ -126,7 +128,8 @@ Return only JSON in this exact format:
     // Parse the JSON response
     try {
       // Extract the JSON part from the response
-      const jsonMatch = result.generated_text.match(/\[.*\]/s);
+      // Fix: The AIService's generateText returns a string directly
+      const jsonMatch = result.match(/\[.*\]/s);
       if (!jsonMatch) {
         throw new Error("No valid JSON found in the response");
       }
@@ -137,7 +140,7 @@ Return only JSON in this exact format:
       return questions.slice(0, count); // Ensure we only return the requested number
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError);
-      console.log("Raw AI response:", result.generated_text);
+      console.log("Raw AI response:", result);
       throw new Error("Failed to parse the generated questions");
     }
   } catch (error) {

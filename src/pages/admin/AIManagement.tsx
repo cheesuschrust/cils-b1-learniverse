@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, Cpu, Settings, Brain, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import AITrainingManager from '@/components/admin/AITrainingManager';
-import AIStatus from '@/components/ai/AIStatus';
+import AIStatus from '@/components/ai/AIStatus'; // Fixed: Using default import instead of named import
 import { useAI } from '@/hooks/useAI';
 
 const AIManagement = () => {

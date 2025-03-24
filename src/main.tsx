@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import * as AuthService from './services/AuthService';
+import { AuthService } from './services/AuthService';
 
 // Add global reference to authService for testing purposes
 // This is a workaround for SystemTester.tsx which is read-only

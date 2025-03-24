@@ -70,4 +70,27 @@ export const processImage = async (
   };
 };
 
+// Add the missing functions needed by AITrainingUtils.ts
+export const addTrainingExamples = (
+  contentType: string,
+  examples: any[]
+): number => {
+  // Mock implementation
+  console.log(`Added ${examples.length} training examples for ${contentType}`);
+  return examples.length;
+};
+
+export const getConfidenceScore = (contentType: string): number => {
+  // Mock implementation
+  const scores: Record<string, number> = {
+    'multiple-choice': 85,
+    'flashcards': 80,
+    'writing': 75,
+    'speaking': 70,
+    'listening': 90
+  };
+  
+  return scores[contentType] || 60;
+};
+
 export const isCacheEnabled = true;

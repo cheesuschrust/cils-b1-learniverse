@@ -6,6 +6,8 @@ import { ContentType } from '@/utils/textAnalysis';
 
 const ContentAnalysis = () => {
   const [questions, setQuestions] = useState<any[]>([]);
+  const [content, setContent] = useState<string>("Enter your content here to generate questions.");
+  const [contentType, setContentType] = useState<ContentType>("multiple-choice");
 
   const handleQuestionsGenerated = (generatedQuestions: any[]) => {
     setQuestions(generatedQuestions);
@@ -25,8 +27,8 @@ const ContentAnalysis = () => {
       </div>
       
       <AIContentProcessor 
-        content="Enter your content here to generate questions."
-        contentType="multiple-choice"
+        content={content}
+        contentType={contentType}
         onQuestionsGenerated={handleQuestionsGenerated}
       />
 
