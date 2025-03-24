@@ -43,4 +43,12 @@ export class AuthService {
   static async verifyEmail(token: string): Promise<void> {
     return API.handleRequest<void>("/auth/verify-email", "POST", { token });
   }
+  
+  static async testConnection(): Promise<{ success: boolean, message: string }> {
+    // Mock implementation for test connection
+    return Promise.resolve({ 
+      success: true, 
+      message: 'Auth service connection test successful' 
+    });
+  }
 }

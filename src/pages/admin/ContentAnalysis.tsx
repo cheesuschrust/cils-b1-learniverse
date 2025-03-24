@@ -1,9 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AIContentProcessor from '@/components/ai/AIContentProcessor';
+import { ContentType } from '@/utils/textAnalysis';
 
 const ContentAnalysis = () => {
+  const [questions, setQuestions] = useState<any[]>([]);
+
+  const handleQuestionsGenerated = (generatedQuestions: any[]) => {
+    setQuestions(generatedQuestions);
+  };
+
   return (
     <div className="container mx-auto py-6 px-4">
       <Helmet>
@@ -17,7 +24,20 @@ const ContentAnalysis = () => {
         </p>
       </div>
       
-      <AIContentProcessor />
+      <AIContentProcessor 
+        content="Enter your content here to generate questions."
+        contentType="multiple-choice"
+        onQuestionsGenerated={handleQuestionsGenerated}
+      />
+
+      {questions.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Generated Questions</h2>
+          <pre className="bg-muted p-4 rounded-md overflow-auto">
+            {JSON.stringify(questions, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };

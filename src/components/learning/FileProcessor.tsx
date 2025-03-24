@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { addListeningExercise } from "@/data/listeningExercises";
-import { detectContentType } from "@/utils/textAnalysis";
+import { detectContentType, ContentType } from "@/utils/textAnalysis";
 import { Progress } from "@/components/ui/progress";
 import { useAI } from "@/hooks/useAI";
 import { useAuth } from "@/contexts/AuthContext";

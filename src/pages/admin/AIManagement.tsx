@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, Cpu, Settings, Brain, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import AITrainingManager from '@/components/admin/AITrainingManager';
-import { AIStatus } from '@/components/ai/AIStatus';
+import AIStatus from '@/components/ai/AIStatus';
 import { useAI } from '@/hooks/useAI';
 
 const AIManagement = () => {

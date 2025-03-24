@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-// Use a type assertion to avoid TypeScript error
+// Assign the authService to the window object
 window.authService = AuthService;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
