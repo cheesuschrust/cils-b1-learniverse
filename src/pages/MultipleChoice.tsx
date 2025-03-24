@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle2,
   XCircle,
@@ -19,156 +19,211 @@ import {
   Clock,
   Award,
   BarChart,
+  ChevronLeft,
+  Loader2,
 } from "lucide-react";
-
-// Sample question data
-const sampleQuestions = [
-  {
-    id: 1,
-    question: "Quale di queste città è la capitale d'Italia?",
-    options: ["Milano", "Firenze", "Roma", "Venezia"],
-    correctAnswer: "Roma",
-    explanation:
-      "Roma è la capitale d'Italia dal 1871. Prima di Roma, la capitale è stata Torino e poi Firenze.",
-  },
-  {
-    id: 2,
-    question: "Cosa rappresentano i tre colori della bandiera italiana?",
-    options: [
-      "Libertà, Uguaglianza, Fraternità",
-      "Passato, Presente, Futuro",
-      "Mare, Pianura, Montagne",
-      "Speranza, Fede, Carità",
-    ],
-    correctAnswer: "Speranza, Fede, Carità",
-    explanation:
-      "I tre colori della bandiera italiana simboleggiano la Speranza (verde), la Fede (bianco) e la Carità (rosso).",
-  },
-  {
-    id: 3,
-    question: "Chi è stato il primo presidente della Repubblica Italiana?",
-    options: [
-      "Alcide De Gasperi",
-      "Enrico De Nicola",
-      "Luigi Einaudi",
-      "Giuseppe Saragat",
-    ],
-    correctAnswer: "Enrico De Nicola",
-    explanation:
-      "Enrico De Nicola è stato il primo presidente della Repubblica Italiana dal 1946 al 1948, sebbene inizialmente con il titolo di Capo Provvisorio dello Stato.",
-  },
-];
+import { useMultipleChoice } from "@/hooks/useMultipleChoice";
+import { QuestionSet } from "@/types/question";
 
 // Component
 const MultipleChoice = () => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  const [incorrectAnswers, setIncorrectAnswers] = useState(0);
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [quizFinished, setQuizFinished] = useState(false);
+  // Get quiz functionality from hook
+  const {
+    availableSets,
+    currentSet,
+    currentQuestion,
+    currentQuestionIndex,
+    selectedOption,
+    isSubmitted,
+    correctAnswers,
+    incorrectAnswers,
+    isLoading,
+    quizFinished,
+    showExplanation,
+    startQuiz,
+    handleOptionSelect,
+    handleSubmit,
+    handleNext,
+    restartQuiz,
+    toggleExplanation
+  } = useMultipleChoice();
   
-  const { toast } = useToast();
+  // If we're not in a quiz yet, show the question set selection
+  if (!currentSet) {
+    return <QuestionSetSelection 
+      isLoading={isLoading} 
+      questionSets={availableSets} 
+      onSelectSet={startQuiz} 
+    />;
+  }
   
-  const currentQuestion = sampleQuestions[currentQuestionIndex];
-  
-  const handleOptionSelect = (option: string) => {
-    if (isSubmitted) return;
-    setSelectedOption(option);
-  };
-  
-  const handleSubmit = () => {
-    if (!selectedOption) {
-      toast({
-        title: "Please select an answer",
-        description: "You need to choose an option before submitting",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsSubmitted(true);
-    
-    if (selectedOption === currentQuestion.correctAnswer) {
-      setCorrectAnswers(correctAnswers + 1);
-      // Play success sound in a real app
-    } else {
-      setIncorrectAnswers(incorrectAnswers + 1);
-      // Play error sound in a real app
-    }
-  };
-  
-  const handleNext = () => {
-    if (currentQuestionIndex < sampleQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedOption(null);
-      setIsSubmitted(false);
-      setShowExplanation(false);
-    } else {
-      setQuizFinished(true);
-    }
-  };
-  
-  const handleStartQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setSelectedOption(null);
-    setIsSubmitted(false);
-    setShowExplanation(false);
-    setCorrectAnswers(0);
-    setIncorrectAnswers(0);
-    setQuizFinished(false);
-    // setTimeLeft(60); // Start a 60-second timer for timed quizzes
-  };
-  
-  const toggleExplanation = () => {
-    setShowExplanation(!showExplanation);
-  };
-  
-  // Function to render the question card
-  const renderQuestionCard = () => (
+  // If we're in a quiz, show either the active quiz or the results
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <div className="flex items-center mb-6">
+        <Button 
+          variant="ghost" 
+          className="mr-2" 
+          onClick={() => startQuiz('')}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Back to Sets
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
+          {currentSet.title}
+        </h1>
+      </div>
+      <p className="text-muted-foreground mb-8 animate-fade-in">
+        {currentSet.description}
+      </p>
+      
+      {quizFinished 
+        ? <QuizResults 
+            questionSet={currentSet} 
+            correctAnswers={correctAnswers} 
+            incorrectAnswers={incorrectAnswers}
+            onRestart={restartQuiz}
+            onBackToSets={() => startQuiz('')}
+          />
+        : <QuestionCard 
+            question={currentQuestion!}
+            questionIndex={currentQuestionIndex}
+            totalQuestions={currentSet.questions.length}
+            selectedOption={selectedOption}
+            isSubmitted={isSubmitted}
+            showExplanation={showExplanation}
+            correctAnswers={correctAnswers}
+            incorrectAnswers={incorrectAnswers}
+            onSelectOption={handleOptionSelect}
+            onSubmit={handleSubmit}
+            onToggleExplanation={toggleExplanation}
+            onNext={handleNext}
+          />
+      }
+    </div>
+  );
+};
+
+// Component to display the question sets
+const QuestionSetSelection = ({ 
+  isLoading, 
+  questionSets, 
+  onSelectSet 
+}: { 
+  isLoading: boolean, 
+  questionSets: QuestionSet[], 
+  onSelectSet: (id: string) => void 
+}) => {
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
+        Multiple Choice Questions
+      </h1>
+      <p className="text-muted-foreground mb-8 animate-fade-in">
+        Test your knowledge of Italian with these interactive quizzes
+      </p>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-lg">Loading question sets...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {questionSets.map(set => (
+            <Card key={set.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle>{set.title}</CardTitle>
+                  <Badge className="capitalize">{set.difficulty}</Badge>
+                </div>
+                <CardDescription>{set.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground mb-4">
+                  <span className="flex items-center mb-1">
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    {set.questions.length} questions
+                  </span>
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    Estimated time: {set.questions.length * 2} minutes
+                  </span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  className="w-full" 
+                  onClick={() => onSelectSet(set.id)}
+                >
+                  Start Quiz
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Component to display a question
+const QuestionCard = ({ 
+  question,
+  questionIndex,
+  totalQuestions,
+  selectedOption,
+  isSubmitted,
+  showExplanation,
+  correctAnswers,
+  incorrectAnswers,
+  onSelectOption,
+  onSubmit,
+  onToggleExplanation,
+  onNext
+}) => {
+  return (
     <Card className="w-full max-w-3xl mx-auto backdrop-blur-sm border-accent/20 animate-fade-up">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">Multiple Choice Question</CardTitle>
           <div className="flex items-center text-sm text-muted-foreground">
             <Clock className="h-4 w-4 mr-1" />
-            Question {currentQuestionIndex + 1} of {sampleQuestions.length}
+            Question {questionIndex + 1} of {totalQuestions}
           </div>
         </div>
         <CardDescription>
-          Test your knowledge of Italian citizenship
+          Category: {question.category}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="bg-secondary/30 p-4 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">{currentQuestion.question}</h3>
+          <h3 className="text-lg font-medium mb-2">{question.question}</h3>
           <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
+            {question.options.map((option, index) => (
               <div
                 key={index}
                 className={`p-3 rounded-lg border transition-all cursor-pointer ${
                   selectedOption === option
                     ? isSubmitted
-                      ? option === currentQuestion.correctAnswer
-                        ? "border-green-500 bg-green-50"
-                        : "border-red-500 bg-red-50"
+                      ? option === question.correctAnswer
+                        ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                        : "border-red-500 bg-red-50 dark:bg-red-950/30"
                       : "border-primary bg-primary/5"
-                    : isSubmitted && option === currentQuestion.correctAnswer
-                    ? "border-green-500 bg-green-50"
+                    : isSubmitted && option === question.correctAnswer
+                    ? "border-green-500 bg-green-50 dark:bg-green-950/30"
                     : "border-border hover:border-primary hover:bg-accent/10"
                 }`}
-                onClick={() => handleOptionSelect(option)}
+                onClick={() => onSelectOption(option)}
               >
                 <div className="flex items-center justify-between">
                   <span>{option}</span>
-                  {isSubmitted && option === currentQuestion.correctAnswer && (
+                  {isSubmitted && option === question.correctAnswer && (
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                   )}
                   {isSubmitted &&
                     selectedOption === option &&
-                    option !== currentQuestion.correctAnswer && (
+                    option !== question.correctAnswer && (
                       <XCircle className="h-5 w-5 text-red-500" />
                     )}
                 </div>
@@ -180,39 +235,39 @@ const MultipleChoice = () => {
         {isSubmitted && (
           <div
             className={`p-4 rounded-lg border ${
-              selectedOption === currentQuestion.correctAnswer
-                ? "border-green-200 bg-green-50"
-                : "border-red-200 bg-red-50"
+              selectedOption === question.correctAnswer
+                ? "border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900"
+                : "border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900"
             }`}
           >
             <div className="flex items-start">
-              {selectedOption === currentQuestion.correctAnswer ? (
+              {selectedOption === question.correctAnswer ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
               ) : (
                 <XCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
               )}
               <div>
                 <p className="font-medium">
-                  {selectedOption === currentQuestion.correctAnswer
+                  {selectedOption === question.correctAnswer
                     ? "Correct!"
                     : "Incorrect!"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {selectedOption === currentQuestion.correctAnswer
+                  {selectedOption === question.correctAnswer
                     ? "Well done! You selected the right answer."
-                    : `The correct answer is "${currentQuestion.correctAnswer}".`}
+                    : `The correct answer is "${question.correctAnswer}".`}
                 </p>
                 
                 {showExplanation ? (
                   <div className="mt-2 p-3 bg-secondary/50 rounded-md text-sm">
-                    <p>{currentQuestion.explanation}</p>
+                    <p>{question.explanation}</p>
                   </div>
                 ) : (
                   <Button
                     variant="link"
                     size="sm"
                     className="px-0 text-primary mt-1"
-                    onClick={toggleExplanation}
+                    onClick={onToggleExplanation}
                   >
                     <HelpCircle className="h-4 w-4 mr-1" />
                     Show explanation
@@ -236,12 +291,12 @@ const MultipleChoice = () => {
         </div>
         <div className="space-x-2">
           {!isSubmitted ? (
-            <Button onClick={handleSubmit} disabled={!selectedOption}>
+            <Button onClick={onSubmit} disabled={!selectedOption}>
               Submit Answer
             </Button>
           ) : (
-            <Button onClick={handleNext}>
-              {currentQuestionIndex < sampleQuestions.length - 1
+            <Button onClick={onNext}>
+              {questionIndex < totalQuestions - 1
                 ? "Next Question"
                 : "Finish Quiz"}
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -251,9 +306,19 @@ const MultipleChoice = () => {
       </CardFooter>
     </Card>
   );
+};
+
+// Component to display quiz results
+const QuizResults = ({ 
+  questionSet, 
+  correctAnswers, 
+  incorrectAnswers,
+  onRestart,
+  onBackToSets
+}) => {
+  const totalQuestions = questionSet.questions.length;
   
-  // Function to render the results card
-  const renderResultsCard = () => (
+  return (
     <Card className="w-full max-w-3xl mx-auto backdrop-blur-sm border-accent/20 animate-fade-up">
       <CardHeader>
         <CardTitle className="text-xl flex items-center">
@@ -261,21 +326,21 @@ const MultipleChoice = () => {
           Quiz Results
         </CardTitle>
         <CardDescription>
-          You've completed the multiple choice questions
+          You've completed the {questionSet.title} quiz
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col md:flex-row items-center justify-center md:justify-around p-6 bg-secondary/30 rounded-lg">
           <div className="text-center mb-4 md:mb-0">
             <div className="text-3xl font-bold text-primary">
-              {correctAnswers}/{sampleQuestions.length}
+              {correctAnswers}/{totalQuestions}
             </div>
             <p className="text-sm text-muted-foreground">Correct Answers</p>
           </div>
           
           <div className="text-center mb-4 md:mb-0">
             <div className="text-3xl font-bold">
-              {Math.round((correctAnswers / sampleQuestions.length) * 100)}%
+              {Math.round((correctAnswers / totalQuestions) * 100)}%
             </div>
             <p className="text-sm text-muted-foreground">Accuracy</p>
           </div>
@@ -301,10 +366,7 @@ const MultipleChoice = () => {
                   fill="transparent"
                   strokeDasharray={`${2 * Math.PI * 40}`}
                   strokeDashoffset={`${
-                    2 *
-                    Math.PI *
-                    40 *
-                    (1 - correctAnswers / sampleQuestions.length)
+                    2 * Math.PI * 40 * (1 - correctAnswers / totalQuestions)
                   }`}
                   style={{
                     transformOrigin: "center",
@@ -321,7 +383,7 @@ const MultipleChoice = () => {
         
         <div className="space-y-4">
           <h3 className="font-medium">Question Summary</h3>
-          {sampleQuestions.map((question, index) => (
+          {questionSet.questions.map((question, index) => (
             <div
               key={question.id}
               className="p-3 border border-border rounded-lg"
@@ -351,36 +413,26 @@ const MultipleChoice = () => {
             <div>
               <h3 className="font-medium">AI Feedback</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {correctAnswers === sampleQuestions.length
-                  ? "Excellent work! You've demonstrated a strong understanding of Italian citizenship knowledge. Keep it up!"
-                  : correctAnswers >= sampleQuestions.length / 2
+                {correctAnswers === totalQuestions
+                  ? "Excellent work! You've demonstrated a strong understanding of this topic. Keep it up!"
+                  : correctAnswers >= totalQuestions / 2
                   ? "Good effort! You're making progress, but there's still room for improvement. Focus on reviewing the questions you missed."
-                  : "You need more practice with Italian citizenship topics. Consider reviewing the basic information about Italy's government, history, and culture."}
+                  : "You need more practice with this topic. Consider reviewing the basic concepts before trying again."}
               </p>
             </div>
           </div>
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={handleStartQuiz}>
+        <Button variant="outline" onClick={onBackToSets}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Sets
+        </Button>
+        <Button onClick={onRestart}>
           Try Again
         </Button>
-        <Button>Continue Learning</Button>
       </CardFooter>
     </Card>
-  );
-  
-  return (
-    <div className="container mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold tracking-tight mb-2 animate-fade-in">
-        Multiple Choice Questions
-      </h1>
-      <p className="text-muted-foreground mb-8 animate-fade-in">
-        Test your knowledge of Italian citizenship with daily questions
-      </p>
-      
-      {quizFinished ? renderResultsCard() : renderQuestionCard()}
-    </div>
   );
 };
 

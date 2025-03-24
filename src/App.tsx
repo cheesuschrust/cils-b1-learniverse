@@ -95,6 +95,7 @@ function App() {
                   </Route>
                 </Route>
                 
+                <Route path="/multiple-choice" element={<MultipleChoice />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />
