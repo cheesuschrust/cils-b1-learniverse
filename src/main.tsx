@@ -11,7 +11,8 @@ interface WindowWithAuthService extends Window {
   authService: typeof AuthService;
 }
 
-(window as WindowWithAuthService).authService = AuthService;
+// Use a type assertion to avoid TypeScript error
+(window as unknown as WindowWithAuthService).authService = AuthService;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
