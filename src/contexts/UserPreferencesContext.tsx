@@ -32,7 +32,7 @@ const defaultPreferences: UserPreferencesContextType = {
   setTheme: () => {},
   preferredLanguage: 'both',
   setPreferredLanguage: () => {},
-  autoPlayAudio: false, // Changed to false to prevent auto-play
+  autoPlayAudio: false, // Default to false to prevent auto-play
   setAutoPlayAudio: () => {},
   voicePreference: defaultVoicePreference,
   setVoicePreference: () => {}
@@ -49,6 +49,7 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
     () => (localStorage.getItem('preferredLanguage') as 'english' | 'italian' | 'both') || 'both'
   );
   
+  // Default autoPlayAudio to false
   const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(
     () => localStorage.getItem('autoPlayAudio') === 'true' ? true : false
   );

@@ -30,14 +30,14 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   // Check if speech is supported
   const speechSupported = isSpeechSupported();
 
-  // Auto-play functionality - now controlled by user preference
+  // Auto-play functionality - controlled by user preference
   useEffect(() => {
     // Only auto-play if explicitly set to true AND user preference is true
+    // This will disable auto-play by default since autoPlayAudio is set to false
     if (autoPlay && autoPlayAudio) {
       handleSpeak(null);
     }
-    // Never auto-play based on component mounting alone
-  }, [word, autoPlay]); // Don't include autoPlayAudio in deps to prevent auto-playing when settings change
+  }, [word]); // Only trigger on word change, not preference changes
 
   const handleSpeak = async (e: React.MouseEvent | null) => {
     if (e) {
