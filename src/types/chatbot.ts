@@ -1,95 +1,69 @@
 
+// Type definitions for chatbot management and training
+
 export interface ChatMessage {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
-  attachments?: {
-    type: 'image' | 'file';
-    url: string;
-    name: string;
-    size?: number;
-  }[];
-  feedback?: {
-    helpful: boolean;
-    reason?: string;
-  };
-  context?: {
-    previousMessageIds?: string[];
-    relatedTopics?: string[];
-    knowledgeSourceIds?: string[];
-  };
 }
 
 export interface ChatSession {
   id: string;
-  userId?: string;
+  userId: string;
   messages: ChatMessage[];
   startedAt: Date;
   lastActivityAt: Date;
   context: {
-    userType: 'free' | 'premium';
-    language: string;
-    [key: string]: any;
+    userLevel?: string;
+    currentLesson?: string;
+    recentTopics?: string[];
+    language?: string;
   };
   resolved: boolean;
-  escalatedToHuman: boolean;
-}
-
-export interface KnowledgeBaseEntry {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  category: string;
-  relevance: number;
-  lastUpdated: Date;
-  keywords: string[];
-  version: string;
-}
-
-export interface ChatbotSettings {
-  enabled: boolean;
-  name: string;
-  avatarUrl: string;
-  welcomeMessage: string;
-  fallbackMessage: string;
-  maxContextLength: number;
-  confidenceThreshold: number;
-  suggestFeedback: boolean;
-  suggestRelatedQuestions: boolean;
-  escalationThreshold: number;
+  escalatedToHuman: boolean; // Required field that was missing
 }
 
 export interface ChatbotTrainingExample {
   id: string;
-  query: string;
-  response: string;
+  prompt: string; // Using prompt instead of question
+  response: string; // Using response instead of answer
+  alternativePrompts?: string[]; // Using alternativePrompts instead of alternatives
   category: string;
-  tags: string[];
+  language: string;
   createdAt: Date;
   updatedAt: Date;
-  createdBy?: string;
-  approved: boolean;
-  source: 'admin' | 'user-feedback' | 'auto-generated';
+}
+
+export interface ChatbotConfig {
+  enabled: boolean;
+  name: string;
+  personality: string;
+  defaultLanguage: string;
+  model: string;
+  temperature: number;
+  maxResponseTokens: number;
+  welcomeMessage: string;
 }
 
 export interface ChatbotAnalytics {
   totalSessions: number;
-  averageSessionLength: number;
-  topQueries: {
+  averageMessagesPerSession: number;
+  mostCommonQueries: {
     query: string;
     count: number;
   }[];
-  topCategories: {
-    category: string;
-    count: number;
-  }[];
-  feedbackStats: {
-    helpful: number;
-    notHelpful: number;
-    helpfulPercentage: number;
-  };
+  resolutionRate: number;
   escalationRate: number;
-  responseTimeAverage: number;
+  averageResponseTime: number;
+  userSatisfaction: number;
+}
+
+export interface ChatbotFeedback {
+  id: string;
+  sessionId: string;
+  userId: string;
+  rating: number;
+  comment?: string;
+  createdAt: Date;
 }

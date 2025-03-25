@@ -3,7 +3,10 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import GlobalUserDocumentation from '@/components/help/GlobalUserDocumentation';
 
-const DocumentationPage: React.FC = () => {
+// Define interface for props if needed
+interface DocumentationPageProps {}
+
+const DocumentationPage: React.FC<DocumentationPageProps> = () => {
   return (
     <>
       <Helmet>

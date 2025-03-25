@@ -1,5 +1,4 @@
 
-
 // Question Types
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'Beginner' | 'Intermediate' | 'Advanced';
 export type QuestionLanguage = 'italian' | 'english' | 'both';
@@ -36,6 +35,7 @@ export interface MultipleChoiceQuestion extends Question {
 export interface QuestionSet {
   id: string;
   name: string;
+  title?: string; // Added for compatibility
   description?: string;
   language: QuestionLanguage;
   category: QuestionCategory;
@@ -45,7 +45,8 @@ export interface QuestionSet {
   updatedAt: Date;
   createdBy?: string;
   isPublic: boolean;
-  title?: string; // Added for compatibility
+  attempts?: number; // Added for compatibility
+  bestScore?: number; // Added for compatibility
 }
 
 export interface QuizAttempt {

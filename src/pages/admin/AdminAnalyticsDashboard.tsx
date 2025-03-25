@@ -3,7 +3,10 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import EnhancedAnalyticsDashboard from '@/components/admin/EnhancedAnalyticsDashboard';
 
-const AdminAnalyticsDashboardPage: React.FC = () => {
+// Define interface for props if needed
+interface AdminAnalyticsDashboardPageProps {}
+
+const AdminAnalyticsDashboardPage: React.FC<AdminAnalyticsDashboardPageProps> = () => {
   return (
     <>
       <Helmet>

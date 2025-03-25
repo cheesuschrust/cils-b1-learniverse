@@ -1,46 +1,47 @@
 
-export type AdFormat = 'banner' | 'interstitial' | 'native' | 'text';
-export type AdPosition = 'top' | 'bottom' | 'inline' | 'sidebar';
-export type AdSize = 'small' | 'medium' | 'large';
+// Type definitions for advertisement management
+
 export type AdNetwork = 'internal' | 'google' | 'facebook' | 'custom';
 export type AdStatus = 'active' | 'paused' | 'draft' | 'archived';
+export type AdFormat = 'banner' | 'native' | 'interstitial' | 'video' | 'popup';
+export type AdPosition = 'top' | 'bottom' | 'inline' | 'sidebar' | 'modal';
+export type AdSize = 'small' | 'medium' | 'large' | 'custom';
+
+export interface AdPerformance {
+  impressions: number;
+  clicks: number;
+  ctr: number;  // Click-through rate (%)
+  revenue: number;
+  cost?: number;
+  roi?: number;  // Return on investment (%)
+}
 
 export interface Advertisement {
   id: string;
   name: string;
   description?: string;
   format: AdFormat;
+  position: AdPosition;
+  size: AdSize;
   content: {
     title?: string;
     description?: string;
     imageUrl?: string;
-    linkUrl: string;
     buttonText?: string;
+    linkUrl: string;
   };
-  position: AdPosition;
-  size: AdSize;
-  network: AdNetwork;
-  status: AdStatus;
   targeting?: {
-    userType?: ('free' | 'premium')[];
-    minLevel?: number;
-    maxLevel?: number;
+    userTypes?: string[];
     countries?: string[];
     languages?: string[];
-    devices?: ('mobile' | 'tablet' | 'desktop')[];
+    devices?: string[];
   };
-  scheduling: {
-    startDate: Date;
-    endDate?: Date;
-    frequency?: number; // Max impressions per user per day
-  };
-  performance?: {
-    impressions: number;
-    clicks: number;
-    conversions: number;
-    revenue: number;
-    ctr: number;
-  };
+  startDate: Date;
+  endDate?: Date;
+  status: AdStatus;
+  network: AdNetwork;
+  campaignId?: string;
+  performance?: AdPerformance;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,28 +54,18 @@ export interface AdCampaign {
   budget: {
     total: number;
     spent: number;
-    currency: string;
+    daily?: number;
   };
-  ads: Advertisement[];
+  startDate: Date;
+  endDate?: Date;
+  ads: string[];  // Ad IDs
   targeting?: {
-    userType?: ('free' | 'premium')[];
-    minLevel?: number;
-    maxLevel?: number;
+    userTypes?: string[];
     countries?: string[];
     languages?: string[];
-    devices?: ('mobile' | 'tablet' | 'desktop')[];
+    devices?: string[];
   };
-  scheduling: {
-    startDate: Date;
-    endDate?: Date;
-  };
-  performance?: {
-    impressions: number;
-    clicks: number;
-    conversions: number;
-    revenue: number;
-    ctr: number;
-  };
+  performance?: AdPerformance;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,21 +73,8 @@ export interface AdCampaign {
 export interface AdSettings {
   enableAds: boolean;
   defaultNetwork: AdNetwork;
-  frequencyCap: number; // Max ads per session
+  frequencyCap: number;
   showToPremiumUsers: boolean;
-  refreshInterval?: number; // In seconds, optional
-  blockList?: string[]; // List of blocked advertisers or categories
-  networks: {
-    google?: {
-      publisherId: string;
-      slots: Record<string, string>;
-    };
-    facebook?: {
-      placementId: string;
-    };
-    custom?: {
-      apiUrl: string;
-      apiKey?: string;
-    };
-  };
+  refreshInterval?: number; // Make this optional since it's causing the error
+  blockList: string[];
 }

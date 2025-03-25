@@ -3,7 +3,10 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import InstitutionalLicensingManager from '@/components/admin/InstitutionalLicensingManager';
 
-const InstitutionalLicensingPage: React.FC = () => {
+// Define interface for props if needed
+interface InstitutionalLicensingPageProps {}
+
+const InstitutionalLicensingPage: React.FC<InstitutionalLicensingPageProps> = () => {
   return (
     <>
       <Helmet>

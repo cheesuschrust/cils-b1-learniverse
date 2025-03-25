@@ -3,7 +3,10 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import ChatbotManager from '@/components/admin/ChatbotManager';
 
-const ChatbotManagementPage: React.FC = () => {
+// Define interface for props if needed
+interface ChatbotManagementPageProps {}
+
+const ChatbotManagementPage: React.FC<ChatbotManagementPageProps> = () => {
   return (
     <>
       <Helmet>

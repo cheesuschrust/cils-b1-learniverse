@@ -1,4 +1,24 @@
 
+export type ImportFormat = 'csv' | 'json' | 'txt' | 'anki';
+
+export interface ImportOptions {
+  format: ImportFormat;
+  separator?: string;
+  hasHeader?: boolean;
+  italianColumn?: number;
+  englishColumn?: number;
+  setName?: string;
+}
+
+export interface ImportResult {
+  success: number;
+  failed: number;
+  total: number;
+  errors: string[];
+  importedCards: Flashcard[];
+  imported: number; // Added for compatibility
+}
+
 export interface Flashcard {
   id: string;
   italian: string;
@@ -52,23 +72,5 @@ export interface FlashcardStudySession {
   completedAt?: Date;
   score: number;
   timeSpent: number;
-}
-
-export type ImportFormat = 'csv' | 'json' | 'txt' | 'anki';
-
-export interface ImportOptions {
-  format: ImportFormat;
-  separator?: string;
-  hasHeader?: boolean;
-  italianColumn?: number;
-  englishColumn?: number;
-}
-
-export interface ImportResult {
-  success: number;
-  failed: number;
-  total: number;
-  errors: string[];
-  importedCards: Flashcard[];
-  imported?: Flashcard[]; // Added for compatibility
+  cardsStudied?: number; // Added for compatibility
 }

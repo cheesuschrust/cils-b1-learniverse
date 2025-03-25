@@ -15,8 +15,8 @@ import {
 
 interface DateRangePickerProps {
   className?: string;
-  dateRange: DateRange;
-  onDateRangeChange: (date: DateRange) => void;
+  dateRange: DateRange | { from: Date; to: Date };
+  onDateRangeChange: (date: DateRange | { from: Date; to: Date }) => void;
 }
 
 export function DateRangePicker({
@@ -56,7 +56,7 @@ export function DateRangePicker({
             initialFocus
             mode="range"
             defaultMonth={dateRange?.from}
-            selected={dateRange}
+            selected={dateRange as DateRange}
             onSelect={onDateRangeChange}
             numberOfMonths={2}
           />

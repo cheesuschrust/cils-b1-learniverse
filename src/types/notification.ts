@@ -23,6 +23,7 @@ export interface Notification {
   userId?: string;
   icon?: string;
   link?: string;
+  metadata?: Record<string, any>;
   actions?: {
     label: string;
     action: string;
