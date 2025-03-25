@@ -10,7 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { 
   Menu, Bell, LogOut, User, Settings, HomeIcon,
   Users, FileText, Upload, Cog, ShieldAlert, AlertTriangle, Database, Cpu,
-  MessageSquareText, LayoutDashboard
+  MessageSquareText, LayoutDashboard, Globe, ShoppingCart, BarChart2, 
+  Smartphone, Search, Tag, Store, FileImage
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AIStatus from '@/components/ai/AIStatus';
@@ -70,6 +71,9 @@ const AdminMobileNav = ({ onNavItemClick }: { onNavItemClick: () => void }) => {
             <div onClick={onNavItemClick}>
               <SideNavItem to="/admin/users" icon={Users}>User Management</SideNavItem>
             </div>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/analytics" icon={BarChart2}>Analytics</SideNavItem>
+            </div>
           </div>
           
           <div className="mb-6">
@@ -89,10 +93,31 @@ const AdminMobileNav = ({ onNavItemClick }: { onNavItemClick: () => void }) => {
           
           <div className="mb-6">
             <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+              Business
+            </h3>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/ecommerce" icon={Store}>E-commerce</SideNavItem>
+            </div>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/seo" icon={Search}>SEO Management</SideNavItem>
+            </div>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/app-store-listing" icon={Smartphone}>App Store Listing</SideNavItem>
+            </div>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/ad-management" icon={Tag}>Ad Management</SideNavItem>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
               System
             </h3>
             <div onClick={onNavItemClick}>
               <SideNavItem to="/admin/ai-management" icon={Cpu}>AI Management</SideNavItem>
+            </div>
+            <div onClick={onNavItemClick}>
+              <SideNavItem to="/admin/chatbot-management" icon={MessageSquareText}>Chatbot Management</SideNavItem>
             </div>
             <div onClick={onNavItemClick}>
               <SideNavItem to="/admin/settings" icon={Cog}>Settings</SideNavItem>
@@ -168,6 +193,7 @@ const AdminLayout = () => {
                   </h3>
                   <SideNavItem to="/admin/dashboard" icon={LayoutDashboard}>Dashboard</SideNavItem>
                   <SideNavItem to="/admin/users" icon={Users}>User Management</SideNavItem>
+                  <SideNavItem to="/admin/analytics" icon={BarChart2}>Analytics</SideNavItem>
                 </div>
                 
                 <div className="mb-6">
@@ -181,9 +207,21 @@ const AdminLayout = () => {
                 
                 <div className="mb-6">
                   <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+                    Business
+                  </h3>
+                  <SideNavItem to="/admin/ecommerce" icon={Store}>E-commerce</SideNavItem>
+                  <SideNavItem to="/admin/seo" icon={Search}>SEO Management</SideNavItem>
+                  <SideNavItem to="/admin/app-store-listing" icon={Smartphone}>App Store Listing</SideNavItem>
+                  <SideNavItem to="/admin/ad-management" icon={Tag}>Ad Management</SideNavItem>
+                  <SideNavItem to="/admin/institutional-licensing" icon={FileImage}>Licensing</SideNavItem>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
                     System
                   </h3>
                   <SideNavItem to="/admin/ai-management" icon={Cpu}>AI Management</SideNavItem>
+                  <SideNavItem to="/admin/chatbot-management" icon={MessageSquareText}>Chatbot Management</SideNavItem>
                   <SideNavItem to="/admin/settings" icon={Settings}>Settings</SideNavItem>
                   <SideNavItem to="/admin/logs" icon={AlertTriangle}>System Logs</SideNavItem>
                   <SideNavItem to="/admin/support-tickets" icon={MessageSquareText}>Support Tickets</SideNavItem>

@@ -1,5 +1,5 @@
 
 export interface DateRange {
   from: Date;
-  to: Date | undefined;
+  to?: Date;
 }

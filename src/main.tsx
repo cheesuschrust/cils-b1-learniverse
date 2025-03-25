@@ -114,7 +114,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
                       {/* Admin Routes */}
                       <Route path="/admin" element={
-                        <ProtectedRoute adminOnly>
+                        <ProtectedRoute requireAdmin>
                           <AdminLayout />
                         </ProtectedRoute>
                       }>

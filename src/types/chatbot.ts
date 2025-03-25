@@ -6,6 +6,7 @@ export interface ChatMessage {
   timestamp: Date;
   feedback?: 'positive' | 'negative' | 'neutral';
   attachments?: string[];
+  context?: Record<string, any>;
 }
 
 export interface ChatSession {
@@ -38,6 +39,7 @@ export interface ChatbotTrainingExample {
   approved: boolean;
   language: 'english' | 'italian' | 'both';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+  createdBy?: string;
 }
 
 export interface KnowledgeBaseEntry {
@@ -48,6 +50,9 @@ export interface KnowledgeBaseEntry {
   tags: string[];
   lastUpdated: Date;
   language: 'english' | 'italian' | 'both';
+  relevance?: number;
+  keywords?: string[];
+  version?: string;
 }
 
 export interface ChatbotSettings {
@@ -60,4 +65,13 @@ export interface ChatbotSettings {
   escalationThreshold: number;
   feedbackEnabled: boolean;
   learningEnabled: boolean;
+  enabled?: boolean;
+  name?: string;
+  avatarUrl?: string;
+  welcomeMessage?: string;
+  fallbackMessage?: string;
+  confidenceThreshold?: number;
+  maxContextLength?: number;
+  suggestFeedback?: boolean;
+  suggestRelatedQuestions?: boolean;
 }

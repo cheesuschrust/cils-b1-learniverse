@@ -6,11 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  adminOnly?: boolean; // Adding adminOnly as an alias for requireAdmin
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireAdmin = false,
+  adminOnly = false // Default value
+}) => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  
+  // Use either requireAdmin or adminOnly for consistency
+  const needsAdminRole = requireAdmin || adminOnly;
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -24,7 +32,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
   }
 
   // If admin access is required, check if the user is an admin
-  if (requireAdmin && user?.role !== 'admin') {
+  if (needsAdminRole && user?.role !== 'admin') {
     // Redirect to dashboard if user is not an admin
     return <Navigate to="/dashboard" replace />;
   }

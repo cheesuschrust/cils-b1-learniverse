@@ -1,5 +1,7 @@
 
 export type LicenseType = 'university' | 'k12' | 'language-school' | 'corporate';
+export type LicenseStatus = 'active' | 'expired' | 'trial' | 'pending' | 'suspended';
+export type RenewalStatus = 'auto' | 'manual' | 'pending' | 'canceled';
 
 export interface License {
   id: string;
@@ -10,17 +12,17 @@ export interface License {
   usedSeats: number;
   startDate: string;
   endDate: string;
-  status: string;
+  status: LicenseStatus;
   contactName: string;
   contactEmail: string;
   customization: {
-    logo?: string;
-    colors?: {
+    logo: string;
+    colors: {
       primary: string;
       secondary: string;
     };
-    domain?: string;
+    domain: string;
   };
   value: number;
-  renewalStatus: string;
+  renewalStatus: RenewalStatus;
 }

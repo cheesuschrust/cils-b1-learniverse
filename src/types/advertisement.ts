@@ -82,7 +82,7 @@ export interface AdSettings {
   defaultNetwork: AdNetwork;
   frequencyCap: number;
   showToPremiumUsers: boolean;
-  refreshInterval?: number;
+  refreshInterval?: number; // Make optional to match usage
   blockList: string[];
   networks?: string[]; // Added for AdService compatibility
 }

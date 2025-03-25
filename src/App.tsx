@@ -57,6 +57,7 @@ import EmailConfigurationPanel from '@/components/admin/EmailConfigurationPanel'
 import InstitutionalLicensingPage from '@/pages/admin/InstitutionalLicensing';
 import AdManagementPage from '@/pages/admin/AdManagement';
 import ChatbotManagementPage from '@/pages/admin/ChatbotManagement';
+import AppStoreListing from '@/pages/admin/AppStoreListing';
 import GlobalUserDocumentation from '@/components/help/GlobalUserDocumentation';
 
 function App() {
@@ -116,6 +117,9 @@ function App() {
                       <Route path="institutional-licensing" element={<InstitutionalLicensingPage />} />
                       <Route path="ad-management" element={<AdManagementPage />} />
                       <Route path="chatbot-management" element={<ChatbotManagementPage />} />
+                      <Route path="app-store-listing" element={<AppStoreListing />} />
+                      <Route path="ecommerce" element={<EcommerceIntegration />} />
+                      <Route path="seo" element={<SEOManager />} />
                     </Route>
                   </Route>
                   
