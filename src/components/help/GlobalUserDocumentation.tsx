@@ -219,6 +219,11 @@ const GlobalUserDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[600px] pr-4">
+                  
+                  {activeTab === 'premiumFeatures' && (
+                    <p>For additional information about premium features, please visit our {"premium features"} page.</p>
+                  )}
+                  
                   {activeTab === 'getting-started' && (
                     <div className="space-y-6">
                       <section>
@@ -713,143 +718,3 @@ const GlobalUserDocumentation: React.FC = () => {
                                       <Play className="h-6 w-6" />
                                     </Button>
                                   </div>
-                                </div>
-                                <div className="p-3">
-                                  <h4 className="font-medium">Advanced Grammar Techniques</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">12:45 • Advanced • Updated 2 days ago</p>
-                                </div>
-                              </div>
-                              
-                              <div className="border rounded-lg overflow-hidden">
-                                <div className="aspect-video bg-muted relative flex items-center justify-center">
-                                  <Video className="h-12 w-12 text-muted-foreground/50" />
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <Button variant="ghost" size="icon" className="rounded-full bg-background/80 h-12 w-12">
-                                      <Play className="h-6 w-6" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div className="p-3">
-                                  <h4 className="font-medium">Progress Analytics Deep Dive</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">9:30 • Intermediate • Updated 5 days ago</p>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        
-                        {!isPremium && (
-                          <div className="mt-6 border rounded-lg p-4 bg-muted/50">
-                            <div className="flex items-start gap-3">
-                              <Star className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <h4 className="font-medium mb-1">Premium Video Library</h4>
-                                <p className="text-sm text-muted-foreground">
-                                  Upgrade to premium to unlock our complete library of 20+ in-depth video tutorials,
-                                  including advanced techniques and masterclasses.
-                                </p>
-                                <Button size="sm" className="mt-3" onClick={() => navigate('/subscription')}>
-                                  Upgrade Now
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </section>
-                    </div>
-                  )}
-                  
-                  {activeTab === 'calendar' && (
-                    <div className="space-y-6">
-                      <section>
-                        <h3 className="text-lg font-medium mb-2">Learning Calendar Features</h3>
-                        <p className="text-muted-foreground">
-                          The Learning Calendar helps you organize your study schedule and maintain a consistent learning routine.
-                          Set goals, track streaks, and never miss a study session.
-                        </p>
-                      </section>
-                      
-                      <Separator />
-                      
-                      <section>
-                        <h3 className="text-lg font-medium mb-2">Setting Up Your Study Schedule</h3>
-                        <ol className="list-decimal list-inside space-y-2 text-muted-foreground pl-2">
-                          <li>Navigate to the <strong>Calendar</strong> section from the main menu</li>
-                          <li>Click on "Set Schedule" to define your preferred study times</li>
-                          <li>Select which days of the week you plan to study</li>
-                          <li>Choose time blocks that work best for your routine</li>
-                          <li>Set reminders to get notifications before each session</li>
-                        </ol>
-                        <div className="mt-4">
-                          <Button variant="outline" size="sm" onClick={() => navigate('/app/calendar')}>
-                            Open Calendar <ChevronRight className="ml-1 h-4 w-4" />
-                          </Button>
-                        </div>
-                      </section>
-                      
-                      <Separator />
-                      
-                      <section>
-                        <h3 className="text-lg font-medium mb-2">Calendar Views</h3>
-                        <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-2">
-                          <li><strong>Daily View</strong> - See detailed schedule for a single day</li>
-                          <li><strong>Weekly View</strong> - Plan your week with an overview of all sessions</li>
-                          <li><strong>Monthly View</strong> - Track your consistency with a monthly overview</li>
-                          <li><strong>Progress View</strong> - See your learning streaks and study patterns</li>
-                        </ul>
-                      </section>
-                      
-                      <Separator />
-                      
-                      <section>
-                        <h3 className="text-lg font-medium mb-2">Streaks and Achievements</h3>
-                        <p className="text-muted-foreground mb-3">
-                          The calendar helps you maintain motivation through:
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-2">
-                          <li><strong>Daily streaks</strong> - Track consecutive days of learning</li>
-                          <li><strong>Weekly goals</strong> - Set and achieve weekly study targets</li>
-                          <li><strong>Milestone badges</strong> - Earn recognition for consistent study</li>
-                          <li><strong>Study statistics</strong> - See your total study hours and sessions</li>
-                        </ul>
-                      </section>
-                      
-                      <Separator />
-                      
-                      <section>
-                        <h3 className="text-lg font-medium mb-2">Smart Schedule Features</h3>
-                        <p className="text-muted-foreground mb-3">
-                          Premium users benefit from additional smart scheduling:
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-2">
-                          <li><strong>Optimized learning</strong> - AI suggests the best times to study based on your performance</li>
-                          <li><strong>Content recommendations</strong> - Calendar suggests what to study in each session</li>
-                          <li><strong>Sync with external calendars</strong> - Google Calendar, Outlook, etc.</li>
-                          <li><strong>Automatic rescheduling</strong> - Adjust your plan if you miss a session</li>
-                        </ul>
-                      </section>
-                      
-                      <section className="mt-6">
-                        <h3 className="text-lg font-medium mb-4">Download Calendar Guide</h3>
-                        <Button 
-                          variant="outline" 
-                          className="w-full flex items-center justify-center gap-2"
-                          onClick={() => downloadGuide("Learning Calendar Guide")}
-                        >
-                          <Download className="h-4 w-4" />
-                          Download PDF Guide {!isPremium && "(Premium Feature)"}
-                        </Button>
-                      </section>
-                    </div>
-                  )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GlobalUserDocumentation;
