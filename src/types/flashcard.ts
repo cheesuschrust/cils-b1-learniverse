@@ -6,11 +6,17 @@ export interface Flashcard {
   explanation?: string;
   example?: string;
   level: number;
-  dueDate: Date;
   mastered: boolean;
+  dueDate: Date;
   setId?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastReviewed?: Date;
+  nextReviewDate?: Date;
+  tags?: string[];
+  audio?: string;
+  image?: string;
+  notes?: string;
 }
 
 export interface FlashcardSet {
@@ -20,19 +26,45 @@ export interface FlashcardSet {
   cards: Flashcard[];
   createdAt: Date;
   updatedAt: Date;
+  createdBy?: string;
+  isPublic: boolean;
+  cardCount: number;
+  masteredCount: number;
+  language: string;
+  category: string;
+  tags?: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
 
+export interface FlashcardStudySession {
+  id: string;
+  userId: string;
+  setId: string;
+  cards: {
+    cardId: string;
+    isCorrect: boolean;
+    responseTime: number;
+  }[];
+  startedAt: Date;
+  completedAt?: Date;
+  score: number;
+  timeSpent: number;
+}
+
+export type ImportFormat = 'csv' | 'json' | 'txt' | 'anki';
+
 export interface ImportOptions {
-  format: 'csv' | 'txt' | 'json' | 'anki';
-  separator: string;
-  hasHeader: boolean;
-  italianColumn: number;
-  englishColumn: number;
-  setName?: string;
+  format: ImportFormat;
+  separator?: string;
+  hasHeader?: boolean;
+  italianColumn?: number;
+  englishColumn?: number;
 }
 
 export interface ImportResult {
-  imported: number;
+  success: number;
   failed: number;
-  errors: { line: string; reason: string }[];
+  total: number;
+  errors: string[];
+  importedCards: Flashcard[];
 }

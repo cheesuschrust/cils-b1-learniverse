@@ -1,51 +1,71 @@
 
-export interface Answer {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-  explanation?: string;
-}
+// Question Types
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+export type QuestionLanguage = 'italian' | 'english' | 'both';
+export type QuestionCategory = 'vocabulary' | 'grammar' | 'conversation' | 'culture' | 'mixed';
 
 export interface Question {
   id: string;
-  text: string;
-  answers: Answer[];
-  difficulty: 'easy' | 'medium' | 'hard';
-  type: 'multiple-choice' | 'true-false' | 'fill-in-blank';
-  category?: string;
-  points?: number;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
   audio?: string;
   image?: string;
-  tags?: string[];
+  difficulty: QuestionDifficulty;
+  category: QuestionCategory;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface MultipleChoiceQuestion extends Question {
+  type: 'multiple-choice';
 }
 
 export interface QuestionSet {
   id: string;
-  title: string;
+  name: string;
   description?: string;
+  language: QuestionLanguage;
+  category: QuestionCategory;
+  difficulty: QuestionDifficulty;
   questions: Question[];
-  difficulty: 'easy' | 'medium' | 'hard';
-  timeLimit?: number; // in seconds
-  passingScore?: number; // percentage
   createdAt: Date;
   updatedAt: Date;
+  createdBy?: string;
+  isPublic: boolean;
 }
 
 export interface QuizAttempt {
   id: string;
   userId: string;
   questionSetId: string;
-  score: number;
-  maxScore: number;
-  percentageScore: number;
-  startedAt: Date;
-  completedAt: Date;
   answers: {
     questionId: string;
-    answerId: string;
+    selectedAnswer: string;
     isCorrect: boolean;
-    timeSpent?: number; // in seconds
+    timeSpent: number;
+  }[];
+  score: number;
+  totalQuestions: number;
+  timeSpent: number;
+  completed: boolean;
+  createdAt: Date;
+  completedAt?: Date;
+}
+
+export interface QuizStats {
+  totalAttempts: number;
+  bestScore: number;
+  averageScore: number;
+  totalTimeSpent: number;
+  averageTimePerQuestion: number;
+  completionRate: number;
+  questionAccuracy: Record<string, number>;
+  categoryAccuracy: Record<QuestionCategory, number>;
+  progressOverTime: {
+    date: Date;
+    score: number;
   }[];
 }

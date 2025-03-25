@@ -1,71 +1,78 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Notification, NotificationPreferences } from '@/types/notification';
 import { v4 as uuidv4 } from 'uuid';
+import { Notification } from '@/types/notification';
 
 interface NotificationsContextType {
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => string;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;
   markAsRead: (id: string) => void;
   dismissNotification: (id: string) => void;
-  dismissAll: () => void;
+  unreadCount: number;
+  markAllAsRead: () => void;
+  getFileProcessingNotifications: () => Notification[];
 }
 
-const NotificationsContext = createContext<NotificationsContextType>({
-  notifications: [],
-  addNotification: () => '',
-  markAsRead: () => {},
-  dismissNotification: () => {},
-  dismissAll: () => {},
-});
-
-export const useNotifications = () => useContext(NotificationsContext);
-
-interface NotificationsProviderProps {
-  children: React.ReactNode;
-}
-
-export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    const savedNotifications = localStorage.getItem('notifications');
-    if (savedNotifications) {
-      try {
-        const parsed = JSON.parse(savedNotifications);
-        // Convert string dates back to Date objects
-        const processedNotifications = parsed.map((n: any) => ({
-          ...n,
-          createdAt: new Date(n.createdAt)
-        }));
-        setNotifications(processedNotifications);
-      } catch (error) {
-        console.error('Failed to parse notifications from localStorage:', error);
-      }
+// Mock initial notifications
+const initialNotifications: Notification[] = [
+  {
+    id: '1',
+    title: 'New learning features available',
+    message: 'Check out the new listening exercises in the app.',
+    type: 'feature',
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    read: false,
+    link: '/listening'
+  },
+  {
+    id: '2',
+    title: 'Your flashcards are ready for review',
+    message: '5 flashcards are due for review today.',
+    type: 'reminder',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    read: true,
+    link: '/flashcards'
+  },
+  {
+    id: '3',
+    title: 'Practice streak achieved!',
+    message: 'Congratulations! You have practiced for 7 days in a row.',
+    type: 'achievement',
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    read: false,
+    icon: 'trophy'
+  },
+  {
+    id: '4',
+    title: 'Italian audio files processed',
+    message: 'Your uploaded Italian pronunciation files have been analyzed.',
+    type: 'file-processing',
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    read: false,
+    metadata: {
+      fileType: 'audio',
+      fileName: 'pronunciation-practice.mp3',
+      processingResult: 'success'
     }
-  }, []);
+  }
+];
 
-  // Save notifications to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-  }, [notifications]);
+const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
-  const addNotification = (
-    notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
-  ): string => {
-    const id = uuidv4();
+export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  
+  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
     const newNotification: Notification = {
       ...notification,
-      id,
-      read: false,
+      id: uuidv4(),
       createdAt: new Date(),
+      read: false
     };
-
+    
     setNotifications((prev) => [newNotification, ...prev]);
-    return id;
   };
-
+  
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((notification) =>
@@ -73,15 +80,23 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
       )
     );
   };
-
+  
   const dismissNotification = (id: string) => {
     setNotifications((prev) => prev.filter((notification) => notification.id !== id));
   };
-
-  const dismissAll = () => {
-    setNotifications([]);
+  
+  const markAllAsRead = () => {
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, read: true }))
+    );
   };
-
+  
+  const getFileProcessingNotifications = () => {
+    return notifications.filter(notification => notification.type === 'file-processing');
+  };
+  
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  
   return (
     <NotificationsContext.Provider
       value={{
@@ -89,10 +104,20 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
         addNotification,
         markAsRead,
         dismissNotification,
-        dismissAll,
+        unreadCount,
+        markAllAsRead,
+        getFileProcessingNotifications,
       }}
     >
       {children}
     </NotificationsContext.Provider>
   );
+};
+
+export const useNotifications = (): NotificationsContextType => {
+  const context = useContext(NotificationsContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationsProvider');
+  }
+  return context;
 };

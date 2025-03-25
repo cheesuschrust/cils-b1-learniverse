@@ -1,5 +1,15 @@
-
-export type ContentType = 'flashcards' | 'multiple-choice' | 'listening' | 'writing' | 'speaking' | 'audio' | 'unknown' | 'csv' | 'json' | 'txt' | 'pdf';
+export type ContentType = 
+  | 'multiple-choice' 
+  | 'flashcards' 
+  | 'writing' 
+  | 'speaking' 
+  | 'listening'
+  | 'audio'
+  | 'unknown'
+  | 'csv'
+  | 'json'
+  | 'txt'
+  | 'pdf';
 
 export const detectContentType = (content: string): ContentType => {
   // Simple detection logic based on content patterns
@@ -203,4 +213,57 @@ export const parseContent = (content: string, type: ContentType): any => {
     default:
       return content;
   }
+};
+
+// Text analysis utilities
+
+export const detectContentTypeFromFile = (file: File): Promise<ContentType> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      resolve(detectContentType(content));
+    };
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    reader.readAsText(file);
+  });
+};
+
+export const detectContentTypeFromText = (text: string): Promise<ContentType> => {
+  return Promise.resolve(detectContentType(text));
+};
+
+export const isMultipleChoice = (text: string): boolean => {
+  const lowerContent = text.toLowerCase();
+  return lowerContent.includes('question') && 
+         (lowerContent.includes('option') || lowerContent.includes('choice'));
+};
+
+export const isFlashcards = (text: string): boolean => {
+  const lowerContent = text.toLowerCase();
+  return (lowerContent.includes('term') && lowerContent.includes('definition')) ||
+         (lowerContent.includes('front') && lowerContent.includes('back')) ||
+         (lowerContent.includes('word') && lowerContent.includes('translation'));
+};
+
+export const isWritingExercise = (text: string): boolean => {
+  const lowerContent = text.toLowerCase();
+  return lowerContent.includes('write') || 
+         lowerContent.includes('essay') ||
+         lowerContent.includes('paragraph');
+};
+
+export const isSpeakingExercise = (text: string): boolean => {
+  const lowerContent = text.toLowerCase();
+  return lowerContent.includes('speak') || 
+         lowerContent.includes('pronunciation') ||
+         lowerContent.includes('conversation');
+};
+
+export const isListeningExercise = (text: string): boolean => {
+  const lowerContent = text.toLowerCase();
+  return lowerContent.includes('listen') && 
+         (lowerContent.includes('audio') || lowerContent.includes('transcript'));
 };
