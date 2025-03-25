@@ -45,6 +45,7 @@ interface SpeechRecognition extends EventTarget {
   onend: ((event: Event) => void) | null;
 }
 
+// Add to global window
 declare global {
   interface Window { 
     SpeechRecognition: {
@@ -75,6 +76,10 @@ export interface AIContextData {
   checkMicrophoneAccess: () => Promise<boolean>;
   processAudioStream: (onResult: (text: string, isFinal: boolean) => void) => Promise<() => void>;
   stopAudioProcessing: () => void;
+  speakText: (text: string, language?: string) => Promise<void>;
+  isSpeaking: boolean;
+  cancelSpeech: () => void;
+  getConfidenceLevel: (contentType: ContentType) => 'low' | 'medium' | 'high';
 }
 
 const defaultContextData: AIContextData = {
@@ -99,7 +104,11 @@ const defaultContextData: AIContextData = {
   hasActiveMicrophone: false,
   checkMicrophoneAccess: async () => false,
   processAudioStream: async () => () => {},
-  stopAudioProcessing: () => {}
+  stopAudioProcessing: () => {},
+  speakText: async () => {},
+  isSpeaking: false,
+  cancelSpeech: () => {},
+  getConfidenceLevel: () => 'medium'
 };
 
 const AIUtilsContext = createContext<AIContextData>(defaultContextData);
@@ -113,8 +122,10 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [lastGeneratedResults, setLastGeneratedResults] = useState<any[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
   const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesisUtterance | null>(null);
   
   const { isProcessing, toggleAI, isModelLoaded } = useAI();
   const { toast } = useToast();
@@ -323,9 +334,115 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [recognitionInstance]);
   
+  const speakText = useCallback(async (text: string, language: string = 'it-IT'): Promise<void> => {
+    if (!isAIEnabled) {
+      toast({
+        title: "Feature Disabled",
+        description: "Text-to-speech requires AI features to be enabled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Cancel any ongoing speech
+    cancelSpeech();
+    
+    try {
+      if (!window.speechSynthesis) {
+        throw new Error('Speech synthesis is not supported in this browser.');
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language;
+      utterance.rate = 0.9; // Slightly slower for language learning
+      
+      // Select a voice that matches the language
+      const voices = window.speechSynthesis.getVoices();
+      const languageVoices = voices.filter(voice => voice.lang.startsWith(language.split('-')[0]));
+      
+      if (languageVoices.length > 0) {
+        // Prefer female voices for language learning (studies show better retention)
+        const femaleVoice = languageVoices.find(voice => voice.name.includes('female') || voice.name.includes('Female'));
+        utterance.voice = femaleVoice || languageVoices[0];
+      }
+      
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setSpeechSynthesis(null);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event.error);
+        setIsSpeaking(false);
+        setSpeechSynthesis(null);
+        
+        toast({
+          title: "Text-to-Speech Error",
+          description: "There was an error with the text-to-speech service.",
+          variant: "destructive",
+        });
+      };
+      
+      setSpeechSynthesis(utterance);
+      window.speechSynthesis.speak(utterance);
+      
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      setIsSpeaking(false);
+      
+      toast({
+        title: "Text-to-Speech Error",
+        description: error instanceof Error ? error.message : "Failed to synthesize speech",
+        variant: "destructive",
+      });
+    }
+  }, [isAIEnabled, toast]);
+  
+  const cancelSpeech = useCallback(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    setSpeechSynthesis(null);
+  }, []);
+  
+  // Get confidence level category based on score
+  const getConfidenceLevel = useCallback((contentType: ContentType): 'low' | 'medium' | 'high' => {
+    const score = confidenceScores[contentType] || 0;
+    
+    if (score < 60) return 'low';
+    if (score < 80) return 'medium';
+    return 'high';
+  }, [confidenceScores]);
+  
   useEffect(() => {
     checkMicrophoneAccess().catch(console.error);
-  }, [checkMicrophoneAccess]);
+    
+    // Load speech synthesis voices when available
+    if (window.speechSynthesis) {
+      const loadVoices = () => {
+        // This just forces loading of voices
+        window.speechSynthesis.getVoices();
+      };
+      
+      loadVoices();
+      
+      // Chrome loads voices asynchronously
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    }
+    
+    // Cleanup
+    return () => {
+      cancelSpeech();
+      stopAudioProcessing();
+    };
+  }, [checkMicrophoneAccess, cancelSpeech, stopAudioProcessing]);
   
   const contextValue: AIContextData = {
     isAIEnabled,
@@ -345,7 +462,11 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     hasActiveMicrophone,
     checkMicrophoneAccess,
     processAudioStream,
-    stopAudioProcessing
+    stopAudioProcessing,
+    speakText,
+    isSpeaking,
+    cancelSpeech,
+    getConfidenceLevel
   };
   
   return (
