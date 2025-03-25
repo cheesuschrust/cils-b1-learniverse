@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useFlashcards } from "@/hooks/useFlashcards";
 import SpeakableWord from "@/components/learning/SpeakableWord";
+import "../styles/flashcards.css";
 
 const Flashcards = () => {
   const {
@@ -481,7 +482,7 @@ const Flashcards = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-muted rounded-md p-6 text-center">
+                <div className="import-zone rounded-md p-6 text-center">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -622,31 +623,6 @@ const Flashcards = () => {
           </div>
         </TabsContent>
       </Tabs>
-      
-      <style jsx>{`
-        .perspective-1000 {
-          perspective: 1000px;
-          position: relative;
-        }
-        
-        .flashcard-front,
-        .flashcard-back {
-          backface-visibility: hidden;
-          transition: transform 0.6s ease;
-        }
-        
-        .flashcard-back {
-          transform: rotateY(180deg);
-        }
-        
-        .flashcard.flipped .flashcard-front {
-          transform: rotateY(180deg);
-        }
-        
-        .flashcard.flipped .flashcard-back {
-          transform: rotateY(0);
-        }
-      `}</style>
     </div>
   );
 };

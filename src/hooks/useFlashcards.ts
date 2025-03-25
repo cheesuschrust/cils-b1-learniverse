@@ -122,7 +122,7 @@ export const useFlashcards = () => {
         toast({
           title: "Import Warning",
           description: "No flashcards were found to import.",
-          variant: "warning",
+          variant: "destructive",
         });
         return false;
       }
