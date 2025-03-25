@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAI } from '@/hooks/useAI';
-import { ContentType } from '@/utils/textAnalysis';
+import { ContentType, detectLanguage } from '@/utils/textAnalysis';
 
 // Define SpeechRecognition types for browsers
 interface SpeechRecognitionEvent extends Event {
@@ -45,13 +45,13 @@ interface SpeechRecognition extends EventTarget {
   onend: ((event: Event) => void) | null;
 }
 
-// Add to global window
+// Declare the SpeechRecognition types for the global window object
 declare global {
   interface Window { 
-    SpeechRecognition: {
+    SpeechRecognition?: {
       new (): SpeechRecognition;
     };
-    webkitSpeechRecognition: {
+    webkitSpeechRecognition?: {
       new (): SpeechRecognition;
     };
   }
@@ -80,6 +80,8 @@ export interface AIContextData {
   isSpeaking: boolean;
   cancelSpeech: () => void;
   getConfidenceLevel: (contentType: ContentType) => 'low' | 'medium' | 'high';
+  getVoiceForLanguage: (language: string) => SpeechSynthesisVoice | null;
+  detectTextLanguage: (text: string) => string;
 }
 
 const defaultContextData: AIContextData = {
@@ -108,7 +110,9 @@ const defaultContextData: AIContextData = {
   speakText: async () => {},
   isSpeaking: false,
   cancelSpeech: () => {},
-  getConfidenceLevel: () => 'medium'
+  getConfidenceLevel: () => 'medium',
+  getVoiceForLanguage: () => null,
+  detectTextLanguage: () => 'en'
 };
 
 const AIUtilsContext = createContext<AIContextData>(defaultContextData);
@@ -124,11 +128,28 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
-  const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
+  const [recognitionInstance, setRecognitionInstance] = useState<SpeechRecognition | null>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesisUtterance | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   
   const { isProcessing, toggleAI, isModelLoaded } = useAI();
   const { toast } = useToast();
+  
+  // Load available voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis?.getVoices() || [];
+      setAvailableVoices(voices);
+    };
+    
+    loadVoices();
+    
+    if (window.speechSynthesis) {
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    }
+  }, []);
   
   useEffect(() => {
     setIsAIEnabled(isModelLoaded);
@@ -162,6 +183,13 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...prev,
       [contentType]: score
     }));
+    
+    // Save to local storage for persistence
+    const savedScores = JSON.parse(localStorage.getItem('ai-confidence-scores') || '{}');
+    localStorage.setItem('ai-confidence-scores', JSON.stringify({
+      ...savedScores,
+      [contentType]: score
+    }));
   };
   
   const storeResults = (results: any[]) => {
@@ -170,6 +198,19 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   
   const clearResults = () => {
     setLastGeneratedResults([]);
+  };
+  
+  const detectTextLanguage = (text: string): string => {
+    const language = detectLanguage(text);
+    
+    switch (language) {
+      case 'english': return 'en-US';
+      case 'italian': return 'it-IT';
+      case 'spanish': return 'es-ES';
+      case 'french': return 'fr-FR';
+      case 'german': return 'de-DE';
+      default: return 'en-US';
+    }
   };
   
   const translateText = useCallback(async (
@@ -186,6 +227,19 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Enhanced error handling for unsupported language pairs
+      const supportedSourceLangs = ['en', 'it', 'es', 'fr', 'de'];
+      const supportedTargetLangs = ['en', 'it', 'es', 'fr', 'de'];
+      
+      if (!supportedSourceLangs.includes(sourceLang)) {
+        throw new Error(`Source language "${sourceLang}" is not supported.`);
+      }
+      
+      if (!supportedTargetLangs.includes(targetLang)) {
+        throw new Error(`Target language "${targetLang}" is not supported.`);
+      }
+      
+      // Simple dictionary-based translation for common Italian words (when AI is disabled or for demo)
       if (sourceLang === 'it' && targetLang === 'en') {
         const translations: Record<string, string> = {
           'ciao': 'hello',
@@ -207,7 +261,17 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           'tempo': 'time',
           'giorno': 'day',
           'anno': 'year',
-          'vita': 'life'
+          'vita': 'life',
+          'mangiare': 'to eat',
+          'bere': 'to drink',
+          'dormire': 'to sleep',
+          'parlare': 'to speak',
+          'ascoltare': 'to listen',
+          'leggere': 'to read',
+          'scrivere': 'to write',
+          'studiare': 'to study',
+          'andare': 'to go',
+          'venire': 'to come'
         };
         
         const words = text.toLowerCase().split(' ');
@@ -221,10 +285,60 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return translatedWords.join(' ');
       }
       
+      // English to Italian
+      if (sourceLang === 'en' && targetLang === 'it') {
+        const translations: Record<string, string> = {
+          'hello': 'ciao',
+          'thank you': 'grazie',
+          'house': 'casa',
+          'cat': 'gatto',
+          'dog': 'cane',
+          'good morning': 'buongiorno',
+          'goodbye': 'arrivederci',
+          'pleasure': 'piacere',
+          'how are you': 'come stai',
+          'well': 'bene',
+          'boy': 'ragazzo',
+          'girl': 'ragazza',
+          'school': 'scuola',
+          'book': 'libro',
+          'city': 'città',
+          'work': 'lavoro',
+          'time': 'tempo',
+          'day': 'giorno',
+          'year': 'anno',
+          'life': 'vita',
+          'to eat': 'mangiare',
+          'to drink': 'bere',
+          'to sleep': 'dormire',
+          'to speak': 'parlare',
+          'to listen': 'ascoltare',
+          'to read': 'leggere',
+          'to write': 'scrivere',
+          'to study': 'studiare',
+          'to go': 'andare',
+          'to come': 'venire'
+        };
+        
+        const words = text.toLowerCase().split(' ');
+        const translatedWords = words.map(word => {
+          const cleanWord = word.replace(/[.,?!;:]/g, '');
+          const translation = translations[cleanWord] || word;
+          const punctuation = word.substring(cleanWord.length);
+          return translation + punctuation;
+        });
+        
+        return translatedWords.join(' ');
+      }
+      
+      // For other language pairs, return a placeholder
       return `[Translation from ${sourceLang} to ${targetLang}] ${text}`;
+      
     } catch (error) {
       console.error('Translation error:', error);
-      throw new Error('Failed to translate text. Please try again.');
+      throw error instanceof Error 
+        ? error 
+        : new Error('Failed to translate text. Please try again.');
     } finally {
       setIsTranslating(false);
     }
@@ -269,9 +383,10 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('AI features are disabled. Enable them in settings.');
     }
     
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Get the appropriate SpeechRecognition constructor
+    const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
     
-    if (!SpeechRecognition) {
+    if (!SpeechRecognitionConstructor) {
       throw new Error('Speech recognition is not supported in this browser.');
     }
     
@@ -281,14 +396,14 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     try {
-      const recognition = new SpeechRecognition();
+      const recognition = new SpeechRecognitionConstructor();
       setRecognitionInstance(recognition);
       
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'it-IT';
       
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = Array.from(event.results)
           .map(result => result[0].transcript)
           .join('');
@@ -297,7 +412,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         onResult(transcript, isFinal);
       };
       
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: SpeechRecognitionError) => {
         console.error('Speech recognition error:', event.error);
         if (event.error === 'no-speech') {
           console.log('No speech detected');
@@ -322,7 +437,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (error) {
       console.error('Speech processing error:', error);
       setIsTranscribing(false);
-      throw new Error('Failed to start speech recognition. Please try again.');
+      throw error instanceof Error 
+        ? error 
+        : new Error('Failed to start speech recognition. Please try again.');
     }
   }, [isAIEnabled, checkMicrophoneAccess]);
   
@@ -333,6 +450,35 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setRecognitionInstance(null);
     }
   }, [recognitionInstance]);
+  
+  // Get the best voice for a given language
+  const getVoiceForLanguage = useCallback((language: string): SpeechSynthesisVoice | null => {
+    if (!window.speechSynthesis || availableVoices.length === 0) {
+      return null;
+    }
+    
+    // Get language code (e.g., 'it' from 'it-IT')
+    const langCode = language.split('-')[0].toLowerCase();
+    
+    // Find voices for this language
+    const matchingVoices = availableVoices.filter(voice => 
+      voice.lang.toLowerCase().startsWith(langCode)
+    );
+    
+    if (matchingVoices.length === 0) {
+      return null;
+    }
+    
+    // Prefer female voices for language learning
+    const femaleVoice = matchingVoices.find(voice => 
+      voice.name.toLowerCase().includes('female') || 
+      voice.name.toLowerCase().includes('donna') ||
+      voice.name.toLowerCase().includes('alice') ||
+      voice.name.toLowerCase().includes('laura')
+    );
+    
+    return femaleVoice || matchingVoices[0];
+  }, [availableVoices]);
   
   const speakText = useCallback(async (text: string, language: string = 'it-IT'): Promise<void> => {
     if (!isAIEnabled) {
@@ -357,13 +503,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       utterance.rate = 0.9; // Slightly slower for language learning
       
       // Select a voice that matches the language
-      const voices = window.speechSynthesis.getVoices();
-      const languageVoices = voices.filter(voice => voice.lang.startsWith(language.split('-')[0]));
-      
-      if (languageVoices.length > 0) {
-        // Prefer female voices for language learning (studies show better retention)
-        const femaleVoice = languageVoices.find(voice => voice.name.includes('female') || voice.name.includes('Female'));
-        utterance.voice = femaleVoice || languageVoices[0];
+      const voice = getVoiceForLanguage(language);
+      if (voice) {
+        utterance.voice = voice;
       }
       
       utterance.onstart = () => {
@@ -400,7 +542,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         variant: "destructive",
       });
     }
-  }, [isAIEnabled, toast]);
+  }, [isAIEnabled, toast, getVoiceForLanguage, cancelSpeech]);
   
   const cancelSpeech = useCallback(() => {
     if (window.speechSynthesis) {
@@ -419,23 +561,24 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return 'high';
   }, [confidenceScores]);
   
+  // Load confidence scores from local storage
+  useEffect(() => {
+    try {
+      const savedScores = localStorage.getItem('ai-confidence-scores');
+      if (savedScores) {
+        const parsedScores = JSON.parse(savedScores);
+        setConfidenceScores(prev => ({
+          ...prev,
+          ...parsedScores
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading confidence scores:', error);
+    }
+  }, []);
+  
   useEffect(() => {
     checkMicrophoneAccess().catch(console.error);
-    
-    // Load speech synthesis voices when available
-    if (window.speechSynthesis) {
-      const loadVoices = () => {
-        // This just forces loading of voices
-        window.speechSynthesis.getVoices();
-      };
-      
-      loadVoices();
-      
-      // Chrome loads voices asynchronously
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-      }
-    }
     
     // Cleanup
     return () => {
@@ -466,7 +609,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     speakText,
     isSpeaking,
     cancelSpeech,
-    getConfidenceLevel
+    getConfidenceLevel,
+    getVoiceForLanguage,
+    detectTextLanguage
   };
   
   return (

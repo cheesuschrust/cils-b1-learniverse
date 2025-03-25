@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { VolumeUp, StopCircle, Mic, Loader2 } from 'lucide-react';
+import { Volume, StopCircle, Mic, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -58,7 +57,6 @@ export const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
         if (isFinal) {
           setUserPronunciation(transcript);
           
-          // Compare pronunciation with text
           const similarity = calculateSimilarity(text.toLowerCase(), transcript.toLowerCase());
           const message = similarity > 0.7 
             ? "Great pronunciation!" 
@@ -73,7 +71,6 @@ export const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
         }
       });
       
-      // Automatically stop after 5 seconds
       setTimeout(() => {
         if (isRecording) {
           stopRecording();
@@ -92,7 +89,6 @@ export const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
     setIsRecording(false);
   };
   
-  // Simple string similarity algorithm (Levenshtein distance)
   const calculateSimilarity = (str1: string, str2: string): number => {
     const track = Array(str2.length + 1).fill(null).map(() => 
       Array(str1.length + 1).fill(null));
@@ -144,7 +140,7 @@ export const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
             </>
           ) : (
             <>
-              <VolumeUp className="mr-1 h-4 w-4" />
+              <Volume className="mr-1 h-4 w-4" />
               Listen
             </>
           )}
