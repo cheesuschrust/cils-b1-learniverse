@@ -14,6 +14,7 @@ export interface AdPerformance {
   revenue: number;
   cost?: number;
   roi?: number;  // Return on investment (%)
+  conversions?: number; // Added for AdService compatibility
 }
 
 export interface Advertisement {
@@ -44,6 +45,11 @@ export interface Advertisement {
   performance?: AdPerformance;
   createdAt: Date;
   updatedAt: Date;
+  scheduling?: {
+    dayOfWeek?: string[];
+    timeOfDay?: string[];
+    frequency?: string;
+  }; // Added for AdService compatibility
 }
 
 export interface AdCampaign {
@@ -55,6 +61,7 @@ export interface AdCampaign {
     total: number;
     spent: number;
     daily?: number;
+    currency?: string; // Added for AdService compatibility
   };
   startDate: Date;
   endDate?: Date;
@@ -77,4 +84,5 @@ export interface AdSettings {
   showToPremiumUsers: boolean;
   refreshInterval?: number;
   blockList: string[];
+  networks?: string[]; // Added for AdService compatibility
 }

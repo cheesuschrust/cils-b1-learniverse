@@ -1,20 +1,22 @@
-
 import { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { MultipleChoiceQuestion, QuestionSet, QuizAttempt, QuizStats } from '@/types/question';
+import { MultipleChoiceQuestion, Question, QuestionCategory, QuestionDifficulty, QuestionSet, QuizAttempt } from '@/types/question';
 import { useToast } from '@/components/ui/use-toast';
 
-// Sample questions for development
 const sampleQuestions: MultipleChoiceQuestion[] = [
   {
-    id: "1",
-    question: "Come stai?",
-    options: ["How are you?", "What's your name?", "Where are you going?", "Why are you here?"],
-    correctAnswer: "How are you?",
-    explanation: "Come stai is Italian for 'How are you?'",
-    difficulty: "Beginner",
-    category: "Greetings",
-    language: "italian"
+    id: '1',
+    type: 'multiple-choice',
+    question: 'Come ti chiami?',
+    options: ['Mi chiamo Giovanni', 'Come ti chiami?', 'Grazie', 'Buongiorno'],
+    correctAnswer: 'Mi chiamo Giovanni',
+    explanation: 'The question "Come ti chiami?" means "What is your name?" and the correct response is "Mi chiamo..." followed by your name.',
+    difficulty: 'Beginner',
+    category: 'Greetings',
+    language: 'italian',
+    tags: ['greeting', 'introduction', 'beginner'],
+    createdAt: new Date(),
+    updatedAt: new Date()
   },
   {
     id: "2",
@@ -28,17 +30,21 @@ const sampleQuestions: MultipleChoiceQuestion[] = [
   }
 ];
 
-const sampleSets: QuestionSet[] = [
+const sampleQuestionSets: QuestionSet[] = [
   {
     id: "1",
-    title: "Basic Italian Phrases",
-    description: "Learn essential Italian phrases for beginners",
+    name: "Italian Basics",
+    title: "Italian Basics Quiz",
+    description: "Test your knowledge of basic Italian phrases and expressions",
     questions: sampleQuestions,
     category: "Basics",
     difficulty: "Beginner",
     language: "italian",
     createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    isPublic: true,
+    attempts: 0,
+    bestScore: 0
   }
 ];
 
@@ -60,7 +66,7 @@ export interface UseMultipleChoiceReturn {
 }
 
 export const useMultipleChoice = (): UseMultipleChoiceReturn => {
-  const [questionSets, setQuestionSets] = useState<QuestionSet[]>(sampleSets);
+  const [questionSets, setQuestionSets] = useState<QuestionSet[]>(sampleQuestionSets);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,123 +1,112 @@
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { v4 as uuid } from 'uuid';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { Notification } from '@/types/notification';
-
-interface NotificationsContextType {
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;
-  markAsRead: (id: string) => void;
-  dismissNotification: (id: string) => void;
-  unreadCount: number;
-  markAllAsRead: () => void;
-  getFileProcessingNotifications: () => Notification[];
+export interface Notification {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  message: string;
+  createdAt: Date;
+  duration?: number;
+  read?: boolean;
 }
 
-// Mock initial notifications
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'New learning features available',
-    message: 'Check out the new listening exercises in the app.',
-    type: 'feature',
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    read: false,
-    link: '/listening'
-  },
-  {
-    id: '2',
-    title: 'Your flashcards are ready for review',
-    message: '5 flashcards are due for review today.',
-    type: 'reminder',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    read: true,
-    link: '/flashcards'
-  },
-  {
-    id: '3',
-    title: 'Practice streak achieved!',
-    message: 'Congratulations! You have practiced for 7 days in a row.',
-    type: 'achievement',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    read: false,
-    icon: 'trophy'
-  },
-  {
-    id: '4',
-    title: 'Italian audio files processed',
-    message: 'Your uploaded Italian pronunciation files have been analyzed.',
-    type: 'file-processing',
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    read: false,
-    metadata: {
-      fileType: 'audio',
-      fileName: 'pronunciation-practice.mp3',
-      processingResult: 'success'
-    }
-  }
-];
+export interface NotificationsContextType {
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => string;
+  removeNotification: (id: string) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearAll: () => void;
+  dismissAll: () => void;
+  unreadCount: number;
+}
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
+export const useNotifications = (): NotificationsContextType => {
+  const context = useContext(NotificationsContext);
+  if (!context) {
+    throw new Error("useNotifications must be used within a NotificationsProvider");
+  }
+  return context;
+};
+
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-  
-  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const displayedNotifications = notifications.filter(notification => !notification.read);
+
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt'>): string => {
+    const id = uuid();
     const newNotification: Notification = {
-      ...notification,
-      id: uuidv4(),
+      id,
       createdAt: new Date(),
-      read: false
+      read: false,
+      ...notification,
     };
-    
-    setNotifications((prev) => [newNotification, ...prev]);
-  };
-  
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
+    setNotifications(prevNotifications => [...prevNotifications, newNotification]);
+    return id;
+  }, []);
+
+  const removeNotification = useCallback((id: string): void => {
+    setNotifications(prevNotifications => prevNotifications.filter(notification => notification.id !== id));
+  }, []);
+
+  const markAsRead = useCallback((id: string): void => {
+    setNotifications(prevNotifications =>
+      prevNotifications.map(notification =>
         notification.id === id ? { ...notification, read: true } : notification
       )
     );
-  };
-  
-  const dismissNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
-  };
-  
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
+  }, []);
+
+  const markAllAsRead = useCallback((): void => {
+    setNotifications(prevNotifications =>
+      prevNotifications.map(notification => ({ ...notification, read: true }))
     );
+  }, []);
+
+  const clearAll = useCallback((): void => {
+    setNotifications([]);
+  }, []);
+  
+  const dismissAll = () => {
+    setNotifications([]);
   };
   
-  const getFileProcessingNotifications = () => {
-    return notifications.filter(notification => notification.type === 'file-processing');
-  };
+  const unreadCount = notifications.filter(notification => !notification.read).length;
   
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
-  
+  useEffect(() => {
+    const autoDismiss = () => {
+      setNotifications(prevNotifications => {
+        return prevNotifications.filter(notification => {
+          if (notification.duration) {
+            const now = new Date().getTime();
+            const created = notification.createdAt.getTime();
+            return (now - created) < notification.duration;
+          }
+          return true;
+        });
+      });
+    };
+
+    const intervalId = setInterval(autoDismiss, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
-    <NotificationsContext.Provider
-      value={{
-        notifications,
-        addNotification,
-        markAsRead,
-        dismissNotification,
-        unreadCount,
-        markAllAsRead,
-        getFileProcessingNotifications,
-      }}
-    >
+    <NotificationsContext.Provider value={{
+      notifications: displayedNotifications,
+      addNotification,
+      removeNotification,
+      markAsRead,
+      markAllAsRead,
+      clearAll,
+      dismissAll,
+      unreadCount
+    }}>
       {children}
     </NotificationsContext.Provider>
   );
-};
-
-export const useNotifications = (): NotificationsContextType => {
-  const context = useContext(NotificationsContext);
-  if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationsProvider');
-  }
-  return context;
 };

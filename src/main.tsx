@@ -36,6 +36,7 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import ResetPassword from '@/pages/ResetPassword';
 import EmailVerification from '@/pages/EmailVerification';
 import SubscriptionPage from '@/pages/SubscriptionPage';
+import DocumentationPage from '@/pages/Documentation';
 
 // Admin pages
 import AdminDashboard from '@/pages/admin/Dashboard';
@@ -88,6 +89,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                         <Route path="privacy-policy" element={<PrivacyPolicy />} />
                         <Route path="support-center" element={<SupportCenter />} />
                         <Route path="subscription" element={<SubscriptionPage />} />
+                        <Route path="documentation" element={<DocumentationPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Route>
 
@@ -111,7 +113,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
                       {/* Admin Routes */}
                       <Route path="/admin" element={
-                        <ProtectedRoute adminOnly={true}>
+                        <ProtectedRoute adminOnly>
                           <AdminLayout />
                         </ProtectedRoute>
                       }>

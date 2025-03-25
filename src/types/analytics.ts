@@ -65,5 +65,5 @@ export interface AnalyticsFilters {
 
 export interface DateRange {
   from: Date;
-  to?: Date;
+  to: Date;
 }

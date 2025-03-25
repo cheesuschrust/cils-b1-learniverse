@@ -1,0 +1,52 @@
+
+import { ContentType } from '@/types/contentType';
+
+export interface AISettingsContentTypeMap {
+  'multiple-choice': string;
+  'flashcards': string;
+  'writing': string;
+  'speaking': string;
+  'listening': string;
+  'audio'?: string;
+  'unknown'?: string;
+  'csv'?: string;
+  'json'?: string;
+  'txt'?: string;
+  'pdf'?: string;
+}
+
+export const getContentTypeLabels = (): Record<ContentType, string> => ({
+  'multiple-choice': 'Multiple Choice',
+  'flashcards': 'Flashcards',
+  'writing': 'Writing',
+  'speaking': 'Speaking',
+  'listening': 'Listening',
+  'audio': 'Audio',
+  'unknown': 'Unknown',
+  'csv': 'CSV',
+  'json': 'JSON',
+  'txt': 'Text',
+  'pdf': 'PDF'
+});
+
+export const getInitialConfidenceScores = (): Record<ContentType, number> => ({
+  'multiple-choice': 85,
+  'flashcards': 90,
+  'writing': 75,
+  'speaking': 70,
+  'listening': 80,
+  'audio': 65,
+  'unknown': 50,
+  'csv': 95,
+  'json': 95,
+  'txt': 90,
+  'pdf': 85
+});
+
+export const getDisplayableContentTypes = (): ContentType[] => [
+  'multiple-choice', 
+  'flashcards', 
+  'writing', 
+  'speaking', 
+  'listening'
+];

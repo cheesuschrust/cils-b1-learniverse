@@ -46,6 +46,12 @@ export interface ChatbotTrainingExample {
   language: string;
   createdAt: Date;
   updatedAt: Date;
+  // Adding properties used in ChatbotManager component
+  question?: string; // alias for prompt
+  answer?: string; // alias for response
+  alternatives?: string[]; // alias for alternativePrompts
+  approved?: boolean; // approval status
+  tags?: string[]; // categorization tags
 }
 
 export interface ChatbotConfig {

@@ -1,432 +1,296 @@
+import { v4 as uuid } from 'uuid';
 
-import { v4 as uuidv4 } from 'uuid';
-import { Advertisement, AdCampaign, AdSettings, AdStatus, AdNetwork } from '@/types/advertisement';
-import { User } from '@/contexts/shared-types';
+import { AdSettings, Advertisement, AdNetwork, AdStatus, AdPerformance, AdCampaign } from '@/types/advertisement';
 
-// In-memory storage for advertisements and campaigns
-let advertisements: Advertisement[] = [];
-let campaigns: AdCampaign[] = [];
+interface UserInfo {
+  userId?: string;
+  preferences?: {
+    interests?: string[];
+    location?: string;
+    age?: number;
+  };
+}
 
-// Default ad settings
-const defaultSettings: AdSettings = {
-  enableAds: true,
-  defaultNetwork: 'internal',
-  frequencyCap: 10,
-  showToPremiumUsers: false,
-  networks: {}
-};
+class AdService {
+  private static instance: AdService;
+  private settings: AdSettings = {
+    enableAds: true,
+    defaultNetwork: 'internal',
+    frequencyCap: 5,
+    showToPremiumUsers: false,
+    refreshInterval: 60, // in seconds
+    blockList: ['adult', 'gambling', 'politics'],
+    networks: ['internal', 'google', 'facebook'] // Custom property for settings
+  };
+  private ads: Advertisement[] = [];
+  private campaigns: AdCampaign[] = [];
 
-let adSettings: AdSettings = { ...defaultSettings };
-
-// Get an advertisement based on position, user, and other parameters
-export const getAdvertisement = (
-  position: Advertisement['position'],
-  size: Advertisement['size'],
-  user?: User
-): Advertisement | null => {
-  // If ads are disabled or user is premium and we don't show ads to premium users
-  if (!adSettings.enableAds || (user?.subscription === 'premium' && !adSettings.showToPremiumUsers)) {
-    return null;
+  private constructor() {
+    // Private constructor to prevent direct instantiation
   }
-  
-  // Get all active ads matching the position and size
-  const eligibleAds = advertisements.filter(ad => {
-    // Check ad status
-    if (ad.status !== 'active') return false;
-    
-    // Check position and size
-    if (ad.position !== position || ad.size !== size) return false;
-    
-    // Check scheduling
-    const now = new Date();
-    if (now < ad.scheduling.startDate || (ad.scheduling.endDate && now > ad.scheduling.endDate)) {
+
+  public static getInstance(): AdService {
+    if (!AdService.instance) {
+      AdService.instance = new AdService();
+    }
+    return AdService.instance;
+  }
+
+  public getSettings(): AdSettings {
+    return this.settings;
+  }
+
+  public updateSettings(newSettings: Partial<AdSettings>): AdSettings {
+    this.settings = { ...this.settings, ...newSettings };
+    return this.settings;
+  }
+
+  public getAdById(id: string): Advertisement | undefined {
+    return this.ads.find(ad => ad.id === id);
+  }
+
+  public createAd(adData: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): Advertisement {
+    const newAd: Advertisement = {
+      id: uuid(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      performance: { impressions: 0, clicks: 0, ctr: 0, revenue: 0 },
+      ...adData
+    };
+    this.ads.push(newAd);
+    return newAd;
+  }
+
+  public updateAd(id: string, adData: Partial<Advertisement>): Advertisement | undefined {
+    const adIndex = this.ads.findIndex(ad => ad.id === id);
+    if (adIndex === -1) {
+      return undefined;
+    }
+
+    this.ads[adIndex] = { ...this.ads[adIndex], ...adData, updatedAt: new Date() };
+    return this.ads[adIndex];
+  }
+
+  public deleteAd(id: string): boolean {
+    const adIndex = this.ads.findIndex(ad => ad.id === id);
+    if (adIndex === -1) {
       return false;
     }
-    
-    // Check targeting (if exists)
-    if (ad.targeting && user) {
-      // Check user type
-      if (ad.targeting.userType && 
-          !ad.targeting.userType.includes(user.subscription === 'premium' ? 'premium' : 'free')) {
-        return false;
-      }
-    }
-    
+
+    this.ads.splice(adIndex, 1);
     return true;
-  });
-  
-  if (eligibleAds.length === 0) {
-    return null;
   }
-  
-  // Select a random ad from eligible ads
-  const selectedAd = eligibleAds[Math.floor(Math.random() * eligibleAds.length)];
-  
-  // Track impression (in a real implementation, this would be more sophisticated)
-  trackImpression(selectedAd.id);
-  
-  return selectedAd;
-};
 
-// Track ad impression
-export const trackImpression = (adId: string): void => {
-  const ad = advertisements.find(a => a.id === adId);
-  if (!ad) return;
-  
-  // Initialize performance metrics if not present
-  if (!ad.performance) {
-    ad.performance = {
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      ctr: 0
-    };
-  }
-  
-  // Update impression count
-  ad.performance.impressions += 1;
-  
-  // Update CTR
-  if (ad.performance.impressions > 0) {
-    ad.performance.ctr = (ad.performance.clicks / ad.performance.impressions) * 100;
-  }
-  
-  // Update campaign metrics if the ad belongs to a campaign
-  updateCampaignMetrics();
-};
+  public getAds(options?: { limit?: number, offset?: number, status?: AdStatus }): Advertisement[] {
+    let filteredAds = this.ads;
 
-// Track ad click
-export const trackClick = (adId: string): void => {
-  const ad = advertisements.find(a => a.id === adId);
-  if (!ad) return;
-  
-  // Initialize performance metrics if not present
-  if (!ad.performance) {
-    ad.performance = {
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      ctr: 0
-    };
-  }
-  
-  // Update click count
-  ad.performance.clicks += 1;
-  
-  // Update CTR
-  if (ad.performance.impressions > 0) {
-    ad.performance.ctr = (ad.performance.clicks / ad.performance.impressions) * 100;
-  }
-  
-  // Estimate revenue (in a real implementation, this would be based on actual ad network data)
-  ad.performance.revenue += 0.05; // Assume $0.05 per click
-  
-  // Update campaign metrics if the ad belongs to a campaign
-  updateCampaignMetrics();
-};
-
-// Track ad conversion
-export const trackConversion = (adId: string, value?: number): void => {
-  const ad = advertisements.find(a => a.id === adId);
-  if (!ad) return;
-  
-  // Initialize performance metrics if not present
-  if (!ad.performance) {
-    ad.performance = {
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      ctr: 0
-    };
-  }
-  
-  // Update conversion count
-  ad.performance.conversions += 1;
-  
-  // Add conversion value to revenue
-  if (value) {
-    ad.performance.revenue += value;
-  }
-  
-  // Update campaign metrics if the ad belongs to a campaign
-  updateCampaignMetrics();
-};
-
-// Update campaign metrics based on ad performance
-const updateCampaignMetrics = (): void => {
-  // Reset all campaign metrics
-  campaigns.forEach(campaign => {
-    campaign.performance = {
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      ctr: 0
-    };
-  });
-  
-  // Calculate metrics based on ads in each campaign
-  advertisements.forEach(ad => {
-    const campaign = campaigns.find(c => c.ads.some(a => a.id === ad.id));
-    if (!campaign || !ad.performance) return;
-    
-    campaign.performance!.impressions += ad.performance.impressions;
-    campaign.performance!.clicks += ad.performance.clicks;
-    campaign.performance!.conversions += ad.performance.conversions;
-    campaign.performance!.revenue += ad.performance.revenue;
-    
-    // Update campaign CTR
-    if (campaign.performance!.impressions > 0) {
-      campaign.performance!.ctr = (campaign.performance!.clicks / campaign.performance!.impressions) * 100;
+    if (options?.status) {
+      filteredAds = filteredAds.filter(ad => ad.status === options.status);
     }
-    
-    // Update campaign budget spent
-    campaign.budget.spent = campaign.performance!.revenue;
-  });
-};
 
-// Create a new advertisement
-export const createAdvertisement = (adData: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt'>): Advertisement => {
-  const newAd: Advertisement = {
-    ...adData,
-    id: uuidv4(),
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  advertisements.push(newAd);
-  return newAd;
-};
+    if (options?.offset) {
+      filteredAds = filteredAds.slice(options.offset);
+    }
 
-// Update an existing advertisement
-export const updateAdvertisement = (id: string, adData: Partial<Advertisement>): Advertisement | null => {
-  const index = advertisements.findIndex(ad => ad.id === id);
-  if (index === -1) return null;
-  
-  advertisements[index] = {
-    ...advertisements[index],
-    ...adData,
-    updatedAt: new Date()
-  };
-  
-  return advertisements[index];
-};
+    if (options?.limit) {
+      filteredAds = filteredAds.slice(0, options.limit);
+    }
 
-// Delete an advertisement
-export const deleteAdvertisement = (id: string): boolean => {
-  const initialLength = advertisements.length;
-  advertisements = advertisements.filter(ad => ad.id !== id);
-  return advertisements.length < initialLength;
-};
+    return filteredAds;
+  }
 
-// Get all advertisements
-export const getAllAdvertisements = (): Advertisement[] => {
-  return advertisements;
-};
+  public getAdsForUser(userInfo?: UserInfo): Advertisement[] {
+    if (!this.settings.enableAds) {
+      return [];
+    }
 
-// Get advertisement by ID
-export const getAdvertisementById = (id: string): Advertisement | null => {
-  return advertisements.find(ad => ad.id === id) || null;
-};
+    let relevantAds = this.getRelevantAds(userInfo);
 
-// Create a new campaign
-export const createCampaign = (campaignData: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt'>): AdCampaign => {
-  const newCampaign: AdCampaign = {
-    ...campaignData,
-    id: uuidv4(),
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  campaigns.push(newCampaign);
-  return newCampaign;
-};
+    // Frequency capping - simplified version
+    if (this.settings.frequencyCap > 0 && userInfo?.userId) {
+      relevantAds = relevantAds.slice(0, this.settings.frequencyCap);
+    }
 
-// Update an existing campaign
-export const updateCampaign = (id: string, campaignData: Partial<AdCampaign>): AdCampaign | null => {
-  const index = campaigns.findIndex(campaign => campaign.id === id);
-  if (index === -1) return null;
-  
-  campaigns[index] = {
-    ...campaigns[index],
-    ...campaignData,
-    updatedAt: new Date()
-  };
-  
-  return campaigns[index];
-};
+    return relevantAds;
+  }
 
-// Delete a campaign
-export const deleteCampaign = (id: string): boolean => {
-  const initialLength = campaigns.length;
-  campaigns = campaigns.filter(campaign => campaign.id !== id);
-  return campaigns.length < initialLength;
-};
-
-// Get all campaigns
-export const getAllCampaigns = (): AdCampaign[] => {
-  return campaigns;
-};
-
-// Get campaign by ID
-export const getCampaignById = (id: string): AdCampaign | null => {
-  return campaigns.find(campaign => campaign.id === id) || null;
-};
-
-// Add an advertisement to a campaign
-export const addAdvertisementToCampaign = (campaignId: string, adId: string): boolean => {
-  const campaign = campaigns.find(c => c.id === campaignId);
-  const ad = advertisements.find(a => a.id === adId);
-  
-  if (!campaign || !ad) return false;
-  
-  // Check if ad is already in the campaign
-  if (campaign.ads.some(a => a.id === adId)) return true;
-  
-  campaign.ads.push(ad);
-  return true;
-};
-
-// Remove an advertisement from a campaign
-export const removeAdvertisementFromCampaign = (campaignId: string, adId: string): boolean => {
-  const campaign = campaigns.find(c => c.id === campaignId);
-  if (!campaign) return false;
-  
-  const initialLength = campaign.ads.length;
-  campaign.ads = campaign.ads.filter(ad => ad.id !== adId);
-  
-  return campaign.ads.length < initialLength;
-};
-
-// Update ad settings
-export const updateAdSettings = (newSettings: Partial<AdSettings>): AdSettings => {
-  adSettings = { ...adSettings, ...newSettings };
-  return adSettings;
-};
-
-// Get current ad settings
-export const getAdSettings = (): AdSettings => adSettings;
-
-// Initialize with some sample data
-export const initializeSampleData = (): void => {
-  // Create some sample advertisements
-  const sampleAds: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt'>[] = [
-    {
-      name: 'Premium Subscription Promotion',
-      description: 'Banner ad promoting premium subscription benefits',
-      format: 'banner',
-      content: {
-        title: 'Upgrade to Premium',
-        description: 'Get unlimited questions and remove ads',
-        imageUrl: '/assets/premium-promo.jpg',
-        linkUrl: '/pricing',
-        buttonText: 'Learn More'
-      },
-      position: 'top',
-      size: 'medium',
-      network: 'internal',
-      status: 'active',
-      scheduling: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 60)),
+  // Update ad targeting to match expected type format
+  private getRelevantAds(userInfo?: { userId?: string, preferences?: any }): Advertisement[] {
+    return this.ads.filter(ad => {
+      // Basic filter - only active ads
+      if (ad.status !== 'active') return false;
+      
+      // Date filter
+      const now = new Date();
+      if (now < ad.startDate) return false;
+      if (ad.endDate && now > ad.endDate) return false;
+      
+      // Optional targeting filters
+      if (userInfo && ad.targeting) {
+        // Check user type targeting
+        if (ad.targeting.userTypes && ad.targeting.userTypes.length > 0) {
+          if (!userInfo.userId) return false;
+          // In a real app, we would check the user type from user data
+        }
       }
-    },
-    {
-      name: 'Italian Culture Course',
-      description: 'Native ad promoting Italian culture course',
-      format: 'native',
-      content: {
-        title: 'Discover Italian Culture',
-        description: 'Learn about Italian history, food, and traditions',
-        imageUrl: '/assets/italy-culture.jpg',
-        linkUrl: '/courses/italian-culture',
-        buttonText: 'Explore Now'
+      
+      return true;
+    });
+  }
+
+  public recordImpression(adId: string): void {
+    const ad = this.ads.find(ad => ad.id === adId);
+    if (ad && ad.performance) {
+      ad.performance.impressions = (ad.performance.impressions || 0) + 1;
+    }
+  }
+
+  public recordClick(adId: string): void {
+    const ad = this.ads.find(ad => ad.id === adId);
+    if (ad && ad.performance) {
+      ad.performance.clicks = (ad.performance.clicks || 0) + 1;
+      ad.performance.ctr = (ad.performance.clicks || 0) / (ad.performance.impressions || 1) * 100;
+    }
+  }
+
+  public getCampaignById(id: string): AdCampaign | undefined {
+    return this.campaigns.find(campaign => campaign.id === id);
+  }
+
+  public createCampaign(campaignData: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): AdCampaign {
+    const newCampaign: AdCampaign = {
+      id: uuid(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      performance: { impressions: 0, clicks: 0, ctr: 0, revenue: 0 },
+      ads: [],
+      ...campaignData
+    };
+    this.campaigns.push(newCampaign);
+    return newCampaign;
+  }
+
+  public updateCampaign(id: string, campaignData: Partial<AdCampaign>): AdCampaign | undefined {
+    const campaignIndex = this.campaigns.findIndex(campaign => campaign.id === id);
+    if (campaignIndex === -1) {
+      return undefined;
+    }
+
+    this.campaigns[campaignIndex] = { ...this.campaigns[campaignIndex], ...campaignData, updatedAt: new Date() };
+    return this.campaigns[campaignIndex];
+  }
+
+  public deleteCampaign(id: string): boolean {
+    const campaignIndex = this.campaigns.findIndex(campaign => campaign.id === id);
+    if (campaignIndex === -1) {
+      return false;
+    }
+
+    this.campaigns.splice(campaignIndex, 1);
+    return true;
+  }
+
+  public getCampaigns(options?: { limit?: number, offset?: number, status?: AdStatus }): AdCampaign[] {
+    let filteredCampaigns = this.campaigns;
+
+    if (options?.status) {
+      filteredCampaigns = filteredCampaigns.filter(campaign => campaign.status === options.status);
+    }
+
+    if (options?.offset) {
+      filteredCampaigns = filteredCampaigns.slice(options.offset);
+    }
+
+    if (options?.limit) {
+      filteredCampaigns = filteredCampaigns.slice(0, options.limit);
+    }
+
+    return filteredCampaigns;
+  }
+  
+  // Initialize sample ads
+  public initializeSampleData(): void {
+    // Sample ad campaigns
+    this.campaigns = Array(5).fill(null).map((_, i) => ({
+      id: `campaign-${i + 1}`,
+      name: `Campaign ${i + 1}`,
+      description: `Description for campaign ${i + 1}`,
+      status: ['active', 'active', 'paused', 'active', 'draft'][i] as AdStatus,
+      budget: {
+        total: 1000 * (i + 1),
+        spent: 250 * i,
+        daily: 100,
+        currency: 'USD' // Custom property
       },
-      position: 'inline',
-      size: 'large',
-      network: 'internal',
-      status: 'active',
+      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+      endDate: i === 4 ? undefined : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * (i + 1)),
+      ads: [],
       targeting: {
-        userType: ['free'],
-        minLevel: 2
+        userTypes: i % 2 === 0 ? ['premium', 'basic'] : undefined,
+        countries: i % 3 === 0 ? ['US', 'UK', 'IT'] : undefined
       },
-      scheduling: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 15)),
-      }
-    },
-    {
-      name: 'Mobile App Download',
-      description: 'Banner promoting our mobile app',
-      format: 'banner',
+      performance: {
+        impressions: 10000 * (i + 1),
+        clicks: 500 * (i + 1),
+        ctr: 5,
+        revenue: 750 * (i + 1),
+        cost: 500 * (i + 1),
+        roi: 50,
+        conversions: 50 * (i + 1) // Custom property
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2)
+    }));
+    
+    this.ads = Array(10).fill(null).map((_, i) => ({
+      id: `ad-${i + 1}`,
+      name: `Ad ${i + 1}`,
+      description: `Description for ad ${i + 1}`,
+      format: ['banner', 'native', 'video', 'popup', 'banner', 'native', 'video', 'popup', 'banner', 'native'][i % 10] as AdFormat,
+      position: ['top', 'bottom', 'inline', 'sidebar', 'top', 'bottom', 'inline', 'sidebar', 'top', 'bottom'][i % 10] as AdPosition,
+      size: ['small', 'medium', 'large', 'custom', 'small', 'medium', 'large', 'custom', 'small', 'medium'][i % 10] as AdSize,
       content: {
-        title: 'Learn Italian on the go',
-        description: 'Download our mobile app for iOS and Android',
-        imageUrl: '/assets/mobile-app.jpg',
-        linkUrl: '/download-app',
-        buttonText: 'Download'
+        title: `Learn Italian - Ad ${i + 1}`,
+        description: 'Start speaking Italian today!',
+        imageUrl: 'https://via.placeholder.com/300x250',
+        buttonText: 'Learn More',
+        linkUrl: 'https://www.example.com/italian'
       },
-      position: 'bottom',
-      size: 'small',
-      network: 'internal',
-      status: 'active',
+      targeting: {
+        userTypes: i % 2 === 0 ? ['premium', 'basic'] : undefined,
+        countries: i % 3 === 0 ? ['US', 'UK', 'IT'] : undefined,
+        languages: i % 4 === 0 ? ['en', 'it'] : undefined
+      },
+      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
+      endDate: i === 5 ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30) : undefined,
+      status: ['active', 'paused', 'draft', 'active', 'active', 'paused', 'draft', 'active', 'active', 'paused'][i % 10] as AdStatus,
+      network: ['internal', 'google', 'facebook', 'custom', 'internal', 'google', 'facebook', 'custom', 'internal', 'google'][i % 10] as AdNetwork,
+      campaignId: this.campaigns[i % this.campaigns.length].id,
+      performance: {
+        impressions: 5000 * (i + 1),
+        clicks: 250 * (i + 1),
+        ctr: 5,
+        revenue: 375 * (i + 1),
+        cost: 250 * (i + 1),
+        roi: 50,
+        conversions: 25 * (i + 1)
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
+      updatedAt: new Date(),
       scheduling: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 45)),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 45)),
+        dayOfWeek: ['Monday', 'Wednesday', 'Friday'],
+        timeOfDay: ['9:00', '12:00', '15:00'],
+        frequency: 'daily'
       }
-    }
-  ];
-  
-  // Create the sample advertisements
-  sampleAds.forEach(ad => createAdvertisement(ad));
-  
-  // Create a sample campaign
-  const sampleCampaign: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt'> = {
-    name: 'Q4 Subscription Drive',
-    description: 'Campaign to increase premium subscriptions in Q4',
-    status: 'active',
-    budget: {
-      total: 5000,
-      spent: 0,
-      currency: 'USD'
-    },
-    ads: [],
-    scheduling: {
-      startDate: new Date(new Date().setDate(new Date().getDate() - 15)),
-      endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-    }
-  };
-  
-  // Create the sample campaign
-  const campaign = createCampaign(sampleCampaign);
-  
-  // Add all ads to the campaign
-  advertisements.forEach(ad => {
-    addAdvertisementToCampaign(campaign.id, ad.id);
-  });
-};
+    }));
 
-// Export these methods as the AdService
-export default {
-  getAdvertisement,
-  trackImpression,
-  trackClick,
-  trackConversion,
-  createAdvertisement,
-  updateAdvertisement,
-  deleteAdvertisement,
-  getAllAdvertisements,
-  getAdvertisementById,
-  createCampaign,
-  updateCampaign,
-  deleteCampaign,
-  getAllCampaigns,
-  getCampaignById,
-  addAdvertisementToCampaign,
-  removeAdvertisementFromCampaign,
-  updateAdSettings,
-  getAdSettings,
-  initializeSampleData
-};
+    // Assign ads to campaigns
+    this.campaigns.forEach(campaign => {
+      campaign.ads = this.ads
+        .filter(ad => ad.campaignId === campaign.id)
+        .map(ad => ad.id);
+    });
+  }
+}
+
+export default AdService.getInstance();

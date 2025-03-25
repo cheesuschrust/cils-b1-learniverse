@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +10,8 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ContentType } from '@/utils/textAnalysis';
+import { getDisplayableContentTypes, getContentTypeLabels } from './AISettingsTypes';
+import { ContentType } from '@/types/contentType';
 
 interface AISettingsProps {
   onClose?: () => void;
@@ -70,21 +70,8 @@ const AISettings: React.FC<AISettingsProps> = ({ onClose, isAdmin = false }) => 
     }
   };
   
-  const contentTypes: ContentType[] = [
-    'multiple-choice', 
-    'flashcards', 
-    'writing', 
-    'speaking', 
-    'listening'
-  ];
-  
-  const contentTypeLabels: Record<ContentType, string> = {
-    'multiple-choice': 'Multiple Choice',
-    'flashcards': 'Flashcards',
-    'writing': 'Writing',
-    'speaking': 'Speaking',
-    'listening': 'Listening'
-  };
+  const contentTypes = getDisplayableContentTypes();
+  const contentTypeLabels = getContentTypeLabels();
   
   return (
     <Card className="w-full">

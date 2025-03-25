@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
@@ -11,16 +10,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { useFlashcards, ImportOptions, ImportResult } from '@/hooks/useFlashcards';
 import { Check, FileDown, FileUp, Upload, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useFlashcardImporter, ImportOptions, ImportResult } from '@/hooks/useFlashcardImporter';
 
 interface FlashcardImporterProps {
   onClose?: () => void;
 }
 
 export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose }) => {
-  const { importFlashcards, exportFlashcards, flashcardSets } = useFlashcards();
+  const { handleImport, handleExport, flashcardSets, loading: importLoading, error: importError } = useFlashcardImporter();
   const { toast } = useToast();
   
   // Import state
@@ -31,7 +30,6 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
   const [hasHeader, setHasHeader] = useState(true);
   const [italianColumn, setItalianColumn] = useState(0);
   const [englishColumn, setEnglishColumn] = useState(1);
-  const [importLoading, setImportLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -99,7 +97,7 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
     }
   });
   
-  const handleImport = async () => {
+  const handleImportSubmit = async () => {
     if (!fileContent) {
       toast({
         title: "No Content",
@@ -109,7 +107,6 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
       return;
     }
     
-    setImportLoading(true);
     setProgress(0);
     setErrorMessage(null);
     
@@ -131,7 +128,7 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
         setName: selectedSetName || undefined
       };
       
-      const result = await importFlashcards(fileContent, options);
+      const result = await handleImport(fileContent, options);
       
       clearInterval(progressInterval);
       setProgress(100);
@@ -152,21 +149,18 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
         });
       }
     } catch (error) {
-      clearInterval(progress);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to import flashcards');
       toast({
         title: "Import Failed",
         description: error instanceof Error ? error.message : 'Failed to import flashcards',
         variant: "destructive"
       });
-    } finally {
-      setImportLoading(false);
     }
   };
   
-  const handleExport = () => {
+  const handleExportSubmit = () => {
     try {
-      const content = exportFlashcards(exportSetId === '' ? undefined : exportSetId, exportFormat);
+      const content = handleExport(exportSetId === '' ? undefined : exportSetId, exportFormat);
       setExportContent(content);
       
       // Create download link
@@ -381,7 +375,7 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
               
               <div className="flex justify-end">
                 <Button 
-                  onClick={handleImport} 
+                  onClick={handleImportSubmit} 
                   disabled={!fileContent || importLoading}
                 >
                   <FileUp className="mr-2 h-4 w-4" />
@@ -431,7 +425,7 @@ export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose })
               </div>
               
               <div className="flex justify-end">
-                <Button onClick={handleExport}>
+                <Button onClick={handleExportSubmit}>
                   <FileDown className="mr-2 h-4 w-4" />
                   Export Flashcards
                 </Button>

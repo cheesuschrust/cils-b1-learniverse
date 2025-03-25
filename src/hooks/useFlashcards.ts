@@ -1,602 +1,393 @@
+import { useState, useEffect } from 'react';
+import { v4 as uuid } from 'uuid';
+import { useLocalStorage } from './useLocalStorage';
+import { Flashcard, FlashcardSet, ImportFormat, ImportOptions, ImportResult } from '@/types/flashcard';
 
-import { useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { Flashcard, FlashcardSet, FlashcardStudySession, ImportOptions, ImportResult } from '@/types/flashcard';
-import { ContentService } from '@/services/ContentService';
-import { useToast } from './use-toast';
+const initialFlashcards: Flashcard[] = [
+  {
+    id: '1',
+    italian: 'ciao',
+    english: 'hello',
+    explanation: 'A common greeting',
+    level: 1,
+    mastered: false,
+    dueDate: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '2',
+    italian: 'grazie',
+    english: 'thank you',
+    explanation: 'Expressing gratitude',
+    level: 1,
+    mastered: false,
+    dueDate: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
 
-// Helper function to calculate the next review date based on spaced repetition algorithm
-const calculateNextReviewDate = (level: number): Date => {
-  const now = new Date();
-  switch(level) {
-    case 0: return new Date(now.getTime() + 1000 * 60 * 60); // 1 hour
-    case 1: return new Date(now.getTime() + 1000 * 60 * 60 * 6); // 6 hours
-    case 2: return new Date(now.getTime() + 1000 * 60 * 60 * 24); // 1 day
-    case 3: return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 3); // 3 days
-    case 4: return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7); // 1 week
-    case 5: return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 14); // 2 weeks
-    case 6: return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30); // 1 month
-    default: return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 60); // 2 months
-  }
-};
+const initialFlashcardSets: FlashcardSet[] = [
+  {
+    id: 'set1',
+    name: 'Italian Basics',
+    title: 'Basic Italian Phrases',
+    description: 'Essential phrases for beginners',
+    cards: initialFlashcards,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: 'system',
+    isPublic: true,
+    cardCount: initialFlashcards.length,
+    masteredCount: 0,
+    language: 'italian',
+    category: 'vocabulary',
+    tags: ['basics', 'italian', 'phrases'],
+    difficulty: 'beginner',
+  },
+];
 
-export interface UseFlashcardsReturn {
-  flashcards: Flashcard[];
-  flashcardSets: FlashcardSet[];
-  studySessions: FlashcardStudySession[];
-  loading: boolean;
-  error: string | null;
-  createFlashcard: (data: Omit<Flashcard, 'id' | 'level' | 'dueDate' | 'createdAt'>) => Promise<Flashcard>;
-  updateFlashcard: (id: string, data: Partial<Flashcard>) => Promise<Flashcard>;
-  deleteFlashcard: (id: string) => Promise<void>;
-  createFlashcardSet: (data: Omit<Partial<FlashcardSet>, 'id' | 'createdAt' | 'updatedAt'>) => Promise<FlashcardSet>;
-  updateFlashcardSet: (id: string, data: Partial<Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<FlashcardSet>;
-  deleteFlashcardSet: (id: string) => Promise<void>;
-  addFlashcardToSet: (setId: string, flashcardId: string) => Promise<void>;
-  removeFlashcardFromSet: (setId: string, flashcardId: string) => Promise<void>;
-  importFlashcards: (fileContent: string, options: ImportOptions) => Promise<ImportResult>;
-  exportFlashcards: (format: 'csv' | 'json', flashcardIds?: string[]) => Promise<string>;
-  reviewFlashcard: (id: string, correct: boolean) => Promise<Flashcard>;
-  markAsMastered: (id: string) => Promise<Flashcard>;
-  resetMastered: (id: string) => Promise<Flashcard>;
-  getStats: () => { total: number, mastered: number, dueToday: number };
-  getDueFlashcards: () => Flashcard[];
-  getFlashcardById: (id: string) => Flashcard | undefined;
-  createStudySession: (setId: string) => Promise<FlashcardStudySession>;
-  updateStudySession: (id: string, data: Partial<FlashcardStudySession>) => Promise<FlashcardStudySession>;
-  completeStudySession: (id: string, results: { correct: string[], incorrect: string[] }) => Promise<FlashcardStudySession>;
-}
+export const useFlashcards = () => {
+  const [flashcards, setFlashcards] = useLocalStorage<Flashcard[]>('flashcards', initialFlashcards);
+  const [flashcardSets, setFlashcardSets] = useLocalStorage<FlashcardSet[]>('flashcardSets', initialFlashcardSets);
 
-export const useFlashcards = (): UseFlashcardsReturn => {
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
-  const [studySessions, setStudySessions] = useState<FlashcardStudySession[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  useEffect(() => {
+    // Update cardCount and masteredCount whenever flashcards change
+    const updatedSets = flashcardSets.map(set => ({
+      ...set,
+      cardCount: set.cards?.length || 0,
+      masteredCount: set.cards?.filter(card => card.mastered).length || 0,
+    }));
+    setFlashcardSets(updatedSets);
+  }, [flashcards]);
 
-  // Load flashcards on first render
-  useState(() => {
-    const loadFlashcards = async () => {
-      try {
-        setLoading(true);
-        const cards = await ContentService.getFlashcards();
-        setFlashcards(cards);
-        // We'd load sets and sessions here too in a full implementation
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load flashcards');
-        setLoading(false);
-        toast({
-          title: "Error",
-          description: "Failed to load flashcards",
-          variant: "destructive"
-        });
-      }
+  const createFlashcard = (data: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard => {
+    const newFlashcard: Flashcard = {
+      id: uuid(),
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
+    setFlashcards(prev => [...prev, newFlashcard]);
+    return newFlashcard;
+  };
 
-    loadFlashcards();
-  });
+  const updateFlashcard = (id: string, updates: Partial<Flashcard>): void => {
+    setFlashcards(prev =>
+      prev.map(flashcard =>
+        flashcard.id === id ? { ...flashcard, ...updates, updatedAt: new Date() } : flashcard
+      )
+    );
+  };
 
-  const createFlashcard = useCallback(async (data: Omit<Flashcard, 'id' | 'level' | 'dueDate' | 'createdAt'>) => {
-    try {
-      const newFlashcard: Flashcard = {
-        ...data,
-        id: uuidv4(),
-        level: 0,
-        dueDate: new Date(),
-        createdAt: new Date(),
-      };
-      
-      const savedCard = await ContentService.saveFlashcard(newFlashcard);
-      
-      setFlashcards((prev) => [...prev, savedCard]);
-      
-      toast({
-        title: "Flashcard Created",
-        description: "New flashcard has been created successfully"
-      });
-      
-      return savedCard;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to create flashcard",
-        variant: "destructive"
-      });
-      throw err;
+  const deleteFlashcard = (id: string): void => {
+    setFlashcards(prev => prev.filter(flashcard => flashcard.id !== id));
+    // Also remove the card from any sets it belongs to
+    setFlashcardSets(prevSets =>
+      prevSets.map(set => ({
+        ...set,
+        cards: set.cards.filter(card => card.id !== id),
+      }))
+    );
+  };
+
+  const getFlashcard = (id: string): Flashcard | undefined => {
+    return flashcards.find(flashcard => flashcard.id === id);
+  };
+
+  const listFlashcards = (): Flashcard[] => {
+    return [...flashcards];
+  };
+
+  const createFlashcardSet = (data: Partial<FlashcardSet>): FlashcardSet => {
+    return {
+      id: uuid(),
+      name: data.name || 'New Set',
+      title: data.title,
+      description: data.description || '',
+      cards: data.cards || [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: data.createdBy,
+      isPublic: data.isPublic || false,
+      cardCount: data.cards?.length || 0,
+      masteredCount: data.cards?.filter(card => card.mastered).length || 0,
+      language: data.language || 'italian',
+      category: data.category || 'vocabulary',
+      tags: data.tags || [],
+      difficulty: data.difficulty || 'beginner',
+    };
+  };
+
+  const addCardToSet = (cardId: string, setId: string): void => {
+    const cardToAdd = getFlashcard(cardId);
+    if (!cardToAdd) {
+      console.error(`Flashcard with id ${cardId} not found`);
+      return;
     }
-  }, [toast]);
 
-  const updateFlashcard = useCallback(async (id: string, data: Partial<Flashcard>) => {
-    try {
-      const updatedCard = await ContentService.updateFlashcard(id, data);
-      
-      setFlashcards((prev) => 
-        prev.map(card => card.id === id ? updatedCard : card)
-      );
-      
-      // Update the card in any sets it belongs to
-      setFlashcardSets((prev) => 
-        prev.map(set => ({
-          ...set,
-          cards: set.cards.map(card => card.id === id ? updatedCard : card),
-          updatedAt: new Date()
-        }))
-      );
-      
-      toast({
-        title: "Flashcard Updated",
-        description: "Flashcard has been updated successfully"
-      });
-      
-      return updatedCard;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to update flashcard",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
-
-  const deleteFlashcard = useCallback(async (id: string) => {
-    try {
-      await ContentService.deleteFlashcard(id);
-      
-      setFlashcards((prev) => 
-        prev.filter(card => card.id !== id)
-      );
-      
-      // Remove the card from any sets it belongs to
-      setFlashcardSets((prev) => 
-        prev.map(set => ({
-          ...set,
-          cards: set.cards.filter(card => card.id !== id),
-          updatedAt: new Date()
-        }))
-      );
-      
-      toast({
-        title: "Flashcard Deleted",
-        description: "Flashcard has been removed"
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete flashcard",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
-
-  const createFlashcardSet = useCallback(async (data: Omit<Partial<FlashcardSet>, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      const newSet: FlashcardSet = {
-        id: uuidv4(),
-        title: data.title || 'Untitled Set',
-        description: data.description || '',
-        language: data.language || 'italian',
-        category: data.category || 'General',
-        cards: data.cards || [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      setFlashcardSets((prev) => [...prev, newSet]);
-      
-      toast({
-        title: "Set Created",
-        description: "New flashcard set has been created"
-      });
-      
-      return newSet;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to create flashcard set",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
-
-  const updateFlashcardSet = useCallback(async (id: string, data: Partial<Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    try {
-      setFlashcardSets((prev) => 
-        prev.map(set => {
-          if (set.id === id) {
-            return {
-              ...set,
-              ...data,
-              updatedAt: new Date()
-            };
+    setFlashcardSets(prevSets =>
+      prevSets.map(set => {
+        if (set.id === setId) {
+          if (set.cards.find(card => card.id === cardId)) {
+            console.warn(`Flashcard with id ${cardId} already exists in set ${setId}`);
+            return set;
           }
-          return set;
-        })
-      );
-      
-      toast({
-        title: "Set Updated",
-        description: "Flashcard set has been updated"
-      });
-      
-      const updatedSet = flashcardSets.find(set => set.id === id);
-      if (!updatedSet) throw new Error('Set not found');
-      
-      return updatedSet;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to update flashcard set",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [flashcardSets, toast]);
+          return { ...set, cards: [...set.cards, cardToAdd] };
+        }
+        return set;
+      })
+    );
+  };
 
-  const deleteFlashcardSet = useCallback(async (id: string) => {
-    try {
-      setFlashcardSets((prev) => 
-        prev.filter(set => set.id !== id)
-      );
-      
-      toast({
-        title: "Set Deleted",
-        description: "Flashcard set has been deleted"
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete flashcard set",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
+  const removeCardFromSet = (cardId: string, setId: string): void => {
+    setFlashcardSets(prevSets =>
+      prevSets.map(set => {
+        if (set.id === setId) {
+          return { ...set, cards: set.cards.filter(card => card.id !== cardId) };
+        }
+        return set;
+      })
+    );
+  };
 
-  const addFlashcardToSet = useCallback(async (setId: string, flashcardId: string) => {
+  const updateFlashcardSet = (id: string, updates: Partial<FlashcardSet>): void => {
+    setFlashcardSets(prev =>
+      prev.map(set => (set.id === id ? { ...set, ...updates, updatedAt: new Date() } : set))
+    );
+  };
+
+  const deleteFlashcardSet = (id: string): void => {
+    setFlashcardSets(prev => prev.filter(set => set.id !== id));
+  };
+
+  const getFlashcardSet = (id: string): FlashcardSet | undefined => {
+    return flashcardSets.find(set => set.id === id);
+  };
+
+  const listFlashcardSets = (): FlashcardSet[] => {
+    return [...flashcardSets];
+  };
+
+  const importFlashcards = async (content: string, options: ImportOptions): Promise<ImportResult> => {
+    // Simulate server processing delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    let importedCards: Flashcard[] = [];
+    let errors: string[] = [];
+    
     try {
-      const card = flashcards.find(c => c.id === flashcardId);
-      if (!card) throw new Error('Flashcard not found');
-      
-      setFlashcardSets((prev) => 
-        prev.map(set => {
-          if (set.id === setId) {
-            // Check if card is already in the set
-            if (set.cards.some(c => c.id === flashcardId)) {
-              return set;
+      if (options.format === 'json') {
+        try {
+          const parsedCards = JSON.parse(content);
+          if (!Array.isArray(parsedCards)) {
+            throw new Error('Invalid JSON format: Expected an array of flashcards.');
+          }
+          
+          importedCards = parsedCards.map((card: any) => ({
+            id: uuid(),
+            italian: card.italian || '',
+            english: card.english || '',
+            explanation: card.explanation || '',
+            example: card.example || '',
+            level: card.level || 1,
+            mastered: card.mastered || false,
+            dueDate: card.dueDate ? new Date(card.dueDate) : new Date(),
+            setId: options.setName,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
+            nextReviewDate: card.nextReviewDate ? new Date(card.nextReviewDate) : undefined,
+            tags: card.tags || [],
+            audio: card.audio,
+            image: card.image,
+            notes: card.notes,
+          }));
+        } catch (jsonError) {
+          errors.push(`JSON Parsing Error: ${jsonError}`);
+        }
+      } else if (options.format === 'csv' || options.format === 'txt') {
+        const separator = options.separator || ',';
+        const lines = content.split('\n');
+        const header = options.hasHeader ? lines.shift()?.split(separator) : null;
+        
+        lines.forEach((line, index) => {
+          if (line.trim() === '') return; // Skip empty lines
+          
+          const values = line.split(separator);
+          
+          try {
+            const italian = values[options.italianColumn || 0]?.trim() || '';
+            const english = values[options.englishColumn || 1]?.trim() || '';
+            
+            if (!italian || !english) {
+              throw new Error(`Missing Italian or English term in line ${index + 1}`);
             }
             
-            return {
-              ...set,
-              cards: [...set.cards, card],
-              updatedAt: new Date()
+            const newCard: Flashcard = {
+              id: uuid(),
+              italian,
+              english,
+              explanation: '',
+              example: '',
+              level: 1,
+              mastered: false,
+              dueDate: new Date(),
+              setId: options.setName,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              tags: [],
             };
+            importedCards.push(newCard);
+          } catch (csvError) {
+            errors.push(`Line ${index + 1} - ${csvError}`);
           }
-          return set;
-        })
-      );
-      
-      toast({
-        title: "Card Added",
-        description: "Flashcard has been added to the set"
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to add flashcard to set",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [flashcards, toast]);
-
-  const removeFlashcardFromSet = useCallback(async (setId: string, flashcardId: string) => {
-    try {
-      setFlashcardSets((prev) => 
-        prev.map(set => {
-          if (set.id === setId) {
-            return {
-              ...set,
-              cards: set.cards.filter(card => card.id !== flashcardId),
-              updatedAt: new Date()
+        });
+      } else if (options.format === 'anki') {
+        const lines = content.split('\n');
+        lines.forEach((line, index) => {
+          if (line.trim() === '') return;
+          
+          try {
+            const [italian, english] = line.split('\t');
+            if (!italian || !english) {
+              throw new Error(`Missing Italian or English term in line ${index + 1}`);
+            }
+            
+            const newCard: Flashcard = {
+              id: uuid(),
+              italian: italian.trim(),
+              english: english.trim(),
+              explanation: '',
+              example: '',
+              level: 1,
+              mastered: false,
+              dueDate: new Date(),
+              setId: options.setName,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              tags: [],
             };
+            importedCards.push(newCard);
+          } catch (ankiError) {
+            errors.push(`Line ${index + 1} - ${ankiError}`);
           }
-          return set;
-        })
-      );
-      
-      toast({
-        title: "Card Removed",
-        description: "Flashcard has been removed from the set"
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to remove flashcard from set",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
-
-  const importFlashcards = useCallback(async (fileContent: string, options: ImportOptions): Promise<ImportResult> => {
-    try {
-      const result = await ContentService.importFlashcards(fileContent, options.format);
-      
-      setFlashcards((prev) => [...prev, ...result]);
-      
-      // Simulate the ImportResult structure since our ContentService doesn't return this format
-      const importResult: ImportResult = {
-        imported: result,
-        failed: [],
-        totalProcessed: result.length
-      };
-      
-      toast({
-        title: "Import Successful",
-        description: `Imported ${result.length} flashcards`
-      });
-      
-      return importResult;
-    } catch (err) {
-      toast({
-        title: "Import Failed",
-        description: "Failed to import flashcards",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [toast]);
-
-  const exportFlashcards = useCallback(async (format: 'csv' | 'json', flashcardIds?: string[]): Promise<string> => {
-    try {
-      let cardsToExport = flashcards;
-      
-      if (flashcardIds && flashcardIds.length > 0) {
-        cardsToExport = flashcards.filter(card => flashcardIds.includes(card.id));
-      }
-      
-      // If we have no cards to export, throw an error
-      if (cardsToExport.length === 0) {
-        throw new Error('No flashcards to export');
-      }
-      
-      const exportData = await ContentService.exportFlashcards(format);
-      
-      toast({
-        title: "Export Successful",
-        description: `Exported ${cardsToExport.length} flashcards`
-      });
-      
-      return exportData;
-    } catch (err) {
-      toast({
-        title: "Export Failed",
-        description: "Failed to export flashcards",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [flashcards, toast]);
-
-  const reviewFlashcard = useCallback(async (id: string, correct: boolean): Promise<Flashcard> => {
-    try {
-      const card = flashcards.find(c => c.id === id);
-      if (!card) throw new Error('Flashcard not found');
-      
-      let newLevel = card.level;
-      
-      if (correct) {
-        // Increase level (capped at 7)
-        newLevel = Math.min(7, card.level + 1);
+        });
       } else {
-        // Decrease level (minimum 0)
-        newLevel = Math.max(0, card.level - 1);
+        throw new Error(`Unsupported import format: ${options.format}`);
       }
       
-      const dueDate = calculateNextReviewDate(newLevel);
+      if (options.setName) {
+        // If a set name is provided, either add to existing or create a new set
+        const existingSet = flashcardSets.find(set => set.name === options.setName);
+        if (existingSet) {
+          // Add imported cards to existing set
+          setFlashcardSets(prevSets =>
+            prevSets.map(set =>
+              set.id === existingSet.id
+                ? { ...set, cards: [...set.cards, ...importedCards] }
+                : set
+            )
+          );
+        } else {
+          // Create a new set with imported cards
+          const newSet: FlashcardSet = {
+            id: uuid(),
+            name: options.setName,
+            title: options.setName,
+            description: 'Imported flashcards',
+            cards: importedCards,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            createdBy: 'user',
+            isPublic: false,
+            cardCount: importedCards.length,
+            masteredCount: 0,
+            language: 'italian',
+            category: 'vocabulary',
+            tags: [],
+            difficulty: 'beginner',
+          };
+          setFlashcardSets(prevSets => [...prevSets, newSet]);
+        }
+      } else {
+        // If no set name, just add cards to the general flashcards list
+        setFlashcards(prevCards => [...prevCards, ...importedCards]);
+      }
       
-      const updatedCard = await updateFlashcard(id, {
-        level: newLevel,
-        dueDate,
-        lastReviewed: new Date()
-      });
-      
-      return updatedCard;
-    } catch (err) {
-      toast({
-        title: "Review Failed",
-        description: "Failed to update flashcard review",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [flashcards, toast, updateFlashcard]);
-
-  const markAsMastered = useCallback(async (id: string): Promise<Flashcard> => {
-    try {
-      return await updateFlashcard(id, { mastered: true });
-    } catch (err) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to mark flashcard as mastered",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [updateFlashcard, toast]);
-
-  const resetMastered = useCallback(async (id: string): Promise<Flashcard> => {
-    try {
-      return await updateFlashcard(id, { 
-        mastered: false,
-        level: 0,
-        dueDate: new Date()
-      });
-    } catch (err) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to reset flashcard mastery",
-        variant: "destructive"
-      });
-      throw err;
-    }
-  }, [updateFlashcard, toast]);
-
-  const getStats = useCallback(() => {
-    const total = flashcards.length;
-    const mastered = flashcards.filter(card => card.mastered).length;
-    const now = new Date();
-    const dueToday = flashcards.filter(card => 
-      !card.mastered && card.dueDate <= now
-    ).length;
-    
-    return { total, mastered, dueToday };
-  }, [flashcards]);
-
-  const getDueFlashcards = useCallback(() => {
-    const now = new Date();
-    return flashcards.filter(card => 
-      !card.mastered && card.dueDate <= now
-    );
-  }, [flashcards]);
-
-  const getFlashcardById = useCallback((id: string) => {
-    return flashcards.find(card => card.id === id);
-  }, [flashcards]);
-
-  const createStudySession = useCallback(async (setId: string): Promise<FlashcardStudySession> => {
-    try {
-      const set = flashcardSets.find(s => s.id === setId);
-      if (!set) throw new Error('Flashcard set not found');
-      
-      const newSession: FlashcardStudySession = {
-        id: uuidv4(),
-        setId,
-        userId: 'current-user', // In a real app, get from auth context
-        startTime: new Date(),
-        cardsStudied: [],
-        cardsCorrect: [],
-        cardsIncorrect: [],
-        createdAt: new Date()
+      const result: ImportResult = {
+        success: importedCards.length,
+        failed: errors.length,
+        total: importedCards.length + errors.length,
+        errors,
+        importedCards,
+        imported: importedCards.length
       };
       
-      setStudySessions((prev) => [...prev, newSession]);
+      return result;
+    } catch (error) {
+      console.error('Flashcard import error:', error);
+      errors.push(error instanceof Error ? error.message : 'Unknown error');
       
-      return newSession;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to create study session",
-        variant: "destructive"
-      });
-      throw err;
+      return {
+        success: 0,
+        failed: errors.length,
+        total: 0,
+        errors,
+        importedCards: [],
+        imported: 0
+      };
     }
-  }, [flashcardSets, toast]);
+  };
 
-  const updateStudySession = useCallback(async (id: string, data: Partial<FlashcardStudySession>): Promise<FlashcardStudySession> => {
-    try {
-      setStudySessions((prev) => 
-        prev.map(session => session.id === id ? { ...session, ...data } : session)
-      );
-      
-      const updatedSession = studySessions.find(session => session.id === id);
-      if (!updatedSession) throw new Error('Study session not found');
-      
-      return updatedSession;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to update study session",
-        variant: "destructive"
-      });
-      throw err;
+  const exportFlashcards = (setId?: string, format: 'csv' | 'json' = 'csv'): string => {
+    let cardsToExport: Flashcard[];
+    
+    if (setId) {
+      const set = getFlashcardSet(setId);
+      if (!set) {
+        throw new Error(`Flashcard set with id ${setId} not found`);
+      }
+      cardsToExport = set.cards;
+    } else {
+      cardsToExport = flashcards;
     }
-  }, [studySessions, toast]);
-
-  const completeStudySession = useCallback(async (
-    id: string, 
-    results: { correct: string[], incorrect: string[] }
-  ): Promise<FlashcardStudySession> => {
-    try {
-      const session = studySessions.find(s => s.id === id);
-      if (!session) throw new Error('Study session not found');
-      
-      const correctCards = results.correct.map(cardId => {
-        const card = flashcards.find(c => c.id === cardId);
-        if (!card) throw new Error(`Flashcard ${cardId} not found`);
-        return card;
+    
+    if (format === 'json') {
+      return JSON.stringify(cardsToExport, null, 2);
+    } else { // CSV
+      const csvHeader = 'italian,english,explanation,example,level,mastered,dueDate,tags,audio,image,notes\n';
+      const csvRows = cardsToExport.map(card => {
+        const escapedItalian = card.italian.replace(/"/g, '""');
+        const escapedEnglish = card.english.replace(/"/g, '""');
+        const escapedExplanation = (card.explanation || '').replace(/"/g, '""');
+        const escapedExample = (card.example || '').replace(/"/g, '""');
+        const escapedTags = (card.tags || []).join(';');
+        const dueDate = card.dueDate ? card.dueDate.toISOString() : '';
+        
+        return `"${escapedItalian}","${escapedEnglish}","${escapedExplanation}","${escapedExample}",${card.level},${card.mastered},${dueDate},"${escapedTags}","${card.audio || ''}","${card.image || ''}","${card.notes || ''}"`;
       });
-      
-      const incorrectCards = results.incorrect.map(cardId => {
-        const card = flashcards.find(c => c.id === cardId);
-        if (!card) throw new Error(`Flashcard ${cardId} not found`);
-        return card;
-      });
-      
-      // Update all the correct cards (increase level)
-      await Promise.all(correctCards.map(card => 
-        reviewFlashcard(card.id, true)
-      ));
-      
-      // Update all the incorrect cards (decrease level)
-      await Promise.all(incorrectCards.map(card => 
-        reviewFlashcard(card.id, false)
-      ));
-      
-      const updatedSession = await updateStudySession(id, {
-        endTime: new Date(),
-        cardsStudied: [...correctCards, ...incorrectCards],
-        cardsCorrect: correctCards,
-        cardsIncorrect: incorrectCards
-      });
-      
-      toast({
-        title: "Study Session Completed",
-        description: `Completed with ${correctCards.length} correct out of ${correctCards.length + incorrectCards.length}`
-      });
-      
-      return updatedSession;
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to complete study session",
-        variant: "destructive"
-      });
-      throw err;
+      return csvHeader + csvRows.join('\n');
     }
-  }, [flashcards, reviewFlashcard, studySessions, updateStudySession, toast]);
+  };
 
   return {
     flashcards,
     flashcardSets,
-    studySessions,
-    loading,
-    error,
     createFlashcard,
     updateFlashcard,
     deleteFlashcard,
+    getFlashcard,
+    listFlashcards,
     createFlashcardSet,
+    addCardToSet,
+    removeCardFromSet,
     updateFlashcardSet,
     deleteFlashcardSet,
-    addFlashcardToSet,
-    removeFlashcardFromSet,
+    getFlashcardSet,
+    listFlashcardSets,
     importFlashcards,
     exportFlashcards,
-    reviewFlashcard,
-    markAsMastered,
-    resetMastered,
-    getStats,
-    getDueFlashcards,
-    getFlashcardById,
-    createStudySession,
-    updateStudySession,
-    completeStudySession
   };
 };
-
-export default useFlashcards;

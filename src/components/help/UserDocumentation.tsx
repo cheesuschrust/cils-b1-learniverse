@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +25,7 @@ import {
   Printer,
   Download
 } from 'lucide-react';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 
 interface DocSection {
   id: string;
@@ -452,7 +452,7 @@ const UserDocumentation: React.FC = () => {
     {
       id: 'calendar',
       title: 'Learning Calendar',
-      icon: <Calendar className="h-5 w-5 text-primary" />,
+      icon: <CalendarComponent className="h-5 w-5 text-primary" />,
       content: (
         <div className="space-y-4">
           <p>

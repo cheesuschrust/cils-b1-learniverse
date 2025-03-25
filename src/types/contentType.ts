@@ -13,3 +13,18 @@ export type ContentType =
   | 'json'
   | 'txt'
   | 'pdf';
+
+// Mapping for content type labels
+export const contentTypeLabels: Record<ContentType, string> = {
+  'multiple-choice': 'Multiple Choice',
+  'flashcards': 'Flashcards',
+  'writing': 'Writing',
+  'speaking': 'Speaking',
+  'listening': 'Listening',
+  'audio': 'Audio',
+  'unknown': 'Unknown',
+  'csv': 'CSV',
+  'json': 'JSON',
+  'txt': 'Text',
+  'pdf': 'PDF'
+};
