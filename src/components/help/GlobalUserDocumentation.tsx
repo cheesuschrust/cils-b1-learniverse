@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -718,3 +719,148 @@ const GlobalUserDocumentation: React.FC = () => {
                                       <Play className="h-6 w-6" />
                                     </Button>
                                   </div>
+                                </div>
+                                <div className="p-3">
+                                  <h4 className="font-medium">Advanced Grammar Techniques</h4>
+                                  <p className="text-xs text-muted-foreground mt-1">10:15 • Advanced • Updated 3 days ago</p>
+                                </div>
+                              </div>
+                              
+                              <div className="border rounded-lg overflow-hidden">
+                                <div className="aspect-video bg-muted relative flex items-center justify-center">
+                                  <Video className="h-12 w-12 text-muted-foreground/50" />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Button variant="ghost" size="icon" className="rounded-full bg-background/80 h-12 w-12">
+                                      <Play className="h-6 w-6" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="p-3">
+                                  <h4 className="font-medium">Cultural Context in Language</h4>
+                                  <p className="text-xs text-muted-foreground mt-1">12:40 • All Levels • Updated 5 days ago</p>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        
+                        {!isPremium && (
+                          <div className="mt-8 border border-primary/20 rounded-lg p-5 bg-primary/5">
+                            <h4 className="font-medium text-center">Unlock 15+ Additional Video Tutorials</h4>
+                            <p className="text-sm text-muted-foreground text-center mt-2 mb-4">
+                              Premium members get access to our complete video library including advanced techniques, 
+                              cultural insights, and specialized content.
+                            </p>
+                            <Button 
+                              className="w-full"
+                              onClick={() => navigate('/subscription')}
+                            >
+                              Upgrade to Premium <Star className="ml-2 h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        
+                        <section className="mt-6">
+                          <h3 className="text-lg font-medium mb-4">Download Video Tutorial Guide</h3>
+                          <Button 
+                            variant="outline" 
+                            className="w-full flex items-center justify-center gap-2"
+                            onClick={() => downloadGuide("Video Tutorials Guide")}
+                          >
+                            <Download className="h-4 w-4" />
+                            Download PDF Guide {!isPremium && "(Premium Feature)"}
+                          </Button>
+                        </section>
+                      </section>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'calendar' && (
+                    <div className="space-y-6">
+                      <section>
+                        <h3 className="text-lg font-medium mb-2">Learning Calendar Overview</h3>
+                        <p className="text-muted-foreground">
+                          The Learning Calendar helps you organize your study sessions, track your daily progress,
+                          and maintain consistency in your language learning journey.
+                        </p>
+                      </section>
+                      
+                      <Separator />
+                      
+                      <section>
+                        <h3 className="text-lg font-medium mb-2">Setting Up Your Learning Schedule</h3>
+                        <ol className="list-decimal list-inside space-y-2 text-muted-foreground pl-2">
+                          <li>Navigate to the <strong>Calendar</strong> section from the main menu</li>
+                          <li>Select your preferred study days and times</li>
+                          <li>Set daily learning goals (vocabulary words, time spent, etc.)</li>
+                          <li>Enable reminders to stay consistent with your practice</li>
+                        </ol>
+                        <div className="mt-4">
+                          <Button variant="outline" size="sm" onClick={() => navigate('/app/calendar')}>
+                            Go to Calendar <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </section>
+                      
+                      <Separator />
+                      
+                      <section>
+                        <h3 className="text-lg font-medium mb-2">Tracking Your Progress</h3>
+                        <p className="text-muted-foreground mb-3">
+                          The calendar visually displays your learning consistency:
+                        </p>
+                        <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-2">
+                          <li><strong>Daily streaks</strong> - See how many consecutive days you've practiced</li>
+                          <li><strong>Heat map</strong> - Visual representation of your activity intensity</li>
+                          <li><strong>Goal completion</strong> - Track which days you met your learning targets</li>
+                          <li><strong>Time analytics</strong> - See when you're most active and productive</li>
+                        </ul>
+                      </section>
+                      
+                      <Separator />
+                      
+                      <section>
+                        <h3 className="text-lg font-medium mb-2">Premium Calendar Features</h3>
+                        <p className="text-muted-foreground mb-3">
+                          Premium users enjoy enhanced calendar functionality:
+                        </p>
+                        <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-2">
+                          <li><strong>Custom learning paths</strong> - Create sequential study plans</li>
+                          <li><strong>Detailed analytics</strong> - Get insights into optimal study times and patterns</li>
+                          <li><strong>Calendar sync</strong> - Integrate with Google Calendar, Apple Calendar, etc.</li>
+                          <li><strong>Advanced reminders</strong> - Smart notifications based on your habits</li>
+                        </ul>
+                        
+                        {!isPremium && (
+                          <div className="mt-4">
+                            <Button variant="default" size="sm" onClick={() => navigate('/subscription')}>
+                              Upgrade to Premium <Star className="ml-1 h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </section>
+                      
+                      <section className="mt-6">
+                        <h3 className="text-lg font-medium mb-4">Download Calendar Guide</h3>
+                        <Button 
+                          variant="outline" 
+                          className="w-full flex items-center justify-center gap-2"
+                          onClick={() => downloadGuide("Learning Calendar Guide")}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download PDF Guide {!isPremium && "(Premium Feature)"}
+                        </Button>
+                      </section>
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GlobalUserDocumentation;
