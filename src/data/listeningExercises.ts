@@ -1,265 +1,352 @@
 
-export interface ListeningQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-}
+// Listening exercises data for the Italian language learning app
 
-export interface ListeningExercise {
-  id: number;
+interface ListeningExercise {
+  id: string;
   title: string;
   audioUrl: string;
   transcript: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  type: "multiple-choice" | "transcript";
-  questions: ListeningQuestion[];
-  feedbackLanguage?: "english" | "italian" | "both";
+  translation?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  questions: {
+    id: string;
+    question: string;
+    options?: string[];
+    correctAnswer: string;
+  }[];
+  type: 'comprehension' | 'dictation' | 'fill-in-the-blank';
+  language: 'italian' | 'english';
+  duration: number; // in seconds
 }
 
-// Function to extract text content from various file types
-export const extractContentFromFile = async (file: File): Promise<string> => {
-  const fileType = file.type;
-  
-  // Text files
-  if (fileType.startsWith("text/") || 
-      fileType === "application/rtf" || 
-      file.name.endsWith(".txt") || 
-      file.name.endsWith(".md")) {
-    return await file.text();
-  }
-  
-  // PDF files - in a real app, would use PDF.js or similar
-  if (fileType === "application/pdf" || file.name.endsWith(".pdf")) {
-    return "PDF content extraction would occur here with an actual PDF processing library";
-  }
-  
-  // Audio files - in a real app, would use a speech-to-text service
-  if (fileType.startsWith("audio/")) {
-    return "Audio transcription would occur here with a speech recognition service. In a production environment, this would connect to a service like Web Speech API, Azure Speech Services, or Google Cloud Speech-to-Text.";
-  }
-  
-  // Word documents - in a real app, would use a docx parser
-  if (fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      fileType === "application/msword" ||
-      file.name.endsWith(".docx") ||
-      file.name.endsWith(".doc")) {
-    return "Word document content extraction would occur here";
-  }
-  
-  // Image files - in a real app, would use OCR
-  if (fileType.startsWith("image/")) {
-    return "Image text extraction via OCR would occur here";
-  }
-  
-  // Unknown type
-  return "Content extraction for this file type is not supported";
-};
+// Mock audio URLs - in a real app, these would be actual URLs to audio files
+const AUDIO_BASE_URL = "https://example.com/audio/";
 
-// Generate questions based on text content
-export const generateQuestions = (content: string, count: number = 4): ListeningQuestion[] => {
-  // This is a simplified version - in a real app, this would use NLP or an AI service
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
-  const questions: ListeningQuestion[] = [];
-  
-  // Generate questions based on the content
-  for (let i = 0; i < Math.min(count, sentences.length); i++) {
-    const sentence = sentences[i].trim();
-    const words = sentence.split(' ').filter(w => w.length > 3);
-    
-    if (words.length < 3) continue;
-    
-    // Key word for the question
-    const keyWord = words[Math.floor(Math.random() * words.length)];
-    
-    // Create a question about the sentence
-    const question = `What is mentioned about "${keyWord}" in the content?`;
-    
-    // Generate options with one correct answer
-    const correctAnswer = `It's described in relation to "${sentence.substring(0, 50)}..."`;
-    const incorrectOptions = [
-      "It's not mentioned in this context",
-      `It's described as unimportant`,
-      `It's only mentioned in passing`
-    ];
-    
-    // Shuffle options
-    const options = [correctAnswer, ...incorrectOptions]
-      .sort(() => Math.random() - 0.5);
-    
-    questions.push({
-      id: i + 1,
-      question,
-      options,
-      correctAnswer
-    });
-  }
-  
-  return questions;
-};
-
-// Function to generate bilingual feedback for student responses
-export const generateBilingualFeedback = (
-  accuracy: number, 
-  language: "english" | "italian" | "both" = "both",
-  detailed: boolean = false
-): { english: string, italian: string } => {
-  // Define feedback templates for different accuracy levels
-  const feedbackTemplates = {
-    high: {
-      english: detailed 
-        ? "Excellent work! Your answer demonstrates a strong understanding of the content. Your comprehension is very good, and you've correctly identified the main points. You're making great progress with Italian listening skills."
-        : "Excellent work! Your comprehension is very good. You're showing real progress with Italian.",
-      italian: detailed
-        ? "Ottimo lavoro! La tua risposta dimostra una forte comprensione del contenuto. La tua comprensione è molto buona e hai identificato correttamente i punti principali. Stai facendo grandi progressi con le tue capacità di ascolto in italiano."
-        : "Ottimo lavoro! La tua comprensione è molto buona. Stai mostrando veri progressi con l'italiano."
-    },
-    medium: {
-      english: detailed
-        ? "Good effort! You've understood most of the content, but there are a few details that could be improved. Try to focus on the specific context next time. With practice, your Italian listening skills will continue to develop."
-        : "Good effort! You've understood most of the content. Keep practicing to improve further.",
-      italian: detailed
-        ? "Buon impegno! Hai compreso la maggior parte del contenuto, ma ci sono alcuni dettagli che potrebbero essere migliorati. Prova a concentrarti sul contesto specifico la prossima volta. Con la pratica, le tue capacità di ascolto in italiano continueranno a svilupparsi."
-        : "Buon impegno! Hai compreso la maggior parte del contenuto. Continua a esercitarti per migliorare ulteriormente."
-    },
-    low: {
-      english: detailed
-        ? "Keep practicing! You're making progress, but this answer shows some misunderstanding of the content. Try listening to the audio again and focus on key words and phrases. Don't be discouraged - Italian listening comprehension takes time to develop."
-        : "Keep practicing! You're making progress. Italian listening skills take time to develop.",
-      italian: detailed
-        ? "Continua a esercitarti! Stai facendo progressi, ma questa risposta mostra alcune incomprensioni del contenuto. Prova ad ascoltare nuovamente l'audio e concentrati sulle parole e frasi chiave. Non scoraggiarti - la comprensione dell'ascolto in italiano richiede tempo per svilupparsi."
-        : "Continua a esercitarti! Stai facendo progressi. Le capacità di ascolto in italiano richiedono tempo per svilupparsi."
-    }
-  };
-  
-  // Determine feedback level based on accuracy
-  let feedbackLevel;
-  if (accuracy >= 0.8) {
-    feedbackLevel = 'high';
-  } else if (accuracy >= 0.5) {
-    feedbackLevel = 'medium';
-  } else {
-    feedbackLevel = 'low';
-  }
-  
-  // Get appropriate feedback
-  const feedback = feedbackTemplates[feedbackLevel];
-  
-  // Return feedback in requested language(s)
-  if (language === "english") {
-    return { english: feedback.english, italian: "" };
-  } else if (language === "italian") {
-    return { english: "", italian: feedback.italian };
-  } else {
-    return feedback;
-  }
-};
-
-// Function to add a new listening exercise
-export const addListeningExercise = (
-  title: string, 
-  audioUrl: string, 
-  transcript: string,
-  difficulty: "Beginner" | "Intermediate" | "Advanced",
-  feedbackLanguage: "english" | "italian" | "both" = "both",
-  customQuestions?: ListeningQuestion[]
-): ListeningExercise => {
-  const newId = Math.max(...listeningExercises.map(ex => ex.id), 0) + 1;
-  
-  // Generate questions if not provided
-  const questions = customQuestions || generateQuestions(transcript);
-  
-  const newExercise: ListeningExercise = {
-    id: newId,
-    title,
-    audioUrl,
-    transcript,
-    difficulty,
-    type: "multiple-choice",
-    questions,
-    feedbackLanguage
-  };
-  
-  // Add to the array
-  listeningExercises.push(newExercise);
-  
-  return newExercise;
-};
-
-// Current listening exercises
 export const listeningExercises: ListeningExercise[] = [
+  // Beginner Comprehension Exercises
   {
-    id: 1,
-    title: "Notizie del Giorno",
-    audioUrl: "https://static.openaudio.ai/2023/06/sample-audio-in-italian.mp3",
-    transcript:
-      "Benvenuti alle notizie del giorno. Oggi a Roma, il Presidente della Repubblica ha incontrato i rappresentanti delle regioni per discutere delle nuove misure economiche. Il governo ha annunciato un nuovo piano per il sostegno alle piccole imprese. Secondo il Ministro dell'Economia, questo piano aiuterà migliaia di aziende in difficoltà. In altre notizie, la squadra nazionale di calcio si prepara per la prossima partita di qualificazione al campionato europeo.",
-    difficulty: "Intermediate",
-    type: "multiple-choice",
+    id: "beginner-comp-1",
+    title: "At the Café",
+    audioUrl: `${AUDIO_BASE_URL}cafe.mp3`,
+    transcript: "Buongiorno, vorrei un cappuccino e un cornetto, per favore. Quanto costa?",
+    translation: "Good morning, I would like a cappuccino and a croissant, please. How much is it?",
+    difficulty: "beginner",
+    type: "comprehension",
+    language: "italian",
+    duration: 5,
     questions: [
       {
-        id: 1,
-        question: "Dove si è svolto l'incontro menzionato nel notiziario?",
-        options: ["Milano", "Roma", "Napoli", "Firenze"],
-        correctAnswer: "Roma",
+        id: "q1-beginner-comp-1",
+        question: "What does the person order?",
+        options: [
+          "An espresso and a sandwich",
+          "A cappuccino and a croissant",
+          "A latte and a pastry",
+          "A tea and a croissant"
+        ],
+        correctAnswer: "A cappuccino and a croissant"
       },
       {
-        id: 2,
-        question: "Chi ha incontrato i rappresentanti delle regioni?",
+        id: "q2-beginner-comp-1",
+        question: "What does the person ask after ordering?",
         options: [
-          "Il Primo Ministro",
-          "Il Ministro dell'Economia",
-          "Il Presidente della Repubblica",
-          "Il Ministro degli Esteri",
+          "Where is the bathroom",
+          "If they have any specials",
+          "How much it costs",
+          "For the time"
         ],
-        correctAnswer: "Il Presidente della Repubblica",
-      },
-      {
-        id: 3,
-        question: "Qual è lo scopo del nuovo piano annunciato dal governo?",
-        options: [
-          "Sostegno alle piccole imprese",
-          "Miglioramento delle infrastrutture",
-          "Riforma del sistema educativo",
-          "Aumento delle pensioni",
-        ],
-        correctAnswer: "Sostegno alle piccole imprese",
-      },
-    ],
+        correctAnswer: "How much it costs"
+      }
+    ]
   },
   {
-    id: 2,
-    title: "Conversazione al Ristorante",
-    audioUrl: "https://static.openaudio.ai/2024/03/italian-restaurant-conversation.mp3",
-    transcript:
-      "Cameriere: Buonasera signori, benvenuti al Ristorante Bella Italia. Avete prenotato?\nCliente: Buonasera, sì, ho prenotato un tavolo per due a nome di Rossi.\nCameriere: Perfetto, signor Rossi. Vi accompagno subito al vostro tavolo. Ecco i menu, vi lascio qualche minuto per decidere.\nCliente: Grazie. Cosa mi consiglia come primo piatto?\nCameriere: Il nostro chef oggi consiglia le tagliatelle ai funghi porcini, sono fresche e molto buone.\nCliente: Ottimo, prenderò quelle. E come secondo?\nCameriere: L'ossobuco alla milanese è una nostra specialità.\nCliente: Perfetto, allora per me tagliatelle e ossobuco. E da bere una bottiglia di vino rosso della casa.\nCameriere: Ottima scelta. Torno subito con il vostro ordine.",
-    difficulty: "Beginner",
-    type: "multiple-choice",
+    id: "beginner-comp-2",
+    title: "Introducing Yourself",
+    audioUrl: `${AUDIO_BASE_URL}introduction.mp3`,
+    transcript: "Ciao! Mi chiamo Marco. Sono italiano, di Roma. E tu, come ti chiami? Di dove sei?",
+    translation: "Hi! My name is Marco. I'm Italian, from Rome. And you, what's your name? Where are you from?",
+    difficulty: "beginner",
+    type: "comprehension",
+    language: "italian",
+    duration: 8,
     questions: [
       {
-        id: 1,
-        question: "Dove si svolge questa conversazione?",
-        options: ["In un bar", "In un ristorante", "In un hotel", "In un negozio"],
-        correctAnswer: "In un ristorante",
+        id: "q1-beginner-comp-2",
+        question: "What is the speaker's name?",
+        options: [
+          "Mario",
+          "Marco",
+          "Matteo",
+          "Michele"
+        ],
+        correctAnswer: "Marco"
       },
       {
-        id: 2,
-        question: "Quale primo piatto consiglia il cameriere?",
-        options: ["Spaghetti alla carbonara", "Risotto allo zafferano", "Tagliatelle ai funghi porcini", "Lasagne alla bolognese"],
-        correctAnswer: "Tagliatelle ai funghi porcini",
+        id: "q2-beginner-comp-2",
+        question: "Where is the speaker from?",
+        options: [
+          "Milan",
+          "Naples",
+          "Rome",
+          "Florence"
+        ],
+        correctAnswer: "Rome"
       },
       {
-        id: 3,
-        question: "Cosa ordina il cliente come secondo piatto?",
-        options: ["Bistecca alla fiorentina", "Ossobuco alla milanese", "Pesce del giorno", "Pollo arrosto"],
-        correctAnswer: "Ossobuco alla milanese",
-      },
-      {
-        id: 4,
-        question: "Il cliente ha prenotato un tavolo?",
-        options: ["Sì", "No", "Non è chiaro dal dialogo", "Ha provato ma non c'era disponibilità"],
-        correctAnswer: "Sì",
+        id: "q3-beginner-comp-2",
+        question: "What does the speaker ask at the end?",
+        options: [
+          "Your age and profession",
+          "Your name and where you're from",
+          "If you speak Italian",
+          "If you've been to Italy"
+        ],
+        correctAnswer: "Your name and where you're from"
       }
-    ],
+    ]
+  },
+  
+  // Intermediate Comprehension Exercises
+  {
+    id: "intermediate-comp-1",
+    title: "Planning a Trip",
+    audioUrl: `${AUDIO_BASE_URL}planning-trip.mp3`,
+    transcript: "Pensavo di visitare l'Italia quest'estate. Vorrei vedere Roma, Firenze e Venezia. Quanto tempo mi consigli di passare in ogni città? E qual è il modo migliore per spostarsi tra le città?",
+    translation: "I was thinking of visiting Italy this summer. I would like to see Rome, Florence, and Venice. How much time do you recommend spending in each city? And what's the best way to travel between cities?",
+    difficulty: "intermediate",
+    type: "comprehension",
+    language: "italian",
+    duration: 15,
+    questions: [
+      {
+        id: "q1-intermediate-comp-1",
+        question: "When does the speaker want to visit Italy?",
+        options: [
+          "This spring",
+          "This summer",
+          "This fall",
+          "This winter"
+        ],
+        correctAnswer: "This summer"
+      },
+      {
+        id: "q2-intermediate-comp-1",
+        question: "Which cities does the speaker want to visit?",
+        options: [
+          "Rome, Milan, and Naples",
+          "Rome, Florence, and Venice",
+          "Milan, Venice, and Florence",
+          "Naples, Rome, and Sicily"
+        ],
+        correctAnswer: "Rome, Florence, and Venice"
+      },
+      {
+        id: "q3-intermediate-comp-1",
+        question: "What information is the speaker asking for?",
+        options: [
+          "Hotel recommendations and restaurant tips",
+          "Time allocation and transportation options",
+          "Weather information and proper attire",
+          "Tourist attractions and opening hours"
+        ],
+        correctAnswer: "Time allocation and transportation options"
+      }
+    ]
+  },
+  {
+    id: "intermediate-comp-2",
+    title: "At the Restaurant",
+    audioUrl: `${AUDIO_BASE_URL}restaurant.mp3`,
+    transcript: "Buonasera, avete un tavolo per due persone? Vorremmo cenare adesso. Potrebbe consigliarci qualche specialità della casa? Io preferisco piatti di pesce, mentre mia moglie è vegetariana. Avete opzioni vegetariane?",
+    translation: "Good evening, do you have a table for two? We would like to have dinner now. Could you recommend some house specialties? I prefer fish dishes, while my wife is vegetarian. Do you have vegetarian options?",
+    difficulty: "intermediate",
+    type: "comprehension",
+    language: "italian",
+    duration: 20,
+    questions: [
+      {
+        id: "q1-intermediate-comp-2",
+        question: "How many people need a table?",
+        options: [
+          "One",
+          "Two",
+          "Three",
+          "Four"
+        ],
+        correctAnswer: "Two"
+      },
+      {
+        id: "q2-intermediate-comp-2",
+        question: "What does the speaker ask for recommendations on?",
+        options: [
+          "Wine options",
+          "Dessert options",
+          "House specialties",
+          "Daily menu"
+        ],
+        correctAnswer: "House specialties"
+      },
+      {
+        id: "q3-intermediate-comp-2",
+        question: "What dietary requirement does the speaker mention?",
+        options: [
+          "Gluten-free",
+          "Vegetarian",
+          "Vegan",
+          "Lactose-free"
+        ],
+        correctAnswer: "Vegetarian"
+      },
+      {
+        id: "q4-intermediate-comp-2",
+        question: "Who is vegetarian?",
+        options: [
+          "The speaker",
+          "The speaker's wife",
+          "Both of them",
+          "Neither of them"
+        ],
+        correctAnswer: "The speaker's wife"
+      }
+    ]
+  },
+  
+  // Advanced Comprehension Exercises
+  {
+    id: "advanced-comp-1",
+    title: "Climate Change Discussion",
+    audioUrl: `${AUDIO_BASE_URL}climate-change.mp3`,
+    transcript: "Il cambiamento climatico rappresenta una delle sfide più urgenti del nostro tempo. Secondo gli scienziati, le temperature medie globali continuano ad aumentare a causa delle emissioni di gas serra. È necessario adottare misure più rigorose per ridurre queste emissioni e promuovere fonti di energia rinnovabile. Tuttavia, ciò richiede un impegno congiunto da parte di governi, aziende e cittadini di tutto il mondo.",
+    translation: "Climate change represents one of the most urgent challenges of our time. According to scientists, global average temperatures continue to rise due to greenhouse gas emissions. More stringent measures need to be adopted to reduce these emissions and promote renewable energy sources. However, this requires a joint commitment from governments, businesses, and citizens around the world.",
+    difficulty: "advanced",
+    type: "comprehension",
+    language: "italian",
+    duration: 25,
+    questions: [
+      {
+        id: "q1-advanced-comp-1",
+        question: "According to the audio, what is causing the increase in global average temperatures?",
+        options: [
+          "Solar activity",
+          "Greenhouse gas emissions",
+          "Natural climate cycles",
+          "Deforestation"
+        ],
+        correctAnswer: "Greenhouse gas emissions"
+      },
+      {
+        id: "q2-advanced-comp-1",
+        question: "What does the speaker suggest is necessary to address climate change?",
+        options: [
+          "Individual action only",
+          "Government regulation only",
+          "Corporate responsibility only",
+          "A joint commitment from governments, businesses, and citizens"
+        ],
+        correctAnswer: "A joint commitment from governments, businesses, and citizens"
+      },
+      {
+        id: "q3-advanced-comp-1",
+        question: "What should be promoted according to the speaker?",
+        options: [
+          "Nuclear energy",
+          "Fossil fuels",
+          "Renewable energy sources",
+          "Coal power plants"
+        ],
+        correctAnswer: "Renewable energy sources"
+      },
+      {
+        id: "q4-advanced-comp-1",
+        question: "How does the speaker characterize climate change?",
+        options: [
+          "A minor issue",
+          "One of the most urgent challenges of our time",
+          "A problem for future generations",
+          "A natural phenomenon"
+        ],
+        correctAnswer: "One of the most urgent challenges of our time"
+      }
+    ]
+  },
+  
+  // Beginner Dictation Exercises
+  {
+    id: "beginner-dict-1",
+    title: "Basic Greetings",
+    audioUrl: `${AUDIO_BASE_URL}basic-greetings.mp3`,
+    transcript: "Buongiorno. Come stai? Io sto bene, grazie. Arrivederci.",
+    translation: "Good morning. How are you? I'm well, thank you. Goodbye.",
+    difficulty: "beginner",
+    type: "dictation",
+    language: "italian",
+    duration: 6,
+    questions: []
+  },
+  {
+    id: "beginner-dict-2",
+    title: "At the Hotel",
+    audioUrl: `${AUDIO_BASE_URL}hotel.mp3`,
+    transcript: "Buonasera. Ho una prenotazione a nome Rossi. Una camera doppia per tre notti, per favore.",
+    translation: "Good evening. I have a reservation under the name Rossi. A double room for three nights, please.",
+    difficulty: "beginner",
+    type: "dictation",
+    language: "italian",
+    duration: 8,
+    questions: []
+  },
+  
+  // Intermediate Dictation Exercises
+  {
+    id: "intermediate-dict-1",
+    title: "Weather Forecast",
+    audioUrl: `${AUDIO_BASE_URL}weather.mp3`,
+    transcript: "Le previsioni meteo per domani: al nord ci sarà pioggia per tutta la giornata, al centro nubi sparse con possibili schiarite nel pomeriggio, mentre al sud il tempo sarà soleggiato con temperature fino a 28 gradi.",
+    translation: "Weather forecast for tomorrow: in the north there will be rain throughout the day, in the center scattered clouds with possible clearing in the afternoon, while in the south the weather will be sunny with temperatures up to 28 degrees.",
+    difficulty: "intermediate",
+    type: "dictation",
+    language: "italian",
+    duration: 15,
+    questions: []
+  },
+  {
+    id: "intermediate-dict-2",
+    title: "Making Plans",
+    audioUrl: `${AUDIO_BASE_URL}making-plans.mp3`,
+    transcript: "Cosa facciamo questo fine settimana? Potremmo andare al cinema venerdì sera, e sabato fare una gita al lago. Domenica possiamo riposare o invitare amici per una cena a casa. Tu che preferisci?",
+    translation: "What shall we do this weekend? We could go to the cinema on Friday evening, and on Saturday take a trip to the lake. On Sunday we can rest or invite friends over for dinner at home. What do you prefer?",
+    difficulty: "intermediate",
+    type: "dictation",
+    language: "italian",
+    duration: 17,
+    questions: []
+  },
+  
+  // Advanced Dictation Exercises
+  {
+    id: "advanced-dict-1",
+    title: "Italian Culture",
+    audioUrl: `${AUDIO_BASE_URL}italian-culture.mp3`,
+    transcript: "La cultura italiana è famosa in tutto il mondo per la sua ricca storia, arte, cucina e tradizioni. L'Italia ha dato i natali a numerosi artisti, scrittori e inventori che hanno influenzato profondamente la civiltà occidentale. Dal Rinascimento alle moderne tendenze del design, l'influenza italiana si fa sentire in molteplici ambiti culturali.",
+    translation: "Italian culture is famous worldwide for its rich history, art, cuisine, and traditions. Italy has given birth to numerous artists, writers, and inventors who have profoundly influenced Western civilization. From the Renaissance to modern design trends, Italian influence is felt in multiple cultural fields.",
+    difficulty: "advanced",
+    type: "dictation",
+    language: "italian",
+    duration: 22,
+    questions: []
+  },
+  {
+    id: "advanced-dict-2",
+    title: "Environmental Issues",
+    audioUrl: `${AUDIO_BASE_URL}environmental-issues.mp3`,
+    transcript: "L'inquinamento ambientale rappresenta una minaccia significativa per gli ecosistemi e la biodiversità. La contaminazione dell'aria, dell'acqua e del suolo ha conseguenze dirette sulla salute umana e sulla sopravvivenza di numerose specie animali e vegetali. È fondamentale adottare politiche sostenibili e promuovere una maggiore consapevolezza riguardo alle problematiche ambientali.",
+    translation: "Environmental pollution represents a significant threat to ecosystems and biodiversity. Contamination of air, water, and soil has direct consequences on human health and the survival of numerous animal and plant species. It is essential to adopt sustainable policies and promote greater awareness regarding environmental issues.",
+    difficulty: "advanced",
+    type: "dictation",
+    language: "italian",
+    duration: 25,
+    questions: []
   }
 ];
+
+export default listeningExercises;

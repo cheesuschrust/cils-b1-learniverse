@@ -1,1127 +1,1144 @@
 
-import React, { useState } from 'react';
-import { useFlashcards, Deck, Flashcard } from '@/hooks/useFlashcards';
-import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { FlashcardPronunciation } from '@/components/flashcards/FlashcardPronunciation';
-import { SpacedRepetitionInfo } from '@/components/flashcards/SpacedRepetitionInfo';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/components/ui/use-toast';
+import { useFlashcards, Flashcard, FlashcardSet } from '@/hooks/useFlashcards';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import { 
-  Plus, X, Check, ArrowLeftRight, Trash2, Edit, Save, Book, ListChecks,
-  PlayCircle, RefreshCw, Download, Upload, ChevronLeft, ChevronRight, Bookmark,
-} from 'lucide-react';
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Edit, FileText, Filter, Loader2, MoreVertical, Plus, Save, Search, Shuffle, Trash, Upload, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FlashcardImporter } from '@/components/flashcards/FlashcardImporter';
+import { SpacedRepetitionInfo } from '@/components/flashcards/SpacedRepetitionInfo';
+import SpeakableWord from '@/components/learning/SpeakableWord';
+import { ConfidenceIndicator } from '@/components/ai/ConfidenceIndicator';
+import { Switch } from '@/components/ui/switch';
+import { isBefore } from 'date-fns';
 
-const Flashcards = () => {
-  const {
-    decks,
-    activeDeck,
-    activeDeckId,
-    setActiveDeckId,
-    isReviewing,
-    showBack,
-    currentCardIndex,
-    dueCardIds,
-    reviewedCardIds,
-    startReview,
-    endReview,
-    nextCard,
-    prevCard,
-    flipCard,
-    markCardResult,
-    createDeck,
-    updateDeck,
-    deleteDeck,
-    createCard,
-    updateCard,
-    deleteCard,
-    toggleCardMastery,
-    resetProgress,
-    addTagToDeck,
-    removeTagFromDeck,
-    addTagToCard,
-    removeTagFromCard,
-    importCardsFromCsv,
-    exportDeckToCsv,
-    isLoading,
-    error,
-  } = useFlashcards();
+const CARDS_PER_PAGE = 10;
+
+const FlashcardsPage: React.FC = () => {
+  const { flashcards, flashcardSets, createFlashcard, updateFlashcard, deleteFlashcard, 
+          createFlashcardSet, updateFlashcardSet, deleteFlashcardSet, addFlashcardToSet, 
+          removeFlashcardFromSet, getStats, markAsMastered, resetMastered, getDueFlashcards,
+          reviewFlashcard, getFlashcardById, getFlashcardSetById } = useFlashcards();
+  
+  const { translateText, isTranslating, isAIEnabled } = useAIUtils();
   const { toast } = useToast();
-  const { translateText, isAIEnabled } = useAIUtils();
-  const { preferredLanguage } = useUserPreferences();
   
-  // State for new deck
-  const [isNewDeckDialogOpen, setIsNewDeckDialogOpen] = useState(false);
-  const [newDeckName, setNewDeckName] = useState('');
-  const [newDeckDescription, setNewDeckDescription] = useState('');
-  const [newDeckLanguage, setNewDeckLanguage] = useState<'english' | 'italian'>(
-    preferredLanguage === 'italian' ? 'italian' : 'english'
-  );
+  // State for creating new cards
+  const [italian, setItalian] = useState('');
+  const [english, setEnglish] = useState('');
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   
-  // State for new card
-  const [isNewCardDialogOpen, setIsNewCardDialogOpen] = useState(false);
-  const [newCardFront, setNewCardFront] = useState('');
-  const [newCardBack, setNewCardBack] = useState('');
-  const [newCardNotes, setNewCardNotes] = useState('');
-  const [newCardTags, setNewCardTags] = useState('');
-  const [newCardFrontLang, setNewCardFrontLang] = useState<'english' | 'italian'>(
-    preferredLanguage === 'italian' ? 'italian' : 'english'
-  );
-  const [newCardBackLang, setNewCardBackLang] = useState<'english' | 'italian'>(
-    preferredLanguage === 'italian' ? 'english' : 'italian'
-  );
+  // State for creating sets
+  const [newSetName, setNewSetName] = useState('');
+  const [newSetDescription, setNewSetDescription] = useState('');
   
-  // State for import/export
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importContent, setImportContent] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
+  // State for search & filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [filterMastered, setFilterMastered] = useState<'all' | 'mastered' | 'unmastered'>('all');
+  const [filterReviewDue, setFilterReviewDue] = useState(false);
+  
+  // State for study session
+  const [studyMode, setStudyMode] = useState(false);
+  const [studyCards, setStudyCards] = useState<Flashcard[]>([]);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [shuffleMode, setShuffleMode] = useState(false);
+  
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
   
   // State for editing
-  const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
-  const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
+  const [editCardId, setEditCardId] = useState<string | null>(null);
+  const [editItalian, setEditItalian] = useState('');
+  const [editEnglish, setEditEnglish] = useState('');
   
-  // Create a new deck
-  const handleCreateDeck = () => {
-    if (!newDeckName.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter a name for the deck.',
-        variant: 'destructive',
-      });
+  // State for editing sets
+  const [editSetId, setEditSetId] = useState<string | null>(null);
+  const [editSetName, setEditSetName] = useState('');
+  const [editSetDescription, setEditSetDescription] = useState('');
+  
+  // State for AI text translation
+  const [isTranslating2, setIsTranslating2] = useState(false);
+  
+  // State for Import/Export 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  
+  // State for auto-translation
+  const [autoTranslate, setAutoTranslate] = useState(true);
+  
+  // Sort options
+  const [sortBy, setSortBy] = useState<'newest' | 'alphabetical' | 'mastery'>('newest');
+  
+  // Stats from the hooks
+  const stats = getStats();
+  
+  // Side effect to restore selected set from localStorage
+  useEffect(() => {
+    const savedSetId = localStorage.getItem('selected-flashcard-set');
+    if (savedSetId && flashcardSets.some(set => set.id === savedSetId)) {
+      setSelectedSetId(savedSetId);
+    } else if (flashcardSets.length > 0) {
+      setSelectedSetId(flashcardSets[0].id);
+    }
+  }, [flashcardSets]);
+  
+  // Save selected set to localStorage when it changes
+  useEffect(() => {
+    if (selectedSetId) {
+      localStorage.setItem('selected-flashcard-set', selectedSetId);
+    }
+  }, [selectedSetId]);
+  
+  // Handle automatic translation of entered Italian term
+  useEffect(() => {
+    if (!autoTranslate || !italian || isTranslating || !isAIEnabled) {
       return;
     }
     
-    createDeck(newDeckName, newDeckDescription, newDeckLanguage);
-    setNewDeckName('');
-    setNewDeckDescription('');
-    setIsNewDeckDialogOpen(false);
-  };
+    const timerId = setTimeout(async () => {
+      try {
+        setIsTranslating2(true);
+        const translated = await translateText(italian, 'it', 'en');
+        setEnglish(translated);
+      } catch (error) {
+        console.error('Translation error:', error);
+      } finally {
+        setIsTranslating2(false);
+      }
+    }, 1000); // 1 second delay after typing stops
+    
+    return () => clearTimeout(timerId);
+  }, [italian, autoTranslate, translateText, isTranslating, isAIEnabled]);
   
-  // Create a new card
-  const handleCreateCard = () => {
-    if (!newCardFront.trim() || !newCardBack.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter both front and back text for the card.',
-        variant: 'destructive',
-      });
-      return;
+  // Filter cards based on search and filters
+  const filteredCards = useMemo(() => {
+    let filtered = [...flashcards];
+    
+    // Filter by selected set
+    if (selectedSetId) {
+      const set = flashcardSets.find(s => s.id === selectedSetId);
+      if (set) {
+        filtered = filtered.filter(card => set.cards.includes(card.id));
+      }
     }
     
-    const tags = newCardTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-    
-    createCard(activeDeckId, {
-      front: newCardFront,
-      back: newCardBack,
-      notes: newCardNotes,
-      tags,
-      frontLanguage: newCardFrontLang,
-      backLanguage: newCardBackLang,
-    });
-    
-    setNewCardFront('');
-    setNewCardBack('');
-    setNewCardNotes('');
-    setNewCardTags('');
-    setIsNewCardDialogOpen(false);
-  };
-  
-  // Handle card update
-  const handleUpdateCard = () => {
-    if (!editingCard) return;
-    
-    if (!editingCard.front.trim() || !editingCard.back.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter both front and back text for the card.',
-        variant: 'destructive',
-      });
-      return;
+    // Apply search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(card => 
+        card.italian.toLowerCase().includes(lowerSearch) || 
+        card.english.toLowerCase().includes(lowerSearch)
+      );
     }
     
-    updateCard(activeDeckId, editingCard.id, editingCard);
-    setEditingCard(null);
-  };
-  
-  // Handle deck update
-  const handleUpdateDeck = () => {
-    if (!editingDeck) return;
-    
-    if (!editingDeck.name.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter a name for the deck.',
-        variant: 'destructive',
-      });
-      return;
+    // Apply mastery filter
+    if (filterMastered !== 'all') {
+      filtered = filtered.filter(card => 
+        filterMastered === 'mastered' ? card.mastered : !card.mastered
+      );
     }
     
-    updateDeck(editingDeck.id, editingDeck);
-    setEditingDeck(null);
-  };
-  
-  // Handle import
-  const handleImport = async () => {
-    if (!importContent.trim()) {
-      toast({
-        title: 'Missing Content',
-        description: 'Please enter CSV content to import.',
-        variant: 'destructive',
-      });
-      return;
+    // Apply review due filter
+    if (filterReviewDue) {
+      const today = new Date();
+      filtered = filtered.filter(card => 
+        !card.mastered && (!card.nextReviewDate || 
+        isBefore(new Date(card.nextReviewDate), today))
+      );
     }
     
-    const importedCount = await importCardsFromCsv(activeDeckId, importContent);
-    if (importedCount > 0) {
-      setImportContent('');
-      setIsImportDialogOpen(false);
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'alphabetical':
+        filtered.sort((a, b) => a.italian.localeCompare(b.italian));
+        break;
+      case 'mastery':
+        filtered.sort((a, b) => {
+          // First by mastery (unmastered first)
+          if (a.mastered !== b.mastered) {
+            return a.mastered ? 1 : -1;
+          }
+          
+          // Then by due date if not mastered
+          if (!a.mastered && !b.mastered) {
+            const aDate = a.nextReviewDate ? new Date(a.nextReviewDate) : new Date(0);
+            const bDate = b.nextReviewDate ? new Date(b.nextReviewDate) : new Date(0);
+            return aDate.getTime() - bDate.getTime();
+          }
+          
+          return 0;
+        });
+        break;
     }
-  };
-  
-  // Handle export
-  const handleExport = () => {
-    const csvContent = exportDeckToCsv(activeDeckId);
     
-    if (csvContent) {
-      // Create a download link
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeDeck.name.replace(/\s+/g, '_')}_flashcards.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: 'Export Successful',
-        description: `${activeDeck.name} has been exported to CSV.`,
-      });
-    }
-  };
+    return filtered;
+  }, [flashcards, flashcardSets, selectedSetId, searchTerm, filterMastered, filterReviewDue, sortBy]);
   
-  // Auto-translate function (when AI is enabled)
-  const handleAutoTranslate = async () => {
-    if (!isAIEnabled || !translateText) {
+  // Paginated cards
+  const paginatedCards = useMemo(() => {
+    const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+    return filteredCards.slice(startIndex, startIndex + CARDS_PER_PAGE);
+  }, [filteredCards, currentPage]);
+  
+  // Handle creating a new flashcard
+  const handleCreateFlashcard = () => {
+    if (!italian || !english) {
       toast({
-        title: 'AI Features Disabled',
-        description: 'Enable AI features to use auto-translation.',
-        variant: 'destructive',
+        title: "Missing Information",
+        description: "Please enter both Italian and English terms.",
+        variant: "destructive",
       });
       return;
     }
     
     try {
-      if (newCardFront && !newCardBack) {
-        const sourceLang = newCardFrontLang === 'italian' ? 'it' : 'en';
-        const targetLang = newCardBackLang === 'italian' ? 'it' : 'en';
-        
-        const translation = await translateText(newCardFront, sourceLang, targetLang);
-        setNewCardBack(translation);
-        
-        toast({
-          title: 'Translation Added',
-          description: 'The text has been automatically translated.',
-        });
+      const newCard = createFlashcard(italian, english);
+      
+      // If a set is selected, add the card to it
+      if (selectedSetId) {
+        addFlashcardToSet(newCard.id, selectedSetId);
       }
-    } catch (err) {
+      
+      // Reset the form
+      setItalian('');
+      setEnglish('');
+      
       toast({
-        title: 'Translation Failed',
-        description: err instanceof Error ? err.message : 'Failed to translate text',
-        variant: 'destructive',
+        title: "Flashcard Created",
+        description: `Successfully added flashcard for "${italian}"`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create flashcard",
+        variant: "destructive",
       });
     }
   };
   
-  // Swap languages
-  const handleSwapLanguages = () => {
-    const tempLang = newCardFrontLang;
-    setNewCardFrontLang(newCardBackLang);
-    setNewCardBackLang(tempLang);
+  // Handle creating a new set
+  const handleCreateSet = () => {
+    if (!newSetName) {
+      toast({
+        title: "Missing Name",
+        description: "Please enter a name for the flashcard set.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Also swap content if both fields have text
-    if (newCardFront && newCardBack) {
-      const tempText = newCardFront;
-      setNewCardFront(newCardBack);
-      setNewCardBack(tempText);
+    try {
+      const newSet = createFlashcardSet(newSetName, newSetDescription);
+      setSelectedSetId(newSet.id);
+      
+      // Reset the form
+      setNewSetName('');
+      setNewSetDescription('');
+      
+      toast({
+        title: "Set Created",
+        description: `Successfully created set "${newSetName}"`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create set",
+        variant: "destructive",
+      });
     }
   };
   
-  // Render current review card
-  const renderReviewCard = () => {
-    if (!isReviewing || dueCardIds.length === 0) return null;
+  // Handle updating a flashcard
+  const handleUpdateFlashcard = () => {
+    if (!editCardId || !editItalian || !editEnglish) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both Italian and English terms.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    const currentCardId = dueCardIds[currentCardIndex];
-    const card = activeDeck.cards.find(c => c.id === currentCardId);
-    
-    if (!card) return null;
-    
-    return (
-      <div className="w-full max-w-xl mx-auto mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-sm text-muted-foreground">
-            Card {currentCardIndex + 1} of {dueCardIds.length}
-          </div>
-          <Button variant="outline" size="sm" onClick={endReview}>
-            End Review
-          </Button>
-        </div>
-        
-        <Card className="w-full h-64 flex flex-col">
-          <CardHeader className="pb-0">
-            <div className="flex justify-between items-center">
-              <Badge variant="outline">{card.frontLanguage}</Badge>
-              <SpacedRepetitionInfo card={card} compact />
-            </div>
-          </CardHeader>
-          <CardContent className="flex-grow flex flex-col justify-center items-center p-6">
-            <div className="text-2xl font-semibold text-center mb-4">
-              {showBack ? card.back : card.front}
-            </div>
-            
-            {showBack && (
-              <div className="mt-2">
-                <FlashcardPronunciation 
-                  text={card.back} 
-                  language={card.backLanguage === 'italian' ? 'it-IT' : 'en-US'} 
-                />
-              </div>
-            )}
-            
-            {card.notes && showBack && (
-              <div className="mt-4 text-sm text-muted-foreground border-t pt-2 w-full">
-                <span className="font-medium">Notes:</span> {card.notes}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {!showBack ? (
-          <Button 
-            className="w-full mt-4" 
-            onClick={flipCard}
-          >
-            Show Answer
-          </Button>
-        ) : (
-          <div className="grid grid-cols-4 gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              className="border-red-500 hover:bg-red-100 dark:hover:bg-red-950" 
-              onClick={() => markCardResult('again')}
-            >
-              Again
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-950" 
-              onClick={() => markCardResult('hard')}
-            >
-              Hard
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-green-500 hover:bg-green-100 dark:hover:bg-green-950" 
-              onClick={() => markCardResult('good')}
-            >
-              Good
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-950" 
-              onClick={() => markCardResult('easy')}
-            >
-              Easy
-            </Button>
-          </div>
-        )}
-        
-        <div className="flex justify-between mt-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={prevCard}
-            disabled={currentCardIndex === 0}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={nextCard}
-            disabled={currentCardIndex === dueCardIds.length - 1}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      </div>
-    );
+    try {
+      updateFlashcard(editCardId, {
+        italian: editItalian,
+        english: editEnglish,
+      });
+      
+      // Reset edit state
+      setEditCardId(null);
+      setEditItalian('');
+      setEditEnglish('');
+      
+      toast({
+        title: "Flashcard Updated",
+        description: "Successfully updated flashcard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update flashcard",
+        variant: "destructive",
+      });
+    }
   };
   
-  // Render deck list and cards
-  const renderDeckAndCards = () => {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Deck list */}
-        <div className="md:col-span-1">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Your Decks</h2>
-            <Dialog open={isNewDeckDialogOpen} onOpenChange={setIsNewDeckDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-1" /> Add Deck
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Deck</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="deckName">Deck Name</Label>
-                    <Input
-                      id="deckName"
-                      placeholder="Enter deck name"
-                      value={newDeckName}
-                      onChange={(e) => setNewDeckName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="deckDescription">Description</Label>
-                    <Textarea
-                      id="deckDescription"
-                      placeholder="Enter deck description"
-                      value={newDeckDescription}
-                      onChange={(e) => setNewDeckDescription(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="deckLanguage">Primary Language</Label>
-                    <Select value={newDeckLanguage} onValueChange={(value) => setNewDeckLanguage(value as 'english' | 'italian')}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="english">English</SelectItem>
-                        <SelectItem value="italian">Italian</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setIsNewDeckDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleCreateDeck}>Create Deck</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="space-y-2">
-            {decks.length === 0 ? (
-              <div className="text-center p-4 border rounded-md">
-                <p className="text-muted-foreground">No decks yet. Create your first deck to get started!</p>
-              </div>
-            ) : (
-              decks.map(deck => (
-                <div
-                  key={deck.id}
-                  className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                    deck.id === activeDeckId ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
-                  }`}
-                  onClick={() => setActiveDeckId(deck.id)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{deck.name}</h3>
-                      <p className="text-xs text-muted-foreground">{deck.totalCards} cards</p>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      {deck.id === activeDeckId && (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingDeck({...deck});
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Are you sure you want to delete "${deck.name}"?`)) {
-                                deleteDeck(deck.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {deck.language && (
-                      <Badge variant="outline" className="text-xs">
-                        {deck.language}
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      {deck.dueCards} due
-                    </Badge>
-                    {deck.masteredCards > 0 && (
-                      <Badge variant="secondary" className="text-xs text-green-600">
-                        {deck.masteredCards} mastered
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+  // Handle updating a set
+  const handleUpdateSet = () => {
+    if (!editSetId || !editSetName) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a name for the set.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      updateFlashcardSet(editSetId, {
+        name: editSetName,
+        description: editSetDescription,
+      });
+      
+      // Reset edit state
+      setEditSetId(null);
+      setEditSetName('');
+      setEditSetDescription('');
+      
+      toast({
+        title: "Set Updated",
+        description: "Successfully updated flashcard set.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update set",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle starting a study session
+  const handleStartStudy = () => {
+    let cardsToStudy = [...filteredCards];
+    
+    // If review due filter is not active, prioritize cards due for review
+    if (!filterReviewDue) {
+      const dueCards = getDueFlashcards();
+      const dueCardIds = new Set(dueCards.map(card => card.id));
+      
+      // Sort to put due cards first
+      cardsToStudy.sort((a, b) => {
+        const aIsDue = dueCardIds.has(a.id);
+        const bIsDue = dueCardIds.has(b.id);
+        
+        if (aIsDue && !bIsDue) return -1;
+        if (!aIsDue && bIsDue) return 1;
+        return 0;
+      });
+    }
+    
+    // Shuffle if shuffle mode is on
+    if (shuffleMode) {
+      cardsToStudy = cardsToStudy
+        .map(value => ({ value, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ value }) => value);
+    }
+    
+    setStudyCards(cardsToStudy);
+    setCurrentCardIndex(0);
+    setShowAnswer(false);
+    setStudyMode(true);
+  };
+  
+  // Handle next card in study session
+  const handleNextCard = () => {
+    if (currentCardIndex < studyCards.length - 1) {
+      setCurrentCardIndex(prev => prev + 1);
+      setShowAnswer(false);
+    } else {
+      // End of study session
+      toast({
+        title: "Study Session Complete",
+        description: "You've reviewed all cards in this session!",
+      });
+      setStudyMode(false);
+    }
+  };
+  
+  // Handle previous card in study session
+  const handlePrevCard = () => {
+    if (currentCardIndex > 0) {
+      setCurrentCardIndex(prev => prev - 1);
+      setShowAnswer(false);
+    }
+  };
+  
+  // Handle card review
+  const handleReviewCard = (difficulty: 'easy' | 'medium' | 'hard') => {
+    const currentCard = studyCards[currentCardIndex];
+    
+    if (currentCard) {
+      reviewFlashcard(currentCard.id, difficulty);
+      
+      toast({
+        title: "Card Reviewed",
+        description: `Marked as ${difficulty}. Will be shown again at the appropriate interval.`,
+      });
+      
+      handleNextCard();
+    }
+  };
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+  
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredCards.length / CARDS_PER_PAGE);
+  
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <header className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Flashcards</h1>
+          <p className="text-muted-foreground">Create and review flashcards to build your vocabulary</p>
         </div>
         
-        {/* Cards section */}
-        <div className="md:col-span-3">
-          {activeDeck.id ? (
-            <>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold">{activeDeck.name}</h1>
-                  <p className="text-muted-foreground">{activeDeck.description}</p>
+        <div className="flex items-center space-x-4">
+          <ConfidenceIndicator contentType="flashcards" />
+          
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                New Set
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Create New Flashcard Set</SheetTitle>
+                <SheetDescription>
+                  Create a new set to organize your flashcards.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="set-name">Set Name</Label>
+                  <Input
+                    id="set-name"
+                    placeholder="Enter a name for your set"
+                    value={newSetName}
+                    onChange={(e) => setNewSetName(e.target.value)}
+                  />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={startReview}
-                    disabled={activeDeck.dueCards === 0}
+                <div className="space-y-2">
+                  <Label htmlFor="set-description">Description (Optional)</Label>
+                  <Textarea
+                    id="set-description"
+                    placeholder="Enter a description for your set"
+                    value={newSetDescription}
+                    onChange={(e) => setNewSetDescription(e.target.value)}
+                  />
+                </div>
+              </div>
+              <SheetFooter>
+                <Button onClick={handleCreateSet}>Create Set</Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+          
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Import Flashcards</DialogTitle>
+                <DialogDescription>
+                  Import flashcards from CSV, TXT, Anki, or JSON format.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <FlashcardImporter onClose={() => setIsImportOpen(false)} />
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImportOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </header>
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <div className="col-span-1 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Statistics</CardTitle>
+              <CardDescription>Your flashcard progress</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Total Flashcards:</span>
+                  <span className="font-medium">{stats.total}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Mastered:</span>
+                  <span className="font-medium">{stats.mastered}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Due for Review:</span>
+                  <span className="font-medium">{stats.dueToday}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Mastery Progress:</span>
+                  <span className="font-medium">
+                    {stats.total > 0 ? Math.round((stats.mastered / stats.total) * 100) : 0}%
+                  </span>
+                </div>
+                <Progress value={stats.total > 0 ? (stats.mastered / stats.total) * 100 : 0} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Flashcard Sets</CardTitle>
+              <CardDescription>Select a set to view cards</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="space-y-1 max-h-80 overflow-y-auto p-4 pt-0">
+                <div 
+                  className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer ${
+                    selectedSetId === null ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                  }`}
+                  onClick={() => setSelectedSetId(null)}
+                >
+                  <span>All Flashcards</span>
+                  <Badge>{flashcards.length}</Badge>
+                </div>
+                
+                {flashcardSets.map(set => (
+                  <div 
+                    key={set.id}
+                    className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer ${
+                      selectedSetId === set.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setSelectedSetId(set.id)}
                   >
-                    <PlayCircle className="h-4 w-4 mr-1" />
-                    Review Deck
-                  </Button>
-                  <Dialog open={isNewCardDialogOpen} onOpenChange={setIsNewCardDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-1" /> Add Card
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Add New Card</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 mt-4">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label htmlFor="frontLanguage">Front Language</Label>
-                            <Select value={newCardFrontLang} onValueChange={(value) => setNewCardFrontLang(value as 'english' | 'italian')}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Front language" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="english">English</SelectItem>
-                                <SelectItem value="italian">Italian</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="backLanguage">Back Language</Label>
-                            <Select value={newCardBackLang} onValueChange={(value) => setNewCardBackLang(value as 'english' | 'italian')}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Back language" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="english">English</SelectItem>
-                                <SelectItem value="italian">Italian</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex items-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={handleSwapLanguages} 
-                            title="Swap languages"
-                          >
-                            <ArrowLeftRight className="h-4 w-4" />
+                    <span>{set.name}</span>
+                    <div className="flex items-center space-x-2">
+                      <Badge>{set.cards.length}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
-                          {isAIEnabled && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleAutoTranslate}
-                              disabled={!newCardFront}
-                              className="ml-auto"
-                            >
-                              Auto-translate
-                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Set Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            setEditSetId(set.id);
+                            setEditSetName(set.name);
+                            setEditSetDescription(set.description || '');
+                          }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Set
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            if (confirm(`Are you sure you want to delete "${set.name}"? This will not delete the cards in the set.`)) {
+                              deleteFlashcardSet(set.id);
+                            }
+                          }} className="text-destructive">
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete Set
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <SpacedRepetitionInfo className="hidden md:block" />
+        </div>
+        
+        {/* Main Content */}
+        <div className="col-span-1 md:col-span-3">
+          {/* Study Mode */}
+          {studyMode ? (
+            <Card className="max-w-3xl mx-auto">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between">
+                  <CardTitle>Study Session</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setStudyMode(false)}>
+                    <X className="h-4 w-4 mr-1" />
+                    End Session
+                  </Button>
+                </div>
+                <CardDescription>
+                  Card {currentCardIndex + 1} of {studyCards.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {studyCards.length > 0 && currentCardIndex < studyCards.length ? (
+                  <div className="space-y-6">
+                    <div className="relative flex flex-col justify-center items-center p-8 rounded-lg bg-muted min-h-40">
+                      <div className="absolute top-2 right-2">
+                        {studyCards[currentCardIndex].mastered && (
+                          <Badge variant="default">Mastered</Badge>
+                        )}
+                      </div>
+                      
+                      <h3 className="text-2xl font-bold text-center">
+                        <SpeakableWord 
+                          word={studyCards[currentCardIndex].italian} 
+                          language="it"
+                          size="lg"
+                          autoPlay={false}
+                        />
+                      </h3>
+                      
+                      {showAnswer && (
+                        <div className="mt-6 pt-6 border-t border-border w-full text-center">
+                          <p className="text-xl">
+                            <SpeakableWord 
+                              word={studyCards[currentCardIndex].english} 
+                              language="en"
+                            />
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!showAnswer ? (
+                      <Button className="w-full" onClick={() => setShowAnswer(true)}>
+                        Show Answer
+                      </Button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button variant="outline" onClick={() => handleReviewCard('hard')}>
+                            Hard
+                          </Button>
+                          <Button variant="outline" onClick={() => handleReviewCard('medium')}>
+                            Medium
+                          </Button>
+                          <Button variant="outline" onClick={() => handleReviewCard('easy')}>
+                            Easy
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button 
+                            variant="default" 
+                            onClick={() => markAsMastered(studyCards[currentCardIndex].id)}
+                            disabled={studyCards[currentCardIndex].mastered}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark as Mastered
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => {
+                              resetMastered(studyCards[currentCardIndex].id);
+                              toast({
+                                title: "Reset Mastery",
+                                description: "This card has been reset to unmastered status.",
+                              });
+                            }}
+                            disabled={!studyCards[currentCardIndex].mastered}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Reset Mastery
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p>No cards available for study. Create some flashcards or change your filters.</p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={handlePrevCard}
+                  disabled={currentCardIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, studyCards.length) }).map((_, index) => {
+                    const actualIndex = Math.floor(currentCardIndex / 5) * 5 + index;
+                    return (
+                      <div 
+                        key={index}
+                        className={`h-2 w-2 rounded-full ${
+                          actualIndex === currentCardIndex 
+                            ? 'bg-primary' 
+                            : actualIndex < studyCards.length 
+                              ? 'bg-muted-foreground/30' 
+                              : 'bg-transparent'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleNextCard}
+                  disabled={currentCardIndex === studyCards.length - 1}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </CardFooter>
+            </Card>
+          ) : (
+            <Tabs defaultValue="browse">
+              <TabsList className="grid grid-cols-2 w-full max-w-xs mb-4">
+                <TabsTrigger value="browse">Browse</TabsTrigger>
+                <TabsTrigger value="create">Create</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="browse" className="space-y-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                      <CardTitle>
+                        {selectedSetId 
+                          ? flashcardSets.find(s => s.id === selectedSetId)?.name || "Flashcards"
+                          : "All Flashcards"
+                        }
+                      </CardTitle>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button onClick={handleStartStudy} disabled={filteredCards.length === 0}>
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Study Now
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className={shuffleMode ? 'bg-muted' : ''} 
+                          onClick={() => setShuffleMode(!shuffleMode)}
+                        >
+                          <Shuffle className="mr-2 h-4 w-4" />
+                          {shuffleMode ? 'Shuffle On' : 'Shuffle Off'}
+                        </Button>
+                      </div>
+                    </div>
+                    <CardDescription>
+                      {selectedSetId
+                        ? flashcardSets.find(s => s.id === selectedSetId)?.description || "Browse and study your flashcards"
+                        : "Browse and study all your flashcards"
+                      }
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row justify-between gap-4">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search flashcards..."
+                            className="pl-8 w-full md:w-[300px]"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Filter className="h-4 w-4 mr-2" />
+                                Filter
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setFilterMastered('all')}>
+                                {filterMastered === 'all' && '✓ '}All Cards
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setFilterMastered('mastered')}>
+                                {filterMastered === 'mastered' && '✓ '}Mastered Only
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setFilterMastered('unmastered')}>
+                                {filterMastered === 'unmastered' && '✓ '}Unmastered Only
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setFilterReviewDue(!filterReviewDue)}>
+                                {filterReviewDue && '✓ '}Due for Review
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          
+                          <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                            <SelectTrigger className="w-[130px]">
+                              <span className="flex items-center">
+                                <FileText className="h-4 w-4 mr-2" />
+                                Sort by
+                              </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="newest">Newest</SelectItem>
+                              <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                              <SelectItem value="mastery">Mastery/Due</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      {isSearching ? (
+                        <div className="text-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                          <p className="text-sm text-muted-foreground mt-2">Searching flashcards...</p>
+                        </div>
+                      ) : filteredCards.length === 0 ? (
+                        <div className="text-center p-8">
+                          <p>No flashcards found. Try changing your filters or create some new cards.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Showing {Math.min(CARDS_PER_PAGE, filteredCards.length)} of {filteredCards.length} cards
+                          </p>
+                          
+                          <div className="space-y-2">
+                            {paginatedCards.map(card => (
+                              <Card key={card.id} className="relative overflow-hidden">
+                                <div className={`absolute top-0 left-0 w-1 h-full 
+                                  ${card.mastered ? 'bg-green-500' : (!card.nextReviewDate || 
+                                  isBefore(new Date(card.nextReviewDate), new Date())) 
+                                  ? 'bg-amber-500' : 'bg-blue-500'}`}
+                                />
+                                <div className="pl-2 pr-0 py-3">
+                                  <div className="flex justify-between items-start">
+                                    <div className="space-y-1 pl-2">
+                                      <div className="font-medium">
+                                        <SpeakableWord 
+                                          word={card.italian} 
+                                          language="it"
+                                          showTooltip={false}
+                                        />
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        <SpeakableWord 
+                                          word={card.english} 
+                                          language="en"
+                                          showTooltip={false}
+                                        />
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center pr-2">
+                                      {card.mastered && (
+                                        <Badge variant="default" className="mr-2">Mastered</Badge>
+                                      )}
+                                      
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuLabel>Card Actions</DropdownMenuLabel>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem onClick={() => {
+                                            setEditCardId(card.id);
+                                            setEditItalian(card.italian);
+                                            setEditEnglish(card.english);
+                                          }}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit Card
+                                          </DropdownMenuItem>
+                                          {card.mastered ? (
+                                            <DropdownMenuItem onClick={() => resetMastered(card.id)}>
+                                              <X className="mr-2 h-4 w-4" />
+                                              Reset Mastery
+                                            </DropdownMenuItem>
+                                          ) : (
+                                            <DropdownMenuItem onClick={() => markAsMastered(card.id)}>
+                                              <CheckCircle className="mr-2 h-4 w-4" />
+                                              Mark as Mastered
+                                            </DropdownMenuItem>
+                                          )}
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem onClick={() => {
+                                            if (confirm('Are you sure you want to delete this flashcard?')) {
+                                              deleteFlashcard(card.id);
+                                            }
+                                          }} className="text-destructive">
+                                            <Trash className="mr-2 h-4 w-4" />
+                                            Delete Card
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                          
+                          {/* Pagination */}
+                          {totalPages > 1 && (
+                            <div className="flex justify-center mt-4 space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                                disabled={currentPage === 1}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              
+                              <div className="flex items-center space-x-1">
+                                {Array.from({ length: totalPages }).map((_, index) => {
+                                  const pageNumber = index + 1;
+                                  const isInRange = Math.abs(pageNumber - currentPage) <= 1 || 
+                                    pageNumber === 1 || pageNumber === totalPages;
+                                  
+                                  if (!isInRange) {
+                                    // Show ellipsis for breaks in the sequence
+                                    if (pageNumber === 2 || pageNumber === totalPages - 1) {
+                                      return (
+                                        <div key={index} className="px-2">
+                                          &hellip;
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }
+                                  
+                                  return (
+                                    <Button
+                                      key={index}
+                                      variant={currentPage === pageNumber ? 'default' : 'outline'}
+                                      size="sm"
+                                      onClick={() => handlePageChange(pageNumber)}
+                                      className="w-8 h-8 p-0"
+                                    >
+                                      {pageNumber}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                              
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                                disabled={currentPage === totalPages}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
                           )}
                         </div>
-                        <div>
-                          <Label htmlFor="cardFront">Front Side</Label>
-                          <Textarea
-                            id="cardFront"
-                            placeholder={`Enter text in ${newCardFrontLang}`}
-                            value={newCardFront}
-                            onChange={(e) => setNewCardFront(e.target.value)}
-                            className="min-h-[80px]"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cardBack">Back Side</Label>
-                          <Textarea
-                            id="cardBack"
-                            placeholder={`Enter text in ${newCardBackLang}`}
-                            value={newCardBack}
-                            onChange={(e) => setNewCardBack(e.target.value)}
-                            className="min-h-[80px]"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cardNotes">Notes (Optional)</Label>
-                          <Textarea
-                            id="cardNotes"
-                            placeholder="Enter any additional notes"
-                            value={newCardNotes}
-                            onChange={(e) => setNewCardNotes(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cardTags">Tags (comma separated)</Label>
-                          <Input
-                            id="cardTags"
-                            placeholder="grammar, basics, food, etc."
-                            value={newCardTags}
-                            onChange={(e) => setNewCardTags(e.target.value)}
-                          />
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsNewCardDialogOpen(false)}>Cancel</Button>
-                          <Button onClick={handleCreateCard}>Add Card</Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  
-                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Upload className="h-4 w-4 mr-1" />
-                        Import
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Import Cards</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 mt-4">
-                        <p className="text-sm text-muted-foreground">
-                          Paste CSV content below. Format: Front,Back,Notes,Tags
-                        </p>
-                        <Textarea
-                          placeholder="Front,Back,Notes,Tags
-Hello,Ciao,,greeting;basic
-Thank you,Grazie,,courtesy"
-                          className="min-h-[200px] font-mono text-sm"
-                          value={importContent}
-                          onChange={(e) => setImportContent(e.target.value)}
-                        />
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancel</Button>
-                          <Button onClick={handleImport} disabled={isLoading}>
-                            {isLoading ? (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                                Importing...
-                              </>
-                            ) : (
-                              'Import Cards'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  
-                  <Button variant="outline" size="sm" onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-1" />
-                    Export
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      if (confirm('Reset progress for all cards in this deck?')) {
-                        resetProgress(activeDeckId);
-                      }
-                    }}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Reset Progress
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Deck stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card>
-                  <CardHeader className="py-4">
-                    <CardTitle className="text-sm font-medium flex items-center">
-                      <Book className="mr-2 h-4 w-4" />
-                      Total Cards
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-bold">{activeDeck.totalCards}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="py-4">
-                    <CardTitle className="text-sm font-medium flex items-center">
-                      <ListChecks className="mr-2 h-4 w-4" />
-                      Due for Review
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-bold">{activeDeck.dueCards}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="py-4">
-                    <CardTitle className="text-sm font-medium flex items-center">
-                      <Check className="mr-2 h-4 w-4" />
-                      Mastered
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-bold">{activeDeck.masteredCards}</p>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-              <Tabs defaultValue="all">
-                <TabsList>
-                  <TabsTrigger value="all">All Cards ({activeDeck.totalCards})</TabsTrigger>
-                  <TabsTrigger value="due">Due ({activeDeck.dueCards})</TabsTrigger>
-                  <TabsTrigger value="mastered">Mastered ({activeDeck.masteredCards})</TabsTrigger>
-                </TabsList>
-                <TabsContent value="all" className="mt-4">
-                  {activeDeck.cards.length === 0 ? (
-                    <div className="text-center p-8 border rounded-md">
-                      <p className="text-muted-foreground">No cards in this deck yet. Add your first card to get started!</p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeDeck.cards.map((card) => (
-                        <Card key={card.id} className={card.isMastered ? 'border-green-200 dark:border-green-800' : ''}>
-                          <div className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center space-x-2">
-                                <Badge variant="outline">
-                                  {card.frontLanguage}
-                                </Badge>
-                                {card.tags.map((tag) => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                              <div className="flex space-x-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => toggleCardMastery(activeDeckId, card.id)}
-                                  title={card.isMastered ? "Mark as not mastered" : "Mark as mastered"}
-                                >
-                                  <Bookmark className={`h-4 w-4 ${card.isMastered ? 'fill-green-500 text-green-500' : ''}`} />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => setEditingCard({...card})}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={() => {
-                                    if (confirm('Delete this card?')) {
-                                      deleteCard(activeDeckId, card.id);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                              <div>
-                                <p className="text-xs uppercase text-muted-foreground mb-1">Front</p>
-                                <p className="font-medium">{card.front}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs uppercase text-muted-foreground mb-1">Back</p>
-                                <p className="font-medium">{card.back}</p>
-                                <div className="mt-2">
-                                  <FlashcardPronunciation 
-                                    text={card.back} 
-                                    language={card.backLanguage === 'italian' ? 'it-IT' : 'en-US'} 
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {card.notes && (
-                              <div className="mt-4 border-t pt-2">
-                                <p className="text-xs uppercase text-muted-foreground mb-1">Notes</p>
-                                <p className="text-sm">{card.notes}</p>
-                              </div>
-                            )}
-                            
-                            <div className="mt-4">
-                              <SpacedRepetitionInfo card={card} compact />
-                            </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="create" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Create New Flashcard</CardTitle>
+                    <CardDescription>
+                      Add a new flashcard to your collection
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="italian">Italian</Label>
+                        <Input
+                          id="italian"
+                          placeholder="Enter Italian word or phrase"
+                          value={italian}
+                          onChange={(e) => setItalian(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <Label htmlFor="english">English</Label>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">Auto-translate</span>
+                            <Switch 
+                              checked={autoTranslate} 
+                              onCheckedChange={setAutoTranslate} 
+                              disabled={!isAIEnabled}
+                            />
                           </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="due" className="mt-4">
-                  {activeDeck.cards.filter(card => !card.isMastered && (!card.dueDate || isBefore(new Date(), card.dueDate))).length === 0 ? (
-                    <div className="text-center p-8 border rounded-md">
-                      <p className="text-muted-foreground">No cards due for review. Great job!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeDeck.cards
-                        .filter(card => !card.isMastered && (!card.dueDate || isBefore(new Date(), card.dueDate)))
-                        .map((card) => (
-                          <Card key={card.id}>
-                            <div className="p-4">
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="outline">
-                                    {card.frontLanguage}
-                                  </Badge>
-                                  {card.tags.map((tag) => (
-                                    <Badge key={tag} variant="secondary" className="text-xs">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                                <div className="flex space-x-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={() => toggleCardMastery(activeDeckId, card.id)}
-                                    title="Mark as mastered"
-                                  >
-                                    <Bookmark className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <div>
-                                  <p className="text-xs uppercase text-muted-foreground mb-1">Front</p>
-                                  <p className="font-medium">{card.front}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs uppercase text-muted-foreground mb-1">Back</p>
-                                  <p className="font-medium">{card.back}</p>
-                                  <div className="mt-2">
-                                    <FlashcardPronunciation 
-                                      text={card.back} 
-                                      language={card.backLanguage === 'italian' ? 'it-IT' : 'en-US'} 
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="mt-4">
-                                <SpacedRepetitionInfo card={card} compact />
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="mastered" className="mt-4">
-                  {activeDeck.cards.filter(card => card.isMastered).length === 0 ? (
-                    <div className="text-center p-8 border rounded-md">
-                      <p className="text-muted-foreground">No cards have been mastered yet. Keep studying!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeDeck.cards
-                        .filter(card => card.isMastered)
-                        .map((card) => (
-                          <Card key={card.id} className="border-green-200 dark:border-green-800">
-                            <div className="p-4">
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="outline">
-                                    {card.frontLanguage}
-                                  </Badge>
-                                  {card.tags.map((tag) => (
-                                    <Badge key={tag} variant="secondary" className="text-xs">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                                <div className="flex space-x-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={() => toggleCardMastery(activeDeckId, card.id)}
-                                    title="Mark as not mastered"
-                                  >
-                                    <Bookmark className="h-4 w-4 fill-green-500 text-green-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <div>
-                                  <p className="text-xs uppercase text-muted-foreground mb-1">Front</p>
-                                  <p className="font-medium">{card.front}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs uppercase text-muted-foreground mb-1">Back</p>
-                                  <p className="font-medium">{card.back}</p>
-                                  <div className="mt-2">
-                                    <FlashcardPronunciation 
-                                      text={card.back} 
-                                      language={card.backLanguage === 'italian' ? 'it-IT' : 'en-US'} 
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="mt-4">
-                                <SpacedRepetitionInfo card={card} compact />
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-              
-              {/* Edit card dialog */}
-              {editingCard && (
-                <Dialog open={!!editingCard} onOpenChange={(open) => !open && setEditingCard(null)}>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Edit Card</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="editFrontLanguage">Front Language</Label>
-                          <Select 
-                            value={editingCard.frontLanguage} 
-                            onValueChange={(value) => setEditingCard({...editingCard, frontLanguage: value as 'english' | 'italian'})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Front language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="italian">Italian</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </div>
-                        <div>
-                          <Label htmlFor="editBackLanguage">Back Language</Label>
-                          <Select 
-                            value={editingCard.backLanguage} 
-                            onValueChange={(value) => setEditingCard({...editingCard, backLanguage: value as 'english' | 'italian'})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Back language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="italian">Italian</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="relative">
+                          <Input
+                            id="english"
+                            placeholder="Enter English translation"
+                            value={english}
+                            onChange={(e) => setEnglish(e.target.value)}
+                            disabled={isTranslating2}
+                          />
+                          {isTranslating2 && (
+                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div>
-                        <Label htmlFor="editCardFront">Front Side</Label>
-                        <Textarea
-                          id="editCardFront"
-                          placeholder={`Enter text in ${editingCard.frontLanguage}`}
-                          value={editingCard.front}
-                          onChange={(e) => setEditingCard({...editingCard, front: e.target.value})}
-                          className="min-h-[80px]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editCardBack">Back Side</Label>
-                        <Textarea
-                          id="editCardBack"
-                          placeholder={`Enter text in ${editingCard.backLanguage}`}
-                          value={editingCard.back}
-                          onChange={(e) => setEditingCard({...editingCard, back: e.target.value})}
-                          className="min-h-[80px]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editCardNotes">Notes (Optional)</Label>
-                        <Textarea
-                          id="editCardNotes"
-                          placeholder="Enter any additional notes"
-                          value={editingCard.notes || ''}
-                          onChange={(e) => setEditingCard({...editingCard, notes: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editCardTags">Tags (comma separated)</Label>
-                        <Input
-                          id="editCardTags"
-                          placeholder="grammar, basics, food, etc."
-                          value={editingCard.tags.join(', ')}
-                          onChange={(e) => setEditingCard({
-                            ...editingCard, 
-                            tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                          })}
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="editCardMastered"
-                          checked={editingCard.isMastered}
-                          onCheckedChange={(checked) => setEditingCard({...editingCard, isMastered: checked})}
-                        />
-                        <Label htmlFor="editCardMastered">Mark as mastered</Label>
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={() => setEditingCard(null)}>Cancel</Button>
-                        <Button onClick={handleUpdateCard}>
-                          <Save className="h-4 w-4 mr-1" />
-                          Save Changes
-                        </Button>
-                      </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-              
-              {/* Edit deck dialog */}
-              {editingDeck && (
-                <Dialog open={!!editingDeck} onOpenChange={(open) => !open && setEditingDeck(null)}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Edit Deck</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div>
-                        <Label htmlFor="editDeckName">Deck Name</Label>
-                        <Input
-                          id="editDeckName"
-                          value={editingDeck.name}
-                          onChange={(e) => setEditingDeck({...editingDeck, name: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editDeckDescription">Description</Label>
-                        <Textarea
-                          id="editDeckDescription"
-                          value={editingDeck.description}
-                          onChange={(e) => setEditingDeck({...editingDeck, description: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editDeckLanguage">Primary Language</Label>
-                        <Select 
-                          value={editingDeck.language} 
-                          onValueChange={(value) => setEditingDeck({...editingDeck, language: value as 'english' | 'italian'})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select language" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="english">English</SelectItem>
-                            <SelectItem value="italian">Italian</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="editDeckTags">Tags (comma separated)</Label>
-                        <Input
-                          id="editDeckTags"
-                          value={editingDeck.tags.join(', ')}
-                          onChange={(e) => setEditingDeck({
-                            ...editingDeck, 
-                            tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                          })}
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={() => setEditingDeck(null)}>Cancel</Button>
-                        <Button onClick={handleUpdateDeck}>
-                          <Save className="h-4 w-4 mr-1" />
-                          Save Changes
-                        </Button>
-                      </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="set">Add to Set</Label>
+                      <Select value={selectedSetId || ''} onValueChange={(value) => setSelectedSetId(value || null)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a set (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No Set</SelectItem>
+                          {flashcardSets.map(set => (
+                            <SelectItem key={set.id} value={set.id}>
+                              {set.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </>
-          ) : (
-            <div className="text-center p-8 border rounded-md">
-              <p className="text-muted-foreground">Select a deck or create a new one to get started.</p>
-            </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={handleCreateFlashcard}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Flashcard
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <SpacedRepetitionInfo className="md:hidden" />
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </div>
-    );
-  };
-  
-  return (
-    <div className="container mx-auto py-8">
-      {isReviewing ? renderReviewCard() : renderDeckAndCards()}
+      
+      {/* Edit Flashcard Dialog */}
+      <Dialog open={!!editCardId} onOpenChange={(open) => !open && setEditCardId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Flashcard</DialogTitle>
+            <DialogDescription>
+              Make changes to your flashcard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-italian">Italian</Label>
+              <Input
+                id="edit-italian"
+                value={editItalian}
+                onChange={(e) => setEditItalian(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-english">English</Label>
+              <Input
+                id="edit-english"
+                value={editEnglish}
+                onChange={(e) => setEditEnglish(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCardId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateFlashcard}>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Set Dialog */}
+      <Dialog open={!!editSetId} onOpenChange={(open) => !open && setEditSetId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Flashcard Set</DialogTitle>
+            <DialogDescription>
+              Make changes to your flashcard set.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-set-name">Set Name</Label>
+              <Input
+                id="edit-set-name"
+                value={editSetName}
+                onChange={(e) => setEditSetName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-set-description">Description (Optional)</Label>
+              <Textarea
+                id="edit-set-description"
+                value={editSetDescription}
+                onChange={(e) => setEditSetDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSetId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateSet}>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default Flashcards;
+export default FlashcardsPage;

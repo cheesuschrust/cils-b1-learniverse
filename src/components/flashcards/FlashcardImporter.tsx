@@ -1,296 +1,445 @@
 
 import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { useFlashcards } from '@/hooks/useFlashcards';
-import { Upload, FileType, Loader2 } from 'lucide-react';
-
-type ImportFormat = 'csv' | 'txt' | 'json' | 'anki';
+import { useFlashcards, ImportOptions, ImportResult } from '@/hooks/useFlashcards';
+import { Check, FileDown, FileUp, Upload, X } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface FlashcardImporterProps {
-  onSuccess?: () => void;
-  onCancel?: () => void;
+  onClose?: () => void;
 }
 
-export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
-  onSuccess,
-  onCancel
-}) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [format, setFormat] = useState<ImportFormat>('csv');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<any[] | null>(null);
-  
+export const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ onClose }) => {
+  const { importFlashcards, exportFlashcards, flashcardSets } = useFlashcards();
   const { toast } = useToast();
-  const { importFlashcards } = useFlashcards();
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
-    setPreviewData(null);
+  // Import state
+  const [importFormat, setImportFormat] = useState<'csv' | 'txt' | 'json' | 'anki'>('csv');
+  const [fileContent, setFileContent] = useState('');
+  const [selectedSetName, setSelectedSetName] = useState('');
+  const [separator, setSeparator] = useState(',');
+  const [hasHeader, setHasHeader] = useState(true);
+  const [italianColumn, setItalianColumn] = useState(0);
+  const [englishColumn, setEnglishColumn] = useState(1);
+  const [importLoading, setImportLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Export state
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [exportSetId, setExportSetId] = useState<string | null>(null);
+  const [exportContent, setExportContent] = useState('');
+  
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setErrorMessage(null);
     
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    const selectedFile = files[0];
-    
-    // Check file type
-    const fileExt = selectedFile.name.split('.').pop()?.toLowerCase();
-    if (!fileExt) {
-      setError('Unable to determine file type');
+    if (acceptedFiles.length === 0) {
+      setErrorMessage('No valid files selected.');
       return;
     }
     
-    // Auto-detect format based on extension
-    if (['csv', 'txt', 'json'].includes(fileExt)) {
-      setFormat(fileExt as ImportFormat);
-    } else if (fileExt === 'apkg') {
-      setFormat('anki');
-    } else {
-      setError(`Unsupported file format: .${fileExt}. Please use CSV, TXT, JSON, or APKG files.`);
-      return;
-    }
-    
-    setFile(selectedFile);
-    
-    // Generate preview
-    generatePreview(selectedFile, fileExt as ImportFormat);
-  };
-  
-  const generatePreview = (file: File, format: ImportFormat) => {
+    const file = acceptedFiles[0];
     const reader = new FileReader();
     
     reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string;
-        
-        if (!content) {
-          setError('Failed to read file content');
-          return;
+      const content = e.target?.result as string;
+      setFileContent(content);
+      
+      // Try to detect format from file extension
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension === 'csv') {
+        setImportFormat('csv');
+        setSeparator(',');
+      } else if (extension === 'txt') {
+        setImportFormat('txt');
+        setSeparator('\t');
+      } else if (extension === 'json') {
+        setImportFormat('json');
+      } else if (extension === 'apkg' || extension === 'anki') {
+        setImportFormat('anki');
+      }
+      
+      // Try to detect if file has a header for CSV
+      if (extension === 'csv') {
+        const firstLine = content.split('\n')[0].toLowerCase();
+        if (firstLine.includes('italian') || firstLine.includes('english') ||
+            firstLine.includes('term') || firstLine.includes('definition')) {
+          setHasHeader(true);
+        } else {
+          setHasHeader(false);
         }
-        
-        let previewItems = [];
-        
-        if (format === 'csv') {
-          // Parse CSV (simple implementation)
-          const lines = content.split('\n');
-          if (lines.length > 0) {
-            const headers = lines[0].split(',');
-            
-            // Take first 5 items for preview
-            for (let i = 1; i < Math.min(lines.length, 6); i++) {
-              const values = lines[i].split(',');
-              if (values.length >= 2) {
-                previewItems.push({
-                  front: values[0].trim().replace(/^"|"$/g, ''),
-                  back: values[1].trim().replace(/^"|"$/g, '')
-                });
-              }
-            }
-          }
-        } else if (format === 'json') {
-          try {
-            const parsed = JSON.parse(content);
-            if (Array.isArray(parsed)) {
-              previewItems = parsed.slice(0, 5).map(item => ({
-                front: item.front || item.term || item.question || '',
-                back: item.back || item.definition || item.answer || ''
-              }));
-            }
-          } catch (jsonError) {
-            setError('Invalid JSON format');
-            return;
-          }
-        } else if (format === 'txt') {
-          // Assume tab or line separated
-          const lines = content.split('\n');
-          for (let i = 0; i < Math.min(lines.length, 5); i++) {
-            const line = lines[i];
-            const parts = line.includes('\t') ? line.split('\t') : [line, ''];
-            if (parts.length >= 1) {
-              previewItems.push({
-                front: parts[0].trim(),
-                back: parts.length > 1 ? parts[1].trim() : ''
-              });
-            }
-          }
-        } else if (format === 'anki') {
-          setError('Anki import preview is not available. Please import the file to see the flashcards.');
-          return;
-        }
-        
-        setPreviewData(previewItems);
-      } catch (error) {
-        console.error('Error generating preview:', error);
-        setError('Failed to parse file');
       }
     };
     
     reader.onerror = () => {
-      setError('Error reading file');
+      setErrorMessage('Error reading file.');
     };
     
-    if (format === 'anki') {
-      // Anki files are binary and need special handling
-      setError('Preview not available for Anki files');
-    } else {
-      reader.readAsText(file);
+    reader.readAsText(file);
+  }, []);
+  
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop,
+    accept: {
+      'text/csv': ['.csv'],
+      'text/plain': ['.txt'],
+      'application/json': ['.json'],
+      'application/octet-stream': ['.anki', '.apkg']
     }
-  };
+  });
   
   const handleImport = async () => {
-    if (!file) {
-      setError('Please select a file to import');
+    if (!fileContent) {
+      toast({
+        title: "No Content",
+        description: "Please upload or paste content to import.",
+        variant: "destructive"
+      });
       return;
     }
     
-    setIsLoading(true);
-    setError(null);
+    setImportLoading(true);
+    setProgress(0);
+    setErrorMessage(null);
     
     try {
-      // Read file content
-      const content = await readFileContent(file);
+      // Animate progress
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          const next = prev + (100 - prev) * 0.1;
+          return Math.min(next, 95); // Cap at 95% until complete
+        });
+      }, 100);
       
-      // Import flashcards
-      const importedCount = await importFlashcards(content, format);
+      const options: ImportOptions = {
+        format: importFormat,
+        separator,
+        hasHeader,
+        italianColumn,
+        englishColumn,
+        setName: selectedSetName || undefined
+      };
       
-      toast({
-        title: "Import Successful",
-        description: `Successfully imported ${importedCount} flashcards.`,
-      });
+      const result = await importFlashcards(fileContent, options);
       
-      if (onSuccess) {
-        onSuccess();
+      clearInterval(progressInterval);
+      setProgress(100);
+      setImportResult(result);
+      
+      if (result.imported > 0) {
+        toast({
+          title: "Import Successful",
+          description: `Successfully imported ${result.imported} flashcards.`
+        });
       }
-    } catch (err) {
-      console.error('Import error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to import flashcards');
       
+      if (result.failed > 0) {
+        toast({
+          title: "Some Cards Failed",
+          description: `${result.failed} cards could not be imported.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      clearInterval(progress);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to import flashcards');
       toast({
         title: "Import Failed",
-        description: err instanceof Error ? err.message : 'Failed to import flashcards',
-        variant: "destructive",
+        description: error instanceof Error ? error.message : 'Failed to import flashcards',
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setImportLoading(false);
     }
   };
   
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+  const handleExport = () => {
+    try {
+      const content = exportFlashcards(exportSetId === '' ? undefined : exportSetId, exportFormat);
+      setExportContent(content);
       
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (content) {
-          resolve(content);
-        } else {
-          reject(new Error('Failed to read file content'));
-        }
-      };
+      // Create download link
+      const blob = new Blob([content], { type: exportFormat === 'csv' ? 'text/csv' : 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flashcards.${exportFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
-      reader.onerror = () => {
-        reject(new Error('Error reading file'));
-      };
-      
-      reader.readAsText(file);
-    });
+      toast({
+        title: "Export Successful",
+        description: `Flashcards exported as ${exportFormat.toUpperCase()}.`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : 'Failed to export flashcards',
+        variant: "destructive"
+      });
+    }
   };
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Import Flashcards</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2">
-          <Label htmlFor="file">Select File</Label>
-          <Input
-            id="file"
-            type="file"
-            accept=".csv,.txt,.json,.apkg"
-            onChange={handleFileChange}
-            disabled={isLoading}
-          />
-          <p className="text-xs text-muted-foreground">
-            Supported formats: CSV, TXT, JSON, Anki (.apkg)
-          </p>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="format">File Format</Label>
-          <Select
-            value={format}
-            onValueChange={(value) => setFormat(value as ImportFormat)}
-            disabled={isLoading}
-          >
-            <SelectTrigger id="format">
-              <SelectValue placeholder="Select format" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="csv">CSV (front,back)</SelectItem>
-              <SelectItem value="txt">Text (tab or line separated)</SelectItem>
-              <SelectItem value="json">JSON</SelectItem>
-              <SelectItem value="anki">Anki (.apkg)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {previewData && previewData.length > 0 && (
-          <div className="space-y-2">
-            <Label>Preview</Label>
-            <div className="rounded-md border p-2 text-sm max-h-40 overflow-y-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left font-medium text-muted-foreground">Front</th>
-                    <th className="text-left font-medium text-muted-foreground">Back</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.map((item, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
-                      <td className="py-1 px-2">{item.front}</td>
-                      <td className="py-1 px-2">{item.back}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    <Tabs defaultValue="import" className="w-full">
+      <TabsList className="grid grid-cols-2 w-60 mb-4">
+        <TabsTrigger value="import">Import</TabsTrigger>
+        <TabsTrigger value="export">Export</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="import" className="space-y-4">
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div 
+              {...getRootProps()} 
+              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-lg font-medium">Drag & drop a file here</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Supported formats: CSV, TXT, JSON, Anki
+              </p>
+              <Button variant="outline" className="mt-4">
+                Select File
+              </Button>
             </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
-          Cancel
-        </Button>
-        <Button onClick={handleImport} disabled={!file || isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Importing...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Import Flashcards
-            </>
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-2">
+                <Label>Format</Label>
+                <Select value={importFormat} onValueChange={(value) => setImportFormat(value as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="csv">CSV (Comma Separated Values)</SelectItem>
+                    <SelectItem value="txt">TXT (Tab/Custom Separated)</SelectItem>
+                    <SelectItem value="json">JSON (JavaScript Object Notation)</SelectItem>
+                    <SelectItem value="anki">Anki Export (.txt)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {(importFormat === 'csv' || importFormat === 'txt') && (
+                <>
+                  <div className="flex flex-col space-y-2">
+                    <Label>Separator</Label>
+                    <RadioGroup value={separator} onValueChange={setSeparator} className="flex space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="," id="separator-comma" />
+                        <Label htmlFor="separator-comma">Comma (,)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="\t" id="separator-tab" />
+                        <Label htmlFor="separator-tab">Tab</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value=";" id="separator-semicolon" />
+                        <Label htmlFor="separator-semicolon">Semicolon (;)</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  
+                  {importFormat === 'csv' && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="has-header"
+                        checked={hasHeader}
+                        onChange={(e) => setHasHeader(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <Label htmlFor="has-header">First row is header</Label>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-2">
+                      <Label>Italian Column</Label>
+                      <Select 
+                        value={italianColumn.toString()} 
+                        onValueChange={(value) => setItalianColumn(parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">First Column (0)</SelectItem>
+                          <SelectItem value="1">Second Column (1)</SelectItem>
+                          <SelectItem value="2">Third Column (2)</SelectItem>
+                          <SelectItem value="3">Fourth Column (3)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <Label>English Column</Label>
+                      <Select 
+                        value={englishColumn.toString()} 
+                        onValueChange={(value) => setEnglishColumn(parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">First Column (0)</SelectItem>
+                          <SelectItem value="1">Second Column (1)</SelectItem>
+                          <SelectItem value="2">Third Column (2)</SelectItem>
+                          <SelectItem value="3">Fourth Column (3)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              <div className="flex flex-col space-y-2">
+                <Label>Save to Set (Optional)</Label>
+                <Input 
+                  placeholder="Create a new set or leave empty"
+                  value={selectedSetName}
+                  onChange={(e) => setSelectedSetName(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex flex-col space-y-2">
+                <Label>Preview</Label>
+                <Textarea 
+                  placeholder="Paste content here or upload a file"
+                  value={fileContent}
+                  onChange={(e) => setFileContent(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                />
+              </div>
+              
+              {errorMessage && (
+                <Alert variant="destructive">
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+              
+              {importLoading && (
+                <div className="space-y-2">
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-sm text-center text-muted-foreground">
+                    {progress < 100 ? 'Processing...' : 'Complete!'}
+                  </p>
+                </div>
+              )}
+              
+              {importResult && (
+                <div className="space-y-2 border rounded-md p-4 bg-muted/50">
+                  <div className="flex items-center space-x-2">
+                    {importResult.imported > 0 ? (
+                      <Check className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <X className="h-5 w-5 text-red-500" />
+                    )}
+                    <h3 className="text-lg font-medium">Import Results</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div>
+                      <p className="text-sm font-medium">Cards Imported:</p>
+                      <p className="text-2xl font-bold text-green-600">{importResult.imported}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Cards Failed:</p>
+                      <p className="text-2xl font-bold text-red-600">{importResult.failed}</p>
+                    </div>
+                  </div>
+                  
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium">Errors:</p>
+                      <ul className="text-sm text-red-600 ml-5 list-disc">
+                        {importResult.errors.slice(0, 5).map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                        {importResult.errors.length > 5 && (
+                          <li>...and {importResult.errors.length - 5} more errors</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleImport} 
+                  disabled={!fileContent || importLoading}
+                >
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Import Flashcards
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      
+      <TabsContent value="export" className="space-y-4">
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-2">
+                <Label>Format</Label>
+                <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="csv">CSV (Comma Separated Values)</SelectItem>
+                    <SelectItem value="json">JSON (JavaScript Object Notation)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex flex-col space-y-2">
+                <Label>Export From</Label>
+                <Select 
+                  value={exportSetId === null ? '' : exportSetId} 
+                  onValueChange={setExportSetId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a set or all cards" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Flashcards</SelectItem>
+                    {flashcardSets.map(set => (
+                      <SelectItem key={set.id} value={set.id}>
+                        {set.name} ({set.cards.length} cards)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button onClick={handleExport}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export Flashcards
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 };
-
-export default FlashcardImporter;

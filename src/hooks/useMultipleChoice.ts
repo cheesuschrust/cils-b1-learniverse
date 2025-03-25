@@ -1,397 +1,294 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { useLocalStorage } from './useLocalStorage';
+import { useToast } from '@/components/ui/use-toast';
+import { MultipleChoiceQuestion, QuestionSet, QuizAttempt, QuizStats } from '@/types/question';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { v4 as uuidv4 } from 'uuid';
-import { MultipleChoiceQuestion, QuestionSet, QuizAttempt } from '@/types/question.d';
-import { useToast } from '@/components/ui/use-toast';
 
-// Mock data for question sets
-const mockQuestionSets: QuestionSet[] = [
-  {
-    id: "set1",
-    title: "Basic Italian Greetings",
-    description: "Test your knowledge of common Italian greetings and phrases",
-    questions: [
-      {
-        id: "q1",
-        question: "What is the Italian word for 'hello'?",
-        options: ['Ciao', 'Grazie', 'Arrivederci', 'Scusa'],
-        correctAnswer: 'Ciao',
-        explanation: 'Ciao is an informal greeting in Italian, similar to "hi" or "hello" in English.',
-        difficulty: 'Beginner',
-        category: 'Greetings',
-        language: 'english'
-      },
-      {
-        id: "q2",
-        question: "Which of these is the correct translation of 'good morning' in Italian?",
-        options: ['Buongiorno', 'Buonasera', 'Buonanotte', 'Ciao'],
-        correctAnswer: 'Buongiorno',
-        explanation: 'Buongiorno literally means "good day" and is used as "good morning" in Italian.',
-        difficulty: 'Beginner',
-        category: 'Greetings',
-        language: 'english'
-      },
-      {
-        id: "q3",
-        question: "What is the Italian word for 'goodbye'?",
-        options: ['Arrivederci', 'Grazie', 'Prego', 'Scusa'],
-        correctAnswer: 'Arrivederci',
-        explanation: 'Arrivederci is a formal way to say goodbye in Italian.',
-        difficulty: 'Beginner',
-        category: 'Greetings',
-        language: 'english'
-      },
-      {
-        id: "q4",
-        question: "Which of these means 'please' in Italian?",
-        options: ['Prego', 'Grazie', 'Scusa', 'Ciao'],
-        correctAnswer: 'Prego',
-        explanation: 'Prego can mean "please", "you\'re welcome", or "after you" depending on context.',
-        difficulty: 'Beginner',
-        category: 'Common Phrases',
-        language: 'english'
-      },
-      {
-        id: "q5",
-        question: "What is the Italian word for 'thank you'?",
-        options: ['Grazie', 'Prego', 'Scusa', 'Per favore'],
-        correctAnswer: 'Grazie',
-        explanation: 'Grazie is the Italian word for "thank you".',
-        difficulty: 'Beginner',
-        category: 'Common Phrases',
-        language: 'english'
-      }
-    ],
-    category: 'Basics',
-    difficulty: 'Beginner',
-    language: 'english',
-    createdAt: new Date('2023-01-15'),
-    updatedAt: new Date('2023-01-15')
-  },
-  {
-    id: "set2",
-    title: "Italian Numbers 1-10",
-    description: "Learn to count from 1 to 10 in Italian",
-    questions: [
-      {
-        id: "q6",
-        question: "What is the Italian word for 'one'?",
-        options: ['Uno', 'Due', 'Tre', 'Quattro'],
-        correctAnswer: 'Uno',
-        explanation: 'Uno is the Italian word for "one".',
-        difficulty: 'Beginner',
-        category: 'Numbers',
-        language: 'english'
-      },
-      {
-        id: "q7",
-        question: "What is the Italian word for 'five'?",
-        options: ['Cinque', 'Sei', 'Sette', 'Otto'],
-        correctAnswer: 'Cinque',
-        explanation: 'Cinque is the Italian word for "five".',
-        difficulty: 'Beginner',
-        category: 'Numbers',
-        language: 'english'
-      },
-      {
-        id: "q8",
-        question: "What is the Italian word for 'ten'?",
-        options: ['Dieci', 'Nove', 'Otto', 'Sette'],
-        correctAnswer: 'Dieci',
-        explanation: 'Dieci is the Italian word for "ten".',
-        difficulty: 'Beginner',
-        category: 'Numbers',
-        language: 'english'
-      }
-    ],
-    category: 'Numbers',
-    difficulty: 'Beginner',
-    language: 'english',
-    createdAt: new Date('2023-02-10'),
-    updatedAt: new Date('2023-02-12')
-  },
-  {
-    id: "set3",
-    title: "Italian Food and Dining",
-    description: "Learn essential vocabulary for ordering food in Italian",
-    questions: [
-      {
-        id: "q9",
-        question: "What does 'il ristorante' mean?",
-        options: ['The restaurant', 'The menu', 'The waiter', 'The bill'],
-        correctAnswer: 'The restaurant',
-        explanation: 'Il ristorante is the Italian word for "the restaurant".',
-        difficulty: 'Intermediate',
-        category: 'Food',
-        language: 'english'
-      },
-      {
-        id: "q10",
-        question: "What is 'pasta' in Italian?",
-        options: ['Pasta', 'Pane', 'Pizza', 'Pesce'],
-        correctAnswer: 'Pasta',
-        explanation: 'Pasta in Italian is the same as in English, though the pronunciation differs slightly.',
-        difficulty: 'Beginner',
-        category: 'Food',
-        language: 'english'
-      },
-      {
-        id: "q11",
-        question: "How would you ask for the bill in Italian?",
-        options: ['Il conto, per favore', 'Il menu, per favore', 'Buon appetito', 'Mi scusi'],
-        correctAnswer: 'Il conto, per favore',
-        explanation: '"Il conto, per favore" means "The bill, please" in Italian.',
-        difficulty: 'Intermediate',
-        category: 'Restaurant Phrases',
-        language: 'english'
-      }
-    ],
-    category: 'Food',
-    difficulty: 'Intermediate',
-    language: 'english',
-    createdAt: new Date('2023-03-20'),
-    updatedAt: new Date('2023-03-25')
-  }
-];
-
-// Mock data for quiz attempts
-const mockAttempts: QuizAttempt[] = [
-  {
-    id: "attempt1",
-    userId: "user123",
-    questionSetId: "set1",
-    score: 4,
-    totalQuestions: 5,
-    completedAt: new Date('2023-05-10'),
-    timeSpent: 120 // in seconds
-  },
-  {
-    id: "attempt2",
-    userId: "user123",
-    questionSetId: "set2",
-    score: 3,
-    totalQuestions: 3,
-    completedAt: new Date('2023-05-15'),
-    timeSpent: 90 // in seconds
-  }
-];
-
-export const useMultipleChoice = () => {
-  const [availableSets, setAvailableSets] = useState<QuestionSet[]>(mockQuestionSets);
-  const [currentSet, setCurrentSet] = useState<QuestionSet | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>('');
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [correctAnswers, setCorrectAnswers] = useState<number>(0);
-  const [incorrectAnswers, setIncorrectAnswers] = useState<number>(0);
-  const [attempts, setAttempts] = useState<QuizAttempt[]>(mockAttempts);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [showExplanation, setShowExplanation] = useState<boolean>(false);
-  const [quizFinished, setQuizFinished] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const { toast } = useToast();
-  const { language, difficulty, preferredLanguage } = useUserPreferences();
-  const { isAIEnabled } = useAIUtils();
-
-  const currentQuestion = currentSet && currentSet.questions[currentQuestionIndex];
-
-  // Start a quiz from a specific question set
-  const startQuiz = useCallback((setId: string) => {
-    const selectedSet = availableSets.find(set => set.id === setId);
-    if (selectedSet) {
-      setCurrentSet(selectedSet);
-      setCurrentQuestionIndex(0);
-      setCorrectAnswers(0);
-      setIncorrectAnswers(0);
-      setQuizFinished(false);
-      setIsSubmitted(false);
-      setSelectedOption('');
-      setShowExplanation(false);
-    } else {
-      toast({
-        title: "Error",
-        description: `Question set with ID ${setId} not found.`,
-        variant: "destructive"
-      });
-    }
-  }, [availableSets, toast]);
-
-  // Handle selection of an option
-  const handleOptionSelect = useCallback((option: string) => {
-    if (!isSubmitted) {
-      setSelectedOption(option);
-    }
-  }, [isSubmitted]);
-
-  // Submit an answer
-  const handleSubmit = useCallback(() => {
-    if (!selectedOption || isSubmitted || !currentQuestion) return;
-
-    setIsSubmitted(true);
-
-    if (selectedOption === currentQuestion.correctAnswer) {
-      setCorrectAnswers(prev => prev + 1);
-      toast({
-        title: "Correct!",
-        description: "Well done!",
-        variant: "default"
-      });
-    } else {
-      setIncorrectAnswers(prev => prev + 1);
-      toast({
-        title: "Incorrect",
-        description: `The correct answer is: ${currentQuestion.correctAnswer}`,
-        variant: "destructive"
-      });
-    }
-  }, [selectedOption, isSubmitted, currentQuestion, toast]);
-
-  // Move to the next question
-  const handleNext = useCallback(() => {
-    if (!currentSet) return;
-
-    if (currentQuestionIndex < currentSet.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setIsSubmitted(false);
-      setSelectedOption('');
-      setShowExplanation(false);
-    } else {
-      // Quiz finished
-      setQuizFinished(true);
-
-      // Save the attempt
-      const newAttempt: QuizAttempt = {
-        id: uuidv4(),
-        userId: "user123", // This would come from authentication in a real app
-        questionSetId: currentSet.id,
-        score: correctAnswers,
-        totalQuestions: currentSet.questions.length,
-        completedAt: new Date(),
-        timeSpent: 0 // Would track actual time in a real app
-      };
-
-      setAttempts(prev => [...prev, newAttempt]);
-    }
-  }, [currentSet, currentQuestionIndex, correctAnswers]);
-
-  // Toggle explanation visibility
-  const toggleExplanation = useCallback(() => {
-    setShowExplanation(prev => !prev);
-  }, []);
-
-  // Restart the current quiz
-  const restartQuiz = useCallback(() => {
-    if (currentSet) {
-      startQuiz(currentSet.id);
-    }
-  }, [currentSet, startQuiz]);
-
-  // Generate questions using AI (for the default implementation without AI)
-  const generateQuestions = useCallback(async (topic: string, count: number = 5) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      if (!isAIEnabled) {
-        throw new Error('AI features are disabled. Enable them in settings to generate questions.');
-      }
-      
-      // In a real app, this would call an AI service to generate questions
-      // For now, we'll simulate a delay and return mock questions
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Filter mock questions based on language preference
-      const filteredSets = mockQuestionSets.filter(set => {
-        if (preferredLanguage === 'english') return set.language === 'english';
-        if (preferredLanguage === 'italian') return set.language === 'italian';
-        return true; // 'both'
-      });
-      
-      if (filteredSets.length > 0) {
-        const randomIndex = Math.floor(Math.random() * filteredSets.length);
-        startQuiz(filteredSets[randomIndex].id);
-        toast({
-          title: "Questions Generated",
-          description: `Generated ${filteredSets[randomIndex].questions.length} questions about ${filteredSets[randomIndex].title}`,
-        });
-      } else {
-        throw new Error(`No question sets available for language: ${preferredLanguage}`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to generate questions';
-      setError(message);
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isAIEnabled, preferredLanguage, startQuiz, toast]);
-
-  // Get current progress information
-  const progress = {
-    current: currentQuestionIndex + 1,
-    total: currentSet?.questions.length || 0,
-    percentage: currentSet?.questions.length ? 
-      ((currentQuestionIndex + 1) / currentSet.questions.length) * 100 : 0
+export interface UseMultipleChoiceReturn {
+  questionSets: QuestionSet[];
+  saveQuestionSet: (set: QuestionSet) => void;
+  deleteQuestionSet: (id: string) => void;
+  updateQuestionSet: (id: string, updates: Partial<QuestionSet>) => void;
+  getQuestionSetById: (id: string) => QuestionSet | undefined;
+  
+  quizAttempts: QuizAttempt[];
+  saveQuizAttempt: (attempt: QuizAttempt) => void;
+  deleteQuizAttempt: (id: string) => void;
+  
+  getQuizStats: () => QuizStats;
+  getQuestionSetStats: (setId: string) => {
+    attempts: number;
+    bestScore: number;
+    averageScore: number;
+    lastAttempt?: Date;
   };
+}
 
-  // Check if the quiz is complete
-  const isComplete = quizFinished;
-
-  // Get current question
-  const getCurrentQuestion = useCallback(() => {
-    return currentSet?.questions[currentQuestionIndex];
-  }, [currentSet, currentQuestionIndex]);
-
-  // Get quiz results
-  const getResults = useCallback(() => {
-    if (!currentSet) return null;
+export const useMultipleChoice = (): UseMultipleChoiceReturn => {
+  const { toast } = useToast();
+  const { isAIEnabled } = useAIUtils();
+  
+  // State for question sets and quiz attempts
+  const [questionSets, setQuestionSets] = useLocalStorage<QuestionSet[]>('question-sets', []);
+  const [quizAttempts, setQuizAttempts] = useLocalStorage<QuizAttempt[]>('quiz-attempts', []);
+  
+  // Save a question set
+  const saveQuestionSet = useCallback((set: QuestionSet) => {
+    const newSet = {
+      ...set,
+      id: set.id || uuidv4(),
+      createdAt: set.createdAt || new Date(),
+      updatedAt: new Date()
+    };
+    
+    setQuestionSets(prev => {
+      const existing = prev.findIndex(s => s.id === newSet.id);
+      if (existing >= 0) {
+        // Update existing set
+        const updated = [...prev];
+        updated[existing] = newSet;
+        return updated;
+      } else {
+        // Add new set
+        return [...prev, newSet];
+      }
+    });
+    
+    toast({
+      title: "Question Set Saved",
+      description: `Successfully saved "${set.title}"`,
+    });
+    
+    return newSet;
+  }, [setQuestionSets, toast]);
+  
+  // Delete a question set
+  const deleteQuestionSet = useCallback((id: string) => {
+    setQuestionSets(prev => prev.filter(set => set.id !== id));
+    
+    toast({
+      title: "Question Set Deleted",
+      description: "The question set has been deleted.",
+    });
+  }, [setQuestionSets, toast]);
+  
+  // Update a question set
+  const updateQuestionSet = useCallback((id: string, updates: Partial<QuestionSet>) => {
+    setQuestionSets(prev => prev.map(set => 
+      set.id === id
+        ? { ...set, ...updates, updatedAt: new Date() }
+        : set
+    ));
+  }, [setQuestionSets]);
+  
+  // Get a question set by ID
+  const getQuestionSetById = useCallback((id: string) => {
+    return questionSets.find(set => set.id === id);
+  }, [questionSets]);
+  
+  // Save a quiz attempt
+  const saveQuizAttempt = useCallback((attempt: QuizAttempt) => {
+    const newAttempt = {
+      ...attempt,
+      id: attempt.id || uuidv4(),
+      completedAt: attempt.completedAt || new Date()
+    };
+    
+    setQuizAttempts(prev => [...prev, newAttempt]);
+    
+    toast({
+      title: "Quiz Attempt Saved",
+      description: `Your score: ${attempt.score} out of ${attempt.totalQuestions}`,
+    });
+    
+    return newAttempt;
+  }, [setQuizAttempts, toast]);
+  
+  // Delete a quiz attempt
+  const deleteQuizAttempt = useCallback((id: string) => {
+    setQuizAttempts(prev => prev.filter(attempt => attempt.id !== id));
+    
+    toast({
+      title: "Quiz Attempt Deleted",
+      description: "The quiz attempt has been deleted.",
+    });
+  }, [setQuizAttempts, toast]);
+  
+  // Calculate quiz statistics
+  const getQuizStats = useCallback((): QuizStats => {
+    if (quizAttempts.length === 0) {
+      return {
+        totalAttempts: 0,
+        averageScore: 0,
+        bestScore: 0,
+        totalTimeSpent: 0,
+        questionSets: []
+      };
+    }
+    
+    // Total attempts
+    const totalAttempts = quizAttempts.length;
+    
+    // Calculate average score (as a decimal from 0-1)
+    const totalScorePercentage = quizAttempts.reduce((acc, attempt) => {
+      return acc + (attempt.score / attempt.totalQuestions);
+    }, 0);
+    const averageScore = totalScorePercentage / totalAttempts;
+    
+    // Best score (as a decimal from 0-1)
+    const bestScore = Math.max(...quizAttempts.map(attempt => attempt.score / attempt.totalQuestions));
+    
+    // Total time spent in seconds
+    const totalTimeSpent = quizAttempts.reduce((acc, attempt) => acc + (attempt.timeSpent || 0), 0);
+    
+    // Group attempts by question set and calculate stats
+    const setStats: Record<string, { 
+      attempts: number;
+      bestScore: number;
+      averageScore: number;
+      title: string;
+    }> = {};
+    
+    quizAttempts.forEach(attempt => {
+      const set = questionSets.find(s => s.id === attempt.questionSetId);
+      
+      if (set) {
+        if (!setStats[set.id]) {
+          setStats[set.id] = {
+            attempts: 0,
+            bestScore: 0,
+            averageScore: 0,
+            title: set.title
+          };
+        }
+        
+        const stats = setStats[set.id];
+        stats.attempts += 1;
+        stats.bestScore = Math.max(stats.bestScore, attempt.score / attempt.totalQuestions);
+        stats.averageScore += attempt.score / attempt.totalQuestions;
+      }
+    });
+    
+    // Calculate averages for each set
+    Object.values(setStats).forEach(stats => {
+      stats.averageScore /= stats.attempts;
+    });
+    
+    // Format data for return
+    const questionSetStats = Object.entries(setStats).map(([id, stats]) => ({
+      id,
+      title: stats.title,
+      attempts: stats.attempts,
+      bestScore: stats.bestScore
+    }));
     
     return {
-      totalQuestions: currentSet.questions.length,
-      correctAnswers: correctAnswers,
-      incorrectAnswers: incorrectAnswers,
-      score: (correctAnswers / currentSet.questions.length) * 100,
-      setPassed: (correctAnswers / currentSet.questions.length) >= 0.7 // 70% pass threshold
+      totalAttempts,
+      averageScore,
+      bestScore,
+      totalTimeSpent,
+      questionSets: questionSetStats
     };
-  }, [currentSet, correctAnswers, incorrectAnswers]);
-
+  }, [quizAttempts, questionSets]);
+  
+  // Get statistics for a specific question set
+  const getQuestionSetStats = useCallback((setId: string) => {
+    const setAttempts = quizAttempts.filter(attempt => attempt.questionSetId === setId);
+    
+    if (setAttempts.length === 0) {
+      return {
+        attempts: 0,
+        bestScore: 0,
+        averageScore: 0
+      };
+    }
+    
+    const attempts = setAttempts.length;
+    
+    const bestScore = Math.max(...setAttempts.map(attempt => attempt.score / attempt.totalQuestions));
+    
+    const totalScorePercentage = setAttempts.reduce((acc, attempt) => {
+      return acc + (attempt.score / attempt.totalQuestions);
+    }, 0);
+    
+    const averageScore = totalScorePercentage / attempts;
+    
+    const lastAttempt = new Date(Math.max(...setAttempts.map(a => new Date(a.completedAt).getTime())));
+    
+    return {
+      attempts,
+      bestScore,
+      averageScore,
+      lastAttempt
+    };
+  }, [quizAttempts]);
+  
+  // Initialize with sample data if needed
+  useEffect(() => {
+    if (questionSets.length === 0) {
+      // Create a sample question set
+      const sampleSet: QuestionSet = {
+        id: uuidv4(),
+        title: "Italian Basics",
+        description: "Basic vocabulary and common phrases",
+        questions: [
+          {
+            id: uuidv4(),
+            question: "How do you say 'hello' in Italian?",
+            options: ["Ciao", "Grazie", "Arrivederci", "Prego"],
+            correctAnswer: "Ciao",
+            explanation: "'Ciao' means 'hello' or 'goodbye' in Italian.",
+            difficulty: "Beginner",
+            category: "Greetings",
+            language: "english"
+          },
+          {
+            id: uuidv4(),
+            question: "How do you say 'thank you' in Italian?",
+            options: ["Ciao", "Grazie", "Arrivederci", "Prego"],
+            correctAnswer: "Grazie",
+            explanation: "'Grazie' means 'thank you' in Italian.",
+            difficulty: "Beginner",
+            category: "Greetings",
+            language: "english"
+          },
+          {
+            id: uuidv4(),
+            question: "How do you say 'goodbye' in Italian?",
+            options: ["Ciao", "Grazie", "Arrivederci", "Prego"],
+            correctAnswer: "Arrivederci",
+            explanation: "'Arrivederci' means 'goodbye' in Italian. 'Ciao' can also be used for 'goodbye' in informal situations.",
+            difficulty: "Beginner",
+            category: "Greetings",
+            language: "english"
+          }
+        ],
+        category: "Vocabulary",
+        difficulty: "Beginner",
+        language: "english",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      saveQuestionSet(sampleSet);
+    }
+  }, [questionSets.length, saveQuestionSet]);
+  
   return {
-    questions: currentSet?.questions || [],
-    currentQuestionIndex,
-    userAnswers: [], // We're using selectedOption instead
-    isLoading,
-    error,
-    generateQuestions,
-    submitAnswer: handleSubmit,
-    getCurrentQuestion,
-    getResults,
-    reset: restartQuiz,
-    progress,
-    isComplete,
-    // Additional properties needed by the MultipleChoice.tsx component
-    availableSets,
-    currentSet,
-    selectedOption,
-    isSubmitted,
-    correctAnswers,
-    incorrectAnswers,
-    quizFinished,
-    showExplanation,
-    attempts,
-    startQuiz,
-    handleOptionSelect,
-    handleSubmit,
-    handleNext,
-    restartQuiz,
-    toggleExplanation,
-    currentQuestion
+    questionSets,
+    saveQuestionSet,
+    deleteQuestionSet,
+    updateQuestionSet,
+    getQuestionSetById,
+    
+    quizAttempts,
+    saveQuizAttempt,
+    deleteQuizAttempt,
+    
+    getQuizStats,
+    getQuestionSetStats
   };
 };
 

@@ -479,6 +479,15 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     return femaleVoice || matchingVoices[0];
   }, [availableVoices]);
+
+  // Define cancelSpeech before it's used
+  const cancelSpeech = useCallback(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    setSpeechSynthesis(null);
+  }, []);
   
   const speakText = useCallback(async (text: string, language: string = 'it-IT'): Promise<void> => {
     if (!isAIEnabled) {
@@ -543,14 +552,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
   }, [isAIEnabled, toast, getVoiceForLanguage, cancelSpeech]);
-  
-  const cancelSpeech = useCallback(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeaking(false);
-    setSpeechSynthesis(null);
-  }, []);
   
   // Get confidence level category based on score
   const getConfidenceLevel = useCallback((contentType: ContentType): 'low' | 'medium' | 'high' => {
