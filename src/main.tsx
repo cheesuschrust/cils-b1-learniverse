@@ -54,6 +54,7 @@ import AIManagement from '@/pages/admin/AIManagement';
 import ChatbotManagement from '@/pages/admin/ChatbotManagement';
 import AdManagement from '@/pages/admin/AdManagement';
 import AdminAnalyticsDashboard from '@/pages/admin/AdminAnalyticsDashboard';
+import InstitutionalLicensing from '@/pages/admin/InstitutionalLicensing';
 
 // Protected routes
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -132,6 +133,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                         <Route path="chatbot-management" element={<ChatbotManagement />} />
                         <Route path="ad-management" element={<AdManagement />} />
                         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
+                        <Route path="institutional-licensing" element={<InstitutionalLicensing />} />
                       </Route>
                     </Routes>
                   </BrowserRouter>

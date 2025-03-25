@@ -67,3 +67,13 @@ export interface DateRange {
   from: Date;
   to: Date;
 }
+
+export type LineChartProps = {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors: string[];
+  valueFormatter: (value: number) => string;
+  className?: string;
+  yAxisWidth?: number;
+};

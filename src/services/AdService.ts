@@ -1,296 +1,409 @@
-import { v4 as uuid } from 'uuid';
 
-import { AdSettings, Advertisement, AdNetwork, AdStatus, AdPerformance, AdCampaign } from '@/types/advertisement';
+import { v4 as uuidv4 } from 'uuid';
+import { 
+  Advertisement, 
+  AdCampaign, 
+  AdSettings, 
+  AdNetwork, 
+  AdStatus, 
+  AdFormat,
+  AdPosition,
+  AdSize,
+  AdServiceInterface
+} from '@/types/advertisement';
 
-interface UserInfo {
-  userId?: string;
-  preferences?: {
-    interests?: string[];
-    location?: string;
-    age?: number;
-  };
-}
-
-class AdService {
+class AdService implements AdServiceInterface {
   private static instance: AdService;
+  private ads: Advertisement[] = [];
+  private campaigns: AdCampaign[] = [];
   private settings: AdSettings = {
     enableAds: true,
     defaultNetwork: 'internal',
     frequencyCap: 5,
     showToPremiumUsers: false,
-    refreshInterval: 60, // in seconds
-    blockList: ['adult', 'gambling', 'politics'],
-    networks: ['internal', 'google', 'facebook'] // Custom property for settings
+    refreshInterval: 60,
+    blockList: []
   };
-  private ads: Advertisement[] = [];
-  private campaigns: AdCampaign[] = [];
-
+  
   private constructor() {
-    // Private constructor to prevent direct instantiation
+    // Private constructor for singleton pattern
+    this.loadFromStorage();
   }
-
+  
   public static getInstance(): AdService {
     if (!AdService.instance) {
       AdService.instance = new AdService();
     }
     return AdService.instance;
   }
-
+  
+  private loadFromStorage(): void {
+    try {
+      const storedAds = localStorage.getItem('ads');
+      const storedCampaigns = localStorage.getItem('adCampaigns');
+      const storedSettings = localStorage.getItem('adSettings');
+      
+      if (storedAds) {
+        this.ads = JSON.parse(storedAds);
+      }
+      
+      if (storedCampaigns) {
+        this.campaigns = JSON.parse(storedCampaigns);
+      }
+      
+      if (storedSettings) {
+        this.settings = JSON.parse(storedSettings);
+      }
+    } catch (error) {
+      console.error('Error loading ad data from storage:', error);
+    }
+  }
+  
+  private saveToStorage(): void {
+    try {
+      localStorage.setItem('ads', JSON.stringify(this.ads));
+      localStorage.setItem('adCampaigns', JSON.stringify(this.campaigns));
+      localStorage.setItem('adSettings', JSON.stringify(this.settings));
+    } catch (error) {
+      console.error('Error saving ad data to storage:', error);
+    }
+  }
+  
+  // Ad Methods
+  public getAds(): Advertisement[] {
+    return this.ads;
+  }
+  
+  public getAllAdvertisements(): Advertisement[] {
+    return this.ads;
+  }
+  
+  public getAd(id: string): Advertisement | null {
+    return this.ads.find(ad => ad.id === id) || null;
+  }
+  
+  public getAdvertisement(id: string): Advertisement | null {
+    return this.getAd(id);
+  }
+  
+  public createAd(ad: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): Advertisement {
+    const now = new Date();
+    const newAd: Advertisement = {
+      ...ad,
+      id: uuidv4(),
+      performance: {
+        impressions: 0,
+        clicks: 0,
+        ctr: 0,
+        revenue: 0
+      },
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.ads.push(newAd);
+    this.saveToStorage();
+    return newAd;
+  }
+  
+  public updateAd(id: string, ad: Partial<Advertisement>): Advertisement | null {
+    const index = this.ads.findIndex(a => a.id === id);
+    if (index === -1) return null;
+    
+    this.ads[index] = {
+      ...this.ads[index],
+      ...ad,
+      updatedAt: new Date()
+    };
+    
+    this.saveToStorage();
+    return this.ads[index];
+  }
+  
+  public updateAdvertisement(id: string, ad: Partial<Advertisement>): Advertisement | null {
+    return this.updateAd(id, ad);
+  }
+  
+  public deleteAd(id: string): boolean {
+    const initialLength = this.ads.length;
+    this.ads = this.ads.filter(a => a.id !== id);
+    const success = this.ads.length < initialLength;
+    
+    if (success) {
+      this.saveToStorage();
+    }
+    
+    return success;
+  }
+  
+  public deleteAdvertisement(id: string): boolean {
+    return this.deleteAd(id);
+  }
+  
+  // Campaign Methods
+  public getCampaigns(): AdCampaign[] {
+    return this.campaigns;
+  }
+  
+  public getAllCampaigns(): AdCampaign[] {
+    return this.campaigns;
+  }
+  
+  public getCampaign(id: string): AdCampaign | null {
+    return this.campaigns.find(c => c.id === id) || null;
+  }
+  
+  public createCampaign(campaign: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): AdCampaign {
+    const now = new Date();
+    const newCampaign: AdCampaign = {
+      ...campaign,
+      id: uuidv4(),
+      performance: {
+        impressions: 0,
+        clicks: 0,
+        ctr: 0,
+        revenue: 0
+      },
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.campaigns.push(newCampaign);
+    this.saveToStorage();
+    return newCampaign;
+  }
+  
+  public updateCampaign(id: string, campaign: Partial<AdCampaign>): AdCampaign | null {
+    const index = this.campaigns.findIndex(c => c.id === id);
+    if (index === -1) return null;
+    
+    this.campaigns[index] = {
+      ...this.campaigns[index],
+      ...campaign,
+      updatedAt: new Date()
+    };
+    
+    this.saveToStorage();
+    return this.campaigns[index];
+  }
+  
+  public deleteCampaign(id: string): boolean {
+    const initialLength = this.campaigns.length;
+    this.campaigns = this.campaigns.filter(c => c.id !== id);
+    const success = this.campaigns.length < initialLength;
+    
+    if (success) {
+      this.saveToStorage();
+    }
+    
+    return success;
+  }
+  
+  // Settings Methods
   public getSettings(): AdSettings {
     return this.settings;
   }
-
-  public updateSettings(newSettings: Partial<AdSettings>): AdSettings {
-    this.settings = { ...this.settings, ...newSettings };
+  
+  public getAdSettings(): AdSettings {
     return this.settings;
   }
-
-  public getAdById(id: string): Advertisement | undefined {
-    return this.ads.find(ad => ad.id === id);
-  }
-
-  public createAd(adData: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): Advertisement {
-    const newAd: Advertisement = {
-      id: uuid(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      performance: { impressions: 0, clicks: 0, ctr: 0, revenue: 0 },
-      ...adData
+  
+  public updateSettings(settings: Partial<AdSettings>): AdSettings {
+    this.settings = {
+      ...this.settings,
+      ...settings
     };
-    this.ads.push(newAd);
-    return newAd;
-  }
-
-  public updateAd(id: string, adData: Partial<Advertisement>): Advertisement | undefined {
-    const adIndex = this.ads.findIndex(ad => ad.id === id);
-    if (adIndex === -1) {
-      return undefined;
-    }
-
-    this.ads[adIndex] = { ...this.ads[adIndex], ...adData, updatedAt: new Date() };
-    return this.ads[adIndex];
-  }
-
-  public deleteAd(id: string): boolean {
-    const adIndex = this.ads.findIndex(ad => ad.id === id);
-    if (adIndex === -1) {
-      return false;
-    }
-
-    this.ads.splice(adIndex, 1);
-    return true;
-  }
-
-  public getAds(options?: { limit?: number, offset?: number, status?: AdStatus }): Advertisement[] {
-    let filteredAds = this.ads;
-
-    if (options?.status) {
-      filteredAds = filteredAds.filter(ad => ad.status === options.status);
-    }
-
-    if (options?.offset) {
-      filteredAds = filteredAds.slice(options.offset);
-    }
-
-    if (options?.limit) {
-      filteredAds = filteredAds.slice(0, options.limit);
-    }
-
-    return filteredAds;
-  }
-
-  public getAdsForUser(userInfo?: UserInfo): Advertisement[] {
-    if (!this.settings.enableAds) {
-      return [];
-    }
-
-    let relevantAds = this.getRelevantAds(userInfo);
-
-    // Frequency capping - simplified version
-    if (this.settings.frequencyCap > 0 && userInfo?.userId) {
-      relevantAds = relevantAds.slice(0, this.settings.frequencyCap);
-    }
-
-    return relevantAds;
-  }
-
-  // Update ad targeting to match expected type format
-  private getRelevantAds(userInfo?: { userId?: string, preferences?: any }): Advertisement[] {
-    return this.ads.filter(ad => {
-      // Basic filter - only active ads
-      if (ad.status !== 'active') return false;
-      
-      // Date filter
-      const now = new Date();
-      if (now < ad.startDate) return false;
-      if (ad.endDate && now > ad.endDate) return false;
-      
-      // Optional targeting filters
-      if (userInfo && ad.targeting) {
-        // Check user type targeting
-        if (ad.targeting.userTypes && ad.targeting.userTypes.length > 0) {
-          if (!userInfo.userId) return false;
-          // In a real app, we would check the user type from user data
-        }
-      }
-      
-      return true;
-    });
-  }
-
-  public recordImpression(adId: string): void {
-    const ad = this.ads.find(ad => ad.id === adId);
-    if (ad && ad.performance) {
-      ad.performance.impressions = (ad.performance.impressions || 0) + 1;
-    }
-  }
-
-  public recordClick(adId: string): void {
-    const ad = this.ads.find(ad => ad.id === adId);
-    if (ad && ad.performance) {
-      ad.performance.clicks = (ad.performance.clicks || 0) + 1;
-      ad.performance.ctr = (ad.performance.clicks || 0) / (ad.performance.impressions || 1) * 100;
-    }
-  }
-
-  public getCampaignById(id: string): AdCampaign | undefined {
-    return this.campaigns.find(campaign => campaign.id === id);
-  }
-
-  public createCampaign(campaignData: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): AdCampaign {
-    const newCampaign: AdCampaign = {
-      id: uuid(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      performance: { impressions: 0, clicks: 0, ctr: 0, revenue: 0 },
-      ads: [],
-      ...campaignData
-    };
-    this.campaigns.push(newCampaign);
-    return newCampaign;
-  }
-
-  public updateCampaign(id: string, campaignData: Partial<AdCampaign>): AdCampaign | undefined {
-    const campaignIndex = this.campaigns.findIndex(campaign => campaign.id === id);
-    if (campaignIndex === -1) {
-      return undefined;
-    }
-
-    this.campaigns[campaignIndex] = { ...this.campaigns[campaignIndex], ...campaignData, updatedAt: new Date() };
-    return this.campaigns[campaignIndex];
-  }
-
-  public deleteCampaign(id: string): boolean {
-    const campaignIndex = this.campaigns.findIndex(campaign => campaign.id === id);
-    if (campaignIndex === -1) {
-      return false;
-    }
-
-    this.campaigns.splice(campaignIndex, 1);
-    return true;
-  }
-
-  public getCampaigns(options?: { limit?: number, offset?: number, status?: AdStatus }): AdCampaign[] {
-    let filteredCampaigns = this.campaigns;
-
-    if (options?.status) {
-      filteredCampaigns = filteredCampaigns.filter(campaign => campaign.status === options.status);
-    }
-
-    if (options?.offset) {
-      filteredCampaigns = filteredCampaigns.slice(options.offset);
-    }
-
-    if (options?.limit) {
-      filteredCampaigns = filteredCampaigns.slice(0, options.limit);
-    }
-
-    return filteredCampaigns;
+    
+    this.saveToStorage();
+    return this.settings;
   }
   
-  // Initialize sample ads
-  public initializeSampleData(): void {
-    // Sample ad campaigns
-    this.campaigns = Array(5).fill(null).map((_, i) => ({
-      id: `campaign-${i + 1}`,
-      name: `Campaign ${i + 1}`,
-      description: `Description for campaign ${i + 1}`,
-      status: ['active', 'active', 'paused', 'active', 'draft'][i] as AdStatus,
-      budget: {
-        total: 1000 * (i + 1),
-        spent: 250 * i,
-        daily: 100,
-        currency: 'USD' // Custom property
-      },
-      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
-      endDate: i === 4 ? undefined : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * (i + 1)),
-      ads: [],
-      targeting: {
-        userTypes: i % 2 === 0 ? ['premium', 'basic'] : undefined,
-        countries: i % 3 === 0 ? ['US', 'UK', 'IT'] : undefined
-      },
-      performance: {
-        impressions: 10000 * (i + 1),
-        clicks: 500 * (i + 1),
-        ctr: 5,
-        revenue: 750 * (i + 1),
-        cost: 500 * (i + 1),
-        roi: 50,
-        conversions: 50 * (i + 1) // Custom property
-      },
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2)
-    }));
+  public updateAdSettings(settings: Partial<AdSettings>): AdSettings {
+    return this.updateSettings(settings);
+  }
+  
+  // Analytics Methods
+  public trackImpression(adId: string): void {
+    const ad = this.getAd(adId);
+    if (!ad) return;
     
-    this.ads = Array(10).fill(null).map((_, i) => ({
-      id: `ad-${i + 1}`,
-      name: `Ad ${i + 1}`,
-      description: `Description for ad ${i + 1}`,
-      format: ['banner', 'native', 'video', 'popup', 'banner', 'native', 'video', 'popup', 'banner', 'native'][i % 10] as AdFormat,
-      position: ['top', 'bottom', 'inline', 'sidebar', 'top', 'bottom', 'inline', 'sidebar', 'top', 'bottom'][i % 10] as AdPosition,
-      size: ['small', 'medium', 'large', 'custom', 'small', 'medium', 'large', 'custom', 'small', 'medium'][i % 10] as AdSize,
-      content: {
-        title: `Learn Italian - Ad ${i + 1}`,
-        description: 'Start speaking Italian today!',
-        imageUrl: 'https://via.placeholder.com/300x250',
-        buttonText: 'Learn More',
-        linkUrl: 'https://www.example.com/italian'
-      },
-      targeting: {
-        userTypes: i % 2 === 0 ? ['premium', 'basic'] : undefined,
-        countries: i % 3 === 0 ? ['US', 'UK', 'IT'] : undefined,
-        languages: i % 4 === 0 ? ['en', 'it'] : undefined
-      },
-      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-      endDate: i === 5 ? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30) : undefined,
-      status: ['active', 'paused', 'draft', 'active', 'active', 'paused', 'draft', 'active', 'active', 'paused'][i % 10] as AdStatus,
-      network: ['internal', 'google', 'facebook', 'custom', 'internal', 'google', 'facebook', 'custom', 'internal', 'google'][i % 10] as AdNetwork,
-      campaignId: this.campaigns[i % this.campaigns.length].id,
-      performance: {
-        impressions: 5000 * (i + 1),
-        clicks: 250 * (i + 1),
-        ctr: 5,
-        revenue: 375 * (i + 1),
-        cost: 250 * (i + 1),
-        roi: 50,
-        conversions: 25 * (i + 1)
-      },
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-      updatedAt: new Date(),
-      scheduling: {
-        dayOfWeek: ['Monday', 'Wednesday', 'Friday'],
-        timeOfDay: ['9:00', '12:00', '15:00'],
-        frequency: 'daily'
-      }
-    }));
-
-    // Assign ads to campaigns
-    this.campaigns.forEach(campaign => {
-      campaign.ads = this.ads
-        .filter(ad => ad.campaignId === campaign.id)
-        .map(ad => ad.id);
-    });
+    const updatedPerformance = {
+      ...ad.performance,
+      impressions: (ad.performance?.impressions || 0) + 1
+    };
+    
+    // Calculate CTR
+    if (updatedPerformance.clicks > 0) {
+      updatedPerformance.ctr = (updatedPerformance.clicks / updatedPerformance.impressions) * 100;
+    }
+    
+    this.updateAd(adId, { performance: updatedPerformance });
+  }
+  
+  public trackClick(adId: string): void {
+    const ad = this.getAd(adId);
+    if (!ad) return;
+    
+    const updatedPerformance = {
+      ...ad.performance,
+      clicks: (ad.performance?.clicks || 0) + 1
+    };
+    
+    // Calculate CTR
+    updatedPerformance.ctr = (updatedPerformance.clicks / updatedPerformance.impressions) * 100;
+    
+    this.updateAd(adId, { performance: updatedPerformance });
+  }
+  
+  // Utility Methods
+  public getAdFormats(): AdFormat[] {
+    return ['banner', 'native', 'interstitial', 'video', 'popup'];
+  }
+  
+  public getAdPositions(): AdPosition[] {
+    return ['top', 'bottom', 'inline', 'sidebar', 'modal'];
+  }
+  
+  public getAdSizes(): AdSize[] {
+    return ['small', 'medium', 'large', 'custom'];
+  }
+  
+  // Sample Data
+  public initializeSampleData(): void {
+    // Only initialize if no ads exist
+    if (this.ads.length === 0) {
+      const now = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 3);
+      
+      // Create a sample campaign
+      const sampleCampaign: AdCampaign = {
+        id: uuidv4(),
+        name: 'Sample Language Learning Campaign',
+        description: 'Campaign targeting language learners',
+        status: 'active',
+        budget: {
+          total: 5000,
+          spent: 750,
+          daily: 50
+        },
+        startDate: now,
+        endDate: endDate,
+        ads: [],
+        targeting: {
+          userTypes: ['free', 'basic'],
+          languages: ['english', 'italian']
+        },
+        performance: {
+          impressions: 10000,
+          clicks: 250,
+          ctr: 2.5,
+          revenue: 500
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      this.campaigns.push(sampleCampaign);
+      
+      // Create sample ads
+      const sampleAds: Advertisement[] = [
+        {
+          id: uuidv4(),
+          name: 'Premium Subscription Promo',
+          description: 'Banner ad promoting premium subscription',
+          format: 'banner',
+          position: 'top',
+          size: 'medium',
+          content: {
+            title: 'Upgrade to Premium',
+            description: 'Get unlimited access to all language learning content',
+            imageUrl: '/images/premium-banner.jpg',
+            buttonText: 'Upgrade Now',
+            linkUrl: '/subscription'
+          },
+          startDate: now,
+          endDate: endDate,
+          status: 'active',
+          network: 'internal',
+          campaignId: sampleCampaign.id,
+          performance: {
+            impressions: 5000,
+            clicks: 120,
+            ctr: 2.4,
+            revenue: 240
+          },
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: uuidv4(),
+          name: 'New Italian Course',
+          description: 'Sidebar ad for new Italian course',
+          format: 'native',
+          position: 'sidebar',
+          size: 'small',
+          content: {
+            title: 'Learn Italian in 30 Days',
+            description: 'Our new accelerated Italian course for beginners',
+            imageUrl: '/images/italian-course.jpg',
+            buttonText: 'Start Learning',
+            linkUrl: '/courses/italian-beginner'
+          },
+          startDate: now,
+          endDate: endDate,
+          status: 'active',
+          network: 'internal',
+          campaignId: sampleCampaign.id,
+          performance: {
+            impressions: 3000,
+            clicks: 90,
+            ctr: 3.0,
+            revenue: 180
+          },
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: uuidv4(),
+          name: 'Premium Plan Comparison',
+          description: 'Comparing different premium plans',
+          format: 'interstitial',
+          position: 'modal',
+          size: 'large',
+          content: {
+            title: 'Choose the Right Plan',
+            description: 'Compare our premium plans and choose what works for you',
+            imageUrl: '/images/plans-comparison.jpg',
+            buttonText: 'View Plans',
+            linkUrl: '/plans'
+          },
+          startDate: now,
+          endDate: endDate,
+          status: 'paused',
+          network: 'internal',
+          campaignId: sampleCampaign.id,
+          performance: {
+            impressions: 2000,
+            clicks: 40,
+            ctr: 2.0,
+            revenue: 80
+          },
+          createdAt: now,
+          updatedAt: now
+        }
+      ];
+      
+      this.ads = sampleAds;
+      
+      // Update campaign with ad IDs
+      sampleCampaign.ads = sampleAds.map(ad => ad.id);
+      
+      this.saveToStorage();
+    }
   }
 }
 
-export default AdService.getInstance();
+// Create and export the singleton instance
+const adServiceInstance = AdService.getInstance();
+export default adServiceInstance;

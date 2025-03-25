@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ImportFormat, ImportOptions, ImportResult, Flashcard, FlashcardSet } from '@/types/flashcard';
+import { ImportFormat, ImportOptions, ImportResult } from '@/types/flashcard';
 import { useFlashcards } from './useFlashcards';
 
 export const useFlashcardImporter = () => {
@@ -46,4 +46,4 @@ export const useFlashcardImporter = () => {
   };
 };
 
-export type { ImportOptions, ImportResult, Flashcard, FlashcardSet, ImportFormat };
+export type { ImportOptions, ImportResult, ImportFormat };

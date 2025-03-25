@@ -86,3 +86,37 @@ export interface AdSettings {
   blockList: string[];
   networks?: string[]; // Added for AdService compatibility
 }
+
+// Ad service interface
+export interface AdServiceInterface {
+  getAds(): Advertisement[];
+  getAd(id: string): Advertisement | null;
+  getAdvertisement(id: string): Advertisement | null; 
+  getAllAdvertisements(): Advertisement[];
+  createAd(ad: Omit<Advertisement, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): Advertisement;
+  updateAd(id: string, ad: Partial<Advertisement>): Advertisement | null;
+  updateAdvertisement(id: string, ad: Partial<Advertisement>): Advertisement | null;
+  deleteAd(id: string): boolean;
+  deleteAdvertisement(id: string): boolean;
+  
+  getCampaigns(): AdCampaign[];
+  getAllCampaigns(): AdCampaign[];
+  getCampaign(id: string): AdCampaign | null;
+  createCampaign(campaign: Omit<AdCampaign, 'id' | 'createdAt' | 'updatedAt' | 'performance'>): AdCampaign;
+  updateCampaign(id: string, campaign: Partial<AdCampaign>): AdCampaign | null;
+  deleteCampaign(id: string): boolean;
+  
+  getSettings(): AdSettings;
+  getAdSettings(): AdSettings;
+  updateSettings(settings: Partial<AdSettings>): AdSettings;
+  updateAdSettings(settings: Partial<AdSettings>): AdSettings;
+  
+  trackImpression(adId: string): void;
+  trackClick(adId: string): void;
+  
+  getAdFormats(): AdFormat[];
+  getAdPositions(): AdPosition[];
+  getAdSizes(): AdSize[];
+  
+  initializeSampleData(): void;
+}

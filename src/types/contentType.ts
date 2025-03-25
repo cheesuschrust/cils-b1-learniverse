@@ -28,3 +28,12 @@ export const contentTypeLabels: Record<ContentType, string> = {
   'txt': 'Text',
   'pdf': 'PDF'
 };
+
+// Helper function to get displayable content types
+export const getDisplayableContentTypes = (): ContentType[] => [
+  'multiple-choice', 
+  'flashcards', 
+  'writing', 
+  'speaking', 
+  'listening'
+];

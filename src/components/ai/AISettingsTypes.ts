@@ -1,5 +1,5 @@
 
-import { ContentType } from '@/types/contentType';
+import { ContentType, getDisplayableContentTypes } from '@/types/contentType';
 
 export interface AISettingsContentTypeMap {
   'multiple-choice': string;
@@ -7,12 +7,12 @@ export interface AISettingsContentTypeMap {
   'writing': string;
   'speaking': string;
   'listening': string;
-  'audio'?: string;
-  'unknown'?: string;
-  'csv'?: string;
-  'json'?: string;
-  'txt'?: string;
-  'pdf'?: string;
+  'audio': string;
+  'unknown': string;
+  'csv': string;
+  'json': string;
+  'txt': string;
+  'pdf': string;
 }
 
 export const getContentTypeLabels = (): Record<ContentType, string> => ({
@@ -43,10 +43,4 @@ export const getInitialConfidenceScores = (): Record<ContentType, number> => ({
   'pdf': 85
 });
 
-export const getDisplayableContentTypes = (): ContentType[] => [
-  'multiple-choice', 
-  'flashcards', 
-  'writing', 
-  'speaking', 
-  'listening'
-];
+export { getDisplayableContentTypes };
