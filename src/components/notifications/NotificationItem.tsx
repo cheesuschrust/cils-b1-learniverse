@@ -1,110 +1,82 @@
 
 import React from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { 
-  File, 
-  Bell, 
-  Check, 
-  FileAudio, 
-  FileText, 
-  FileSpreadsheet, 
-  FileImage 
-} from 'lucide-react';
-import { Notification, useNotifications } from '@/contexts/NotificationsContext';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { CheckCircle, Info, AlertTriangle, AlertCircle, X } from 'lucide-react';
+import { Notification } from '@/types/notification';
 
 interface NotificationItemProps {
   notification: Notification;
+  onDismiss: (id: string) => void;
+  onAction?: (id: string, action: string) => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification }) => {
-  const { markAsRead } = useNotifications();
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onDismiss,
+  onAction
+}) => {
+  const { id, title, message, type, actions, createdAt, read } = notification;
   
-  const getNotificationIcon = () => {
-    const { type, metadata } = notification;
-    
-    if (type === 'file-processed') {
-      const fileType = metadata?.fileType;
-      if (fileType?.startsWith('audio')) return <FileAudio className="h-5 w-5" />;
-      if (fileType?.startsWith('text') || fileType?.includes('txt')) return <FileText className="h-5 w-5" />;
-      if (fileType?.includes('sheet') || fileType?.includes('csv')) return <FileSpreadsheet className="h-5 w-5" />;
-      if (fileType?.startsWith('image')) return <FileImage className="h-5 w-5" />;
-      return <File className="h-5 w-5" />;
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Info className="h-5 w-5 text-blue-500" />;
     }
-    
-    return <Bell className="h-5 w-5" />;
   };
   
-  const handleMarkAsRead = () => {
-    markAsRead(notification.id);
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleString();
   };
   
   return (
-    <div 
-      className={cn(
-        "flex items-start gap-3 p-3 rounded-md transition-colors cursor-pointer",
-        notification.read 
-          ? "bg-background hover:bg-muted/50" 
-          : "bg-muted/30 hover:bg-muted/50"
-      )}
-      onClick={handleMarkAsRead}
-    >
-      <div className="flex-shrink-0 mt-0.5">
-        {getNotificationIcon()}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h5 className={cn("text-sm font-medium", !notification.read && "font-semibold")}>
-            {notification.title}
-          </h5>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
-          </span>
+    <Card className={`mb-3 ${read ? 'opacity-75' : ''}`}>
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            {getIcon()}
+            <div>
+              <h4 className="font-medium">{title}</h4>
+              <p className="text-sm text-muted-foreground">{message}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatDate(createdAt)}
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 rounded-full"
+            onClick={() => onDismiss(id)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
-        
-        {notification.type === 'file-processed' && notification.metadata && (
-          <div className="mt-2 text-xs">
-            {notification.metadata.contentType && (
-              <div className="flex items-center justify-between">
-                <span>Content Type:</span>
-                <span className="font-medium capitalize">{notification.metadata.contentType}</span>
-              </div>
-            )}
-            {notification.metadata.confidence !== undefined && (
-              <div className="flex items-center justify-between">
-                <span>Confidence:</span>
-                <span className="font-medium">{notification.metadata.confidence.toFixed(1)}%</span>
-              </div>
-            )}
-            {notification.metadata.detectedLanguage && (
-              <div className="flex items-center justify-between">
-                <span>Language:</span>
-                <span className="font-medium capitalize">{notification.metadata.detectedLanguage}</span>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {!notification.read && (
-          <div className="mt-2 flex justify-end">
+      </CardContent>
+      
+      {actions && actions.length > 0 && (
+        <CardFooter className="flex justify-end gap-2 pt-0">
+          {actions.map((action) => (
             <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMarkAsRead();
-              }}
-              className="h-6 text-xs"
+              key={action.id} 
+              variant="outline" 
+              size="sm"
+              onClick={() => onAction && onAction(id, action.id)}
             >
-              <Check className="h-3 w-3 mr-1" />
-              Mark as read
+              {action.label}
             </Button>
-          </div>
-        )}
-      </div>
-    </div>
+          ))}
+        </CardFooter>
+      )}
+    </Card>
   );
 };
 

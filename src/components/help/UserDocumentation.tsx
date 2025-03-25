@@ -1,331 +1,260 @@
 
-import React, { useState } from 'react';
-import { 
-  Book, 
-  ChevronRight, 
-  Search, 
-  BookOpen, 
-  FileText, 
-  Lightbulb, 
-  HelpCircle, 
-  Bookmark,
-  ExternalLink
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/components/ui/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface DocSection {
-  id: string;
-  title: string;
-  icon: React.ComponentType<any>;
-  content: React.ReactNode;
-}
-
-export const UserDocumentation: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
-  
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    // In a real implementation, this would filter documentation content
-  };
-  
-  const handleBookmark = () => {
-    toast({
-      title: "Page bookmarked",
-      description: "This documentation page has been saved to your bookmarks",
-    });
-  };
-
-  // Documentation sections
-  const sections: DocSection[] = [
-    {
-      id: 'getting-started',
-      title: 'Getting Started',
-      icon: BookOpen,
-      content: (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Getting Started with the Italian Learning Platform</h2>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Welcome to Your Learning Journey</h3>
-            <p>
-              This comprehensive platform is designed to help you learn Italian effectively through multiple learning methods.
-              Our approach combines flashcards, listening exercises, speaking practice, and writing exercises to give you a well-rounded experience.
-            </p>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Setting Up Your Account</h3>
-            <ol className="list-decimal ml-6 space-y-2">
-              <li>Complete your profile with your current Italian proficiency level</li>
-              <li>Set your learning goals (daily study time, target fluency date)</li>
-              <li>Customize your learning preferences (voice preferences, notification settings)</li>
-              <li>Take the optional placement test to personalize your learning path</li>
-            </ol>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Your First Learning Session</h3>
-            <p>
-              We recommend starting with the following steps:
-            </p>
-            <ol className="list-decimal ml-6 space-y-2">
-              <li>Browse the flashcard collections and select a beginner set</li>
-              <li>Complete a 5-minute study session to learn basic vocabulary</li>
-              <li>Try a simple listening exercise to train your ear</li>
-              <li>Practice pronouncing a few common phrases</li>
-            </ol>
-          </section>
-          
-          <div className="bg-primary/5 p-4 rounded-lg mt-6">
-            <h4 className="flex items-center font-medium">
-              <Lightbulb className="h-5 w-5 mr-2 text-primary" />
-              Pro Tip
-            </h4>
-            <p className="mt-1 text-sm">
-              Consistency is key to language learning. Even 10 minutes of daily practice is more effective than occasional
-              longer sessions. Set a regular study schedule to maximize your progress.
-            </p>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'flashcards',
-      title: 'Flashcard System',
-      icon: FileText,
-      content: (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Flashcard System Guide</h2>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Understanding Spaced Repetition</h3>
-            <p>
-              Our flashcard system uses spaced repetition science to optimize your learning. Cards you find difficult
-              will appear more frequently, while cards you know well will appear less often, maximizing your study efficiency.
-            </p>
-            
-            <div className="mt-2 bg-muted p-4 rounded-lg">
-              <h4 className="font-medium">How It Works:</h4>
-              <ul className="list-disc ml-6 mt-2 space-y-1">
-                <li>After reviewing a card, rate your knowledge from "Again" to "Easy"</li>
-                <li>Cards rated "Again" or "Hard" will reappear sooner</li>
-                <li>Cards rated "Good" or "Easy" will have longer intervals</li>
-                <li>The system tracks your progress and adjusts intervals automatically</li>
-              </ul>
-            </div>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Creating Custom Flashcards</h3>
-            <p>
-              You can create your own custom flashcards in addition to using our pre-made collections:
-            </p>
-            <ol className="list-decimal ml-6 space-y-2">
-              <li>Navigate to the Flashcards section</li>
-              <li>Click "Create New Set" to make a collection</li>
-              <li>Add cards with Italian words/phrases and their English translations</li>
-              <li>Optionally add explanations, images, or audio recordings</li>
-              <li>Organize cards with tags and categories</li>
-            </ol>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Importing and Exporting</h3>
-            <p>
-              Our platform supports importing and exporting flashcards in various formats:
-            </p>
-            <ul className="list-disc ml-6 space-y-1">
-              <li>CSV files with columns for Italian, English, and optional fields</li>
-              <li>JSON format for more complex data structures</li>
-              <li>Plain text files with simple formatting</li>
-              <li>Direct import from popular apps like Anki and Quizlet</li>
-            </ul>
-          </section>
-          
-          <div className="bg-primary/5 p-4 rounded-lg mt-6">
-            <h4 className="flex items-center font-medium">
-              <Lightbulb className="h-5 w-5 mr-2 text-primary" />
-              Pro Tip
-            </h4>
-            <p className="mt-1 text-sm">
-              Create cards with example sentences, not just word translations. Context helps your brain form stronger memory connections.
-            </p>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'listening',
-      title: 'Listening Exercises',
-      icon: FileText,
-      content: (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Listening Exercises Guide</h2>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Developing Your Ear for Italian</h3>
-            <p>
-              Our listening exercises feature authentic Italian audio with various accents and speaking speeds.
-              Each exercise is designed to gradually improve your comprehension abilities.
-            </p>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Types of Listening Exercises</h3>
-            <ul className="list-disc ml-6 space-y-3">
-              <li>
-                <strong>Dictation:</strong> Listen and type what you hear to practice spelling and comprehension
-              </li>
-              <li>
-                <strong>Comprehension Questions:</strong> Answer questions about audio clips to test understanding
-              </li>
-              <li>
-                <strong>Speed Variation:</strong> Adjust playback speed to challenge yourself or ease into difficult content
-              </li>
-              <li>
-                <strong>Gap Filling:</strong> Complete transcripts with missing words based on what you hear
-              </li>
-            </ul>
-          </section>
-          
-          <section className="space-y-2">
-            <h3 className="text-lg font-medium">Listening Practice Tips</h3>
-            <ol className="list-decimal ml-6 space-y-2">
-              <li>Start with slower, clearer recordings before advancing to natural speech</li>
-              <li>Listen to the same clip multiple times to catch more details</li>
-              <li>Try listening without reading first, then check the transcript</li>
-              <li>Use the playback controls to repeat challenging sections</li>
-              <li>Practice with different Italian accents to improve adaptability</li>
-            </ol>
-          </section>
-          
-          <div className="bg-primary/5 p-4 rounded-lg mt-6">
-            <h4 className="flex items-center font-medium">
-              <Lightbulb className="h-5 w-5 mr-2 text-primary" />
-              Pro Tip
-            </h4>
-            <p className="mt-1 text-sm">
-              For additional practice, try shadowing: listen to a short segment and repeat it immediately, 
-              mimicking the speaker's intonation and rhythm as closely as possible.
-            </p>
-          </div>
-        </div>
-      )
-    },
-  ];
-  
+const UserDocumentation: React.FC = () => {
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            <Book className="h-5 w-5 mr-2 text-primary" />
-            User Documentation
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleBookmark}>
-              <Bookmark className="h-4 w-4 mr-1" />
-              <span className="sr-only md:not-sr-only md:inline">Bookmark</span>
-            </Button>
-            <a href="#" target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="sm">
-                <ExternalLink className="h-4 w-4 mr-1" />
-                <span className="sr-only md:not-sr-only md:inline">Expand</span>
-              </Button>
-            </a>
-          </div>
-        </div>
-        <CardDescription>
-          Comprehensive guides and tutorials for using the Italian learning platform
-        </CardDescription>
-        <div className="relative mt-4">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search documentation..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={handleSearch}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={sections[0].id}>
-          <div className="flex">
-            <div className="w-64 shrink-0 pr-4 border-r">
-              <h3 className="font-medium mb-3">Documentation Topics</h3>
-              <TabsList orientation="vertical" className="flex flex-col items-stretch h-auto">
-                {sections.map((section) => (
-                  <TabsTrigger 
-                    key={section.id} 
-                    value={section.id}
-                    className="justify-start py-2"
-                  >
-                    <section.icon className="h-4 w-4 mr-2" />
-                    {section.title}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+    <Card>
+      <CardContent className="pt-6">
+        <Tabs defaultValue="getting-started">
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="faq">FAQ</TabsTrigger>
+            <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
+          </TabsList>
+          
+          <ScrollArea className="h-[500px] pr-4">
+            <TabsContent value="getting-started" className="space-y-4">
+              <h2 className="text-2xl font-bold">Getting Started with Italian Learning</h2>
               
-              <div className="mt-6">
-                <h3 className="font-medium mb-3">Additional Resources</h3>
-                <ul className="space-y-2">
-                  <li>
-                    <a 
-                      href="#" 
-                      className="text-sm flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ChevronRight className="h-3 w-3 mr-1" />
-                      Video Tutorials
-                    </a>
-                  </li>
-                  <li>
-                    <a 
-                      href="#" 
-                      className="text-sm flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ChevronRight className="h-3 w-3 mr-1" />
-                      Downloadable PDFs
-                    </a>
-                  </li>
-                  <li>
-                    <a 
-                      href="#" 
-                      className="text-sm flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ChevronRight className="h-3 w-3 mr-1" />
-                      Community Forums
-                    </a>
-                  </li>
-                </ul>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Welcome to the Platform</h3>
+                  <p>
+                    This Italian learning platform is designed to help you master Italian through a variety of interactive exercises and tools. Whether you're a beginner or looking to advance your skills, our platform provides comprehensive resources for your language learning journey.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Setting Up Your Account</h3>
+                  <ol className="list-decimal ml-5 space-y-2">
+                    <li>Complete your profile with your language learning goals</li>
+                    <li>Take the placement test to determine your current level</li>
+                    <li>Set your learning schedule and daily targets</li>
+                    <li>Configure notification preferences</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Your First Lesson</h3>
+                  <p>
+                    Start with the recommended lessons based on your level. Each lesson combines multiple learning methods:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Vocabulary flashcards</li>
+                    <li>Grammar explanations</li>
+                    <li>Listening exercises</li>
+                    <li>Speaking practice</li>
+                    <li>Writing activities</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Learning Path</h3>
+                  <p>
+                    Our platform uses spaced repetition and adaptive learning to create a personalized learning path. As you progress, the system will adjust the difficulty and focus areas based on your performance.
+                  </p>
+                </div>
               </div>
-            </div>
+            </TabsContent>
             
-            <div className="flex-1 pl-6">
-              <ScrollArea className="h-[600px] pr-4">
-                {sections.map((section) => (
-                  <TabsContent key={section.id} value={section.id}>
-                    {section.content}
-                  </TabsContent>
-                ))}
-              </ScrollArea>
-            </div>
-          </div>
+            <TabsContent value="features" className="space-y-4">
+              <h2 className="text-2xl font-bold">Platform Features</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Flashcards</h3>
+                  <p>
+                    Our advanced flashcard system uses spaced repetition to optimize your vocabulary learning. You can:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Create custom flashcard sets</li>
+                    <li>Import/export flashcards</li>
+                    <li>Practice with audio pronunciation</li>
+                    <li>Track mastery progress for each word</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Multiple Choice Quizzes</h3>
+                  <p>
+                    Test your knowledge with adaptive quizzes that focus on grammar, vocabulary, and comprehension. The difficulty adjusts based on your performance.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Speaking Practice</h3>
+                  <p>
+                    Improve your pronunciation with our AI-powered speaking exercises:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Pronunciation assessment</li>
+                    <li>Conversation simulations</li>
+                    <li>Vocabulary pronunciation practice</li>
+                    <li>Real-time feedback</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Listening Exercises</h3>
+                  <p>
+                    Enhance your comprehension with audio exercises featuring native speakers:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Dialogues with transcripts</li>
+                    <li>Dictation exercises</li>
+                    <li>Comprehension questions</li>
+                    <li>Variable playback speed</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Writing Practice</h3>
+                  <p>
+                    Develop your writing skills with exercises that include:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Grammar-focused activities</li>
+                    <li>Sentence construction</li>
+                    <li>Freestyle writing with AI feedback</li>
+                    <li>Error correction</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Progress Tracking</h3>
+                  <p>
+                    Monitor your learning journey with detailed analytics:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Daily streak tracking</li>
+                    <li>Mastery level by topic</li>
+                    <li>Time spent learning</li>
+                    <li>Weak areas identification</li>
+                  </ul>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="faq" className="space-y-4">
+              <h2 className="text-2xl font-bold">Frequently Asked Questions</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">How does the spaced repetition system work?</h3>
+                  <p>
+                    Our spaced repetition system schedules flashcards for review at optimal intervals. Cards you find difficult appear more frequently, while mastered cards appear less often. This algorithm is based on cognitive science research on memory retention.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Can I use the platform offline?</h3>
+                  <p>
+                    Some features are available offline through our progressive web app. You can download flashcard sets for offline study, but interactive features like speaking practice require an internet connection.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">How accurate is the speech recognition?</h3>
+                  <p>
+                    Our speech recognition system is trained on native Italian speakers and can accurately assess pronunciation for most words and phrases. However, it may have limitations with certain regional accents or complex sentences.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Can I import my own content?</h3>
+                  <p>
+                    Yes! You can import flashcards from CSV, JSON, or TXT files. You can also upload audio files for listening practice and text documents for reading exercises.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">How do I reset my progress?</h3>
+                  <p>
+                    You can reset progress for individual lessons or exercises from your profile settings. If you want to reset all progress, contact support for assistance.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Is my data secure?</h3>
+                  <p>
+                    We take data security seriously. All your learning data is encrypted and stored securely. Your personal information is never shared with third parties without your consent.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="troubleshooting" className="space-y-4">
+              <h2 className="text-2xl font-bold">Troubleshooting</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Audio Not Working</h3>
+                  <p>If you're experiencing issues with audio playback or recording:</p>
+                  <ol className="list-decimal ml-5 space-y-1">
+                    <li>Check your browser permissions for microphone access</li>
+                    <li>Ensure your device's sound is not muted</li>
+                    <li>Try using headphones to rule out speaker issues</li>
+                    <li>Update your browser to the latest version</li>
+                    <li>Try a different device if problems persist</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Content Not Loading</h3>
+                  <p>If exercises or content isn't loading properly:</p>
+                  <ol className="list-decimal ml-5 space-y-1">
+                    <li>Check your internet connection</li>
+                    <li>Clear your browser cache</li>
+                    <li>Disable browser extensions that might interfere</li>
+                    <li>Try logging out and back in</li>
+                    <li>Contact support if the issue persists</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Progress Not Saving</h3>
+                  <p>If your progress isn't being saved:</p>
+                  <ol className="list-decimal ml-5 space-y-1">
+                    <li>Check that you're logged in</li>
+                    <li>Ensure you have a stable internet connection</li>
+                    <li>Complete the entire exercise before closing</li>
+                    <li>Check for browser storage restrictions</li>
+                    <li>Contact support with details of the affected exercises</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Account Issues</h3>
+                  <p>For problems with your account:</p>
+                  <ol className="list-decimal ml-5 space-y-1">
+                    <li>Use the password reset function if you can't log in</li>
+                    <li>Check your email for verification messages</li>
+                    <li>Ensure your subscription is active (for premium features)</li>
+                    <li>Update your profile information if it's outdated</li>
+                    <li>Contact support for assistance with account recovery</li>
+                  </ol>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold">Contacting Support</h3>
+                  <p>
+                    If you need additional help, our support team is available through:
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>In-app support chat</li>
+                    <li>Email at support@italianlearning.example.com</li>
+                    <li>Support tickets (for registered users)</li>
+                    <li>Response times are typically within 24 hours</li>
+                  </ul>
+                </div>
+              </div>
+            </TabsContent>
+          </ScrollArea>
         </Tabs>
-        
-        <div className="mt-8 flex items-center justify-between bg-muted p-4 rounded-lg">
-          <div className="flex items-center">
-            <HelpCircle className="h-5 w-5 mr-2 text-primary" />
-            <span className="text-sm">Need more help?</span>
-          </div>
-          <Button size="sm">Contact Support</Button>
-        </div>
       </CardContent>
     </Card>
   );

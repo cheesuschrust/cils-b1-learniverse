@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Send, 
@@ -115,7 +114,6 @@ const EmailConfigurationPanel: React.FC = () => {
       toast({
         title: "Connection successful",
         description: "Email server connection was successful",
-        variant: "success",
       });
     }, 1500);
   };
@@ -129,7 +127,6 @@ const EmailConfigurationPanel: React.FC = () => {
       toast({
         title: "Settings saved",
         description: "Email configuration has been updated successfully",
-        variant: "success",
       });
     }, 1500);
   };

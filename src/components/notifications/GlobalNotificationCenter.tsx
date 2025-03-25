@@ -1,165 +1,114 @@
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  CheckCircle, 
-  AlertTriangle, 
-  Info, 
-  X,
-  Settings 
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
+  CardDescription, 
   CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from '@/components/ui/card';
+  CardTitle 
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { NotificationItem } from '@/components/notifications/NotificationItem';
+import { Bell, Trash2, BellOff } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import NotificationItem from '@/components/notifications/NotificationItem';
 
-export interface NotificationCenterProps {
-  maxNotifications?: number;
-  className?: string;
-}
-
-export const GlobalNotificationCenter: React.FC<NotificationCenterProps> = ({
-  maxNotifications = 5,
-  className = ""
-}) => {
+const GlobalNotificationCenter: React.FC = () => {
   const { 
     notifications, 
-    markAllAsRead, 
-    markAsRead,
-    clearAll, 
-    userPreferences,
-    updatePreferences
+    markAsRead, 
+    dismissNotification,
+    dismissAll
   } = useNotifications();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+
+  const [activeTab, setActiveTab] = useState<string>('all');
   
-  useEffect(() => {
-    setUnreadCount(notifications.filter(n => !n.read).length);
-  }, [notifications]);
+  const unreadCount = notifications.filter(n => !n.read).length;
   
-  const handleTogglePreference = (key: keyof typeof userPreferences) => {
-    updatePreferences({
-      ...userPreferences,
-      [key]: !userPreferences[key]
-    });
+  const filteredNotifications = () => {
+    switch (activeTab) {
+      case 'unread':
+        return notifications.filter(n => !n.read);
+      case 'info':
+        return notifications.filter(n => n.type === 'info');
+      case 'alerts':
+        return notifications.filter(n => n.type === 'warning' || n.type === 'error');
+      default:
+        return notifications;
+    }
+  };
+  
+  const handleDismiss = (id: string) => {
+    dismissNotification(id);
+  };
+  
+  const handleAction = (id: string, action: string) => {
+    // Mark as read when action is taken
+    markAsRead(id);
+    
+    // Handle specific actions
+    console.log(`Action ${action} taken on notification ${id}`);
   };
   
   return (
-    <Card className={`${className} w-full max-w-sm shadow-lg`}>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-lg flex items-center">
-            <Bell className="h-5 w-5 mr-2" />
-            Notifications
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            <CardTitle>Notifications</CardTitle>
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {unreadCount}
+              <Badge variant="default" className="ml-2">
+                {unreadCount} new
               </Badge>
             )}
-          </CardTitle>
-          <CardDescription>
-            Your recent notifications
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Notification settings</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="p-2">
-                <h4 className="font-medium mb-2">Notification Settings</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="system-notifications" className="text-sm">System</Label>
-                    <Switch 
-                      id="system-notifications" 
-                      checked={userPreferences.system}
-                      onCheckedChange={() => handleTogglePreference('system')}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="learning-notifications" className="text-sm">Learning</Label>
-                    <Switch 
-                      id="learning-notifications" 
-                      checked={userPreferences.learning}
-                      onCheckedChange={() => handleTogglePreference('learning')}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="achievement-notifications" className="text-sm">Achievements</Label>
-                    <Switch 
-                      id="achievement-notifications" 
-                      checked={userPreferences.achievements}
-                      onCheckedChange={() => handleTogglePreference('achievements')}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="marketing-notifications" className="text-sm">Marketing</Label>
-                    <Switch 
-                      id="marketing-notifications" 
-                      checked={userPreferences.marketing}
-                      onCheckedChange={() => handleTogglePreference('marketing')}
-                    />
-                  </div>
-                </div>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={clearAll}>
-            <X className="h-4 w-4" />
-            <span className="sr-only">Clear all</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={dismissAll}
+            disabled={notifications.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All
           </Button>
         </div>
+        <CardDescription>
+          Stay informed about system updates and your learning progress
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {notifications.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <Info className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No notifications to display</p>
-          </div>
-        ) : (
-          <>
-            <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-2">
-                {notifications.slice(0, maxNotifications).map((notification) => (
-                  <NotificationItem 
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="unread">Unread</TabsTrigger>
+            <TabsTrigger value="info">Info</TabsTrigger>
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={activeTab}>
+            {filteredNotifications().length > 0 ? (
+              <div className="space-y-4">
+                {filteredNotifications().map((notification) => (
+                  <NotificationItem
                     key={notification.id}
                     notification={notification}
-                    onMarkAsRead={markAsRead}
+                    onDismiss={handleDismiss}
+                    onAction={handleAction}
                   />
                 ))}
               </div>
-            </ScrollArea>
-            
-            {unreadCount > 0 && (
-              <div className="mt-4 flex justify-end">
-                <Button variant="outline" size="sm" onClick={markAllAsRead}>
-                  Mark all as read
-                </Button>
+            ) : (
+              <div className="py-8 text-center">
+                <BellOff className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No notifications to display</p>
               </div>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

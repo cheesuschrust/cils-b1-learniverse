@@ -42,14 +42,18 @@ import {
   FileUploader,
   AdminSettings,
   ContentAnalysis,
-  MultipleChoice
+  MultipleChoice,
+  SystemLogs,
+  SupportTickets,
+  Support,
+  SupportCenter,
+  AIManagement,
+  SystemTests
 } from '@/pages/imports';
-import SystemLogs from '@/pages/admin/SystemLogs';
-import SupportTickets from '@/pages/admin/SupportTickets';
-import Support from '@/pages/Support';
-import SupportCenter from '@/pages/SupportCenter';
-import AIManagement from '@/pages/admin/AIManagement';
-import SystemTests from '@/pages/admin/SystemTests';
+
+// Import admin components directly
+import AdminAnalyticsDashboard from '@/components/admin/AdminAnalyticsDashboard';
+import EmailConfigurationPanel from '@/components/admin/EmailConfigurationPanel';
 
 function App() {
   return (
