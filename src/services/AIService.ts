@@ -1,87 +1,180 @@
 
-// This is a simplified mock version of the AIService
+// AIService.ts - Provides AI capabilities through a consistent API
+// This is a mock implementation that simulates AI functionality
 
+// Initialize the AI service
+export const initialize = async (config: any): Promise<boolean> => {
+  console.log('Initializing AI service with config:', config);
+  // Simulate initialization delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return true;
+};
+
+// Test the connection to the AI service
+export const testConnection = async (): Promise<{ success: boolean, message: string }> => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return { success: true, message: "AI service connection successful" };
+};
+
+// Generate text based on a prompt
 export const generateText = async (
   prompt: string, 
   options: any = {}
 ): Promise<string> => {
-  // Mock implementation
-  return `Generated text for: ${prompt}`;
+  console.log(`Generating text for prompt: "${prompt.substring(0, 50)}..."`, options);
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  // Simple mock implementation
+  return `Generated text for: ${prompt.substring(0, 20)}... [AI response would appear here in a production environment]`;
 };
 
+// Classify text into categories
 export const classifyText = async (
   text: string
 ): Promise<{ label: string; score: number }[]> => {
-  // Mock implementation
-  return [
-    { label: "multiple-choice", score: 0.8 },
-    { label: "flashcards", score: 0.3 },
-  ];
+  console.log(`Classifying text: "${text.substring(0, 50)}..."`);
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 600));
+  
+  // Determine labels based on text content
+  const labels = [];
+  
+  if (text.toLowerCase().includes('question') || text.toLowerCase().includes('quiz')) {
+    labels.push({ label: "multiple-choice", score: 0.85 });
+  } else {
+    labels.push({ label: "multiple-choice", score: 0.4 });
+  }
+  
+  if (text.toLowerCase().includes('vocabulary') || text.toLowerCase().includes('word')) {
+    labels.push({ label: "flashcards", score: 0.9 });
+  } else {
+    labels.push({ label: "flashcards", score: 0.3 });
+  }
+  
+  if (text.toLowerCase().includes('write') || text.toLowerCase().includes('essay')) {
+    labels.push({ label: "writing", score: 0.8 });
+  } else {
+    labels.push({ label: "writing", score: 0.5 });
+  }
+  
+  if (text.toLowerCase().includes('speak') || text.toLowerCase().includes('pronunciation')) {
+    labels.push({ label: "speaking", score: 0.75 });
+  } else {
+    labels.push({ label: "speaking", score: 0.25 });
+  }
+  
+  if (text.toLowerCase().includes('listen') || text.toLowerCase().includes('audio')) {
+    labels.push({ label: "listening", score: 0.7 });
+  } else {
+    labels.push({ label: "listening", score: 0.2 });
+  }
+  
+  // Sort by score descending
+  labels.sort((a, b) => b.score - a.score);
+  
+  return labels;
 };
 
+// Generate questions from content
 export const generateQuestions = async (
   content: string,
   contentType: string,
   count: number = 5,
   difficulty: string = "Intermediate"
 ): Promise<any[]> => {
-  // Mock implementation
-  return Array(count).fill(null).map((_, i) => ({
-    id: `q-${i}`,
-    question: `Sample question ${i+1} about ${content.substring(0, 20)}...`,
-    options: ['Option A', 'Option B', 'Option C', 'Option D'],
-    correctAnswerIndex: 0,
-    difficulty,
-    type: contentType
-  }));
+  console.log(`Generating ${count} ${difficulty} questions for ${contentType}`);
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Create mock questions based on content type
+  return Array(count).fill(null).map((_, i) => {
+    const index = i + 1;
+    
+    if (contentType === 'multiple-choice') {
+      return {
+        id: `q-${index}`,
+        question: `Sample question ${index} about ${content.substring(0, 20)}...`,
+        options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswerIndex: Math.floor(Math.random() * 4),
+        difficulty,
+        type: contentType
+      };
+    } else if (contentType === 'flashcards') {
+      return {
+        id: `card-${index}`,
+        front: `Italian term ${index}`,
+        back: `English translation ${index}`,
+        difficulty,
+        type: contentType
+      };
+    } else {
+      return {
+        id: `ex-${index}`,
+        prompt: `Exercise ${index}: ${content.substring(0, 30)}...`,
+        instructions: `Complete this ${difficulty.toLowerCase()} ${contentType} exercise.`,
+        difficulty,
+        type: contentType
+      };
+    }
+  });
 };
 
-export const initialize = async (config: any): Promise<boolean> => {
-  // Mock implementation
-  return true;
-};
-
-export const testConnection = async (): Promise<{ success: boolean, message: string }> => {
-  // Mock implementation
-  return { success: true, message: "AI service connection successful" };
-};
-
+// Process text with AI
 export const processText = async (
   text: string, 
   processingType: string
 ): Promise<any> => {
-  // Mock implementation
+  console.log(`Processing text with ${processingType}: "${text.substring(0, 50)}..."`);
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 700));
+  
+  // Return mock result
   return {
     text,
     processingType,
-    confidence: Math.random() * 100
+    confidence: 70 + Math.random() * 30,
+    result: `Processed: ${text.substring(0, 20)}... [Results would appear here]`
   };
 };
 
+// Process image with AI
 export const processImage = async (
   imageUrl: string, 
   prompt: string
 ): Promise<any> => {
-  // Mock implementation
+  console.log(`Processing image ${imageUrl} with prompt: ${prompt}`);
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Return mock result
   return {
     imageUrl,
     prompt,
-    confidence: Math.random() * 100
+    confidence: 65 + Math.random() * 35,
+    result: `Image analysis complete. [Results would appear here]`
   };
 };
 
-// Add the missing functions needed by AITrainingUtils.ts
+// Add training examples to improve AI
 export const addTrainingExamples = (
   contentType: string,
   examples: any[]
 ): number => {
-  // Mock implementation
-  console.log(`Added ${examples.length} training examples for ${contentType}`);
+  console.log(`Adding ${examples.length} training examples for ${contentType}`);
+  
+  // In a real implementation, these would be stored and used to improve the model
   return examples.length;
 };
 
+// Get confidence score for a content type
 export const getConfidenceScore = (contentType: string): number => {
-  // Mock implementation
   const scores: Record<string, number> = {
     'multiple-choice': 85,
     'flashcards': 80,
@@ -93,7 +186,7 @@ export const getConfidenceScore = (contentType: string): number => {
   return scores[contentType] || 60;
 };
 
-// Add speech recognition capabilities
+// Speech recognition (audio to text)
 export const recognizeSpeech = async (
   audioBlob: Blob,
   language: 'it' | 'en' = 'it'
@@ -105,8 +198,6 @@ export const recognizeSpeech = async (
     score: number; 
   }[] 
 }> => {
-  // Mock implementation
-  // In a real implementation, this would send the audioBlob to a speech recognition service
   console.log(`Recognizing speech in ${language}`);
   
   // Wait for 1-2 seconds to simulate processing
@@ -152,8 +243,10 @@ export const evaluateSpeech = async (
   feedback: string;
   errors: { word: string; suggestion: string; position: number }[];
 }> => {
-  // Mock implementation
   console.log(`Evaluating speech in ${language}: "${spokenText}" against "${referenceText}"`);
+  
+  // Simulate processing
+  await new Promise(resolve => setTimeout(resolve, 800));
   
   // Simple mock evaluation
   const similarityScore = Math.random() * 40 + 60; // 60-100
@@ -211,8 +304,10 @@ export const generateSpeechExercises = async (
   translation: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
 }[]> => {
-  // Mock implementation
   console.log(`Generating ${count} ${level} speech exercises in ${language}`);
+  
+  // Simulate processing
+  await new Promise(resolve => setTimeout(resolve, 1200));
   
   const exercises: Record<string, Record<string, { text: string; translation: string }[]>> = {
     it: {
@@ -298,4 +393,109 @@ export const generateSpeechExercises = async (
   return result;
 };
 
+// Generate multiple choice questions from text
+export const generateMultipleChoice = async (
+  text: string,
+  count: number = 5,
+  difficulty: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
+): Promise<any[]> => {
+  console.log(`Generating ${count} ${difficulty} multiple choice questions`);
+  
+  // Simulate processing
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  return Array(count).fill(null).map((_, i) => ({
+    id: `mc-${i}`,
+    question: `Question ${i + 1} about ${text.substring(0, 15)}...`,
+    options: [
+      `Option A for question ${i + 1}`,
+      `Option B for question ${i + 1}`,
+      `Option C for question ${i + 1}`,
+      `Option D for question ${i + 1}`
+    ],
+    correctAnswerIndex: Math.floor(Math.random() * 4),
+    explanation: `Explanation for question ${i + 1}`,
+    difficulty
+  }));
+};
+
+// Generate flashcards from text
+export const generateFlashcards = async (
+  text: string,
+  count: number = 10,
+  difficulty: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
+): Promise<any[]> => {
+  console.log(`Generating ${count} ${difficulty} flashcards`);
+  
+  // Simulate processing
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  return Array(count).fill(null).map((_, i) => ({
+    id: `fc-${i}`,
+    italian: `Italian term ${i + 1}`,
+    english: `English translation ${i + 1}`,
+    mastered: false,
+    difficulty
+  }));
+};
+
+// Generate writing prompts
+export const generateWritingPrompts = async (
+  count: number = 3,
+  difficulty: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
+): Promise<any[]> => {
+  console.log(`Generating ${count} ${difficulty} writing prompts`);
+  
+  // Simulate processing
+  await new Promise(resolve => setTimeout(resolve, 600));
+  
+  const topics = {
+    beginner: [
+      "Describe your family",
+      "Write about your daily routine",
+      "Describe your favorite food",
+      "Write about your hometown",
+      "Describe your best friend"
+    ],
+    intermediate: [
+      "Write about a memorable vacation",
+      "Discuss your favorite hobby and why you enjoy it",
+      "Describe a challenge you've overcome",
+      "Write about your career goals",
+      "Discuss a cultural difference you've experienced"
+    ],
+    advanced: [
+      "Analyze the impact of technology on language learning",
+      "Discuss the cultural significance of cuisine in Italian society",
+      "Compare and contrast the education systems in Italy and your country",
+      "Examine the role of art in preserving cultural heritage",
+      "Discuss the challenges of sustainable tourism in popular Italian destinations"
+    ]
+  };
+  
+  const selectedTopics = topics[difficulty];
+  const result = [];
+  
+  for (let i = 0; i < count; i++) {
+    if (selectedTopics.length > 0) {
+      const randomIndex = Math.floor(Math.random() * selectedTopics.length);
+      const topic = selectedTopics[randomIndex];
+      
+      result.push({
+        id: `wp-${i}`,
+        prompt: topic,
+        wordCount: difficulty === 'beginner' ? 100 : 
+                  difficulty === 'intermediate' ? 200 : 300,
+        difficulty
+      });
+      
+      // Remove to avoid duplicates
+      selectedTopics.splice(randomIndex, 1);
+    }
+  }
+  
+  return result;
+};
+
+// Global cache setting
 export const isCacheEnabled = true;
