@@ -47,6 +47,7 @@ import {
 import SystemLogs from '@/pages/admin/SystemLogs';
 import SupportTickets from '@/pages/admin/SupportTickets';
 import Support from '@/pages/Support';
+import SupportCenter from '@/pages/SupportCenter';
 import AIManagement from '@/pages/admin/AIManagement';
 import SystemTests from '@/pages/admin/SystemTests';
 
@@ -85,6 +86,7 @@ function App() {
                       <Route path="communities" element={<Communities />} />
                       <Route path="progress" element={<ProgressTracker />} />
                       <Route path="support" element={<Support />} />
+                      <Route path="support-center" element={<SupportCenter />} />
                     </Route>
 
                     {/* Admin Routes */}
@@ -100,6 +102,8 @@ function App() {
                       <Route path="logs" element={<SystemLogs />} />
                       <Route path="system-tests" element={<SystemTests />} />
                       <Route path="support-tickets" element={<SupportTickets />} />
+                      <Route path="analytics" element={<AdminAnalyticsDashboard />} />
+                      <Route path="email-config" element={<EmailConfigurationPanel />} />
                     </Route>
                   </Route>
                   
