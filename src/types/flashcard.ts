@@ -9,6 +9,7 @@ export interface Flashcard {
   mastered: boolean;
   lastReviewed?: Date;
   nextReview?: Date;
+  dueDate?: Date;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +36,9 @@ export interface FlashcardStats {
   dueCards: number;
   reviewStreak: number;
   lastReview?: Date;
+  total?: number; // Added for backwards compatibility
+  mastered?: number; // Added for backwards compatibility
+  dueToday?: number; // Added for backwards compatibility
   reviewHistory: {
     date: Date;
     correct: number;
@@ -42,7 +46,7 @@ export interface FlashcardStats {
   }[];
 }
 
-export type ImportFormat = 'csv' | 'json' | 'anki' | 'quizlet';
+export type ImportFormat = 'csv' | 'json' | 'anki' | 'quizlet' | 'txt';
 
 export interface ImportOptions {
   format: ImportFormat;
@@ -59,5 +63,7 @@ export interface ImportResult {
   failed: number;
   warnings: string[];
   importedCards: Flashcard[];
+  imported?: Flashcard[]; // For backward compatibility
+  errors?: string[]; // For backward compatibility
   setId?: string;
 }

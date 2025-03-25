@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ImportFormat, ImportOptions, ImportResult, FlashcardSet } from '@/types/flashcard';
+import { ImportFormat, ImportOptions, ImportResult, FlashcardSet, Flashcard } from '@/types/flashcard';
 import { useFlashcards } from './useFlashcards';
 
 export const useFlashcardImporter = () => {
@@ -15,6 +15,12 @@ export const useFlashcardImporter = () => {
     
     try {
       const result = await importFlashcards(content, options);
+      
+      // If result doesn't have importedCards but has imported (legacy field), map it
+      if (!result.importedCards && result.imported) {
+        result.importedCards = result.imported;
+      }
+      
       setImportResult(result);
       return result;
     } catch (err) {

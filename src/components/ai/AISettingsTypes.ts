@@ -33,3 +33,15 @@ export const getInitialConfidenceScores = (): Record<ContentType, number> => ({
 });
 
 export { getDisplayableContentTypes };
+
+export interface AIPreference {
+  enabled: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  processOnDevice: boolean;
+  confidenceThreshold: number;
+  confidenceDisplay: boolean;
+  voiceRate: number;
+  voicePitch: number;
+  italianVoiceURI: string;
+  englishVoiceURI: string;
+}

@@ -41,7 +41,7 @@ export interface NotificationsContextType {
   markAllAsRead: () => void;
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
-  dismissAll: () => void; // Added to fix the missing method
+  dismissAll: () => void; // Method to dismiss all notifications
   getFileProcessingNotifications: () => Notification[];
 }
 

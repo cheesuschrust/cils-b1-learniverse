@@ -45,6 +45,7 @@ export interface User {
   address?: string;
   profileImage?: string; // Added this property
   photoURL?: string; // Added this property
+  avatar?: string; // Added for compatibility
   metrics: {
     totalQuestions: number;
     correctAnswers: number;
@@ -102,8 +103,15 @@ export interface EmailSettings {
     passwordReset: EmailTemplate;
     welcome: EmailTemplate;
   };
-  temporaryInboxDuration?: number; // Make this optional to resolve the type error
+  temporaryInboxDuration?: number;
 }
+
+// Import required types from other files
+import { License } from "@/types/license";
+import { ChatSession, ChatbotTrainingExample } from "@/types/chatbot";
+import { Notification } from "@/types/notification";
+import { Flashcard, FlashcardSet } from "@/types/flashcard";
+import { AdSettings, AdUnit } from "@/types/ad";
 
 // Mock database
 export interface MockDatabase {
@@ -112,4 +120,12 @@ export interface MockDatabase {
   emailSettings: EmailSettings;
   resetTokens: Map<string, { email: string; expires: Date }>;
   verificationTokens: Map<string, { email: string; expires: Date }>;
+  licenses: License[];
+  chatSessions: ChatSession[];
+  chatbotTraining: ChatbotTrainingExample[];
+  notifications: Notification[];
+  flashcards: Flashcard[];
+  flashcardSets: FlashcardSet[];
+  adSettings: AdSettings;
+  adUnits: AdUnit[];
 }

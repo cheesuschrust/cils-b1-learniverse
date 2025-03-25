@@ -12,7 +12,7 @@ import NotificationItem from '@/components/notifications/NotificationItem';
 import { cn } from '@/lib/utils';
 
 const AdminNotificationCenter: React.FC = () => {
-  const { notifications, unreadCount, markAllAsRead, getFileProcessingNotifications } = useNotifications();
+  const { notifications, unreadCount, markAllAsRead, getFileProcessingNotifications, markAsRead, dismissNotification } = useNotifications();
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,8 +32,12 @@ const AdminNotificationCenter: React.FC = () => {
   
   const fileProcessingNotifications = getFileProcessingNotifications();
   
+  const handleMarkAsRead = (id: string) => {
+    markAsRead(id);
+  };
+  
   const handleDismiss = (id: string) => {
-    console.log(`Dismissing notification: ${id}`);
+    dismissNotification(id);
   };
   
   return (
@@ -132,6 +136,7 @@ const AdminNotificationCenter: React.FC = () => {
               key={notification.id}
               notification={notification}
               onDismiss={handleDismiss}
+              onRead={handleMarkAsRead}
             />
           ))}
         </div>
