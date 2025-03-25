@@ -2,8 +2,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getDefaultVoicePreferences, VoicePreference } from '@/utils/textToSpeech';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { ContentType } from '@/utils/textAnalysis';
 
 export type Theme = 'dark' | 'light' | 'system';
+
+// AI preference settings interface
+export interface AIPreference {
+  processOnDevice: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  dataCollection: boolean;
+  assistanceLevel: number;
+}
 
 interface UserPreferencesContextType {
   theme: Theme;
@@ -24,7 +33,19 @@ interface UserPreferencesContextType {
   setNotifications: (enabled: boolean) => void;
   dailyGoal: number;
   setDailyGoal: (minutes: number) => void;
+  // Add missing properties
+  preferredLanguage: 'english' | 'italian' | 'both';
+  setPreferredLanguage: (lang: 'english' | 'italian' | 'both') => void;
+  aiPreference: AIPreference;
+  setAIPreference: (preference: AIPreference) => void;
 }
+
+const defaultAIPreference: AIPreference = {
+  processOnDevice: false,
+  modelSize: 'medium',
+  dataCollection: true,
+  assistanceLevel: 5
+};
 
 const defaultPreferences: UserPreferencesContextType = {
   theme: 'system',
@@ -49,7 +70,12 @@ const defaultPreferences: UserPreferencesContextType = {
   notifications: true,
   setNotifications: () => {},
   dailyGoal: 15,
-  setDailyGoal: () => {}
+  setDailyGoal: () => {},
+  // Add default values for new properties
+  preferredLanguage: 'both',
+  setPreferredLanguage: () => {},
+  aiPreference: defaultAIPreference,
+  setAIPreference: () => {}
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
@@ -66,6 +92,9 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
   const [difficulty, setDifficultyValue] = useLocalStorage<'beginner' | 'intermediate' | 'advanced'>('difficulty', 'intermediate');
   const [notifications, setNotificationsValue] = useLocalStorage<boolean>('notifications', true);
   const [dailyGoal, setDailyGoalValue] = useLocalStorage<number>('dailyGoal', 15);
+  // Add new state variables
+  const [preferredLanguage, setPreferredLanguageValue] = useLocalStorage<'english' | 'italian' | 'both'>('preferredLanguage', 'both');
+  const [aiPreference, setAIPreferenceValue] = useLocalStorage<AIPreference>('aiPreference', defaultAIPreference);
 
   // Initialize voice preferences with system defaults if not already set
   useEffect(() => {
@@ -123,6 +152,9 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
   const setDifficulty = (value: 'beginner' | 'intermediate' | 'advanced') => setDifficultyValue(value);
   const setNotifications = (value: boolean) => setNotificationsValue(value);
   const setDailyGoal = (value: number) => setDailyGoalValue(value);
+  // Add setter functions for new properties
+  const setPreferredLanguage = (value: 'english' | 'italian' | 'both') => setPreferredLanguageValue(value);
+  const setAIPreference = (value: AIPreference) => setAIPreferenceValue(value);
 
   return (
     <UserPreferencesContext.Provider
@@ -144,10 +176,16 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         notifications,
         setNotifications,
         dailyGoal,
-        setDailyGoal
+        setDailyGoal,
+        // Add new properties
+        preferredLanguage,
+        setPreferredLanguage,
+        aiPreference,
+        setAIPreference
       }}
     >
       {children}
     </UserPreferencesContext.Provider>
   );
 };
+

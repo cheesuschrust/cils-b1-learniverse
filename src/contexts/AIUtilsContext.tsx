@@ -1,8 +1,14 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAI } from '@/hooks/useAI';
 import { ContentType } from '@/utils/textAnalysis';
+
+declare global {
+  interface Window { 
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
 
 export interface AIContextData {
   isAIEnabled: boolean;
@@ -109,7 +115,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLastGeneratedResults([]);
   };
   
-  // Translation function with multiple language support
   const translateText = useCallback(async (
     text: string, 
     sourceLang: string = 'it', 
@@ -122,12 +127,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsTranslating(true);
     
     try {
-      // This is a placeholder - in a real app, you would use an actual AI model or API
-      // Mock translation for testing purposes
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       if (sourceLang === 'it' && targetLang === 'en') {
-        // Common Italian words mock translation
         const translations: Record<string, string> = {
           'ciao': 'hello',
           'grazie': 'thank you',
@@ -151,12 +153,10 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           'vita': 'life'
         };
         
-        // Very simple word-by-word translation for demo purposes
         const words = text.toLowerCase().split(' ');
         const translatedWords = words.map(word => {
           const cleanWord = word.replace(/[.,?!;:]/g, '');
           const translation = translations[cleanWord] || word;
-          // Preserve punctuation
           const punctuation = word.substring(cleanWord.length);
           return translation + punctuation;
         });
@@ -164,7 +164,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return translatedWords.join(' ');
       }
       
-      // For other language combinations, just return the original text with a note
       return `[Translation from ${sourceLang} to ${targetLang}] ${text}`;
     } catch (error) {
       console.error('Translation error:', error);
@@ -174,7 +173,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isAIEnabled]);
   
-  // Audio transcription (speech-to-text)
   const transcribeAudio = useCallback(async (audioData: Blob): Promise<string> => {
     if (!isAIEnabled) {
       throw new Error('AI features are disabled. Enable them in settings.');
@@ -183,13 +181,8 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsTranscribing(true);
     
     try {
-      // In a real app, you would send the audio to an AI service for transcription
-      // For now, we'll just pretend it worked
-      
-      // Simulate processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Return a mock result
       return "This is a simulated transcription result. In a production app, this would be the actual text transcribed from your audio.";
     } catch (error) {
       console.error('Transcription error:', error);
@@ -199,11 +192,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isAIEnabled]);
   
-  // Check if the browser has microphone access
   const checkMicrophoneAccess = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Clean up the stream after checking
       stream.getTracks().forEach(track => track.stop());
       setHasActiveMicrophone(true);
       return true;
@@ -214,7 +205,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
   
-  // Process audio stream with Web Speech API (if available)
   const processAudioStream = useCallback(async (
     onResult: (text: string, isFinal: boolean) => void
   ): Promise<() => void> => {
@@ -222,30 +212,25 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('AI features are disabled. Enable them in settings.');
     }
     
-    // Check if Speech Recognition is available
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
       throw new Error('Speech recognition is not supported in this browser.');
     }
     
-    // Check microphone access
     const hasMicAccess = await checkMicrophoneAccess();
     if (!hasMicAccess) {
       throw new Error('Microphone access is required for speech recognition.');
     }
     
     try {
-      // Create a new speech recognition instance
       const recognition = new SpeechRecognition();
       setRecognitionInstance(recognition);
       
-      // Configure the recognition
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'it-IT'; // Default to Italian
+      recognition.lang = 'it-IT';
       
-      // Set up event handlers
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results)
           .map(result => result[0].transcript)
@@ -258,7 +243,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         if (event.error === 'no-speech') {
-          // Don't throw for no speech, just log it
           console.log('No speech detected');
         } else {
           throw new Error(`Speech recognition error: ${event.error}`);
@@ -270,11 +254,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsTranscribing(false);
       };
       
-      // Start recognition
       recognition.start();
       setIsTranscribing(true);
       
-      // Return a function to stop the recognition
       return () => {
         recognition.stop();
         setIsTranscribing(false);
@@ -287,7 +269,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isAIEnabled, checkMicrophoneAccess]);
   
-  // Stop audio processing
   const stopAudioProcessing = useCallback(() => {
     if (recognitionInstance) {
       recognitionInstance.stop();
@@ -296,7 +277,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [recognitionInstance]);
   
-  // Check microphone access on component mount
   useEffect(() => {
     checkMicrophoneAccess().catch(console.error);
   }, [checkMicrophoneAccess]);
