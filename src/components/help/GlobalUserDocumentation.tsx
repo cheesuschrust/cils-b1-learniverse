@@ -579,7 +579,7 @@ const GlobalUserDocumentation: React.FC = () => {
                           <div className="border rounded-lg p-4">
                             <h4 className="font-medium">How do I cancel my subscription?</h4>
                             <p className="text-sm text-muted-foreground mt-2">
-                              Go to Settings > Subscription > Manage Subscription, then select "Cancel Subscription." Your access will continue until the end of your current billing period.
+                              Go to Settings {">"} Subscription {">"} Manage Subscription, then select "Cancel Subscription." Your access will continue until the end of your current billing period.
                             </p>
                           </div>
                           
