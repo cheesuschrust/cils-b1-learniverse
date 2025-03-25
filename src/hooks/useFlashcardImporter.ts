@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ImportFormat, ImportOptions, ImportResult } from '@/types/flashcard';
+import { ImportFormat, ImportOptions, ImportResult, FlashcardSet } from '@/types/flashcard';
 import { useFlashcards } from './useFlashcards';
 
 export const useFlashcardImporter = () => {

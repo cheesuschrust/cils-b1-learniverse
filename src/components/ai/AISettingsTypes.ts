@@ -1,5 +1,5 @@
 
-import { ContentType, getDisplayableContentTypes } from '@/types/contentType';
+import { ContentType, contentTypeLabels as baseContentTypeLabels, getDisplayableContentTypes } from '@/types/contentType';
 
 export interface AISettingsContentTypeMap {
   'multiple-choice': string;
@@ -15,19 +15,8 @@ export interface AISettingsContentTypeMap {
   'pdf': string;
 }
 
-export const getContentTypeLabels = (): Record<ContentType, string> => ({
-  'multiple-choice': 'Multiple Choice',
-  'flashcards': 'Flashcards',
-  'writing': 'Writing',
-  'speaking': 'Speaking',
-  'listening': 'Listening',
-  'audio': 'Audio',
-  'unknown': 'Unknown',
-  'csv': 'CSV',
-  'json': 'JSON',
-  'txt': 'Text',
-  'pdf': 'PDF'
-});
+// Re-export the content type labels to ensure consistency
+export const getContentTypeLabels = (): Record<ContentType, string> => baseContentTypeLabels;
 
 export const getInitialConfidenceScores = (): Record<ContentType, number> => ({
   'multiple-choice': 85,

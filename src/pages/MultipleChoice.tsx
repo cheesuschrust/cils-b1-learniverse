@@ -1,837 +1,455 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ChevronRight, CheckCircle, AlertCircle, Pencil, XCircle, ChevronLeft, RotateCcw, Save, Plus, Tag, Filter, Clock } from 'lucide-react';
-import { generateQuestionSet, evaluateAnswer } from '@/services/questionService';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { ConfidenceIndicator } from '@/components/ai/ConfidenceIndicator';
-import { MultipleChoiceQuestion, QuestionSet } from '@/types/question';
+import { useAuth } from '@/contexts/AuthContext';
+import { Clock, Book, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { QuestionSet, MultipleChoiceQuestion, QuizAttempt } from '@/types/question';
 import { useMultipleChoice } from '@/hooks/useMultipleChoice';
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import SpeakableWord from '@/components/learning/SpeakableWord';
+import { Helmet } from 'react-helmet-async';
 
-const CATEGORIES = [
-  'Italian Grammar',
-  'Vocabulary',
-  'Common Phrases',
-  'Verb Conjugation',
-  'Travel Phrases',
-  'Business Italian',
-  'Food and Dining',
-  'Art and Culture',
-  'Italian History',
-  'Idioms and Expressions'
-];
-
-const MultipleChoicePage: React.FC = () => {
-  const { isAIEnabled, speakText, isSpeaking } = useAIUtils();
+const MultipleChoice = () => {
+  const navigate = useNavigate();
+  const { setId } = useParams();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { 
-    questionSets, 
-    saveQuestionSet, 
-    saveQuizAttempt, 
-    getQuizStats 
-  } = useMultipleChoice();
-  const { language, autoPlayAudio } = useUserPreferences();
+  const { questionSets, getQuestionSetById, saveQuizAttempt } = useMultipleChoice();
   
-  // State for generating questions
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
-  const [questionCount, setQuestionCount] = useState(5);
-  const [questionLanguage, setQuestionLanguage] = useState<'english' | 'italian'>(language === 'it' ? 'italian' : 'english');
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  
-  // State for quiz
-  const [quizMode, setQuizMode] = useState(false);
-  const [currentQuestionSet, setCurrentQuestionSet] = useState<QuestionSet | null>(null);
+  const [currentSet, setCurrentSet] = useState<QuestionSet | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  const [startTime, setStartTime] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [quizComplete, setQuizComplete] = useState(false);
+  const [score, setScore] = useState({ correct: 0, incorrect: 0, unanswered: 0 });
+  const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [activeTab, setActiveTab] = useState('quiz');
   
-  // State for feedback
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
-  
-  // Stats
-  const quizStats = useMemo(() => getQuizStats(), [getQuizStats]);
-  
-  // Setup timer when quiz starts
+  // Initialize the quiz
   useEffect(() => {
-    if (quizMode && startTime === null) {
-      setStartTime(Date.now());
-      const interval = setInterval(() => {
-        setElapsedTime(Math.floor((Date.now() - (startTime || Date.now())) / 1000));
-      }, 1000);
-      setTimer(interval);
-    }
-    
-    return () => {
-      if (timer) {
-        clearInterval(timer);
+    if (setId) {
+      const questionSet = getQuestionSetById(setId);
+      if (questionSet) {
+        setCurrentSet(questionSet);
+        setStartTime(new Date());
+      } else {
+        toast({
+          title: "Question Set Not Found",
+          description: "The requested question set could not be found.",
+          variant: "destructive"
+        });
+        navigate('/dashboard/multiple-choice');
       }
-    };
-  }, [quizMode, startTime, timer]);
+    } else {
+      // If no set ID is provided, show the first set or redirect
+      if (questionSets.length > 0) {
+        setCurrentSet(questionSets[0]);
+        setStartTime(new Date());
+      } else {
+        toast({
+          title: "No Question Sets",
+          description: "There are no question sets available.",
+          variant: "destructive"
+        });
+        navigate('/dashboard');
+      }
+    }
+  }, [setId, questionSets, navigate, toast, getQuestionSetById]);
   
-  // Format elapsed time
+  // Timer effect
+  useEffect(() => {
+    if (!startTime || quizComplete) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      setElapsedTime(elapsed);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [startTime, quizComplete]);
+  
+  // Format time as mm:ss
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Handle generating questions
-  const handleGenerateQuestions = async () => {
-    if (!isAIEnabled) {
-      toast({
-        title: "AI Features Disabled",
-        description: "Enable AI to generate custom questions. Using pre-made question sets instead.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsGenerating(true);
-    setGenerationError(null);
-    
-    try {
-      let prompt = category;
-      if (customPrompt) {
-        prompt = customPrompt;
-      }
-      
-      const generatedQuestions = await generateQuestionSet(
-        prompt,
-        difficulty,
-        questionLanguage,
-        questionCount
-      );
-      
-      if (!generatedQuestions || generatedQuestions.length === 0) {
-        throw new Error('Failed to generate questions. Please try again with a different topic.');
-      }
-      
-      // Map the generated questions to our question format
-      const questions: MultipleChoiceQuestion[] = generatedQuestions.map((item, index) => ({
-        id: `gen-${Date.now()}-${index}`,
-        question: item.question,
-        options: item.options,
-        correctAnswer: item.options[item.correctAnswerIndex],
-        explanation: item.explanation || 'Explanation not provided',
-        difficulty,
-        category: prompt,
-        language: questionLanguage
-      }));
-      
-      // Create a new question set
-      const newQuestionSet: QuestionSet = {
-        id: `set-${Date.now()}`,
-        title: `${difficulty} ${prompt}`,
-        description: `Generated ${questionCount} questions about ${prompt}`,
-        questions,
-        category: prompt,
-        difficulty,
-        language: questionLanguage,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      saveQuestionSet(newQuestionSet);
-      
-      toast({
-        title: "Questions Generated",
-        description: `Successfully created ${questions.length} ${difficulty.toLowerCase()} level questions.`,
-      });
-      
-      // Start quiz with new questions
-      setCurrentQuestionSet(newQuestionSet);
-      setSelectedAnswers({});
-      setCurrentQuestionIndex(0);
-      setQuizMode(true);
-      setShowResults(false);
-      setQuizCompleted(false);
-      setStartTime(Date.now());
-      setElapsedTime(0);
-      
-    } catch (error) {
-      console.error('Error generating questions:', error);
-      setGenerationError(error instanceof Error ? error.message : 'Failed to generate questions');
-      
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : 'Failed to generate questions',
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  // Get the current question
+  const currentQuestion = currentSet?.questions[currentQuestionIndex] as MultipleChoiceQuestion | undefined;
   
-  // Start quiz with a saved question set
-  const handleStartQuiz = (questionSetId: string) => {
-    const set = questionSets.find(s => s.id === questionSetId);
-    if (set) {
-      setCurrentQuestionSet(set);
-      setSelectedAnswers({});
-      setCurrentQuestionIndex(0);
-      setQuizMode(true);
-      setShowResults(false);
-      setQuizCompleted(false);
-      setStartTime(Date.now());
-      setElapsedTime(0);
-    }
-  };
-  
-  // Handle selecting an answer
-  const handleSelectAnswer = (questionId: string, answer: string) => {
-    if (quizCompleted) return;
+  // Handle answer selection
+  const handleAnswerSelect = (value: string) => {
+    if (isRevealed || quizComplete) return;
     
-    setSelectedAnswers(prev => ({
+    setAnswers(prev => ({
       ...prev,
-      [questionId]: answer
+      [currentQuestion?.id || '']: value
     }));
   };
   
-  // Navigate to next question
+  // Check if the selected answer is correct
+  const isAnswerCorrect = (): boolean => {
+    if (!currentQuestion) return false;
+    const selectedAnswer = answers[currentQuestion.id];
+    return selectedAnswer === currentQuestion.correctAnswer;
+  };
+  
+  // Reveal the answer
+  const handleRevealAnswer = () => {
+    setIsRevealed(true);
+  };
+  
+  // Move to the next question
   const handleNextQuestion = () => {
-    if (!currentQuestionSet) return;
+    if (!currentSet) return;
     
-    if (currentQuestionIndex < currentQuestionSet.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+    // Update the score if revealed
+    if (isRevealed) {
+      if (isAnswerCorrect()) {
+        setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+      } else {
+        setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+      }
     } else {
-      // End of quiz
-      setShowResults(true);
-      
-      // Stop timer
-      if (timer) {
-        clearInterval(timer);
-        setTimer(null);
-      }
-      
-      // Calculate results
-      const score = calculateScore();
-      
-      // Save attempt
-      if (!quizCompleted) {
-        saveQuizAttempt({
-          id: `attempt-${Date.now()}`,
-          userId: 'current-user',
-          questionSetId: currentQuestionSet.id,
-          score,
-          totalQuestions: currentQuestionSet.questions.length,
-          completedAt: new Date(),
-          timeSpent: elapsedTime
-        });
-        
-        setQuizCompleted(true);
-      }
-      
-      toast({
-        title: "Quiz Completed!",
-        description: `Your score: ${score} out of ${currentQuestionSet.questions.length}`,
-      });
+      setScore(prev => ({ ...prev, unanswered: prev.unanswered + 1 }));
+    }
+    
+    // Check if this was the last question
+    if (currentQuestionIndex >= currentSet.questions.length - 1) {
+      completeQuiz();
+    } else {
+      // Move to the next question
+      setCurrentQuestionIndex(prev => prev + 1);
+      setIsRevealed(false);
     }
   };
   
-  // Navigate to previous question
-  const handlePrevQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
+  // Complete the quiz
+  const completeQuiz = () => {
+    if (!currentSet || !user) return;
+    
+    // Calculate final score
+    const totalQuestions = currentSet.questions.length;
+    const correctAnswers = score.correct + (isRevealed && isAnswerCorrect() ? 1 : 0);
+    const finalScore = Math.round((correctAnswers / totalQuestions) * 100);
+    
+    // Save the quiz attempt
+    const quizAttempt: Omit<QuizAttempt, 'createdAt'> = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      questionSetId: currentSet.id,
+      answers: answers,
+      score: correctAnswers,
+      totalQuestions,
+      completedAt: new Date(),
+      completed: true,
+      timeSpent: elapsedTime
+    };
+    
+    saveQuizAttempt(quizAttempt);
+    
+    // Set quiz complete
+    setQuizComplete(true);
+    setActiveTab('results');
+    
+    // Show completion toast
+    toast({
+      title: "Quiz Completed",
+      description: `You scored ${correctAnswers} out of ${totalQuestions} (${finalScore}%)`,
+    });
   };
   
-  // Calculate score
-  const calculateScore = (): number => {
-    if (!currentQuestionSet) return 0;
-    
-    return currentQuestionSet.questions.filter(q => 
-      selectedAnswers[q.id] === q.correctAnswer
-    ).length;
+  // Start a new quiz with the same set
+  const handleRestartQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setIsRevealed(false);
+    setQuizComplete(false);
+    setScore({ correct: 0, incorrect: 0, unanswered: 0 });
+    setStartTime(new Date());
+    setElapsedTime(0);
+    setActiveTab('quiz');
   };
   
-  // Get detailed feedback on an answer
-  const handleGetFeedback = async (questionId: string) => {
-    if (!isAIEnabled || !currentQuestionSet) {
-      toast({
-        title: "Feature Disabled",
-        description: "AI features are required for detailed feedback.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const question = currentQuestionSet.questions.find(q => q.id === questionId);
-    if (!question) return;
-    
-    setIsFeedbackLoading(true);
-    
-    try {
-      const response = await evaluateAnswer(
-        selectedAnswers[questionId],
-        question.correctAnswer,
-        question.question,
-        questionLanguage
-      );
-      
-      setFeedback(response);
-    } catch (error) {
-      console.error('Error getting feedback:', error);
-      setFeedback('Unable to generate feedback at this time. Please try again later.');
-    } finally {
-      setIsFeedbackLoading(false);
-    }
+  // Go back to the quiz selection
+  const handleBackToSets = () => {
+    navigate('/dashboard/multiple-choice');
   };
   
-  // Reset the quiz to start over
-  const handleResetQuiz = () => {
-    if (currentQuestionSet) {
-      setSelectedAnswers({});
-      setCurrentQuestionIndex(0);
-      setShowResults(false);
-      setQuizCompleted(false);
-      setStartTime(Date.now());
-      setElapsedTime(0);
-    }
-  };
+  // Calculate progress percentage
+  const progressPercentage = currentSet 
+    ? ((currentQuestionIndex + (isRevealed ? 1 : 0)) / currentSet.questions.length) * 100 
+    : 0;
   
-  // Speak the current question
-  const handleSpeakQuestion = useCallback(async () => {
-    if (!currentQuestionSet) return;
-    
-    const question = currentQuestionSet.questions[currentQuestionIndex];
-    if (!question) return;
-    
-    try {
-      await speakText(
-        question.question, 
-        questionLanguage === 'italian' ? 'it-IT' : 'en-US'
-      );
-    } catch (error) {
-      console.error('Error speaking text:', error);
+  // Sample data for demonstration
+  const sampleQuestions: MultipleChoiceQuestion[] = [
+    {
+      id: "1",
+      type: "multiple-choice",
+      question: "What is the Italian word for 'hello'?",
+      options: ["Ciao", "Arrivederci", "Grazie", "Prego"],
+      correctAnswer: "Ciao",
+      explanation: "Ciao is a casual greeting in Italian, equivalent to 'hello' or 'hi' in English.",
+      difficulty: "Beginner",
+      category: "Vocabulary",
+      tags: ["greeting", "basic"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      language: "english"
+    },
+    {
+      id: "2",
+      type: "multiple-choice",
+      question: "Which of these is NOT an Italian word for a type of pasta?",
+      options: ["Spaghetti", "Penne", "Panini", "Linguine"],
+      correctAnswer: "Panini",
+      explanation: "Panini is actually the Italian word for sandwiches. The other options are all types of pasta.",
+      difficulty: "Beginner",
+      category: "Food",
+      tags: ["food", "pasta"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      language: "english"
     }
-  }, [currentQuestionSet, currentQuestionIndex, questionLanguage, speakText]);
+  ];
   
-  // Auto-speak question when navigating
+  // If no sets are available, use sample data
   useEffect(() => {
-    if (quizMode && autoPlayAudio && currentQuestionSet) {
-      handleSpeakQuestion();
+    if (!currentSet && questionSets.length === 0) {
+      setCurrentSet({
+        id: "sample",
+        title: "Italian Basics Sample Quiz",
+        description: "A sample quiz to demonstrate the multiple choice feature.",
+        questions: sampleQuestions,
+        category: "Vocabulary",
+        difficulty: "Beginner",
+        language: "english",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      setStartTime(new Date());
     }
-  }, [quizMode, currentQuestionIndex, handleSpeakQuestion, autoPlayAudio, currentQuestionSet]);
+  }, [currentSet, questionSets]);
   
-  // Get current question
-  const currentQuestion = useMemo(() => {
-    if (!currentQuestionSet || currentQuestionIndex >= currentQuestionSet.questions.length) {
-      return null;
-    }
-    return currentQuestionSet.questions[currentQuestionIndex];
-  }, [currentQuestionSet, currentQuestionIndex]);
+  if (!currentSet) {
+    return <div className="flex justify-center items-center h-96">Loading quiz...</div>;
+  }
   
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <header className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Multiple Choice</h1>
-          <p className="text-muted-foreground">Test your knowledge with quizzes</p>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <ConfidenceIndicator contentType="multiple-choice" />
-          
-          {quizMode && (
-            <div className="flex items-center bg-muted px-3 py-1 rounded-full">
-              <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span className="font-mono">{formatTime(elapsedTime)}</span>
-            </div>
-          )}
-          
-          {quizMode && (
-            <Button variant="outline" onClick={() => setQuizMode(false)}>
-              Exit Quiz
-            </Button>
-          )}
-        </div>
-      </header>
+    <div className="container mx-auto py-6 px-4">
+      <Helmet>
+        <title>Multiple Choice Quiz | Italian Learning</title>
+      </Helmet>
       
-      {quizMode ? (
-        <div className="max-w-3xl mx-auto">
-          {/* Quiz Progress Bar */}
-          <div className="mb-6 space-y-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="quiz">Quiz</TabsTrigger>
+          <TabsTrigger value="results" disabled={!quizComplete}>Results</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="quiz">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">
-                Question {currentQuestionIndex + 1} of {currentQuestionSet?.questions.length}
-              </span>
-              <Badge variant="outline">
-                {currentQuestionSet?.difficulty}
-              </Badge>
+              <div>
+                <h1 className="text-2xl font-bold">{currentSet.title}</h1>
+                <p className="text-muted-foreground">{currentSet.description}</p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                  {currentSet.difficulty}
+                </span>
+                <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm font-medium">
+                  {currentSet.category}
+                </span>
+              </div>
             </div>
-            <Progress 
-              value={((currentQuestionIndex + 1) / (currentQuestionSet?.questions.length || 1)) * 100} 
-              className="h-2" 
-            />
-          </div>
-          
-          {showResults ? (
-            /* Results View */
-            <Card>
-              <CardHeader>
-                <CardTitle>Quiz Results</CardTitle>
-                <CardDescription>
-                  {currentQuestionSet?.title} - Completed in {formatTime(elapsedTime)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-center py-4">
-                  <div className="text-2xl font-bold mb-2">
-                    Your Score: {calculateScore()} / {currentQuestionSet?.questions.length}
-                  </div>
-                  <div className="text-lg">
-                    {calculateScore() === currentQuestionSet?.questions.length 
-                      ? "Perfect score! Excellent work!" 
-                      : calculateScore() > (currentQuestionSet?.questions.length || 0) / 2 
-                        ? "Good job! Keep practicing to improve." 
-                        : "Keep practicing to improve your score."}
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg mb-2">Question Summary</h3>
-                  
-                  {currentQuestionSet?.questions.map((question, index) => {
-                    const isCorrect = selectedAnswers[question.id] === question.correctAnswer;
-                    
-                    return (
-                      <Card key={question.id} className={`border-l-4 ${
-                        isCorrect ? 'border-l-green-500' : 'border-l-red-500'
-                      }`}>
-                        <CardContent className="pt-4 pb-2">
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2 flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                  isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                                }`}>
-                                  {isCorrect ? 
-                                    <CheckCircle className="h-4 w-4" /> : 
-                                    <XCircle className="h-4 w-4" />
-                                  }
-                                </div>
-                                <span className="font-medium">Question {index + 1}</span>
-                              </div>
-                              
-                              <div className="pl-8">
-                                <SpeakableWord 
-                                  word={question.question}
-                                  language={questionLanguage === 'italian' ? 'it' : 'en'}
-                                  className="font-medium"
-                                />
-                                
-                                <div className="mt-2 space-y-1">
-                                  {question.options.map((option) => (
-                                    <div key={option} className={`flex items-center p-2 rounded-md ${
-                                      option === question.correctAnswer ? 'bg-green-50 text-green-700' : 
-                                      option === selectedAnswers[question.id] ? 'bg-red-50 text-red-700' : ''
-                                    }`}>
-                                      <div className="w-5">
-                                        {option === question.correctAnswer && <CheckCircle className="h-4 w-4 text-green-500" />}
-                                        {option === selectedAnswers[question.id] && option !== question.correctAnswer && 
-                                          <XCircle className="h-4 w-4 text-red-500" />
-                                        }
-                                      </div>
-                                      <span className="ml-2">{option}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                <div className="mt-3 text-sm text-muted-foreground border-t pt-2">
-                                  <span className="font-medium">Explanation: </span>
-                                  {question.explanation}
-                                </div>
-                                
-                                {/* AI Feedback */}
-                                {feedback && question.id === currentQuestion?.id && (
-                                  <Alert className="mt-3">
-                                    <AlertDescription>{feedback}</AlertDescription>
-                                  </Alert>
-                                )}
-                                
-                                {isAIEnabled && (
-                                  <Button 
-                                    variant="link" 
-                                    className="mt-1 p-0 h-auto text-sm"
-                                    onClick={() => handleGetFeedback(question.id)}
-                                    disabled={isFeedbackLoading}
-                                  >
-                                    {isFeedbackLoading && question.id === currentQuestion?.id ? (
-                                      <>
-                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                        Generating feedback...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Pencil className="h-3 w-3 mr-1" />
-                                        Get detailed explanation
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => setQuizMode(false)}>
-                  Back to Quizzes
-                </Button>
-                <Button onClick={handleResetQuiz}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Restart Quiz
-                </Button>
-              </CardFooter>
-            </Card>
-          ) : (
-            /* Question View */
-            currentQuestion && (
-              <Card>
+            
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center">
+                <Book className="w-4 h-4 mr-1" />
+                <span>
+                  Question {currentQuestionIndex + 1} of {currentSet.questions.length}
+                </span>
+              </div>
+              
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-1" />
+                <span>{formatTime(elapsedTime)}</span>
+              </div>
+            </div>
+            
+            <Progress value={progressPercentage} className="h-2" />
+            
+            {currentQuestion ? (
+              <Card className="mt-4">
                 <CardHeader>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>
-                        <SpeakableWord
-                          word={currentQuestion.question}
-                          language={questionLanguage === 'italian' ? 'it' : 'en'}
-                        />
-                      </CardTitle>
-                      {/* Play button for question audio */}
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={handleSpeakQuestion}
-                        disabled={isSpeaking}
-                      >
-                        {isSpeaking ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <span className="text-xl">🔊</span>
-                        )}
-                      </Button>
-                    </div>
-                    <CardDescription>
-                      {currentQuestionSet?.title} - {currentQuestionSet?.difficulty}
-                    </CardDescription>
-                  </div>
+                  <CardTitle>Question {currentQuestionIndex + 1}</CardTitle>
+                  <CardDescription className="text-lg font-medium text-foreground">
+                    {currentQuestion.question}
+                  </CardDescription>
                 </CardHeader>
+                
                 <CardContent>
                   <RadioGroup
-                    value={selectedAnswers[currentQuestion.id] || ''}
-                    onValueChange={(value) => handleSelectAnswer(currentQuestion.id, value)}
+                    value={answers[currentQuestion.id] || ''}
+                    onValueChange={handleAnswerSelect}
+                    className="space-y-3"
                   >
-                    {currentQuestion.options.map((option) => (
-                      <div key={option} className="flex items-center space-x-2 py-2 px-4 rounded hover:bg-muted cursor-pointer">
-                        <RadioGroupItem 
-                          value={option} 
-                          id={`option-${option}`} 
-                          className="peer" 
+                    {currentQuestion.options.map((option, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center space-x-2 p-3 rounded-md border ${
+                          isRevealed && option === currentQuestion.correctAnswer
+                            ? 'bg-green-500/10 border-green-500/50'
+                            : isRevealed && answers[currentQuestion.id] === option && option !== currentQuestion.correctAnswer
+                              ? 'bg-destructive/10 border-destructive/50'
+                              : ''
+                        }`}
+                      >
+                        <RadioGroupItem
+                          value={option}
+                          id={`option-${index}`}
+                          disabled={isRevealed}
                         />
-                        <Label 
-                          htmlFor={`option-${option}`} 
-                          className="flex-1 cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        <Label
+                          htmlFor={`option-${index}`}
+                          className={`flex-grow ${
+                            isRevealed && option === currentQuestion.correctAnswer
+                              ? 'text-green-600 dark:text-green-400 font-medium'
+                              : isRevealed && answers[currentQuestion.id] === option && option !== currentQuestion.correctAnswer
+                                ? 'text-destructive font-medium'
+                                : ''
+                          }`}
                         >
                           {option}
                         </Label>
+                        
+                        {isRevealed && option === currentQuestion.correctAnswer && (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        )}
+                        
+                        {isRevealed && answers[currentQuestion.id] === option && option !== currentQuestion.correctAnswer && (
+                          <XCircle className="h-5 w-5 text-destructive" />
+                        )}
                       </div>
                     ))}
                   </RadioGroup>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={handlePrevQuestion}
-                    disabled={currentQuestionIndex === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={handleNextQuestion}
-                    disabled={!selectedAnswers[currentQuestion.id]}
-                  >
-                    {currentQuestionIndex === currentQuestionSet.questions.length - 1 ? 'Finish' : 'Next'}
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            )
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column - Create Quiz */}
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create New Quiz</CardTitle>
-                <CardDescription>
-                  Generate multiple choice questions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="topic">Topic</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="topic">
-                      <SelectValue placeholder="Select a topic" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty">Difficulty</Label>
-                  <Select value={difficulty} onValueChange={(value) => setDifficulty(value as any)}>
-                    <SelectTrigger id="difficulty">
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Beginner">Beginner</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
-                      <SelectItem value="Advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="language">Question Language</Label>
-                  <Select value={questionLanguage} onValueChange={(value) => setQuestionLanguage(value as any)}>
-                    <SelectTrigger id="language">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="english">English</SelectItem>
-                      <SelectItem value="italian">Italian</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="count">Number of Questions</Label>
-                  <Select 
-                    value={questionCount.toString()} 
-                    onValueChange={(value) => setQuestionCount(parseInt(value))}
-                  >
-                    <SelectTrigger id="count">
-                      <SelectValue placeholder="Select count" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 Questions</SelectItem>
-                      <SelectItem value="10">10 Questions</SelectItem>
-                      <SelectItem value="15">15 Questions</SelectItem>
-                      <SelectItem value="20">20 Questions</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="custom-topic">Custom Topic (Optional)</Label>
-                  <Textarea
-                    id="custom-topic"
-                    placeholder="Enter a specific topic or instructions for the quiz"
-                    value={customPrompt}
-                    onChange={(e) => setCustomPrompt(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty to use the selected topic or enter a custom topic
-                  </p>
-                </div>
-                
-                {generationError && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{generationError}</AlertDescription>
-                  </Alert>
+                {isRevealed && currentQuestion.explanation && (
+                  <div className="px-6 pb-4">
+                    <div className="p-3 rounded-md bg-muted text-muted-foreground">
+                      <p className="font-medium text-foreground">Explanation:</p>
+                      <p>{currentQuestion.explanation}</p>
+                    </div>
+                  </div>
                 )}
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  onClick={handleGenerateQuestions} 
-                  disabled={isGenerating}
-                  className="w-full"
-                >
-                  {isGenerating ? (
+                
+                <CardFooter className="flex justify-between">
+                  {!isRevealed ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
+                      <Button variant="outline" onClick={handleRevealAnswer} disabled={!answers[currentQuestion.id]}>
+                        Show Answer
+                      </Button>
+                      <Button onClick={handleNextQuestion}>
+                        {currentQuestionIndex >= currentSet.questions.length - 1 ? 'Skip & Finish' : 'Skip'}
+                      </Button>
                     </>
                   ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Generate Questions
-                    </>
+                    <Button onClick={handleNextQuestion} className="ml-auto">
+                      {currentQuestionIndex >= currentSet.questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
+                    </Button>
                   )}
-                </Button>
-              </CardFooter>
-            </Card>
+                </CardFooter>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="mt-4 text-lg font-medium">No questions available</p>
+                  <p className="text-muted-foreground">This quiz set has no questions.</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
-          
-          {/* Right Column - Saved Quizzes */}
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Saved Quizzes</CardTitle>
-                <CardDescription>
-                  Start a quiz from previously generated questions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="saved">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="saved">Saved Quizzes</TabsTrigger>
-                    <TabsTrigger value="stats">Your Stats</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="saved" className="space-y-4">
-                    {questionSets.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground">
-                          No saved quizzes yet. Generate a new quiz to get started!
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {questionSets.map((set) => (
-                          <Card key={set.id} className="hover:bg-muted/30 transition">
-                            <div className="p-4">
-                              <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                  <h3 className="font-medium">{set.title}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    {set.description}
-                                  </p>
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    <Badge variant="outline">{set.questions.length} Questions</Badge>
-                                    <Badge variant="outline">{set.difficulty}</Badge>
-                                    <Badge variant="outline">
-                                      {set.language === 'italian' ? '🇮🇹 Italian' : '🇬🇧 English'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <Button onClick={() => handleStartQuiz(set.id)}>
-                                  Start Quiz
-                                </Button>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="stats">
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-muted/30">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-xl">Total Quizzes</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-3xl font-bold">{quizStats.totalAttempts}</div>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-muted/30">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-xl">Average Score</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-3xl font-bold">
-                              {quizStats.totalAttempts > 0 
-                                ? `${Math.round(quizStats.averageScore * 100)}%` 
-                                : 'N/A'}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-muted/30">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-xl">Best Score</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-3xl font-bold">
-                              {quizStats.totalAttempts > 0 
-                                ? `${Math.round(quizStats.bestScore * 100)}%` 
-                                : 'N/A'}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                      
-                      {quizStats.questionSets.length > 0 ? (
-                        <div className="space-y-3">
-                          <h3 className="font-semibold text-lg">Quiz Performance</h3>
-                          {quizStats.questionSets.map((set) => (
-                            <Card key={set.id} className="overflow-hidden">
-                              <div className="p-4">
-                                <div className="flex justify-between items-center">
-                                  <h4 className="font-medium">{set.title}</h4>
-                                  <Badge variant="outline">{set.attempts} attempts</Badge>
-                                </div>
-                                <div className="mt-2 space-y-1">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Best Score:</span>
-                                    <span className="font-medium">{Math.round(set.bestScore * 100)}%</span>
-                                  </div>
-                                  <Progress 
-                                    value={set.bestScore * 100} 
-                                    className="h-2" 
-                                  />
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <p className="text-muted-foreground">
-                            No quiz statistics yet. Complete a quiz to see your performance!
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+        </TabsContent>
+        
+        <TabsContent value="results">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quiz Results</CardTitle>
+              <CardDescription>
+                {currentSet.title} - {formatTime(elapsedTime)}
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                    {score.correct}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Correct</div>
+                </div>
+                
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-destructive">
+                    {score.incorrect}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Incorrect</div>
+                </div>
+                
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-muted-foreground">
+                    {score.unanswered}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Skipped</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Score</span>
+                  <span className="font-medium">
+                    {Math.round((score.correct / currentSet.questions.length) * 100)}%
+                  </span>
+                </div>
+                <Progress
+                  value={(score.correct / currentSet.questions.length) * 100}
+                  className="h-2"
+                />
+              </div>
+              
+              <div className="space-y-1">
+                <h3 className="font-medium">Time Spent</h3>
+                <p className="text-muted-foreground">{formatTime(elapsedTime)}</p>
+              </div>
+              
+              {/* Quiz analytics would go here in a more advanced app */}
+            </CardContent>
+            
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleBackToSets}>
+                Back to Question Sets
+              </Button>
+              <Button onClick={handleRestartQuiz}>
+                Retry Quiz
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
 
-export default MultipleChoicePage;
+export default MultipleChoice;

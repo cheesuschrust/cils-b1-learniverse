@@ -64,7 +64,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
       updatedAt: now
     };
     
-    setQuestionSets(prev => [...prev, newSet]);
+    setQuestionSets((prev: QuestionSet[]) => [...prev, newSet]);
     return newSet;
   };
   
@@ -72,7 +72,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   const updateQuestionSet = (id: string, data: Partial<QuestionSet>): QuestionSet | null => {
     let updatedSet: QuestionSet | null = null;
     
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       const index = prev.findIndex(set => set.id === id);
       if (index === -1) return prev;
       
@@ -94,7 +94,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   const deleteQuestionSet = (id: string): boolean => {
     let success = false;
     
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       const index = prev.findIndex(set => set.id === id);
       if (index === -1) return prev;
       
@@ -111,7 +111,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   const createQuestion = (setId: string, data: Omit<MultipleChoiceQuestion, 'id' | 'createdAt' | 'updatedAt'>): MultipleChoiceQuestion | null => {
     let newQuestion: MultipleChoiceQuestion | null = null;
     
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       const setIndex = prev.findIndex(set => set.id === setId);
       if (setIndex === -1) return prev;
       
@@ -128,7 +128,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
       const updatedSets = [...prev];
       updatedSets[setIndex] = {
         ...updatedSets[setIndex],
-        questions: [...updatedSets[setIndex].questions, newQuestion],
+        questions: [...updatedSets[setIndex].questions, newQuestion as MultipleChoiceQuestion],
         updatedAt: now
       };
       
@@ -142,7 +142,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   const updateQuestion = (setId: string, questionId: string, data: Partial<MultipleChoiceQuestion>): MultipleChoiceQuestion | null => {
     let updatedQuestion: MultipleChoiceQuestion | null = null;
     
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       const setIndex = prev.findIndex(set => set.id === setId);
       if (setIndex === -1) return prev;
       
@@ -154,7 +154,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
         ...updatedSets[setIndex].questions[questionIndex],
         ...data,
         updatedAt: new Date()
-      };
+      } as MultipleChoiceQuestion;
       
       const updatedQuestions = [...updatedSets[setIndex].questions];
       updatedQuestions[questionIndex] = updatedQuestion;
@@ -175,7 +175,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   const deleteQuestion = (setId: string, questionId: string): boolean => {
     let success = false;
     
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       const setIndex = prev.findIndex(set => set.id === setId);
       if (setIndex === -1) return prev;
       
@@ -208,13 +208,13 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
       createdAt: new Date()
     };
     
-    setQuizAttempts(prev => [...prev, newAttempt]);
+    setQuizAttempts((prev: QuizAttempt[]) => [...prev, newAttempt]);
     return newAttempt;
   };
   
   // Save a question set (for imported/generated sets)
   const saveQuestionSet = (questionSet: QuestionSet): void => {
-    setQuestionSets(prev => {
+    setQuestionSets((prev: QuestionSet[]) => {
       // Check if it already exists
       const existingIndex = prev.findIndex(set => set.id === questionSet.id);
       if (existingIndex >= 0) {

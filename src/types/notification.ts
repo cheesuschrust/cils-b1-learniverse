@@ -1,7 +1,19 @@
 
 // Type definitions for notification system
 
-export type NotificationType = 'success' | 'info' | 'warning' | 'error' | 'system' | 'file-processing';
+export type NotificationType = 
+  | 'success' 
+  | 'info' 
+  | 'warning' 
+  | 'error' 
+  | 'system' 
+  | 'file-processing'
+  | 'achievement'
+  | 'reminder'
+  | 'feature'
+  | 'update'
+  | 'lesson'
+  | 'support';
 
 export interface Notification {
   id: string;
@@ -18,6 +30,7 @@ export interface Notification {
   metadata?: Record<string, any>;
   priority?: 'low' | 'medium' | 'high';
   icon?: string;
+  link?: string; // Added link property to support notification linking
 }
 
 export interface NotificationsContextType {
@@ -28,6 +41,7 @@ export interface NotificationsContextType {
   markAllAsRead: () => void;
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
+  dismissAll: () => void; // Added to fix the missing method
   getFileProcessingNotifications: () => Notification[];
 }
 

@@ -1,129 +1,147 @@
 
 import React from 'react';
-import { Card } from '@/components/ui/card';
+import { 
+  BellRing, 
+  CheckCircle, 
+  Info, 
+  AlertTriangle, 
+  X, 
+  FileText,
+  Trophy,
+  Calendar,
+  Sparkles,
+  RefreshCw,
+  BookOpen,
+  MessageSquareText
+} from 'lucide-react';
+import { Notification, NotificationType } from '@/types/notification';
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Bell, BookOpen, CheckCircle, FileText, History, Info, MessageCircle, Settings, Star, Trophy, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { Notification } from '@/types/notification';
 
 interface NotificationItemProps {
   notification: Notification;
-  key: string;
   onDismiss: (id: string) => void;
-  onAction?: (id: string, action: string) => void;
+  onRead: (id: string) => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDismiss, onAction }) => {
-  // Choose icon based on notification type
-  const getIcon = () => {
-    switch (notification.type) {
-      case 'achievement':
-        return <Trophy className="h-5 w-5 text-yellow-500" />;
-      case 'reminder':
-        return <Bell className="h-5 w-5 text-blue-500" />;
-      case 'feature':
-        return <Star className="h-5 w-5 text-purple-500" />;
-      case 'update':
-        return <Info className="h-5 w-5 text-green-500" />;
-      case 'lesson':
-        return <BookOpen className="h-5 w-5 text-teal-500" />;
-      case 'support':
-        return <MessageCircle className="h-5 w-5 text-pink-500" />;
-      case 'file-processing':
-        return <FileText className="h-5 w-5 text-indigo-500" />;
-      case 'system':
-        return <Settings className="h-5 w-5 text-gray-500" />;
-      case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />;
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'warning':
-        return <Bell className="h-5 w-5 text-yellow-500" />;
-      case 'error':
-        return <X className="h-5 w-5 text-red-500" />;
-      default:
-        return <Info className="h-5 w-5 text-blue-500" />;
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onDismiss,
+  onRead
+}) => {
+  const getIcon = (type: NotificationType) => {
+    if (type === 'success') {
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    } else if (type === 'info') {
+      return <Info className="h-5 w-5 text-blue-500" />;
+    } else if (type === 'warning') {
+      return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+    } else if (type === 'error') {
+      return <X className="h-5 w-5 text-red-500" />;
+    } else if (type === 'file-processing') {
+      return <FileText className="h-5 w-5 text-indigo-500" />;
+    } else if (type === 'achievement') {
+      return <Trophy className="h-5 w-5 text-yellow-500" />;
+    } else if (type === 'reminder') {
+      return <Calendar className="h-5 w-5 text-purple-500" />;
+    } else if (type === 'feature') {
+      return <Sparkles className="h-5 w-5 text-cyan-500" />;
+    } else if (type === 'update') {
+      return <RefreshCw className="h-5 w-5 text-emerald-500" />;
+    } else if (type === 'lesson') {
+      return <BookOpen className="h-5 w-5 text-violet-500" />;
+    } else if (type === 'support') {
+      return <MessageSquareText className="h-5 w-5 text-pink-500" />;
+    } else {
+      return <BellRing className="h-5 w-5 text-gray-500" />;
     }
   };
   
-  // For custom icons provided in the notification
-  const getCustomIcon = () => {
-    if (notification.icon === 'trophy') return <Trophy className="h-5 w-5 text-yellow-500" />;
-    if (notification.icon === 'history') return <History className="h-5 w-5 text-blue-500" />;
-    if (notification.icon === 'check') return <CheckCircle className="h-5 w-5 text-green-500" />;
-    return null;
-  };
-  
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDismiss(notification.id);
-  };
-  
-  const handleAction = (action: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onAction) {
-      onAction(notification.id, action);
+  const getPriorityClasses = () => {
+    if (notification.priority === 'high') {
+      return "border-l-4 border-red-500";
+    } else if (notification.priority === 'medium') {
+      return "border-l-4 border-amber-500";
     }
+    return "";
   };
   
-  const notificationContent = (
-    <Card className={cn(
-      "flex items-start p-4 space-x-4 cursor-pointer hover:bg-muted/50 transition-colors",
-      !notification.read && "border-l-4 border-l-primary"
-    )}>
-      <div className="flex-shrink-0 mt-0.5">
-        {notification.icon ? getCustomIcon() : getIcon()}
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-sm">{notification.title}</h4>
-        <p className="text-sm text-muted-foreground line-clamp-2">{notification.message}</p>
-        {notification.actions && notification.actions.length > 0 && (
-          <div className="flex space-x-2 mt-2">
-            {notification.actions.map((action, index) => (
-              <Button 
-                key={index} 
-                variant="outline" 
-                size="sm" 
-                className="h-7 text-xs"
-                onClick={handleAction(action.action)}
-              >
-                {action.label}
-              </Button>
-            ))}
+  const handleActionClick = (action: () => void) => {
+    // Mark as read when an action is clicked
+    onRead(notification.id);
+    action();
+  };
+  
+  return (
+    <div 
+      className={`p-4 bg-card rounded-md mb-2 shadow-sm 
+        ${notification.read ? 'opacity-70' : ''} 
+        ${getPriorityClasses()}`}
+      onClick={() => !notification.read && onRead(notification.id)}
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex gap-3">
+          <div className="mt-0.5">
+            {notification.icon ? 
+              <img src={notification.icon} alt="" className="h-5 w-5" /> : 
+              getIcon(notification.type)
+            }
           </div>
-        )}
-        <div className="flex justify-between items-center mt-1">
-          <span className="text-xs text-muted-foreground">
-            {new Date(notification.createdAt).toLocaleString()}
-          </span>
+          
+          <div className="flex-1">
+            <div className="font-medium text-sm">
+              {notification.title}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {notification.message}
+            </div>
+            
+            {notification.link && (
+              <Link 
+                to={notification.link} 
+                className="text-xs text-primary hover:underline mt-1 inline-block"
+                onClick={() => onRead(notification.id)}
+              >
+                View details
+              </Link>
+            )}
+            
+            {notification.actions && notification.actions.length > 0 && (
+              <div className="flex gap-2 mt-2">
+                {notification.actions.map((action, index) => (
+                  <Button 
+                    key={index} 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleActionClick(action.action)}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+            
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+            </div>
+          </div>
         </div>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss(notification.id);
+          }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
-      
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 flex-shrink-0 opacity-50 hover:opacity-100"
-        onClick={handleDismiss}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </Card>
+    </div>
   );
-  
-  // If there's a link, wrap the notification in a Link component
-  if (notification.link) {
-    return (
-      <Link to={notification.link}>
-        {notificationContent}
-      </Link>
-    );
-  }
-  
-  return notificationContent;
 };
 
 export default NotificationItem;

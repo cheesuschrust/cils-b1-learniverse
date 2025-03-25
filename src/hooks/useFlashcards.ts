@@ -1,393 +1,575 @@
 import { useState, useEffect } from 'react';
-import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { useLocalStorage } from './useLocalStorage';
-import { Flashcard, FlashcardSet, ImportFormat, ImportOptions, ImportResult } from '@/types/flashcard';
+import { Flashcard, FlashcardSet, FlashcardStats, ImportOptions, ImportResult } from '@/types/flashcard';
 
-const initialFlashcards: Flashcard[] = [
+const DEFAULT_FLASHCARDS: Flashcard[] = [
   {
     id: '1',
-    italian: 'ciao',
-    english: 'hello',
-    explanation: 'A common greeting',
+    italian: 'Ciao',
+    english: 'Hello',
     level: 1,
     mastered: false,
-    dueDate: new Date(),
+    tags: ['greeting', 'basic'],
     createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: new Date()
   },
   {
     id: '2',
-    italian: 'grazie',
-    english: 'thank you',
-    explanation: 'Expressing gratitude',
+    italian: 'Grazie',
+    english: 'Thank you',
+    explanation: 'Used to express gratitude',
     level: 1,
     mastered: false,
-    dueDate: new Date(),
+    tags: ['courtesy', 'basic'],
     createdAt: new Date(),
-    updatedAt: new Date(),
-  },
+    updatedAt: new Date()
+  }
 ];
 
-const initialFlashcardSets: FlashcardSet[] = [
+const DEFAULT_SETS: FlashcardSet[] = [
   {
-    id: 'set1',
-    name: 'Italian Basics',
-    title: 'Basic Italian Phrases',
-    description: 'Essential phrases for beginners',
-    cards: initialFlashcards,
+    id: '1',
+    name: 'Basic Italian Greetings',
+    description: 'Essential greetings and phrases for beginners',
+    tags: ['beginner', 'greetings'],
+    cards: ['1', '2'],
     createdAt: new Date(),
     updatedAt: new Date(),
-    createdBy: 'system',
-    isPublic: true,
-    cardCount: initialFlashcards.length,
-    masteredCount: 0,
-    language: 'italian',
-    category: 'vocabulary',
-    tags: ['basics', 'italian', 'phrases'],
-    difficulty: 'beginner',
-  },
+    totalCards: 2,
+    masteredCards: 0
+  }
 ];
 
-export const useFlashcards = () => {
-  const [flashcards, setFlashcards] = useLocalStorage<Flashcard[]>('flashcards', initialFlashcards);
-  const [flashcardSets, setFlashcardSets] = useLocalStorage<FlashcardSet[]>('flashcardSets', initialFlashcardSets);
+export interface UseFlashcardsReturn {
+  flashcards: Flashcard[];
+  flashcardSets: FlashcardSet[];
+  createFlashcard: (data: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>) => Flashcard;
+  updateFlashcard: (id: string, data: Partial<Flashcard>) => Flashcard | null;
+  deleteFlashcard: (id: string) => boolean;
+  createFlashcardSet: (data: Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt' | 'totalCards' | 'masteredCards'>) => FlashcardSet;
+  updateFlashcardSet: (id: string, data: Partial<FlashcardSet>) => FlashcardSet | null;
+  deleteFlashcardSet: (id: string) => boolean;
+  importFlashcards: (content: string, options: ImportOptions) => Promise<ImportResult>;
+  exportFlashcards: (setId?: string, format?: 'csv' | 'json') => string;
+  addFlashcardToSet: (flashcardId: string, setId: string) => boolean;
+  removeFlashcardFromSet: (flashcardId: string, setId: string) => boolean;
+  getStats: () => FlashcardStats;
+  markAsMastered: (id: string) => void;
+  resetMastered: (id: string) => void;
+  getDueFlashcards: () => Flashcard[];
+  reviewFlashcard: (id: string, performanceRating: number) => void;
+  getFlashcardById: (id: string) => Flashcard | undefined;
+  getFlashcardSetById: (id: string) => FlashcardSet | undefined;
+}
 
-  useEffect(() => {
-    // Update cardCount and masteredCount whenever flashcards change
-    const updatedSets = flashcardSets.map(set => ({
-      ...set,
-      cardCount: set.cards?.length || 0,
-      masteredCount: set.cards?.filter(card => card.mastered).length || 0,
-    }));
-    setFlashcardSets(updatedSets);
-  }, [flashcards]);
-
+export const useFlashcards = (): UseFlashcardsReturn => {
+  const [flashcards, setFlashcards] = useLocalStorage<Flashcard[]>('flashcards', DEFAULT_FLASHCARDS);
+  const [flashcardSets, setFlashcardSets] = useLocalStorage<FlashcardSet[]>('flashcard-sets', DEFAULT_SETS);
+  
   const createFlashcard = (data: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard => {
+    const now = new Date();
     const newFlashcard: Flashcard = {
-      id: uuid(),
       ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      id: uuidv4(),
+      level: data.level || 1,
+      mastered: data.mastered || false,
+      tags: data.tags || [],
+      createdAt: now,
+      updatedAt: now
     };
-    setFlashcards(prev => [...prev, newFlashcard]);
+    
+    setFlashcards((prev: Flashcard[]) => [...prev, newFlashcard]);
     return newFlashcard;
   };
-
-  const updateFlashcard = (id: string, updates: Partial<Flashcard>): void => {
-    setFlashcards(prev =>
-      prev.map(flashcard =>
-        flashcard.id === id ? { ...flashcard, ...updates, updatedAt: new Date() } : flashcard
-      )
-    );
+  
+  const updateFlashcard = (id: string, data: Partial<Flashcard>): Flashcard | null => {
+    let updatedCard: Flashcard | null = null;
+    
+    setFlashcards((prev: Flashcard[]) => {
+      const index = prev.findIndex(card => card.id === id);
+      if (index === -1) return prev;
+      
+      const updatedCards = [...prev];
+      updatedCards[index] = {
+        ...updatedCards[index],
+        ...data,
+        updatedAt: new Date()
+      };
+      
+      updatedCard = updatedCards[index];
+      return updatedCards;
+    });
+    
+    return updatedCard;
   };
-
-  const deleteFlashcard = (id: string): void => {
-    setFlashcards(prev => prev.filter(flashcard => flashcard.id !== id));
-    // Also remove the card from any sets it belongs to
-    setFlashcardSets(prevSets =>
-      prevSets.map(set => ({
-        ...set,
-        cards: set.cards.filter(card => card.id !== id),
-      }))
-    );
+  
+  const deleteFlashcard = (id: string): boolean => {
+    let success = false;
+    
+    setFlashcards((prev: Flashcard[]) => {
+      const index = prev.findIndex(card => card.id === id);
+      if (index === -1) return prev;
+      
+      success = true;
+      const updatedCards = [...prev];
+      updatedCards.splice(index, 1);
+      return updatedCards;
+    });
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      return prevSets.map(set => {
+        if (set.cards.includes(id)) {
+          const updatedCards = set.cards.filter(cardId => cardId !== id);
+          return {
+            ...set,
+            cards: updatedCards,
+            totalCards: updatedCards.length,
+            masteredCards: calculateMasteredCards(updatedCards, flashcards),
+            updatedAt: new Date()
+          };
+        }
+        return set;
+      });
+    });
+    
+    return success;
   };
-
-  const getFlashcard = (id: string): Flashcard | undefined => {
-    return flashcards.find(flashcard => flashcard.id === id);
-  };
-
-  const listFlashcards = (): Flashcard[] => {
-    return [...flashcards];
-  };
-
-  const createFlashcardSet = (data: Partial<FlashcardSet>): FlashcardSet => {
-    return {
-      id: uuid(),
-      name: data.name || 'New Set',
-      title: data.title,
-      description: data.description || '',
+  
+  const createFlashcardSet = (data: Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt' | 'totalCards' | 'masteredCards'>): FlashcardSet => {
+    const now = new Date();
+    const newSet: FlashcardSet = {
+      ...data,
+      id: uuidv4(),
       cards: data.cards || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: data.createdBy,
-      isPublic: data.isPublic || false,
-      cardCount: data.cards?.length || 0,
-      masteredCount: data.cards?.filter(card => card.mastered).length || 0,
-      language: data.language || 'italian',
-      category: data.category || 'vocabulary',
-      tags: data.tags || [],
-      difficulty: data.difficulty || 'beginner',
+      totalCards: data.cards?.length || 0,
+      masteredCards: calculateMasteredCards(data.cards || [], flashcards),
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => [...prevSets, newSet]);
+    return newSet;
+  };
+  
+  const updateFlashcardSet = (id: string, data: Partial<FlashcardSet>): FlashcardSet | null => {
+    let updatedSet: FlashcardSet | null = null;
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      const index = prevSets.findIndex(set => set.id === id);
+      if (index === -1) return prevSets;
+      
+      const updatedSets = [...prevSets];
+      updatedSets[index] = {
+        ...updatedSets[index],
+        ...data,
+        updatedAt: new Date()
+      };
+      
+      if (data.cards) {
+        updatedSets[index].totalCards = data.cards.length;
+        updatedSets[index].masteredCards = calculateMasteredCards(data.cards, flashcards);
+      }
+      
+      updatedSet = updatedSets[index];
+      return updatedSets;
+    });
+    
+    return updatedSet;
+  };
+  
+  const deleteFlashcardSet = (id: string): boolean => {
+    let success = false;
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      const index = prevSets.findIndex(set => set.id === id);
+      if (index === -1) return prevSets;
+      
+      success = true;
+      const updatedSets = [...prevSets];
+      updatedSets.splice(index, 1);
+      return updatedSets;
+    });
+    
+    return success;
+  };
+  
+  const addFlashcardToSet = (flashcardId: string, setId: string): boolean => {
+    let success = false;
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      const setIndex = prevSets.findIndex(set => set.id === setId);
+      if (setIndex === -1) return prevSets;
+      
+      const set = prevSets[setIndex];
+      if (set.cards.includes(flashcardId)) return prevSets;
+      
+      success = true;
+      const updatedSets = [...prevSets];
+      const updatedCards = [...set.cards, flashcardId];
+      
+      updatedSets[setIndex] = {
+        ...set,
+        cards: updatedCards,
+        totalCards: updatedCards.length,
+        masteredCards: calculateMasteredCards(updatedCards, flashcards),
+        updatedAt: new Date()
+      };
+      
+      return updatedSets;
+    });
+    
+    return success;
+  };
+  
+  const removeFlashcardFromSet = (flashcardId: string, setId: string): boolean => {
+    let success = false;
+    
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      const setIndex = prevSets.findIndex(set => set.id === setId);
+      if (setIndex === -1) return prevSets;
+      
+      const set = prevSets[setIndex];
+      if (!set.cards.includes(flashcardId)) return prevSets;
+      
+      success = true;
+      const updatedSets = [...prevSets];
+      const updatedCards = set.cards.filter(id => id !== flashcardId);
+      
+      updatedSets[setIndex] = {
+        ...set,
+        cards: updatedCards,
+        totalCards: updatedCards.length,
+        masteredCards: calculateMasteredCards(updatedCards, flashcards),
+        updatedAt: new Date()
+      };
+      
+      return updatedSets;
+    });
+    
+    return success;
+  };
+  
+  const calculateMasteredCards = (cardIds: string[], allCards: Flashcard[]): number => {
+    return cardIds.reduce((count, id) => {
+      const card = allCards.find(c => c.id === id);
+      return card?.mastered ? count + 1 : count;
+    }, 0);
+  };
+  
+  const getStats = (): FlashcardStats => {
+    const totalCards = flashcards.length;
+    const masteredCards = flashcards.filter(card => card.mastered).length;
+    
+    const levels = flashcards.map(card => card.level);
+    const averageLevel = levels.length > 0 
+      ? levels.reduce((sum, level) => sum + level, 0) / levels.length 
+      : 0;
+    
+    const dueCards = getDueFlashcards().length;
+    
+    const reviewStreak = 3;
+    
+    const reviewHistory = [
+      {
+        date: new Date(Date.now() - 86400000 * 2),
+        correct: 8,
+        incorrect: 2
+      },
+      {
+        date: new Date(Date.now() - 86400000),
+        correct: 12,
+        incorrect: 3
+      },
+      {
+        date: new Date(),
+        correct: 7,
+        incorrect: 1
+      }
+    ];
+    
+    return {
+      totalCards,
+      masteredCards,
+      averageLevel,
+      dueCards,
+      reviewStreak,
+      lastReview: reviewHistory[reviewHistory.length - 1]?.date,
+      reviewHistory
     };
   };
-
-  const addCardToSet = (cardId: string, setId: string): void => {
-    const cardToAdd = getFlashcard(cardId);
-    if (!cardToAdd) {
-      console.error(`Flashcard with id ${cardId} not found`);
-      return;
-    }
-
-    setFlashcardSets(prevSets =>
-      prevSets.map(set => {
-        if (set.id === setId) {
-          if (set.cards.find(card => card.id === cardId)) {
-            console.warn(`Flashcard with id ${cardId} already exists in set ${setId}`);
-            return set;
-          }
-          return { ...set, cards: [...set.cards, cardToAdd] };
-        }
-        return set;
-      })
-    );
-  };
-
-  const removeCardFromSet = (cardId: string, setId: string): void => {
-    setFlashcardSets(prevSets =>
-      prevSets.map(set => {
-        if (set.id === setId) {
-          return { ...set, cards: set.cards.filter(card => card.id !== cardId) };
-        }
-        return set;
-      })
-    );
-  };
-
-  const updateFlashcardSet = (id: string, updates: Partial<FlashcardSet>): void => {
-    setFlashcardSets(prev =>
-      prev.map(set => (set.id === id ? { ...set, ...updates, updatedAt: new Date() } : set))
-    );
-  };
-
-  const deleteFlashcardSet = (id: string): void => {
-    setFlashcardSets(prev => prev.filter(set => set.id !== id));
-  };
-
-  const getFlashcardSet = (id: string): FlashcardSet | undefined => {
-    return flashcardSets.find(set => set.id === id);
-  };
-
-  const listFlashcardSets = (): FlashcardSet[] => {
-    return [...flashcardSets];
-  };
-
-  const importFlashcards = async (content: string, options: ImportOptions): Promise<ImportResult> => {
-    // Simulate server processing delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+  
+  const markAsMastered = (id: string): void => {
+    updateFlashcard(id, { mastered: true });
     
-    let importedCards: Flashcard[] = [];
-    let errors: string[] = [];
+    setFlashcardSets((prevSets: FlashcardSet[]) => {
+      return prevSets.map(set => {
+        if (set.cards.includes(id)) {
+          return {
+            ...set,
+            masteredCards: set.masteredCards + 1,
+            updatedAt: new Date()
+          };
+        }
+        return set;
+      });
+    });
+  };
+  
+  const resetMastered = (id: string): void => {
+    const card = flashcards.find(c => c.id === id);
+    if (card?.mastered) {
+      updateFlashcard(id, { mastered: false });
+      
+      setFlashcardSets((prevSets: FlashcardSet[]) => {
+        return prevSets.map(set => {
+          if (set.cards.includes(id)) {
+            return {
+              ...set,
+              masteredCards: Math.max(0, set.masteredCards - 1),
+              updatedAt: new Date()
+            };
+          }
+          return set;
+        });
+      });
+    }
+  };
+  
+  const getDueFlashcards = (): Flashcard[] => {
+    const now = new Date();
+    return flashcards.filter(card => 
+      !card.mastered && 
+      (!card.nextReview || card.nextReview <= now)
+    );
+  };
+  
+  const reviewFlashcard = (id: string, performanceRating: number): void => {
+    const card = flashcards.find(c => c.id === id);
+    if (!card) return;
+    
+    let newLevel = card.level;
+    let daysUntilNextReview = 1;
+    
+    if (performanceRating === 0) {
+      newLevel = 1;
+      daysUntilNextReview = 1;
+    } else if (performanceRating === 1) {
+      daysUntilNextReview = card.level;
+    } else {
+      newLevel = card.level + 1;
+      daysUntilNextReview = Math.pow(2, newLevel - 1);
+    }
+    
+    daysUntilNextReview = Math.min(daysUntilNextReview, 90);
+    
+    const nextReview = new Date();
+    nextReview.setDate(nextReview.getDate() + daysUntilNextReview);
+    
+    updateFlashcard(id, {
+      level: newLevel,
+      lastReviewed: new Date(),
+      nextReview: nextReview,
+      mastered: newLevel >= 8
+    });
+  };
+  
+  const importFlashcards = async (content: string, options: ImportOptions): Promise<ImportResult> => {
+    const result: ImportResult = {
+      successful: 0,
+      failed: 0,
+      warnings: [],
+      importedCards: []
+    };
     
     try {
-      if (options.format === 'json') {
-        try {
-          const parsedCards = JSON.parse(content);
-          if (!Array.isArray(parsedCards)) {
-            throw new Error('Invalid JSON format: Expected an array of flashcards.');
-          }
-          
-          importedCards = parsedCards.map((card: any) => ({
-            id: uuid(),
-            italian: card.italian || '',
-            english: card.english || '',
-            explanation: card.explanation || '',
-            example: card.example || '',
-            level: card.level || 1,
-            mastered: card.mastered || false,
-            dueDate: card.dueDate ? new Date(card.dueDate) : new Date(),
-            setId: options.setName,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
-            nextReviewDate: card.nextReviewDate ? new Date(card.nextReviewDate) : undefined,
-            tags: card.tags || [],
-            audio: card.audio,
-            image: card.image,
-            notes: card.notes,
-          }));
-        } catch (jsonError) {
-          errors.push(`JSON Parsing Error: ${jsonError}`);
-        }
-      } else if (options.format === 'csv' || options.format === 'txt') {
+      if (options.format === 'csv') {
+        const rows = content.split('\n');
+        const hasHeaders = options.hasHeaders || false;
         const separator = options.separator || ',';
-        const lines = content.split('\n');
-        const header = options.hasHeader ? lines.shift()?.split(separator) : null;
         
-        lines.forEach((line, index) => {
-          if (line.trim() === '') return; // Skip empty lines
-          
-          const values = line.split(separator);
+        const startIndex = hasHeaders ? 1 : 0;
+        
+        const italianCol = options.italianColumn ?? 0;
+        const englishCol = options.englishColumn ?? 1;
+        const notesCol = options.notesColumn ?? 2;
+        const tagCol = options.tagColumn;
+        
+        for (let i = startIndex; i < rows.length; i++) {
+          const row = rows[i].trim();
+          if (!row) continue;
           
           try {
-            const italian = values[options.italianColumn || 0]?.trim() || '';
-            const english = values[options.englishColumn || 1]?.trim() || '';
+            const cells = row.split(separator);
             
-            if (!italian || !english) {
-              throw new Error(`Missing Italian or English term in line ${index + 1}`);
+            if (cells.length < 2) {
+              result.warnings.push(`Row ${i+1}: Not enough columns`);
+              result.failed++;
+              continue;
             }
             
-            const newCard: Flashcard = {
-              id: uuid(),
+            const italian = cells[italianCol]?.trim() || '';
+            const english = cells[englishCol]?.trim() || '';
+            
+            if (!italian || !english) {
+              result.warnings.push(`Row ${i+1}: Missing Italian or English text`);
+              result.failed++;
+              continue;
+            }
+            
+            const explanation = notesCol !== undefined && cells[notesCol] 
+              ? cells[notesCol].trim() 
+              : undefined;
+            
+            const tags = tagCol !== undefined && cells[tagCol]
+              ? cells[tagCol].trim().split(',').map(tag => tag.trim())
+              : ['imported'];
+            
+            const newCard = createFlashcard({
               italian,
               english,
-              explanation: '',
-              example: '',
+              explanation,
+              tags,
               level: 1,
-              mastered: false,
-              dueDate: new Date(),
-              setId: options.setName,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              tags: [],
-            };
-            importedCards.push(newCard);
-          } catch (csvError) {
-            errors.push(`Line ${index + 1} - ${csvError}`);
-          }
-        });
-      } else if (options.format === 'anki') {
-        const lines = content.split('\n');
-        lines.forEach((line, index) => {
-          if (line.trim() === '') return;
-          
-          try {
-            const [italian, english] = line.split('\t');
-            if (!italian || !english) {
-              throw new Error(`Missing Italian or English term in line ${index + 1}`);
-            }
+              mastered: false
+            });
             
-            const newCard: Flashcard = {
-              id: uuid(),
-              italian: italian.trim(),
-              english: english.trim(),
-              explanation: '',
-              example: '',
-              level: 1,
-              mastered: false,
-              dueDate: new Date(),
-              setId: options.setName,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              tags: [],
-            };
-            importedCards.push(newCard);
-          } catch (ankiError) {
-            errors.push(`Line ${index + 1} - ${ankiError}`);
+            result.importedCards.push(newCard);
+            result.successful++;
+          } catch (err) {
+            result.warnings.push(`Row ${i+1}: Failed to parse`);
+            result.failed++;
           }
-        });
-      } else {
-        throw new Error(`Unsupported import format: ${options.format}`);
-      }
-      
-      if (options.setName) {
-        // If a set name is provided, either add to existing or create a new set
-        const existingSet = flashcardSets.find(set => set.name === options.setName);
-        if (existingSet) {
-          // Add imported cards to existing set
-          setFlashcardSets(prevSets =>
-            prevSets.map(set =>
-              set.id === existingSet.id
-                ? { ...set, cards: [...set.cards, ...importedCards] }
-                : set
-            )
-          );
-        } else {
-          // Create a new set with imported cards
-          const newSet: FlashcardSet = {
-            id: uuid(),
-            name: options.setName,
-            title: options.setName,
-            description: 'Imported flashcards',
-            cards: importedCards,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            createdBy: 'user',
-            isPublic: false,
-            cardCount: importedCards.length,
-            masteredCount: 0,
-            language: 'italian',
-            category: 'vocabulary',
-            tags: [],
-            difficulty: 'beginner',
-          };
-          setFlashcardSets(prevSets => [...prevSets, newSet]);
+        }
+      } else if (options.format === 'json') {
+        try {
+          const json = JSON.parse(content);
+          
+          if (Array.isArray(json)) {
+            for (const item of json) {
+              if (item.italian && item.english) {
+                const newCard = createFlashcard({
+                  italian: item.italian,
+                  english: item.english,
+                  explanation: item.explanation || item.notes,
+                  tags: Array.isArray(item.tags) ? item.tags : ['imported'],
+                  level: typeof item.level === 'number' ? item.level : 1,
+                  mastered: !!item.mastered
+                });
+                
+                result.importedCards.push(newCard);
+                result.successful++;
+              } else {
+                result.failed++;
+                result.warnings.push('Item missing required fields');
+              }
+            }
+          } else {
+            result.failed++;
+            result.warnings.push('JSON is not an array');
+          }
+        } catch (err) {
+          result.failed++;
+          result.warnings.push('Invalid JSON format');
         }
       } else {
-        // If no set name, just add cards to the general flashcards list
-        setFlashcards(prevCards => [...prevCards, ...importedCards]);
+        result.failed++;
+        result.warnings.push(`Unsupported format: ${options.format}`);
       }
       
-      const result: ImportResult = {
-        success: importedCards.length,
-        failed: errors.length,
-        total: importedCards.length + errors.length,
-        errors,
-        importedCards,
-        imported: importedCards.length
-      };
+      if (result.importedCards.length > 0) {
+        const newSet = createFlashcardSet({
+          name: `Imported Cards (${new Date().toLocaleString()})`,
+          description: `Imported from ${options.format.toUpperCase()}`,
+          tags: ['imported'],
+          cards: result.importedCards.map(card => card.id)
+        });
+        
+        result.setId = newSet.id;
+      }
       
       return result;
     } catch (error) {
-      console.error('Flashcard import error:', error);
-      errors.push(error instanceof Error ? error.message : 'Unknown error');
-      
-      return {
-        success: 0,
-        failed: errors.length,
-        total: 0,
-        errors,
-        importedCards: [],
-        imported: 0
-      };
+      console.error("Import error:", error);
+      result.failed++;
+      result.warnings.push('Unexpected error during import');
+      return result;
     }
   };
-
+  
   const exportFlashcards = (setId?: string, format: 'csv' | 'json' = 'csv'): string => {
-    let cardsToExport: Flashcard[];
+    let cardsToExport: Flashcard[] = [];
     
     if (setId) {
-      const set = getFlashcardSet(setId);
-      if (!set) {
-        throw new Error(`Flashcard set with id ${setId} not found`);
+      const set = flashcardSets.find(s => s.id === setId);
+      if (set) {
+        cardsToExport = set.cards
+          .map(id => flashcards.find(c => c.id === id))
+          .filter((card): card is Flashcard => !!card);
       }
-      cardsToExport = set.cards;
     } else {
-      cardsToExport = flashcards;
+      cardsToExport = [...flashcards];
     }
     
-    if (format === 'json') {
-      return JSON.stringify(cardsToExport, null, 2);
-    } else { // CSV
-      const csvHeader = 'italian,english,explanation,example,level,mastered,dueDate,tags,audio,image,notes\n';
-      const csvRows = cardsToExport.map(card => {
-        const escapedItalian = card.italian.replace(/"/g, '""');
-        const escapedEnglish = card.english.replace(/"/g, '""');
-        const escapedExplanation = (card.explanation || '').replace(/"/g, '""');
-        const escapedExample = (card.example || '').replace(/"/g, '""');
-        const escapedTags = (card.tags || []).join(';');
-        const dueDate = card.dueDate ? card.dueDate.toISOString() : '';
+    if (format === 'csv') {
+      let csv = 'Italian,English,Explanation,Tags\n';
+      
+      cardsToExport.forEach(card => {
+        const italian = escapeCsvField(card.italian);
+        const english = escapeCsvField(card.english);
+        const explanation = escapeCsvField(card.explanation || '');
+        const tags = escapeCsvField(card.tags.join(', '));
         
-        return `"${escapedItalian}","${escapedEnglish}","${escapedExplanation}","${escapedExample}",${card.level},${card.mastered},${dueDate},"${escapedTags}","${card.audio || ''}","${card.image || ''}","${card.notes || ''}"`;
+        csv += `${italian},${english},${explanation},${tags}\n`;
       });
-      return csvHeader + csvRows.join('\n');
+      
+      return csv;
+    } else if (format === 'json') {
+      return JSON.stringify(cardsToExport, null, 2);
     }
+    
+    throw new Error(`Unsupported export format: ${format}`);
   };
-
+  
+  const escapeCsvField = (field: string): string => {
+    if (!field) return '';
+    
+    if (/[",\n\r]/.test(field)) {
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    
+    return field;
+  };
+  
+  const getFlashcardById = (id: string): Flashcard | undefined => {
+    return flashcards.find(card => card.id === id);
+  };
+  
+  const getFlashcardSetById = (id: string): FlashcardSet | undefined => {
+    return flashcardSets.find(set => set.id === id);
+  };
+  
   return {
     flashcards,
     flashcardSets,
     createFlashcard,
     updateFlashcard,
     deleteFlashcard,
-    getFlashcard,
-    listFlashcards,
     createFlashcardSet,
-    addCardToSet,
-    removeCardFromSet,
     updateFlashcardSet,
     deleteFlashcardSet,
-    getFlashcardSet,
-    listFlashcardSets,
     importFlashcards,
     exportFlashcards,
+    addFlashcardToSet,
+    removeFlashcardFromSet,
+    getStats,
+    markAsMastered,
+    resetMastered,
+    getDueFlashcards,
+    reviewFlashcard,
+    getFlashcardById,
+    getFlashcardSetById
   };
 };
+
+export type { Flashcard, FlashcardSet, FlashcardStats };

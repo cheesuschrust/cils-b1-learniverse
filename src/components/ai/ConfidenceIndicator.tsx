@@ -1,129 +1,122 @@
 
 import React from 'react';
-import { ContentType } from '@/utils/textAnalysis';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { AlertCircle, CheckCircle2, HelpCircle, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ContentType } from '@/types/contentType';
+import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface ConfidenceIndicatorProps {
   contentType: ContentType;
-  showDetails?: boolean;
-  className?: string;
+  hideLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   showTooltip?: boolean;
+  className?: string;
 }
 
-export const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
+const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   contentType,
-  showDetails = false,
-  className = '',
+  hideLabel = false,
   size = 'md',
   showTooltip = true,
+  className
 }) => {
-  const { confidenceScores, getConfidenceLevel, isAIEnabled } = useAIUtils();
-  
-  const score = confidenceScores[contentType] || 0;
-  const confidenceLevel = getConfidenceLevel(contentType);
-  
-  const getProgressColor = () => {
-    switch (confidenceLevel) {
-      case 'high': return 'bg-green-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-  
-  const getConfidenceIcon = () => {
-    switch (confidenceLevel) {
-      case 'high': return <CheckCircle2 className={`text-green-500 ${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'}`} />;
-      case 'medium': return <HelpCircle className={`text-yellow-500 ${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'}`} />;
-      case 'low': return <AlertCircle className={`text-red-500 ${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'}`} />;
-      default: return <HelpCircle className={`text-gray-500 ${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'}`} />;
-    }
-  };
-  
-  const getConfidenceDescription = () => {
-    switch (confidenceLevel) {
-      case 'high':
-        return 'The AI has high confidence in its ability to assist with this content type.';
-      case 'medium':
-        return 'The AI has moderate confidence and may need occasional guidance.';
-      case 'low':
-        return 'The AI has low confidence and may require more user verification.';
-      default:
-        return 'Confidence level unknown.';
-    }
-  };
+  const { confidenceScores, isAIEnabled } = useAIUtils();
   
   if (!isAIEnabled) {
     return (
-      <div className={`flex items-center space-x-2 ${className}`}>
-        <Info className={`text-gray-400 ${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'}`} />
-        <span className="text-sm font-medium text-gray-400">
-          AI disabled
+      <Badge variant="outline" className="text-muted-foreground">
+        AI Disabled
+      </Badge>
+    );
+  }
+  
+  const confidenceScore = confidenceScores[contentType] || 0;
+  
+  const getConfidenceLabel = (score: number): string => {
+    if (score >= 90) {
+      return 'Very High';
+    } else if (score >= 75) {
+      return 'High';
+    } else if (score >= 60) {
+      return 'Moderate';
+    } else if (score >= 40) {
+      return 'Low';
+    } else {
+      return 'Very Low';
+    }
+  };
+  
+  const getConfidenceColor = (score: number): string => {
+    if (score >= 90) {
+      return 'bg-green-500';
+    } else if (score >= 75) {
+      return 'bg-emerald-500';
+    } else if (score >= 60) {
+      return 'bg-yellow-500';
+    } else if (score >= 40) {
+      return 'bg-orange-500';
+    } else {
+      return 'bg-red-500';
+    }
+  };
+  
+  const getTooltipText = (contentType: ContentType, score: number): string => {
+    const baseText = `AI confidence for ${contentType}: ${score}%`;
+    let additionalInfo = '';
+    
+    if (score >= 90) {
+      additionalInfo = 'The AI has high confidence in its ability to process this content type accurately.';
+    } else if (score >= 75) {
+      additionalInfo = 'The AI is confident in processing this content, with occasional errors.';
+    } else if (score >= 60) {
+      additionalInfo = 'The AI may make some errors when processing this content. Review results carefully.';
+    } else if (score >= 40) {
+      additionalInfo = 'The AI often struggles with this content type. Expect more errors and review thoroughly.';
+    } else {
+      additionalInfo = 'The AI has very low confidence with this content. Results likely need manual correction.';
+    }
+    
+    return `${baseText} - ${additionalInfo}`;
+  };
+  
+  const sizeClasses = {
+    sm: 'h-1.5 w-16',
+    md: 'h-2 w-24',
+    lg: 'h-3 w-32'
+  };
+  
+  const indicator = (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <Progress 
+        value={confidenceScore} 
+        className={`${sizeClasses[size]} ${getConfidenceColor(confidenceScore)}`}
+      />
+      
+      {!hideLabel && (
+        <span className="text-xs font-medium">
+          {getConfidenceLabel(confidenceScore)}
         </span>
-      </div>
-    );
-  }
-  
-  if (!showDetails) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className={`flex items-center space-x-2 ${className} ${showTooltip ? 'cursor-help' : ''}`}>
-              {getConfidenceIcon()}
-              <span className={`font-medium ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
-                {score}% confidence
-              </span>
-            </div>
-          </TooltipTrigger>
-          {showTooltip && (
-            <TooltipContent side="top">
-              <p className="max-w-xs">{getConfidenceDescription()}</p>
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-  
-  return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>AI Confidence: {contentType}</span>
-          <Badge variant={confidenceLevel === 'high' ? 'default' : confidenceLevel === 'medium' ? 'outline' : 'destructive'}>
-            {confidenceLevel.charAt(0).toUpperCase() + confidenceLevel.slice(1)}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{score}%</span>
-            <span className="text-xs text-muted-foreground">
-              {score < 60 ? 'Needs improvement' : score < 80 ? 'Good' : 'Excellent'}
-            </span>
-          </div>
-          <Progress value={score} className={getProgressColor()} />
-          <p className="text-xs text-muted-foreground mt-2">
-            {getConfidenceDescription()}
-          </p>
-          {confidenceLevel === 'low' && (
-            <div className="flex items-center mt-1 text-xs text-red-500">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              <span>Results may be unreliable - verify manually</span>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
+  
+  if (showTooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {indicator}
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p>{getTooltipText(contentType, confidenceScore)}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  
+  return indicator;
 };
 
 export default ConfidenceIndicator;

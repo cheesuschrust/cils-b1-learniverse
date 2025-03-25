@@ -1,234 +1,225 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AIService } from '@/services/AIService';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUserPreferences } from './UserPreferencesContext';
+import { ContentType } from '@/types/contentType';
+import { getInitialConfidenceScores } from '@/components/ai/AISettingsTypes';
 
 // Type definitions
-export interface AIPreference {
-  enabled: boolean;
-  confidenceThreshold: number;
-  contentTypePreferences: Record<string, boolean>;
-  voicePreferences: {
-    voice: string;
-    rate: number;
-    pitch: number;
-  };
-}
-
-export interface TranscriptionCallback {
-  (transcript: string, isFinal: boolean): void;
-}
-
 export interface AIUtilsContextType {
   isAIEnabled: boolean;
   toggleAI: () => void;
-  processByType: (content: string, contentType: string) => Promise<string>;
-  searchKnowledgeBase: (query: string, limit?: number) => Promise<any[]>;
-  setUserAIPreferences: (preferences: Partial<AIPreference>) => void;
-  userAIPreferences: AIPreference;
-  
-  // Speech and audio related functions
   speakText: (text: string, language?: string) => Promise<void>;
   isSpeaking: boolean;
   cancelSpeech: () => void;
-  processAudioStream: (callback: TranscriptionCallback) => Promise<() => void>;
+  processAudioStream: (callback: (transcript: string, isFinal: boolean) => void) => Promise<() => void>;
   stopAudioProcessing: () => void;
   isTranscribing: boolean;
-  hasActiveMicrophone: boolean;
-  checkMicrophoneAccess: () => Promise<boolean>;
-  
-  // Confidence scores
-  getConfidenceLevel: (contentType: string) => number;
+  // Add the missing properties and methods
+  modelSize: 'small' | 'medium' | 'large';
+  setModelSize: (size: 'small' | 'medium' | 'large') => void;
+  confidenceScores: Record<ContentType, number>;
+  isProcessing: boolean;
+  translateText: (text: string, targetLanguage: string) => Promise<string>;
+  isTranslating: boolean;
 }
 
-const defaultAIPreferences: AIPreference = {
-  enabled: true,
-  confidenceThreshold: 70,
-  contentTypePreferences: {
-    'writing': true,
-    'speaking': true,
-    'listening': true,
-    'multiple-choice': true,
-    'flashcards': true
-  },
-  voicePreferences: {
-    voice: 'default',
-    rate: 1.0,
-    pitch: 1.0
-  }
-};
+// Create the context with a default value
+const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
 
-export const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
+// Provider component
+export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { aiPreference } = useUserPreferences();
+  const [isAIEnabled, setIsAIEnabled] = useState<boolean>(true);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [modelSize, setModelSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [confidenceScores, setConfidenceScores] = useState<Record<ContentType, number>>(
+    getInitialConfidenceScores()
+  );
 
-interface AIUtilsProviderProps {
-  children: ReactNode;
-}
-
-export const AIUtilsProvider: React.FC<AIUtilsProviderProps> = ({ children }) => {
-  const { preferences } = useUserPreferences();
-  const [userAIPreferences, setUserAIPreferences] = useState<AIPreference>(defaultAIPreferences);
-  const [isAIEnabled, setIsAIEnabled] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
-  
-  useEffect(() => {
-    // Initialize AI preferences from user preferences
-    if (preferences?.aiPreferences) {
-      setUserAIPreferences(preferences.aiPreferences);
-      setIsAIEnabled(preferences.aiPreferences.enabled);
-    }
-    
-    // Initialize microphone status
-    checkMicrophoneAccess().then(setHasActiveMicrophone).catch(() => setHasActiveMicrophone(false));
-  }, [preferences]);
-
+  // Toggle AI functionality
   const toggleAI = () => {
-    const newState = !isAIEnabled;
-    setIsAIEnabled(newState);
-    setUserAIPreferences(prev => ({ ...prev, enabled: newState }));
+    setIsAIEnabled(prev => !prev);
   };
-  
-  const processByType = async (content: string, contentType: string): Promise<string> => {
-    if (!isAIEnabled) {
-      throw new Error('AI processing is disabled');
-    }
-    
-    try {
-      // Simulate AI processing
-      return await AIService.processContent(content, contentType);
-    } catch (error) {
-      console.error('AI processing error:', error);
-      throw new Error('Failed to process content with AI');
-    }
-  };
-  
-  const searchKnowledgeBase = async (query: string, limit = 5): Promise<any[]> => {
-    if (!isAIEnabled) {
-      return [];
-    }
-    
-    try {
-      // Simulate knowledge base search
-      return await AIService.searchKnowledgeBase(query, limit);
-    } catch (error) {
-      console.error('Knowledge base search error:', error);
-      return [];
-    }
-  };
-  
-  // Speech synthesis
+
+  // Text-to-speech function
   const speakText = async (text: string, language = 'en-US'): Promise<void> => {
     if (!isAIEnabled) {
-      throw new Error('AI text-to-speech is disabled');
+      throw new Error("AI features are currently disabled");
     }
     
     try {
       setIsSpeaking(true);
-      await AIService.textToSpeech(text, language, userAIPreferences.voicePreferences);
-      setIsSpeaking(false);
+      
+      // Simple implementation using Web Speech API
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language;
+      utterance.rate = aiPreference.voiceRate || 1;
+      utterance.pitch = aiPreference.voicePitch || 1;
+      
+      // Select voice based on language
+      if (language.startsWith('it') && aiPreference.italianVoiceURI) {
+        const voices = speechSynthesis.getVoices();
+        const selectedVoice = voices.find(voice => voice.voiceURI === aiPreference.italianVoiceURI);
+        if (selectedVoice) utterance.voice = selectedVoice;
+      } else if (aiPreference.englishVoiceURI) {
+        const voices = speechSynthesis.getVoices();
+        const selectedVoice = voices.find(voice => voice.voiceURI === aiPreference.englishVoiceURI);
+        if (selectedVoice) utterance.voice = selectedVoice;
+      }
+      
+      // Handle completion
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      speechSynthesis.speak(utterance);
     } catch (error) {
       setIsSpeaking(false);
-      console.error('Text-to-speech error:', error);
-      throw new Error('Failed to speak text');
+      throw error;
     }
   };
   
-  const cancelSpeech = (): void => {
-    AIService.cancelSpeech();
+  // Cancel speech
+  const cancelSpeech = () => {
+    speechSynthesis.cancel();
     setIsSpeaking(false);
   };
   
-  // Speech recognition
-  const processAudioStream = async (callback: TranscriptionCallback): Promise<() => void> => {
+  // Process audio for speech recognition
+  const processAudioStream = async (callback: (transcript: string, isFinal: boolean) => void): Promise<() => void> => {
     if (!isAIEnabled) {
-      throw new Error('AI speech recognition is disabled');
+      throw new Error("AI features are currently disabled");
     }
     
     try {
       setIsTranscribing(true);
-      const stopFn = await AIService.startSpeechRecognition(callback);
+      
+      // Simple implementation using Web Speech API
+      const SpeechRecognition = (window as any).SpeechRecognition || 
+                                (window as any).webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        throw new Error("Speech recognition not supported in this browser");
+      }
+      
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        
+        const isFinal = event.results[0].isFinal;
+        callback(transcript, isFinal);
+        
+        if (isFinal) {
+          recognition.stop();
+          setIsTranscribing(false);
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event);
+        setIsTranscribing(false);
+        throw new Error(`Speech recognition error: ${event.error}`);
+      };
+      
+      recognition.onend = () => {
+        setIsTranscribing(false);
+      };
+      
+      recognition.start();
+      
+      // Return function to stop recording
       return () => {
-        stopFn();
+        recognition.stop();
         setIsTranscribing(false);
       };
     } catch (error) {
       setIsTranscribing(false);
-      console.error('Speech recognition error:', error);
-      throw new Error('Failed to start speech recognition');
+      throw error;
     }
   };
   
-  const stopAudioProcessing = (): void => {
-    AIService.stopSpeechRecognition();
+  // Stop audio processing
+  const stopAudioProcessing = () => {
     setIsTranscribing(false);
-  };
-  
-  const checkMicrophoneAccess = async (): Promise<boolean> => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  
-  const getConfidenceLevel = (contentType: string): number => {
-    // Return confidence score from 0-100 for the content type
-    const confidenceScores: Record<string, number> = {
-      'multiple-choice': 85,
-      'flashcards': 90,
-      'writing': 75,
-      'speaking': 70,
-      'listening': 80,
-      'audio': 65,
-      'unknown': 50,
-      'csv': 95,
-      'json': 95,
-      'txt': 90,
-      'pdf': 85
-    };
-    
-    return confidenceScores[contentType] || 50;
-  };
-  
-  const updateAIPreferences = (preferences: Partial<AIPreference>) => {
-    setUserAIPreferences(prev => ({
-      ...prev,
-      ...preferences
-    }));
+    // Additional cleanup if needed
   };
 
+  // Translation function
+  const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+    if (!isAIEnabled) {
+      throw new Error("AI features are currently disabled");
+    }
+    
+    try {
+      setIsTranslating(true);
+      
+      // Simulate translation with a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock translation (in a real app, this would call a translation API)
+      let result = text;
+      
+      if (text === "Hello" && targetLanguage === "it") {
+        result = "Ciao";
+      } else if (text === "Thank you" && targetLanguage === "it") {
+        result = "Grazie";
+      } else if (text === "Goodbye" && targetLanguage === "it") {
+        result = "Arrivederci";
+      } else if (text === "Ciao" && targetLanguage === "en") {
+        result = "Hello";
+      } else if (text === "Grazie" && targetLanguage === "en") {
+        result = "Thank you";
+      } else if (text === "Arrivederci" && targetLanguage === "en") {
+        result = "Goodbye";
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Translation error:", error);
+      throw error;
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+  
+  // Context value
+  const value: AIUtilsContextType = {
+    isAIEnabled,
+    toggleAI,
+    speakText,
+    isSpeaking,
+    cancelSpeech,
+    processAudioStream,
+    stopAudioProcessing,
+    isTranscribing,
+    modelSize,
+    setModelSize,
+    confidenceScores,
+    isProcessing,
+    translateText,
+    isTranslating
+  };
+  
   return (
-    <AIUtilsContext.Provider
-      value={{
-        isAIEnabled,
-        toggleAI,
-        processByType,
-        searchKnowledgeBase,
-        setUserAIPreferences: updateAIPreferences,
-        userAIPreferences,
-        speakText,
-        isSpeaking,
-        cancelSpeech,
-        processAudioStream,
-        stopAudioProcessing,
-        isTranscribing,
-        hasActiveMicrophone,
-        checkMicrophoneAccess,
-        getConfidenceLevel
-      }}
-    >
+    <AIUtilsContext.Provider value={value}>
       {children}
     </AIUtilsContext.Provider>
   );
 };
 
+// Custom hook for using the context
 export const useAIUtils = (): AIUtilsContextType => {
   const context = useContext(AIUtilsContext);
   if (context === undefined) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
+    throw new Error("useAIUtils must be used within an AIUtilsProvider");
   }
   return context;
 };

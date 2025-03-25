@@ -1,76 +1,63 @@
 
-export type ImportFormat = 'csv' | 'json' | 'txt' | 'anki';
-
-export interface ImportOptions {
-  format: ImportFormat;
-  separator?: string;
-  hasHeader?: boolean;
-  italianColumn?: number;
-  englishColumn?: number;
-  setName?: string;
-}
-
-export interface ImportResult {
-  success: number;
-  failed: number;
-  total: number;
-  errors: string[];
-  importedCards: Flashcard[];
-  imported: number;
-}
-
 export interface Flashcard {
   id: string;
   italian: string;
   english: string;
   explanation?: string;
-  example?: string;
+  examples?: string[];
   level: number;
   mastered: boolean;
-  dueDate: Date;
-  setId?: string;
+  lastReviewed?: Date;
+  nextReview?: Date;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  lastReviewed?: Date;
-  nextReviewDate?: Date;
-  tags?: string[];
-  audio?: string;
-  image?: string;
-  notes?: string;
 }
 
 export interface FlashcardSet {
   id: string;
   name: string;
-  title?: string;
-  description?: string;
-  cards: Flashcard[];
+  description: string;
+  tags: string[];
+  cards: string[]; // Array of flashcard IDs
   createdAt: Date;
   updatedAt: Date;
-  createdBy?: string;
-  isPublic: boolean;
-  cardCount: number;
-  masteredCount: number;
-  language: string;
-  category: string;
-  tags?: string[];
+  totalCards: number;
+  masteredCards: number;
+  category?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
 
-export interface FlashcardStudySession {
-  id: string;
-  userId: string;
-  setId: string;
-  cards: {
-    cardId: string;
-    isCorrect: boolean;
-    responseTime: number;
+export interface FlashcardStats {
+  totalCards: number;
+  masteredCards: number;
+  averageLevel: number;
+  dueCards: number;
+  reviewStreak: number;
+  lastReview?: Date;
+  reviewHistory: {
+    date: Date;
+    correct: number;
+    incorrect: number;
   }[];
-  startedAt: Date;
-  startTime?: Date;
-  endTime?: Date;
-  completedAt?: Date;
-  score: number;
-  timeSpent: number;
-  cardsStudied?: number;
+}
+
+export type ImportFormat = 'csv' | 'json' | 'anki' | 'quizlet';
+
+export interface ImportOptions {
+  format: ImportFormat;
+  hasHeaders?: boolean;
+  separator?: string;
+  italianColumn?: number;
+  englishColumn?: number;
+  notesColumn?: number;
+  tagColumn?: number;
+}
+
+export interface ImportResult {
+  successful: number;
+  failed: number;
+  warnings: string[];
+  importedCards: Flashcard[];
+  setId?: string;
 }
