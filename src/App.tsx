@@ -59,6 +59,8 @@ import AdManagementPage from '@/pages/admin/AdManagement';
 import ChatbotManagementPage from '@/pages/admin/ChatbotManagement';
 import AppStoreListing from '@/pages/admin/AppStoreListing';
 import GlobalUserDocumentation from '@/components/help/GlobalUserDocumentation';
+import SEOManager from '@/pages/admin/SEOManager';
+import EcommerceIntegration from '@/pages/admin/EcommerceIntegration';
 
 function App() {
   return (

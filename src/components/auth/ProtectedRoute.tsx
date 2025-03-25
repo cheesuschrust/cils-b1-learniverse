@@ -9,6 +9,17 @@ export interface ProtectedRouteProps {
   adminOnly?: boolean; // Adding adminOnly as an alias for requireAdmin
 }
 
+/**
+ * ProtectedRoute component
+ * 
+ * Ensures routes are only accessible by authenticated users with appropriate permissions.
+ * Redirects unauthorized users to the login page, storing the current location for return after login.
+ * Can restrict routes to admin users only.
+ * 
+ * @param {React.ReactNode} children - Components to render if access is granted
+ * @param {boolean} requireAdmin - Whether the route requires admin access
+ * @param {boolean} adminOnly - Alias for requireAdmin for readability
+ */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requireAdmin = false,
