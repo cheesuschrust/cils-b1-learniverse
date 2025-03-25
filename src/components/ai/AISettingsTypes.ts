@@ -25,6 +25,9 @@ export interface AIPreferences {
   voicePitch: number;
   englishVoiceURI: string | null;
   italianVoiceURI: string | null;
+  processOnDevice?: boolean;
+  dataCollection?: boolean;
+  assistanceLevel?: number;
 }
 
 export type AIModelCategory = 'text' | 'speech' | 'translation';
@@ -85,6 +88,9 @@ export const getDefaultAIPreferences = (): AIPreferences => {
     voiceRate: 1,
     voicePitch: 1,
     englishVoiceURI: null,
-    italianVoiceURI: null
+    italianVoiceURI: null,
+    processOnDevice: true,
+    dataCollection: true,
+    assistanceLevel: 5
   };
 };

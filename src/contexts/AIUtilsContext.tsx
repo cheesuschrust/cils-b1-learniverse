@@ -31,13 +31,15 @@ const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
 
 // Provider component
 export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { aiPreference } = useUserPreferences();
+  const { aiPreference, setAIPreference } = useUserPreferences();
   const [isAIEnabled, setIsAIEnabled] = useState<boolean>(true);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [modelSize, setModelSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [modelSize, setModelSize] = useState<'small' | 'medium' | 'large'>(
+    aiPreference?.defaultModelSize || 'medium'
+  );
   const [confidenceScores, setConfidenceScores] = useState<Record<ContentType, number>>(
     getInitialConfidenceScores()
   );
@@ -50,18 +52,25 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const initAI = async () => {
       try {
-        await AIService.initialize({
-          preloadModels: [],
-          useWebGPU: true
-        });
+        setIsProcessing(true);
+        await HuggingFaceService.initialize();
         console.log('AI service initialized');
         
         // Check if microphone is available
         checkMicrophoneAccess().then(hasAccess => {
           setHasActiveMicrophone(hasAccess);
         });
+        
+        // Initialize with WebGPU if enabled
+        await AIService.initialize({
+          preloadModels: [],
+          useWebGPU: preferences.useWebGPU
+        });
       } catch (error) {
         console.error('Failed to initialize AI service:', error);
+        setIsAIEnabled(false);
+      } finally {
+        setIsProcessing(false);
       }
     };
     
@@ -160,6 +169,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.lang = preferences.defaultLanguage === 'italian' ? 'it-IT' : 'en-US';
       
       recognition.onresult = (event: any) => {
         const transcript = Array.from(event.results)
@@ -212,6 +222,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     try {
       setIsTranslating(true);
+      setIsProcessing(true);
       
       // Use HuggingFace translation if available
       const sourceLanguage = targetLanguage === 'it' ? 'en' : 'it';
@@ -239,6 +250,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw error;
     } finally {
       setIsTranslating(false);
+      setIsProcessing(false);
     }
   };
   

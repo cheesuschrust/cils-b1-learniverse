@@ -144,7 +144,7 @@ export const translateText = async (
   text: string,
   sourceLanguage: string = 'en',
   targetLanguage: string = 'it'
-) => {
+): Promise<string> => {
   try {
     // Choose the appropriate model based on language direction
     const modelName = sourceLanguage === 'en' && targetLanguage === 'it'
@@ -166,7 +166,7 @@ export const generateText = async (
   prompt: string,
   modelName: string = 'distilgpt2',
   options: any = {}
-) => {
+): Promise<string> => {
   try {
     // This is a placeholder function as text-generation models can be large
     // In a real implementation, we might use a smaller model or an API
@@ -181,7 +181,7 @@ export const generateText = async (
 };
 
 // Get similarity between texts
-export const getTextSimilarity = async (text1: string, text2: string) => {
+export const getTextSimilarity = async (text1: string, text2: string): Promise<number> => {
   try {
     // Get embeddings for both texts
     const embeddings = await getTextEmbeddings([text1, text2]);

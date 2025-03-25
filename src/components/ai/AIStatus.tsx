@@ -8,13 +8,15 @@ import { useAIUtils } from '@/contexts/AIUtilsContext';
 interface AIStatusProps {
   showTooltip?: boolean;
   variant?: 'default' | 'minimal';
+  className?: string;
 }
 
 const AIStatus: React.FC<AIStatusProps> = ({ 
   showTooltip = true,
-  variant = 'default'
+  variant = 'default',
+  className = ''
 }) => {
-  const { isAIEnabled, modelSize, isProcessing } = useAIUtils();
+  const { isAIEnabled, modelSize, isProcessing, hasActiveMicrophone } = useAIUtils();
   
   // Generate the appropriate icon and text based on status
   const getStatusContent = () => {
@@ -36,10 +38,16 @@ const AIStatus: React.FC<AIStatusProps> = ({
       };
     }
     
+    const modelSizeDisplay = modelSize === 'small' 
+      ? 'Small (Fast)' 
+      : modelSize === 'medium' 
+        ? 'Medium (Balanced)' 
+        : 'Large (Accurate)';
+
     return {
       icon: <Brain className="h-4 w-4 mr-1" />,
-      text: variant === 'minimal' ? 'AI' : `AI Active (${modelSize})`,
-      tooltipText: `AI is enabled and ready to use. Current model size: ${modelSize}.`,
+      text: variant === 'minimal' ? 'AI' : `AI Active (${modelSizeDisplay})`,
+      tooltipText: `AI is enabled and ready to use. Current model: ${modelSizeDisplay}. ${hasActiveMicrophone ? 'Microphone available.' : 'No microphone access.'}`,
       badgeVariant: 'default' as const
     };
   };
@@ -52,7 +60,7 @@ const AIStatus: React.FC<AIStatusProps> = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant={badgeVariant} className="cursor-help">
+            <Badge variant={badgeVariant} className={`cursor-help ${className}`}>
               {icon}
               {text}
             </Badge>
@@ -66,7 +74,7 @@ const AIStatus: React.FC<AIStatusProps> = ({
   }
   
   return (
-    <Badge variant={badgeVariant}>
+    <Badge variant={badgeVariant} className={className}>
       {icon}
       {text}
     </Badge>
