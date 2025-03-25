@@ -1,223 +1,178 @@
 
-import { addTrainingExamples, getConfidenceScore } from '@/services/AIService';
 import { v4 as uuidv4 } from 'uuid';
 import { ContentType } from '@/utils/textAnalysis';
-import { toast } from 'react-hot-toast';
 
-// Supported file formats for training
-export const SUPPORTED_FORMATS = {
-  text: ['text/plain', 'application/json', 'text/markdown'],
-  audio: ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg'],
-  document: ['application/pdf']
-};
-
-// Maximum file size (20MB)
-export const MAX_FILE_SIZE = 20 * 1024 * 1024;
-
-interface ProcessedContent {
+interface TrainingExample {
   id: string;
-  content: string | ArrayBuffer;
   contentType: ContentType;
-  format: string;
-  metadata: {
-    filename: string;
-    filesize: number;
-    uploadedAt: Date;
-    processingTime: number;
-    confidence: number;
-    language: 'english' | 'italian' | 'unknown';
-  };
+  text: string;
+  metadata: any;
 }
 
-export const validateFile = (file: File): { valid: boolean; message?: string } => {
-  // Check file size
-  if (file.size > MAX_FILE_SIZE) {
-    return {
-      valid: false,
-      message: `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`
-    };
-  }
+interface ContentTypeConfidence {
+  contentType: ContentType;
+  confidenceScore: number;
+  exampleCount: number;
+  lastImproved: Date;
+}
 
-  // Check file type
-  const supportedTypes = [
-    ...SUPPORTED_FORMATS.text,
-    ...SUPPORTED_FORMATS.audio,
-    ...SUPPORTED_FORMATS.document
-  ];
-  
-  if (!supportedTypes.includes(file.type)) {
-    return {
-      valid: false,
-      message: 'Unsupported file format. Please upload text, audio, or PDF files.'
-    };
-  }
-
-  return { valid: true };
+// In a real implementation, this would be stored in a database or local storage
+const mockDatabase = {
+  trainingExamples: [] as TrainingExample[],
+  confidenceScores: {
+    'multiple-choice': { score: 85, count: 12, lastImproved: new Date() },
+    'flashcards': { score: 78, count: 8, lastImproved: new Date() },
+    'writing': { score: 72, count: 6, lastImproved: new Date() },
+    'speaking': { score: 68, count: 5, lastImproved: new Date() },
+    'listening': { score: 80, count: 10, lastImproved: new Date() }
+  } as Record<ContentType, { score: number, count: number, lastImproved: Date }>
 };
 
-export const readFileContent = async (file: File): Promise<string | ArrayBuffer> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = () => {
-      resolve(reader.result as string | ArrayBuffer);
+/**
+ * Add training examples for a specific content type
+ * @param contentType The type of content to train
+ * @param examples Array of training examples
+ * @returns Number of examples added
+ */
+export const addTrainingExamples = (contentType: ContentType, examples: TrainingExample[]): number => {
+  const validExamples = examples.filter(ex => 
+    ex.contentType === contentType && ex.text.trim() !== ''
+  );
+  
+  if (validExamples.length === 0) return 0;
+  
+  // Add examples to the database
+  validExamples.forEach(example => {
+    const exampleWithId = {
+      ...example,
+      id: example.id || uuidv4(),
+      contentType // Ensure correct content type
     };
     
-    reader.onerror = () => {
-      reject(new Error(`Failed to read file: ${file.name}`));
-    };
-    
-    if (SUPPORTED_FORMATS.text.includes(file.type)) {
-      reader.readAsText(file);
+    // Check if example already exists
+    const existingIndex = mockDatabase.trainingExamples.findIndex(ex => ex.id === exampleWithId.id);
+    if (existingIndex >= 0) {
+      mockDatabase.trainingExamples[existingIndex] = exampleWithId;
     } else {
-      reader.readAsArrayBuffer(file);
+      mockDatabase.trainingExamples.push(exampleWithId);
     }
   });
+  
+  // Update confidence score
+  updateConfidenceScore(contentType, validExamples.length);
+  
+  return validExamples.length;
 };
 
-export const processFileForAITraining = async (
-  file: File, 
-  contentType: ContentType
-): Promise<ProcessedContent> => {
-  const startTime = Date.now();
+/**
+ * Remove a training example
+ * @param id Example ID to remove
+ * @returns Whether the operation was successful
+ */
+export const removeTrainingExample = (id: string): boolean => {
+  const initialLength = mockDatabase.trainingExamples.length;
+  mockDatabase.trainingExamples = mockDatabase.trainingExamples.filter(ex => ex.id !== id);
+  return mockDatabase.trainingExamples.length < initialLength;
+};
+
+/**
+ * Get training examples for a specific content type
+ * @param contentType Type of content
+ * @returns Array of training examples
+ */
+export const getTrainingExamples = (contentType: ContentType): TrainingExample[] => {
+  return mockDatabase.trainingExamples.filter(ex => ex.contentType === contentType);
+};
+
+/**
+ * Get the confidence score for a specific content type
+ * @param contentType Type of content
+ * @returns Confidence score (0-100)
+ */
+export const getConfidenceScore = (contentType: ContentType): number => {
+  return mockDatabase.confidenceScores[contentType]?.score || 50;
+};
+
+/**
+ * Get detailed confidence information for all content types
+ * @returns Object containing confidence details for each content type
+ */
+export const getContentTypeConfidence = (): Record<ContentType, ContentTypeConfidence> => {
+  const contentTypes: ContentType[] = ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
   
-  try {
-    const content = await readFileContent(file);
-    const endTime = Date.now();
-    const processingTime = endTime - startTime;
-    
-    // Get confidence score for this content type from AI Service
-    const confidence = getConfidenceScore(contentType);
-    
-    // Create a record of the processed content
-    const processedContent: ProcessedContent = {
-      id: uuidv4(),
-      content,
-      contentType,
-      format: file.type,
-      metadata: {
-        filename: file.name,
-        filesize: file.size,
-        uploadedAt: new Date(),
-        processingTime,
-        confidence,
-        language: file.name.toLowerCase().includes('italian') ? 'italian' : 'english'
-      }
+  const result: Record<ContentType, ContentTypeConfidence> = {} as Record<ContentType, ContentTypeConfidence>;
+  
+  contentTypes.forEach(type => {
+    const data = mockDatabase.confidenceScores[type];
+    result[type] = {
+      contentType: type,
+      confidenceScore: data?.score || 50,
+      exampleCount: data?.count || 0,
+      lastImproved: data?.lastImproved || new Date()
     };
-    
-    return processedContent;
-  } catch (error) {
-    console.error("Error processing file:", error);
-    throw new Error(`Failed to process file: ${error.message}`);
-  }
-};
-
-// Add processed content to AI training examples
-export const addContentToAITraining = async (
-  processedContent: ProcessedContent,
-  examples: any[]
-): Promise<number> => {
-  try {
-    // Add examples to the AI training
-    const totalExamples = addTrainingExamples(
-      processedContent.contentType,
-      examples
-    );
-    
-    // Log the training activity
-    console.log(`Added ${examples.length} examples to AI training for ${processedContent.contentType}`);
-    
-    // Return total count of examples
-    return totalExamples;
-  } catch (error) {
-    console.error("Error adding content to AI training:", error);
-    toast.error("Failed to add content to AI training");
-    throw error;
-  }
-};
-
-// Function to extract training examples from different content types
-export const extractTrainingExamples = (
-  processedContent: ProcessedContent
-): any[] => {
-  const { contentType, content } = processedContent;
+  });
   
-  // This would normally involve more sophisticated parsing
-  // based on the content type and format
+  return result;
+};
+
+/**
+ * Reset all training data
+ * @returns Whether the operation was successful
+ */
+export const resetTrainingData = (): boolean => {
   try {
-    if (typeof content === 'string') {
-      // For text content, try to parse as JSON first
-      try {
-        const jsonData = JSON.parse(content);
-        if (Array.isArray(jsonData)) {
-          return jsonData;
-        }
-      } catch (e) {
-        // Not valid JSON, process as text
-        console.log("Content is not valid JSON, processing as text");
-      }
-      
-      // Basic text processing for different content types
-      switch (contentType) {
-        case 'multiple-choice':
-          // Extract questions from text content
-          const questions = content.split(/\n{2,}/)
-            .filter(q => q.includes('?'))
-            .map((q, i) => {
-              const lines = q.split('\n');
-              const questionText = lines[0];
-              const options = lines.slice(1, 5).map(l => l.replace(/^[A-D][.)]\s*/, ''));
-              const correctAnswer = lines.find(l => l.toLowerCase().includes('answer'))?.replace(/^.*?:\s*/, '') || options[0];
-              
-              return {
-                id: `auto-${i}`,
-                question: questionText,
-                options,
-                correctAnswer,
-                explanation: "Automatically extracted from training content",
-                category: "General",
-                difficulty: "Intermediate",
-                language: processedContent.metadata.language
-              };
-            });
-          return questions;
-          
-        case 'flashcards':
-          // Extract flashcards from text content
-          const flashcards = content.split(/\n{2,}/)
-            .map((card, i) => {
-              const [term, translation] = card.split(/[:-]\s*/);
-              return {
-                id: `auto-${i}`,
-                term: term?.trim(),
-                translation: translation?.trim(),
-                sampleSentence: "",
-                language: processedContent.metadata.language
-              };
-            })
-            .filter(card => card.term && card.translation);
-          return flashcards;
-          
-        default:
-          // Generic processing
-          return [{
-            content,
-            type: contentType,
-            timestamp: new Date().toISOString()
-          }];
-      }
-    }
+    mockDatabase.trainingExamples = [];
     
-    // For non-text content (audio, PDF)
-    return [{
-      id: uuidv4(),
-      contentType,
-      format: processedContent.format,
-      metadata: processedContent.metadata,
-      status: 'pending_processing'
-    }];
+    // Reset confidence scores to default values
+    const contentTypes: ContentType[] = ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
+    contentTypes.forEach(type => {
+      mockDatabase.confidenceScores[type] = { 
+        score: 50, 
+        count: 0, 
+        lastImproved: new Date() 
+      };
+    });
+    
+    return true;
   } catch (error) {
-    console.error("Error extracting training examples:", error);
-    return [];
+    console.error('Failed to reset training data:', error);
+    return false;
   }
+};
+
+/**
+ * Update the confidence score for a content type based on new training examples
+ * @param contentType Type of content
+ * @param newExampleCount Number of new examples added
+ */
+const updateConfidenceScore = (contentType: ContentType, newExampleCount: number): void => {
+  const currentData = mockDatabase.confidenceScores[contentType] || { 
+    score: 50, 
+    count: 0, 
+    lastImproved: new Date() 
+  };
+  
+  // Calculate new score based on example count
+  // This is a simplified model - in a real implementation this would be based on model performance
+  const baseScore = currentData.score;
+  const exampleWeight = 0.5; // Weight per example
+  const maxBoost = 10; // Maximum boost from a single batch
+  
+  // Calculate score boost based on new examples (diminishing returns)
+  const boost = Math.min(maxBoost, newExampleCount * exampleWeight);
+  
+  // Cap the score at 95% - final 5% requires actual performance improvements
+  const newScore = Math.min(95, baseScore + boost);
+  
+  mockDatabase.confidenceScores[contentType] = {
+    score: newScore,
+    count: currentData.count + newExampleCount,
+    lastImproved: new Date()
+  };
+};
+
+export const analyzeContentForTraining = (content: string): ContentType => {
+  // This would use the training examples to improve content detection
+  // For now, just use the basic detection
+  return import('./textAnalysis').then(module => module.detectContentType(content));
 };

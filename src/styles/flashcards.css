@@ -1,84 +1,133 @@
 
-/* Flashcard perspective and flipping effects */
+/* Flashcard 3D Effects */
 .perspective-1000 {
   perspective: 1000px;
+}
+
+.transform-style-3d {
   transform-style: preserve-3d;
-  position: relative;
 }
 
-.flashcard-front,
-.flashcard-back {
+.backface-hidden {
   backface-visibility: hidden;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  position: absolute;
-  top: 0;
-  left: 0;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Animation for card flipping */
+@keyframes flip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes flipBack {
+  0% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+.animate-flip {
+  animation: flip 0.6s ease-out forwards;
+}
+
+.animate-flip-back {
+  animation: flipBack 0.6s ease-out forwards;
+}
+
+/* Mastered badge styles */
+.badge-mastered {
+  background-color: rgb(34, 197, 94);
+  color: white;
+}
+
+/* Study mode styles */
+.study-mode-container {
+  min-height: 400px;
+}
+
+.flashcard-study-container {
   width: 100%;
-  height: 100%;
+  max-width: 500px;
+  height: 300px;
+  margin: 0 auto;
 }
 
-.flashcard-back {
-  transform: rotateY(180deg);
+/* Progress indicator styles */
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }
 
-.flashcard.flipped .flashcard-front {
-  transform: rotateY(180deg);
+.progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgb(203, 213, 225);
+  transition: all 0.3s ease;
 }
 
-.flashcard.flipped .flashcard-back {
-  transform: rotateY(0);
+.progress-dot-active {
+  background-color: rgb(99, 102, 241);
+  transform: scale(1.2);
 }
 
-/* Animation for new cards */
-@keyframes cardAppear {
+.progress-dot-correct {
+  background-color: rgb(34, 197, 94);
+}
+
+.progress-dot-incorrect {
+  background-color: rgb(239, 68, 68);
+}
+
+/* Card entrance/exit animations */
+@keyframes slideInRight {
   from {
+    transform: translateX(100%);
     opacity: 0;
-    transform: translateY(20px);
   }
   to {
+    transform: translateX(0);
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-.card-new {
-  animation: cardAppear 0.3s ease-out forwards;
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
 }
 
-/* Progress tracker */
-.mastery-progress {
-  height: 8px;
-  background-color: hsl(var(--secondary));
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 8px 0;
+.animate-slide-in-right {
+  animation: slideInRight 0.3s forwards;
 }
 
-.mastery-progress-bar {
-  height: 100%;
-  background-color: hsl(var(--primary));
-  transition: width 0.3s ease;
+.animate-slide-out-left {
+  animation: slideOutLeft 0.3s forwards;
 }
 
-/* Hover effects */
-.flashcard-item {
-  transition: transform 0.2s, box-shadow 0.2s;
+/* Card shake animation for incorrect answers */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
 }
 
-.flashcard-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Import area */
-.import-zone {
-  border: 2px dashed hsl(var(--border));
-  border-radius: 8px;
-  padding: 24px;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.import-zone:hover, .import-zone.active {
-  background-color: hsl(var(--accent) / 0.1);
-  border-color: hsl(var(--primary));
+.animate-shake {
+  animation: shake 0.4s;
 }

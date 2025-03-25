@@ -1,57 +1,111 @@
 
 import { v4 as uuidv4 } from 'uuid';
-
-export interface Flashcard {
-  id: string;
-  italian: string;
-  english: string;
-  mastered: boolean;
-  level?: number;
-  dueDate?: Date;
-  isMastered?: boolean;
-  lastReviewed?: Date;
-  createdAt?: Date;
-}
-
-export interface MultipleChoiceQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  explanation?: string;
-}
-
-export interface MultipleChoiceSet {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  questions: MultipleChoiceQuestion[];
-}
-
-export interface QuizAttempt {
-  id: string;
-  questionSetId: string;
-  score: number;
-  totalQuestions: number;
-  completedAt: Date;
-}
-
-export type ContentType = 'multiple-choice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
+import { Flashcard, FlashcardSet } from '@/types/flashcard';
+import { MultipleChoiceQuestion, QuestionSet, QuizAttempt } from '@/types/question';
+import { ContentType } from '@/utils/textAnalysis';
 
 // Sample data
 const sampleFlashcards: Flashcard[] = [
-  { id: '1', italian: 'casa', english: 'house', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '2', italian: 'cibo', english: 'food', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '3', italian: 'acqua', english: 'water', mastered: true, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '4', italian: 'cittadino', english: 'citizen', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '5', italian: 'diritto', english: 'right (legal)', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '6', italian: 'buongiorno', english: 'good morning', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '7', italian: 'grazie', english: 'thank you', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '8', italian: 'piacere', english: 'pleasure/nice to meet you', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '9', italian: 'scusa', english: 'excuse me/sorry', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
-  { id: '10', italian: 'ciao', english: 'hello/goodbye', mastered: false, createdAt: new Date(), lastReviewed: new Date() },
+  { 
+    id: '1', 
+    italian: 'casa', 
+    english: 'house', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '2', 
+    italian: 'cibo', 
+    english: 'food', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '3', 
+    italian: 'acqua', 
+    english: 'water', 
+    mastered: true, 
+    level: 5,
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '4', 
+    italian: 'cittadino', 
+    english: 'citizen', 
+    mastered: false, 
+    level: 2,
+    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '5', 
+    italian: 'diritto', 
+    english: 'right (legal)', 
+    mastered: false, 
+    level: 1,
+    dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '6', 
+    italian: 'buongiorno', 
+    english: 'good morning', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '7', 
+    italian: 'grazie', 
+    english: 'thank you', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '8', 
+    italian: 'piacere', 
+    english: 'pleasure/nice to meet you', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '9', 
+    italian: 'scusa', 
+    english: 'excuse me/sorry', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
+  { 
+    id: '10', 
+    italian: 'ciao', 
+    english: 'hello/goodbye', 
+    mastered: false, 
+    level: 0,
+    dueDate: new Date(), 
+    createdAt: new Date(), 
+    lastReviewed: new Date() 
+  },
 ];
 
 // Mock storage - in a real app, this would use IndexedDB, localStorage, or a backend database
@@ -71,12 +125,11 @@ export const ContentService = {
     return [...storage.flashcards];
   },
   
-  saveFlashcard: async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'lastReviewed'>): Promise<Flashcard> => {
-    const newCard = {
-      ...flashcard,
-      id: uuidv4(),
-      createdAt: new Date(),
-      lastReviewed: new Date(),
+  saveFlashcard: async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'lastReviewed'> | Flashcard): Promise<Flashcard> => {
+    const newCard: Flashcard = {
+      ...('id' in flashcard ? flashcard : { ...flashcard, id: uuidv4() }),
+      createdAt: 'createdAt' in flashcard ? flashcard.createdAt : new Date(),
+      lastReviewed: 'lastReviewed' in flashcard ? flashcard.lastReviewed : new Date(),
     };
     
     storage.flashcards.push(newCard);
@@ -140,6 +193,8 @@ export const ContentService = {
               italian,
               english,
               mastered: false,
+              level: 0,
+              dueDate: new Date(),
               createdAt: new Date(),
               lastReviewed: new Date()
             });
@@ -155,6 +210,8 @@ export const ContentService = {
             italian: item.italian || '',
             english: item.english || '',
             mastered: item.mastered || false,
+            level: item.level || 0,
+            dueDate: new Date(),
             createdAt: new Date(),
             lastReviewed: new Date()
           }));
@@ -180,9 +237,9 @@ export const ContentService = {
     
     if (format === 'csv') {
       // Generate CSV
-      const headers = ['italian', 'english', 'mastered'];
+      const headers = ['italian', 'english', 'mastered', 'level'];
       const rows = cardsToExport.map(card => 
-        `${card.italian},${card.english},${card.mastered ? 'true' : 'false'}`
+        `${card.italian},${card.english},${card.mastered ? 'true' : 'false'},${card.level}`
       );
       
       return [headers.join(','), ...rows].join('\n');
@@ -192,5 +249,37 @@ export const ContentService = {
     }
   },
   
-  // Other content methods would go here
+  // Question methods
+  getQuestionSets: async (): Promise<QuestionSet[]> => {
+    await delay(300);
+    return []; // Mock implementation
+  },
+  
+  saveQuestionSet: async (questionSet: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuestionSet> => {
+    await delay(300);
+    return {
+      ...questionSet,
+      id: uuidv4(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  },
+  
+  // Speaking methods
+  getSpeakingExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
+    await delay(300);
+    return []; // Mock implementation
+  },
+  
+  // Listening methods
+  getListeningExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
+    await delay(300);
+    return []; // Mock implementation
+  },
+  
+  // Writing methods
+  getWritingExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
+    await delay(300);
+    return []; // Mock implementation
+  },
 };

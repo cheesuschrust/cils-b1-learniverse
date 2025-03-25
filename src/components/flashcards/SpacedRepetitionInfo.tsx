@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Brain, Award } from "lucide-react";
-import { Flashcard } from '@/services/ContentService';
+import { Flashcard } from '@/types/flashcard';
 
 interface SpacedRepetitionInfoProps {
   card?: Flashcard;
@@ -16,7 +16,7 @@ const SpacedRepetitionInfo: React.FC<SpacedRepetitionInfoProps> = ({
 }) => {
   const level = card?.level || 0;
   const dueDate = card?.dueDate || new Date();
-  const isMastered = card?.isMastered || card?.mastered || false;
+  const isMastered = card?.mastered || false;
   
   return (
     <Card className={`overflow-hidden ${className}`}>
