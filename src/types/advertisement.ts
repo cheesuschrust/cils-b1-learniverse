@@ -84,7 +84,7 @@ export interface AdSettings {
   defaultNetwork: AdNetwork;
   frequencyCap: number; // Max ads per session
   showToPremiumUsers: boolean;
-  refreshInterval?: number; // In seconds
+  refreshInterval?: number; // In seconds, optional
   blockList?: string[]; // List of blocked advertisers or categories
   networks: {
     google?: {

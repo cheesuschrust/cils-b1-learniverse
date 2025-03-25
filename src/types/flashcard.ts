@@ -22,6 +22,7 @@ export interface Flashcard {
 export interface FlashcardSet {
   id: string;
   name: string;
+  title?: string; // Added for compatibility
   description?: string;
   cards: Flashcard[];
   createdAt: Date;
@@ -46,6 +47,8 @@ export interface FlashcardStudySession {
     responseTime: number;
   }[];
   startedAt: Date;
+  startTime?: Date; // Added for compatibility
+  endTime?: Date; // Added for compatibility
   completedAt?: Date;
   score: number;
   timeSpent: number;
@@ -67,4 +70,5 @@ export interface ImportResult {
   total: number;
   errors: string[];
   importedCards: Flashcard[];
+  imported?: Flashcard[]; // Added for compatibility
 }

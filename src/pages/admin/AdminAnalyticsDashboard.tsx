@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import AdminAnalyticsDashboard from '@/components/admin/AdminAnalyticsDashboard';
+import EnhancedAnalyticsDashboard from '@/components/admin/EnhancedAnalyticsDashboard';
 
 const AdminAnalyticsDashboardPage: React.FC = () => {
   return (
@@ -9,7 +9,9 @@ const AdminAnalyticsDashboardPage: React.FC = () => {
       <Helmet>
         <title>Analytics Dashboard - Admin</title>
       </Helmet>
-      <AdminAnalyticsDashboard />
+      <div className="container max-w-7xl mx-auto py-8 px-4">
+        <EnhancedAnalyticsDashboard />
+      </div>
     </>
   );
 };

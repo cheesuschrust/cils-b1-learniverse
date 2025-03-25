@@ -52,8 +52,12 @@ import {
 } from '@/pages/imports';
 
 // Import admin components directly
-import AdminAnalyticsDashboard from '@/components/admin/AdminAnalyticsDashboard';
+import AdminAnalyticsDashboardPage from '@/pages/admin/AdminAnalyticsDashboard';
 import EmailConfigurationPanel from '@/components/admin/EmailConfigurationPanel';
+import InstitutionalLicensingPage from '@/pages/admin/InstitutionalLicensing';
+import AdManagementPage from '@/pages/admin/AdManagement';
+import ChatbotManagementPage from '@/pages/admin/ChatbotManagement';
+import GlobalUserDocumentation from '@/components/help/GlobalUserDocumentation';
 
 function App() {
   return (
@@ -91,6 +95,7 @@ function App() {
                       <Route path="progress" element={<ProgressTracker />} />
                       <Route path="support" element={<Support />} />
                       <Route path="support-center" element={<SupportCenter />} />
+                      <Route path="documentation" element={<GlobalUserDocumentation />} />
                     </Route>
 
                     {/* Admin Routes */}
@@ -106,8 +111,11 @@ function App() {
                       <Route path="logs" element={<SystemLogs />} />
                       <Route path="system-tests" element={<SystemTests />} />
                       <Route path="support-tickets" element={<SupportTickets />} />
-                      <Route path="analytics" element={<AdminAnalyticsDashboard />} />
+                      <Route path="analytics" element={<AdminAnalyticsDashboardPage />} />
                       <Route path="email-config" element={<EmailConfigurationPanel />} />
+                      <Route path="institutional-licensing" element={<InstitutionalLicensingPage />} />
+                      <Route path="ad-management" element={<AdManagementPage />} />
+                      <Route path="chatbot-management" element={<ChatbotManagementPage />} />
                     </Route>
                   </Route>
                   

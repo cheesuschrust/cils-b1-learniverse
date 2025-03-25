@@ -5,21 +5,20 @@ export interface ChatMessage {
   isUser: boolean;
   timestamp: Date;
   attachments?: {
-    id: string;
-    type: 'image' | 'file' | 'audio';
+    type: 'image' | 'file';
     url: string;
     name: string;
+    size?: number;
   }[];
   feedback?: {
     helpful: boolean;
     reason?: string;
   };
   context?: {
-    page?: string;
-    feature?: string;
     previousMessageIds?: string[];
+    relatedTopics?: string[];
+    knowledgeSourceIds?: string[];
   };
-  metadata?: Record<string, any>;
 }
 
 export interface ChatSession {
@@ -28,14 +27,13 @@ export interface ChatSession {
   messages: ChatMessage[];
   startedAt: Date;
   lastActivityAt: Date;
-  context?: {
+  context: {
     userType: 'free' | 'premium';
     language: string;
-    referringPage?: string;
-    userLevel?: string;
+    [key: string]: any;
   };
-  resolved?: boolean;
-  escalatedToHuman?: boolean;
+  resolved: boolean;
+  escalatedToHuman: boolean;
 }
 
 export interface KnowledgeBaseEntry {
@@ -50,36 +48,48 @@ export interface KnowledgeBaseEntry {
   version: string;
 }
 
+export interface ChatbotSettings {
+  enabled: boolean;
+  name: string;
+  avatarUrl: string;
+  welcomeMessage: string;
+  fallbackMessage: string;
+  maxContextLength: number;
+  confidenceThreshold: number;
+  suggestFeedback: boolean;
+  suggestRelatedQuestions: boolean;
+  escalationThreshold: number;
+}
+
 export interface ChatbotTrainingExample {
   id: string;
-  question: string;
-  answer: string;
+  query: string;
+  response: string;
   category: string;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  createdBy: string;
+  createdBy?: string;
   approved: boolean;
-  alternatives?: string[]; // Alternative phrasings of the question
+  source: 'admin' | 'user-feedback' | 'auto-generated';
 }
 
-export interface ChatbotSettings {
-  enabled: boolean;
-  name: string;
-  avatarUrl?: string;
-  welcomeMessage: string;
-  fallbackMessage: string;
-  maxContextLength: number;
-  confidenceThreshold: number; // Minimum confidence score to provide an answer
-  suggestFeedback: boolean;
-  suggestRelatedQuestions: boolean;
-  escalationThreshold: number; // Number of low-confidence responses before suggesting human help
-  operatingHours?: {
-    timezone: string;
-    schedule: {
-      day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
-      start: string; // HH:MM format
-      end: string; // HH:MM format
-    }[];
+export interface ChatbotAnalytics {
+  totalSessions: number;
+  averageSessionLength: number;
+  topQueries: {
+    query: string;
+    count: number;
+  }[];
+  topCategories: {
+    category: string;
+    count: number;
+  }[];
+  feedbackStats: {
+    helpful: number;
+    notHelpful: number;
+    helpfulPercentage: number;
   };
+  escalationRate: number;
+  responseTimeAverage: number;
 }

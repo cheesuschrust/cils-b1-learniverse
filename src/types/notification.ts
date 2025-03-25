@@ -1,27 +1,40 @@
 
-export interface NotificationAction {
-  id: string;
-  label: string;
-}
+export type NotificationType = 
+  | 'info' 
+  | 'success' 
+  | 'warning' 
+  | 'error'
+  | 'achievement'
+  | 'reminder'
+  | 'feature'
+  | 'update'
+  | 'lesson'
+  | 'support'
+  | 'file-processing'
+  | 'system';
 
 export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
+  type: NotificationType;
   createdAt: Date;
-  actions?: NotificationAction[];
+  read: boolean;
+  userId?: string;
+  icon?: string;
+  link?: string;
+  actions?: {
+    label: string;
+    action: string;
+  }[];
 }
 
-export interface NotificationPreference {
-  type: string;
-  enabled: boolean;
-}
-
-export interface NotificationPreferences {
-  email: boolean;
-  push: boolean;
-  inApp: boolean;
-  types: NotificationPreference[];
+export interface NotificationsContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  dismissNotification: (id: string) => void;
+  dismissAll: () => void;
 }

@@ -1,8 +1,17 @@
 
+
 // Question Types
-export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'Beginner' | 'Intermediate' | 'Advanced';
 export type QuestionLanguage = 'italian' | 'english' | 'both';
-export type QuestionCategory = 'vocabulary' | 'grammar' | 'conversation' | 'culture' | 'mixed';
+export type QuestionCategory = 
+  | 'vocabulary' 
+  | 'grammar' 
+  | 'conversation' 
+  | 'culture' 
+  | 'mixed'
+  | 'Greetings'
+  | 'Food'
+  | 'Basics';
 
 export interface Question {
   id: string;
@@ -17,6 +26,7 @@ export interface Question {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  language?: 'english' | 'italian';
 }
 
 export interface MultipleChoiceQuestion extends Question {
@@ -35,6 +45,7 @@ export interface QuestionSet {
   updatedAt: Date;
   createdBy?: string;
   isPublic: boolean;
+  title?: string; // Added for compatibility
 }
 
 export interface QuizAttempt {
@@ -68,4 +79,5 @@ export interface QuizStats {
     date: Date;
     score: number;
   }[];
+  questionSets?: QuestionSet[]; // Added for compatibility
 }

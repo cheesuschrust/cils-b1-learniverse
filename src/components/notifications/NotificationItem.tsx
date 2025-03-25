@@ -11,9 +11,10 @@ interface NotificationItemProps {
   notification: Notification;
   key: string;
   onDismiss: (id: string) => void;
+  onAction?: (id: string, action: string) => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDismiss }) => {
+const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDismiss, onAction }) => {
   // Choose icon based on notification type
   const getIcon = () => {
     switch (notification.type) {
@@ -33,6 +34,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDis
         return <FileText className="h-5 w-5 text-indigo-500" />;
       case 'system':
         return <Settings className="h-5 w-5 text-gray-500" />;
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'warning':
+        return <Bell className="h-5 w-5 text-yellow-500" />;
+      case 'error':
+        return <X className="h-5 w-5 text-red-500" />;
       default:
         return <Info className="h-5 w-5 text-blue-500" />;
     }
@@ -52,6 +61,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDis
     onDismiss(notification.id);
   };
   
+  const handleAction = (action: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onAction) {
+      onAction(notification.id, action);
+    }
+  };
+  
   const notificationContent = (
     <Card className={cn(
       "flex items-start p-4 space-x-4 cursor-pointer hover:bg-muted/50 transition-colors",
@@ -64,6 +81,21 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onDis
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-sm">{notification.title}</h4>
         <p className="text-sm text-muted-foreground line-clamp-2">{notification.message}</p>
+        {notification.actions && notification.actions.length > 0 && (
+          <div className="flex space-x-2 mt-2">
+            {notification.actions.map((action, index) => (
+              <Button 
+                key={index} 
+                variant="outline" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={handleAction(action.action)}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex justify-between items-center mt-1">
           <span className="text-xs text-muted-foreground">
             {new Date(notification.createdAt).toLocaleString()}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, CreditCard, Star, Trophy, Building, Users, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { SubscriptionPlan, SubscriptionPlanDetails } from '@/types/subscription';
+import { SubscriptionPlan, SubscriptionPlanDetails, SubscriptionInterval } from '@/types/subscription';
 import { useToast } from '@/hooks/use-toast';
 
 const plans: SubscriptionPlanDetails[] = [
@@ -125,8 +125,8 @@ const plans: SubscriptionPlanDetails[] = [
 ];
 
 interface SubscriptionPlansProps {
-  selectedInterval?: 'monthly' | 'annual';
-  onIntervalChange?: (interval: 'monthly' | 'annual') => void;
+  selectedInterval?: 'monthly' | 'annual' | 'quarterly';
+  onIntervalChange?: (interval: 'monthly' | 'annual' | 'quarterly') => void;
 }
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ 
