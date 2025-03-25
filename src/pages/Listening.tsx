@@ -244,7 +244,7 @@ const ListeningPage: React.FC = () => {
       toast({
         title: `Score: ${percentage}%`,
         description: `You got ${score.correct} out of ${score.total} correct!`,
-        variant: percentage >= 80 ? 'default' : percentage >= 60 ? 'outline' : 'destructive',
+        variant: percentage >= 80 ? 'default' : (percentage >= 60 ? 'default' : 'destructive'),
       });
     }, 1000);
   };
@@ -735,7 +735,7 @@ const ListeningPage: React.FC = () => {
                 
                 {showResults ? (
                   <Button 
-                    variant="outline" 
+                    variant="default" 
                     onClick={handleRestartExercise}
                   >
                     <RefreshCcw className="h-4 w-4 mr-2" />

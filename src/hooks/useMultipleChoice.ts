@@ -44,7 +44,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
         updatedAt: new Date()
       };
       
-      setQuestionSets(prev => {
+      setQuestionSets((prev: QuestionSet[]) => {
         const existing = prev.findIndex(s => s.id === newSet.id);
         if (existing >= 0) {
           // Update existing set
@@ -77,7 +77,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   // Delete a question set
   const deleteQuestionSet = useCallback((id: string) => {
     try {
-      setQuestionSets(prev => prev.filter(set => set.id !== id));
+      setQuestionSets((prev: QuestionSet[]) => prev.filter(set => set.id !== id));
       
       toast({
         title: "Question Set Deleted",
@@ -96,7 +96,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   // Update a question set
   const updateQuestionSet = useCallback((id: string, updates: Partial<QuestionSet>) => {
     try {
-      setQuestionSets(prev => prev.map(set => 
+      setQuestionSets((prev: QuestionSet[]) => prev.map(set => 
         set.id === id
           ? { ...set, ...updates, updatedAt: new Date() }
           : set
@@ -125,7 +125,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
         completedAt: attempt.completedAt || new Date()
       };
       
-      setQuizAttempts(prev => [...prev, newAttempt]);
+      setQuizAttempts((prev: QuizAttempt[]) => [...prev, newAttempt]);
       
       toast({
         title: "Quiz Attempt Saved",
@@ -147,7 +147,7 @@ export const useMultipleChoice = (): UseMultipleChoiceReturn => {
   // Delete a quiz attempt
   const deleteQuizAttempt = useCallback((id: string) => {
     try {
-      setQuizAttempts(prev => prev.filter(attempt => attempt.id !== id));
+      setQuizAttempts((prev: QuizAttempt[]) => prev.filter(attempt => attempt.id !== id));
       
       toast({
         title: "Quiz Attempt Deleted",

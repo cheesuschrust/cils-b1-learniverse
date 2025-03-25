@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 
 export interface Flashcard {
@@ -5,6 +6,9 @@ export interface Flashcard {
   italian: string;
   english: string;
   mastered: boolean;
+  level?: number;
+  dueDate?: Date;
+  isMastered?: boolean;
   lastReviewed?: Date;
   createdAt?: Date;
 }

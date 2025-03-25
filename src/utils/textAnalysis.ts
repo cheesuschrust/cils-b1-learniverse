@@ -1,495 +1,291 @@
 
-import natural from 'natural';
-import { z } from 'zod';
+import { ContentType } from '@/services/ContentService';
 
-// Define content types for the application
-export type ContentType = 'multiple-choice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
+// Simplified NLP functions for text analysis
+// In a real app, you might use libraries like natural, compromise, etc.
 
-// Simple language detection
-export const detectLanguage = (text: string): 'english' | 'italian' | 'spanish' | 'french' | 'german' | 'unknown' => {
-  if (!text || text.trim().length < 5) {
-    return 'unknown';
+const MIN_SENTENCE_LENGTH = 4;
+const MIN_WORD_LENGTH = 2;
+
+export interface TextAnalysisResult {
+  readability: 'Beginner' | 'Intermediate' | 'Advanced';
+  wordCount: number;
+  sentenceCount: number;
+  avgWordLength: number;
+  avgSentenceLength: number;
+  topKeywords: string[];
+  contentType: ContentType | 'unknown';
+  languageDetected: 'english' | 'italian' | 'unknown';
+  confidence: number;
+}
+
+// Calculate text readability
+export function analyzeTextReadability(text: string): TextAnalysisResult {
+  // Clean the text
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  
+  // Split into sentences and words
+  const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > MIN_SENTENCE_LENGTH);
+  const words = cleanText.split(/\s+/).filter(w => w.length > MIN_WORD_LENGTH);
+  
+  // Calculate basic metrics
+  const wordCount = words.length;
+  const sentenceCount = sentences.length;
+  const avgWordLength = words.length ? words.join('').length / words.length : 0;
+  const avgSentenceLength = sentences.length ? wordCount / sentences.length : 0;
+  
+  // Determine readability
+  let readability: 'Beginner' | 'Intermediate' | 'Advanced';
+  
+  if (avgWordLength < 4.5 && avgSentenceLength < 10) {
+    readability = 'Beginner';
+  } else if (avgWordLength < 5.5 && avgSentenceLength < 15) {
+    readability = 'Intermediate';
+  } else {
+    readability = 'Advanced';
   }
   
-  // Count occurrences of language-specific characters or patterns
-  const italianPatterns = [
-    /\bsono\b/i, /\bsei\b/i, /\bè\b/i, /\bsiamo\b/i, /\bsiete\b/i, 
-    /\bche\b/i, /\bbambino\b/i, /\bbuon(a|o)\b/i, /\bmolt(o|a)\b/i,
-    /\bgiorno\b/i, /\bquesto\b/i, /\bella\b/i, /\btutt(i|o|a|e)\b/i,
-    /\bcosa\b/i, /\bquando\b/i, /\bperché\b/i, /\bdove\b/i,
-    /\bcome\b/i, /\bqui\b/i, /\bchi\b/i, /\bpiacere\b/i
-  ];
+  // Extract top keywords
+  const topKeywords = extractKeywords(cleanText, 5);
   
-  const englishPatterns = [
-    /\bis\b/i, /\bare\b/i, /\bwas\b/i, /\bwere\b/i, /\bthe\b/i, 
-    /\ba\b/i, /\ban\b/i, /\bto\b/i, /\bin\b/i, /\bfor\b/i,
-    /\bwith\b/i, /\byou\b/i, /\bthey\b/i, /\bwe\b/i, /\bhe\b/i,
-    /\bshe\b/i, /\bit\b/i, /\band\b/i, /\bor\b/i, /\bnot\b/i
-  ];
+  // Detect content type
+  const contentType = detectContentType(cleanText);
   
-  const spanishPatterns = [
-    /\bes\b/i, /\bson\b/i, /\bestá\b/i, /\bestán\b/i, /\bel\b/i, 
-    /\bla\b/i, /\blos\b/i, /\blas\b/i, /\bun\b/i, /\buna\b/i,
-    /\bunos\b/i, /\bunas\b/i, /\by\b/i, /\bo\b/i, /\bpero\b/i,
-    /\bque\b/i, /\bcuando\b/i, /\bcómo\b/i, /\bdónde\b/i, /\bporqué\b/i
-  ];
+  // Detect language
+  const languageResult = detectLanguage(cleanText);
   
-  const frenchPatterns = [
-    /\best\b/i, /\bsont\b/i, /\bétait\b/i, /\bétaient\b/i, /\ble\b/i, 
-    /\bla\b/i, /\bles\b/i, /\bun\b/i, /\bune\b/i, /\bdes\b/i,
-    /\bet\b/i, /\bou\b/i, /\bmais\b/i, /\bque\b/i, /\bquand\b/i,
-    /\bcomment\b/i, /\boù\b/i, /\bpourquoi\b/i, /\bqui\b/i, /\bavec\b/i
-  ];
-  
-  const germanPatterns = [
-    /\bist\b/i, /\bsind\b/i, /\bwar\b/i, /\bwaren\b/i, /\bder\b/i, 
-    /\bdie\b/i, /\bdas\b/i, /\bein\b/i, /\beine\b/i, /\bund\b/i,
-    /\boder\b/i, /\baber\b/i, /\bwenn\b/i, /\bwann\b/i, /\bwie\b/i,
-    /\bwo\b/i, /\bwarum\b/i, /\bwer\b/i, /\bmit\b/i, /\bfür\b/i
-  ];
-  
-  // Function to count matches for a set of patterns
-  const countMatches = (patterns: RegExp[]) => {
-    return patterns.reduce((count, pattern) => {
-      const matches = text.match(pattern);
-      return count + (matches ? matches.length : 0);
-    }, 0);
+  return {
+    readability,
+    wordCount,
+    sentenceCount,
+    avgWordLength,
+    avgSentenceLength,
+    topKeywords,
+    contentType,
+    languageDetected: languageResult.language,
+    confidence: languageResult.confidence
   };
-  
-  // Count matches for each language
-  const italianCount = countMatches(italianPatterns);
-  const englishCount = countMatches(englishPatterns);
-  const spanishCount = countMatches(spanishPatterns);
-  const frenchCount = countMatches(frenchPatterns);
-  const germanCount = countMatches(germanPatterns);
-  
-  // Find the maximum count
-  const maxCount = Math.max(italianCount, englishCount, spanishCount, frenchCount, germanCount);
-  
-  // If no significant pattern is detected, return unknown
-  if (maxCount < 2) {
-    return 'unknown';
-  }
-  
-  // Return the language with the highest count
-  if (italianCount === maxCount) return 'italian';
-  if (englishCount === maxCount) return 'english';
-  if (spanishCount === maxCount) return 'spanish';
-  if (frenchCount === maxCount) return 'french';
-  if (germanCount === maxCount) return 'german';
-  
-  return 'unknown';
-};
+}
 
-// Detect content type from text
-export const detectContentType = (text: string): ContentType => {
-  if (!text || text.trim().length < 20) {
-    // Default to writing if text is too short to analyze
-    return 'writing';
+// Extract keywords from text
+function extractKeywords(text: string, limit: number = 5): string[] {
+  // Remove common stop words
+  const stopWords = ['the', 'and', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'il', 'la', 'e', 'in', 'che', 'di', 'non', 'un', 'una'];
+  
+  // Get words and their frequencies
+  const words = text.toLowerCase().match(/\b[a-z']{3,}\b/g) || [];
+  const wordFreq: Record<string, number> = {};
+  
+  for (const word of words) {
+    if (!stopWords.includes(word)) {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    }
   }
   
-  // Convert to lowercase for case-insensitive matching
-  const lowerText = text.toLowerCase();
+  // Sort by frequency
+  return Object.entries(wordFreq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([word]) => word);
+}
+
+// Detect if text is more suitable for flashcards, multiple choice, etc.
+function detectContentType(text: string): ContentType | 'unknown' {
+  const lowercaseText = text.toLowerCase();
   
-  // Check for patterns indicating multiple choice questions
-  const mcQuestionPatterns = [
-    /\?.*\ba\)|\bb\)|\bc\)|\bd\)/i,
-    /\bwhich of the following\b/i,
-    /\bchoose the correct\b/i,
-    /\bchoose the best\b/i,
-    /\bselect the\b.*\boption\b/i,
-    /\bcorrect answer\b/i,
-    /\bmultiple choice\b/i,
-    /\s[a-d]\.\s/g, // a. b. c. d. format
-  ];
+  // Pattern matching to detect content type
+  // Let flashcardMatches be a variable that changes
+  let flashcardMatches = 0;
+  let mcMatches = 0;
+  let listeningMatches = 0;
+  let writingMatches = 0;
+  let speakingMatches = 0;
   
-  // Check for patterns indicating flashcards
-  const flashcardPatterns = [
-    /\btranslation\b/i,
-    /\bvocabulary\b/i,
-    /\bword list\b/i,
-    /\bglossary\b/i,
-    /\bterm\b.*\bdefinition\b/i,
-    /\bitali[a-z]*\s*:\s*english\b/i, // Italian: English pattern
-    /\benglish\s*:\s*itali[a-z]*\b/i, // English: Italian pattern
-    /\b\w+\s*-\s*\w+\b/g, // word - definition format
-    /\b\w+\s*:\s*\w+\b/g, // word: definition format
-    /\b\w+\s*=\s*\w+\b/g, // word = definition format
-  ];
-  
-  // Check for patterns indicating speaking exercises
-  const speakingPatterns = [
-    /\bspeak\b/i,
-    /\bsay\b/i,
-    /\bpronounce\b/i,
-    /\bpronunciation\b/i,
-    /\bconversation\b/i,
-    /\bdialogue\b/i,
-    /\brepeat\b/i,
-    /\blistening\b/i,
-    /\baudio\b/i,
-  ];
-  
-  // Check for patterns indicating listening exercises
-  const listeningPatterns = [
-    /\blisten\b/i,
-    /\baudio\b/i,
-    /\bsound\b/i,
-    /\brecording\b/i,
-    /\bheadphones\b/i,
-    /\bspeaker\b/i,
-    /\bheadset\b/i,
-    /\bplay\b.*\baudio\b/i,
-  ];
-  
-  // Count pattern matches for each type
-  const mcMatches = mcQuestionPatterns.filter(pattern => pattern.test(lowerText)).length;
-  const flashcardMatches = flashcardPatterns.filter(pattern => pattern.test(lowerText)).length;
-  const speakingMatches = speakingPatterns.filter(pattern => pattern.test(lowerText)).length;
-  const listeningMatches = listeningPatterns.filter(pattern => pattern.test(lowerText)).length;
-  
-  // Check for tab/comma-separated values which often indicate flashcards
-  const hasTabbedFormat = /\w+\t\w+/.test(text); // Word<tab>Word format
-  const hasCSVFormat = /\w+,\w+/.test(text) && text.split(',').length > 2; // CSV format
-  
-  if (hasTabbedFormat || hasCSVFormat) {
-    flashcardMatches += 3; // Add weight for structured formats
+  // Flashcard detection - vocabulary lists, word-definition pairs
+  if (
+    lowercaseText.includes('vocabulary') || 
+    lowercaseText.includes('word list') ||
+    lowercaseText.includes('glossary') ||
+    lowercaseText.match(/\b\w+\s*[-:=]\s*\w+\b/g)
+  ) {
+    flashcardMatches += 2;
   }
   
-  // Check for question mark prevalence which might indicate multiple choice
-  const questionMarkCount = (text.match(/\?/g) || []).length;
-  const lineCount = text.split('\n').filter(line => line.trim().length > 0).length;
-  const questionRatio = lineCount > 0 ? questionMarkCount / lineCount : 0;
-  
-  if (questionRatio > 0.3) {
-    mcMatches += 2; // Add weight if many lines have question marks
-  }
-  
-  // Additional weight for content with numbered questions
-  const numberedQuestions = text.match(/\b\d+\s*[.)\]]\s*\w+/g);
-  if (numberedQuestions && numberedQuestions.length > 3) {
+  // Multiple choice detection - questions with options
+  if (
+    lowercaseText.includes('question') || 
+    lowercaseText.includes('choose') ||
+    lowercaseText.includes('select') ||
+    lowercaseText.match(/\b[a-d][.)]\s+\w+/gi) ||
+    lowercaseText.match(/\d+[.)]\s+\w+/g)
+  ) {
     mcMatches += 2;
   }
   
-  // Count headings (# in markdown) which are common in writing exercises
-  const headingCount = (text.match(/^#{1,6}\s+.+$/gm) || []).length;
-  
-  // Find the dominant type
-  const maxMatches = Math.max(mcMatches, flashcardMatches, speakingMatches, listeningMatches);
-  
-  // If no clear pattern is detected, default to writing
-  if (maxMatches < 2) {
-    return 'writing';
+  // More signals for multiple choice - options format
+  if (
+    lowercaseText.match(/\b(?:options|choices)[:]\s*\w+/gi)
+  ) {
+    mcMatches += 1;
   }
   
-  // Return the content type with the most matches
-  if (mcMatches === maxMatches) return 'multiple-choice';
-  if (flashcardMatches === maxMatches) return 'flashcards';
-  if (speakingMatches === maxMatches) return 'speaking';
-  if (listeningMatches === maxMatches) return 'listening';
+  // Listening exercise detection
+  if (
+    lowercaseText.includes('listen') ||
+    lowercaseText.includes('audio') ||
+    lowercaseText.includes('pronunciation') ||
+    lowercaseText.includes('dictation')
+  ) {
+    listeningMatches += 2;
+  }
   
-  // Default to writing
-  return 'writing';
-};
+  // Writing exercise detection - essays, fill-in-blanks
+  if (
+    lowercaseText.includes('write') ||
+    lowercaseText.includes('essay') ||
+    lowercaseText.includes('compose') ||
+    lowercaseText.includes('fill in') ||
+    lowercaseText.match(/_{2,}/g) // underscores for blanks
+  ) {
+    writingMatches += 2;
+  }
+  
+  // Speaking exercise detection
+  if (
+    lowercaseText.includes('speak') ||
+    lowercaseText.includes('pronunciation') ||
+    lowercaseText.includes('repeat') ||
+    lowercaseText.includes('say')
+  ) {
+    speakingMatches += 2;
+  }
+  
+  // Count sentence-ending with question marks
+  const questionCount = (text.match(/\?/g) || []).length;
+  if (questionCount > 3) {
+    mcMatches += 1;
+  }
+  
+  // Determine the most likely content type
+  const scores = [
+    { type: 'flashcards', score: flashcardMatches },
+    { type: 'multiple-choice', score: mcMatches },
+    { type: 'listening', score: listeningMatches },
+    { type: 'writing', score: writingMatches },
+    { type: 'speaking', score: speakingMatches }
+  ];
+  
+  const highestScore = scores.sort((a, b) => b.score - a.score)[0];
+  
+  // Only return a content type if we have a reasonably high confidence
+  return highestScore.score >= 2 
+    ? highestScore.type as ContentType 
+    : 'unknown';
+}
 
-// Parse content based on detected type
-export const parseContent = (content: string, contentType: ContentType): any => {
-  switch (contentType) {
-    case 'multiple-choice':
-      return parseMultipleChoice(content);
+// Simple language detection
+function detectLanguage(text: string): { language: 'english' | 'italian' | 'unknown', confidence: number } {
+  // Very simplified language detection based on common words
+  const englishWords = ['the', 'and', 'to', 'of', 'a', 'in', 'that', 'is', 'was', 'he', 'for', 'it', 'with', 'as', 'his', 'on'];
+  const italianWords = ['il', 'la', 'e', 'che', 'di', 'a', 'in', 'un', 'una', 'sono', 'ho', 'non', 'si', 'mi', 'per', 'ti', 'lo'];
+  
+  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  
+  let englishMatches = 0;
+  let italianMatches = 0;
+  
+  for (const word of words) {
+    if (englishWords.includes(word)) englishMatches++;
+    if (italianWords.includes(word)) italianMatches++;
+  }
+  
+  const totalWords = words.length;
+  
+  if (totalWords === 0) return { language: 'unknown', confidence: 0 };
+  
+  const englishConfidence = englishMatches / totalWords;
+  const italianConfidence = italianMatches / totalWords;
+  
+  // Set threshold for language detection
+  const threshold = 0.05; // 5% of words need to be recognized
+  
+  if (englishConfidence > italianConfidence && englishConfidence > threshold) {
+    return { language: 'english', confidence: englishConfidence * 100 };
+  } else if (italianConfidence > englishConfidence && italianConfidence > threshold) {
+    return { language: 'italian', confidence: italianConfidence * 100 };
+  } else {
+    return { language: 'unknown', confidence: Math.max(englishConfidence, italianConfidence) * 100 };
+  }
+}
+
+// Enhanced endpoints for handling content-specific analysis
+export function getContentTypeConfidence(text: string, type: ContentType): number {
+  // Calculate confidence that the given text is suitable for the specified content type
+  const result = analyzeTextReadability(text);
+  
+  if (result.contentType === type) {
+    return Math.min(80 + Math.random() * 20, 100); // High confidence if detected type matches
+  }
+  
+  // Calculate based on text characteristics
+  switch (type) {
     case 'flashcards':
-      return parseFlashcards(content);
-    case 'speaking':
+      return calculateFlashcardConfidence(text);
+    case 'multiple-choice':
+      return calculateMultipleChoiceConfidence(text);
     case 'listening':
+      return calculateListeningConfidence(text);
     case 'writing':
+      return calculateWritingConfidence(text);
+    case 'speaking':
+      return calculateSpeakingConfidence(text);
     default:
-      return { text: content.trim() };
+      return 0;
   }
-};
+}
 
-// Parse multiple choice content
-const parseMultipleChoice = (content: string): any => {
-  const questions = [];
-  const lines = content.split('\n').filter(line => line.trim());
+// Calculate confidence scores for different content types
+function calculateFlashcardConfidence(text: string): number {
+  const wordPairs = text.match(/\b\w+\s*[-:=]\s*\w+\b/g) || [];
+  const shortLines = text.split('\n').filter(line => line.trim().length > 0 && line.trim().length < 30).length;
   
-  let currentQuestion: any = null;
-  
-  for (const line of lines) {
-    const questionMatch = line.match(/^\s*(\d+)[.)\]]\s+(.+)/);
-    const optionMatch = line.match(/^\s*([A-D])[.)\]]\s+(.+)/i) || line.match(/^\s*([a-d])\.\s+(.+)/i);
-    
-    if (questionMatch) {
-      // Save previous question if exists
-      if (currentQuestion && currentQuestion.options.length > 0) {
-        questions.push(currentQuestion);
-      }
-      
-      // Start a new question
-      currentQuestion = {
-        id: questions.length + 1,
-        question: questionMatch[2].trim(),
-        options: [],
-        correctAnswer: null,
-        explanation: "",
-      };
-    } else if (optionMatch && currentQuestion) {
-      // Add option to current question
-      const optionLetter = optionMatch[1].toUpperCase();
-      const optionText = optionMatch[2].trim();
-      
-      currentQuestion.options.push({
-        id: optionLetter,
-        text: optionText,
-      });
-      
-      // Check if this option is marked as correct
-      if (optionText.includes('*CORRECT*') || optionText.includes('(correct)')) {
-        currentQuestion.correctAnswer = optionLetter;
-        currentQuestion.options[currentQuestion.options.length - 1].text = optionText
-          .replace('*CORRECT*', '')
-          .replace('(correct)', '')
-          .trim();
-      }
-    } else if (line.toLowerCase().includes('answer:') && currentQuestion) {
-      // Parse answer indicator
-      const answerMatch = line.match(/answer:\s*([A-D])/i);
-      if (answerMatch) {
-        currentQuestion.correctAnswer = answerMatch[1].toUpperCase();
-      }
-    } else if (line.toLowerCase().includes('explanation:') && currentQuestion) {
-      // Parse explanation
-      currentQuestion.explanation = line.replace(/explanation:/i, '').trim();
-    } else if (currentQuestion && currentQuestion.explanation) {
-      // Append to existing explanation
-      currentQuestion.explanation += ' ' + line.trim();
-    }
-  }
-  
-  // Add the last question
-  if (currentQuestion && currentQuestion.options.length > 0) {
-    questions.push(currentQuestion);
-  }
-  
-  // If no correct answers were marked, make a reasonable guess for each question
-  questions.forEach(q => {
-    if (!q.correctAnswer && q.options.length > 0) {
-      // Default to first option if no correct answer was identified
-      q.correctAnswer = q.options[0].id;
-    }
-  });
-  
-  return questions;
-};
+  return Math.min(
+    ((wordPairs.length * 10) + (shortLines * 5)) / 
+    Math.max(text.length / 100, 1),
+    100
+  );
+}
 
-// Parse flashcard content
-const parseFlashcards = (content: string): any => {
-  const cards = [];
+function calculateMultipleChoiceConfidence(text: string): number {
+  const questionMarks = (text.match(/\?/g) || []).length;
+  const options = text.match(/\b[a-d][.)]\s+\w+/gi) || [];
   
-  // Try to determine the format
-  const hasTabs = content.includes('\t');
-  const hasCommas = content.includes(',');
-  const hasSemicolons = content.includes(';');
-  const hasColons = content.includes(':');
-  const hasDashes = content.includes(' - ');
-  
-  let separator: string;
-  let hasHeader = false;
-  
-  // Determine the most likely separator
-  if (hasTabs) {
-    separator = '\t';
-  } else if (hasCommas && content.split(',').length > 2) {
-    separator = ',';
-    
-    // Check if the first line looks like a header
-    const firstLine = content.split('\n')[0].toLowerCase();
-    if (firstLine.includes('italian') || firstLine.includes('english') || 
-        firstLine.includes('term') || firstLine.includes('definition')) {
-      hasHeader = true;
-    }
-  } else if (hasSemicolons) {
-    separator = ';';
-  } else if (hasColons) {
-    separator = ':';
-  } else if (hasDashes) {
-    separator = ' - ';
-  } else {
-    // Fallback to newlines as separator between pairs
-    const lines = content.split('\n').filter(line => line.trim());
-    
-    for (let i = 0; i < lines.length; i += 2) {
-      if (i + 1 < lines.length) {
-        cards.push({
-          italian: lines[i].trim(),
-          english: lines[i + 1].trim(),
-        });
-      }
-    }
-    
-    return cards;
-  }
-  
-  // Process with the identified separator
-  const lines = content.split('\n').filter(line => line.trim());
-  const startIndex = hasHeader ? 1 : 0;
-  
-  for (let i = startIndex; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    
-    const parts = line.split(separator);
-    
-    if (parts.length >= 2) {
-      const italian = parts[0].trim();
-      const english = parts[1].trim();
-      
-      if (italian && english) {
-        cards.push({
-          italian,
-          english,
-        });
-      }
-    }
-  }
-  
-  return cards;
-};
+  return Math.min(
+    ((questionMarks * 15) + (options.length * 10)) /
+    Math.max(text.length / 200, 1),
+    100
+  );
+}
 
-// Format detection function
-export const detectFileFormat = (filename: string): 'text' | 'image' | 'audio' | 'video' | 'data' | 'unknown' => {
-  const extension = filename.split('.').pop()?.toLowerCase() || '';
+function calculateListeningConfidence(text: string): number {
+  const listeningKeywords = ['listen', 'audio', 'hear', 'sound', 'pronunciation', 'dictation']
+    .filter(keyword => text.toLowerCase().includes(keyword)).length;
   
-  const formatMap: Record<string, 'text' | 'image' | 'audio' | 'video' | 'data'> = {
-    // Text formats
-    'txt': 'text',
-    'md': 'text',
-    'doc': 'text',
-    'docx': 'text',
-    'pdf': 'text',
-    'rtf': 'text',
-    'html': 'text',
-    'htm': 'text',
-    
-    // Image formats
-    'jpg': 'image',
-    'jpeg': 'image',
-    'png': 'image',
-    'gif': 'image',
-    'bmp': 'image',
-    'svg': 'image',
-    'webp': 'image',
-    
-    // Audio formats
-    'mp3': 'audio',
-    'wav': 'audio',
-    'ogg': 'audio',
-    'm4a': 'audio',
-    'flac': 'audio',
-    
-    // Video formats
-    'mp4': 'video',
-    'avi': 'video',
-    'mov': 'video',
-    'wmv': 'video',
-    'mkv': 'video',
-    'webm': 'video',
-    
-    // Data formats
-    'csv': 'data',
-    'json': 'data',
-    'xml': 'data',
-    'xlsx': 'data',
-    'xls': 'data',
-    'tsv': 'data',
-  };
-  
-  return formatMap[extension] || 'unknown';
-};
+  return Math.min(listeningKeywords * 20, 100);
+}
 
-// Schema for content validation
-export const contentSchema = z.object({
-  type: z.enum(['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening']),
-  language: z.enum(['english', 'italian', 'spanish', 'french', 'german', 'unknown']).default('unknown'),
-  content: z.string(),
-  parsedContent: z.any().optional(),
-});
+function calculateWritingConfidence(text: string): number {
+  const writingKeywords = ['write', 'essay', 'paragraph', 'compose', 'fill in', 'complete']
+    .filter(keyword => text.toLowerCase().includes(keyword)).length;
+  
+  const blanks = (text.match(/_{2,}/g) || []).length;
+  
+  return Math.min((writingKeywords * 15) + (blanks * 10), 100);
+}
 
-export type ValidatedContent = z.infer<typeof contentSchema>;
-
-// Analyze text readability
-export const analyzeReadability = (text: string): { 
-  readabilityScore: number;
-  wordCount: number;
-  sentenceCount: number;
-  averageSentenceLength: number;
-  uniqueWordCount: number;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  keywords: string[];
-} => {
-  if (!text || text.length === 0) {
-    return {
-      readabilityScore: 0,
-      wordCount: 0,
-      sentenceCount: 0,
-      averageSentenceLength: 0,
-      uniqueWordCount: 0,
-      level: 'beginner',
-      keywords: []
-    };
-  }
+function calculateSpeakingConfidence(text: string): number {
+  const speakingKeywords = ['speak', 'say', 'repeat', 'pronounce', 'oral', 'tell']
+    .filter(keyword => text.toLowerCase().includes(keyword)).length;
   
-  // Count sentences (split by .!?)
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const sentenceCount = sentences.length;
-  
-  // Count words
-  const words = text.split(/\s+/).filter(w => w.trim().length > 0);
-  const wordCount = words.length;
-  
-  // Count unique words
-  const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')));
-  const uniqueWordCount = uniqueWords.size;
-  
-  // Calculate average sentence length
-  const averageSentenceLength = sentenceCount > 0 ? wordCount / sentenceCount : 0;
-  
-  // Simple readability formula based on average sentence length and unique word ratio
-  const uniqueWordRatio = wordCount > 0 ? uniqueWordCount / wordCount : 0;
-  const readabilityScore = Math.round((averageSentenceLength * 0.6 + uniqueWordRatio * 50) * 10) / 10;
-  
-  // Determine level based on readability score
-  let level: 'beginner' | 'intermediate' | 'advanced';
-  if (readabilityScore < 15) {
-    level = 'beginner';
-  } else if (readabilityScore < 30) {
-    level = 'intermediate';
-  } else {
-    level = 'advanced';
-  }
-  
-  // Extract potential keywords (longer words that appear multiple times)
-  const wordFrequency: Record<string, number> = {};
-  words.forEach(word => {
-    const cleanWord = word.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-    if (cleanWord.length > 3) { // Only count words with more than 3 characters
-      wordFrequency[cleanWord] = (wordFrequency[cleanWord] || 0) + 1;
-    }
-  });
-  
-  // Sort by frequency and get top keywords
-  const keywords = Object.entries(wordFrequency)
-    .filter(([_, count]) => count > 1) // Only include words that appear more than once
-    .sort((a, b) => b[1] - a[1]) // Sort by frequency
-    .slice(0, 10) // Get top 10
-    .map(([word, _]) => word);
-  
-  return {
-    readabilityScore,
-    wordCount,
-    sentenceCount,
-    averageSentenceLength,
-    uniqueWordCount,
-    level,
-    keywords
-  };
-};
+  return Math.min(speakingKeywords * 20, 100);
+}
