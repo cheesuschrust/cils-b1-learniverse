@@ -2,7 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUserPreferences } from './UserPreferencesContext';
 import { ContentType } from '@/types/contentType';
-import { getInitialConfidenceScores } from '@/components/ai/AISettingsTypes';
+import { getInitialConfidenceScores, AIPreferences, getDefaultAIPreferences } from '@/components/ai/AISettingsTypes';
+import * as AIService from '@/services/AIService';
+import * as HuggingFaceService from '@/services/HuggingFaceService';
 
 // Type definitions
 export interface AIUtilsContextType {
@@ -14,7 +16,6 @@ export interface AIUtilsContextType {
   processAudioStream: (callback: (transcript: string, isFinal: boolean) => void) => Promise<() => void>;
   stopAudioProcessing: () => void;
   isTranscribing: boolean;
-  // Add the missing properties and methods
   modelSize: 'small' | 'medium' | 'large';
   setModelSize: (size: 'small' | 'medium' | 'large') => void;
   confidenceScores: Record<ContentType, number>;
@@ -38,6 +39,26 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [confidenceScores, setConfidenceScores] = useState<Record<ContentType, number>>(
     getInitialConfidenceScores()
   );
+  
+  // Set default preferences if not available
+  const preferences = aiPreference || getDefaultAIPreferences();
+  
+  // Initialize AI service when the component mounts
+  useEffect(() => {
+    const initAI = async () => {
+      try {
+        await AIService.initialize({
+          preloadModels: [],
+          useWebGPU: true
+        });
+        console.log('AI service initialized');
+      } catch (error) {
+        console.error('Failed to initialize AI service:', error);
+      }
+    };
+    
+    initAI();
+  }, []);
 
   // Toggle AI functionality
   const toggleAI = () => {
@@ -56,17 +77,17 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Simple implementation using Web Speech API
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
-      utterance.rate = aiPreference.voiceRate || 1;
-      utterance.pitch = aiPreference.voicePitch || 1;
+      utterance.rate = preferences.voiceRate || 1;
+      utterance.pitch = preferences.voicePitch || 1;
       
       // Select voice based on language
-      if (language.startsWith('it') && aiPreference.italianVoiceURI) {
+      if (language.startsWith('it') && preferences.italianVoiceURI) {
         const voices = speechSynthesis.getVoices();
-        const selectedVoice = voices.find(voice => voice.voiceURI === aiPreference.italianVoiceURI);
+        const selectedVoice = voices.find(voice => voice.voiceURI === preferences.italianVoiceURI);
         if (selectedVoice) utterance.voice = selectedVoice;
-      } else if (aiPreference.englishVoiceURI) {
+      } else if (preferences.englishVoiceURI) {
         const voices = speechSynthesis.getVoices();
-        const selectedVoice = voices.find(voice => voice.voiceURI === aiPreference.englishVoiceURI);
+        const selectedVoice = voices.find(voice => voice.voiceURI === preferences.englishVoiceURI);
         if (selectedVoice) utterance.voice = selectedVoice;
       }
       
@@ -97,9 +118,13 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setIsTranscribing(true);
       
-      // Simple implementation using Web Speech API
+      // If HuggingFace's models are loaded, use those for speech recognition
+      // Otherwise, fall back to Web Speech API
+      
+      // Currently, HuggingFace's ASR models require audio files, not streams
+      // So we'll use Web Speech API for streaming recognition
       const SpeechRecognition = (window as any).SpeechRecognition || 
-                                (window as any).webkitSpeechRecognition;
+                              (window as any).webkitSpeechRecognition;
       
       if (!SpeechRecognition) {
         throw new Error("Speech recognition not supported in this browser");
@@ -161,29 +186,29 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setIsTranslating(true);
       
-      // Simulate translation with a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use HuggingFace translation if available
+      const sourceLanguage = targetLanguage === 'it' ? 'en' : 'it';
+      const translatedText = await HuggingFaceService.translateText(text, sourceLanguage, targetLanguage);
       
-      // Mock translation (in a real app, this would call a translation API)
-      let result = text;
-      
-      if (text === "Hello" && targetLanguage === "it") {
-        result = "Ciao";
-      } else if (text === "Thank you" && targetLanguage === "it") {
-        result = "Grazie";
-      } else if (text === "Goodbye" && targetLanguage === "it") {
-        result = "Arrivederci";
-      } else if (text === "Ciao" && targetLanguage === "en") {
-        result = "Hello";
-      } else if (text === "Grazie" && targetLanguage === "en") {
-        result = "Thank you";
-      } else if (text === "Arrivederci" && targetLanguage === "en") {
-        result = "Goodbye";
-      }
-      
-      return result;
+      return translatedText;
     } catch (error) {
       console.error("Translation error:", error);
+      
+      // Fallback translation for common phrases
+      if (text === "Hello" && targetLanguage === "it") {
+        return "Ciao";
+      } else if (text === "Thank you" && targetLanguage === "it") {
+        return "Grazie";
+      } else if (text === "Goodbye" && targetLanguage === "it") {
+        return "Arrivederci";
+      } else if (text === "Ciao" && targetLanguage === "en") {
+        return "Hello";
+      } else if (text === "Grazie" && targetLanguage === "en") {
+        return "Thank you";
+      } else if (text === "Arrivederci" && targetLanguage === "en") {
+        return "Goodbye";
+      }
+      
       throw error;
     } finally {
       setIsTranslating(false);

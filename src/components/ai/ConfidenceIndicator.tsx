@@ -1,84 +1,117 @@
 
 import React from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Badge } from '@/components/ui/badge';
+import { Zap, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface ConfidenceIndicatorProps {
   score: number;
-  showText?: boolean;
+  showLabel?: boolean;
+  showTooltip?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  showInfo?: boolean;
+  variant?: 'default' | 'muted';
 }
 
+/**
+ * A component that visually indicates the confidence level of an AI prediction or task.
+ * It shows a colored badge and/or progress bar with optional tooltip explanation.
+ */
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
-  showText = true,
+  showLabel = false,
+  showTooltip = true,
   size = 'md',
-  showInfo = true
+  variant = 'default'
 }) => {
-  // Determine color based on confidence score
-  const getColorClass = () => {
-    if (score >= 85) return 'text-green-500';
-    if (score >= 70) return 'text-yellow-500';
-    return 'text-red-500';
+  // Helper function to determine confidence level
+  const getConfidenceLevel = () => {
+    if (score >= 85) return 'high';
+    if (score >= 70) return 'medium';
+    return 'low';
   };
-
-  // Determine progress bar color
-  const getProgressColor = () => {
-    if (score >= 85) return 'bg-green-500';
-    if (score >= 70) return 'bg-yellow-500';
-    return 'bg-red-500';
+  
+  // Helper function to get badge styling based on confidence level
+  const getBadgeVariant = () => {
+    const level = getConfidenceLevel();
+    
+    if (variant === 'muted') {
+      if (level === 'high') return 'outline';
+      if (level === 'medium') return 'outline';
+      return 'outline';
+    }
+    
+    if (level === 'high') return 'default';
+    if (level === 'medium') return 'secondary';
+    return 'destructive';
   };
-
-  // Determine size classes
-  const getSizeClass = () => {
-    switch (size) {
-      case 'sm': return 'text-xs';
-      case 'lg': return 'text-base';
-      default: return 'text-sm';
+  
+  // Helper function to get the appropriate icon
+  const getIcon = () => {
+    const level = getConfidenceLevel();
+    
+    if (level === 'high') return <Zap className={`${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />;
+    if (level === 'medium') return <AlertCircle className={`${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />;
+    return <AlertTriangle className={`${size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />;
+  };
+  
+  // Get tooltip content based on confidence level
+  const getTooltipContent = () => {
+    const level = getConfidenceLevel();
+    
+    if (level === 'high') {
+      return "High confidence: The AI system is very confident in this result.";
+    } else if (level === 'medium') {
+      return "Medium confidence: The AI system is moderately confident in this result.";
+    } else {
+      return "Low confidence: The AI system has low confidence in this result. Consider reviewing manually.";
     }
   };
-
-  // Get descriptive text for confidence level
-  const getConfidenceText = () => {
-    if (score >= 85) return 'High confidence';
-    if (score >= 70) return 'Medium confidence';
-    return 'Low confidence';
-  };
-
-  return (
-    <div className="flex items-center space-x-2">
-      <div className="flex-1">
-        <div className="flex justify-between items-center mb-1">
-          {showText && (
-            <div className={`${getSizeClass()} ${getColorClass()} font-medium flex items-center`}>
-              <span>{getConfidenceText()}</span>
-              {showInfo && (
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <button className="ml-1 inline-flex">
-                      <InfoCircledIcon className="h-3.5 w-3.5 opacity-70" />
-                    </button>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-80 p-3 text-sm">
-                    <p>AI confidence score represents how certain the model is about this content.</p>
-                    <ul className="mt-2 space-y-1">
-                      <li><span className="text-green-500 font-medium">High (85-100%)</span>: Very likely to be correct</li>
-                      <li><span className="text-yellow-500 font-medium">Medium (70-84%)</span>: Moderately reliable</li>
-                      <li><span className="text-red-500 font-medium">Low (0-69%)</span>: Less reliable, verify information</li>
-                    </ul>
-                  </HoverCardContent>
-                </HoverCard>
-              )}
+  
+  // Render badge or progress bar based on size
+  const renderIndicator = () => {
+    if (size === 'lg') {
+      return (
+        <div className="space-y-1">
+          {showLabel && (
+            <div className="flex justify-between items-center text-sm">
+              <span>AI Confidence</span>
+              <span className="font-medium">{Math.round(score)}%</span>
             </div>
           )}
-          <span className={`${getSizeClass()} ${getColorClass()} font-medium`}>{score}%</span>
+          <Progress value={score} className="h-2" />
         </div>
-        <Progress value={score} className={`h-1.5 ${getProgressColor()}`} />
-      </div>
-    </div>
-  );
+      );
+    }
+    
+    return (
+      <Badge
+        variant={getBadgeVariant()}
+        className={`${size === 'sm' ? 'text-xs py-0 px-1' : ''} flex items-center`}
+      >
+        {getIcon()}
+        {Math.round(score)}%
+      </Badge>
+    );
+  };
+  
+  // Wrap in tooltip if needed
+  if (showTooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-flex">{renderIndicator()}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{getTooltipContent()}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
+  return renderIndicator();
 };
 
 export default ConfidenceIndicator;

@@ -13,7 +13,8 @@ import { Progress } from '@/components/ui/progress';
 import { Plus, Trash2, Save, RotateCcw, DatabaseBackup, Brain } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { addTrainingExamples, getConfidenceScore } from '@/services/AIService';
-import { ContentType } from '@/utils/textAnalysis';
+import { ContentType } from '@/types/contentType';
+import { getInitialConfidenceScores } from '@/components/ai/AISettingsTypes';
 
 const contentTypes: { value: ContentType; label: string }[] = [
   { value: 'multiple-choice', label: 'Multiple Choice' },
@@ -67,20 +68,14 @@ const AITrainingManager: React.FC = () => {
   const [newExampleText, setNewExampleText] = useState('');
   const [newExampleMetadata, setNewExampleMetadata] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confidenceScores, setConfidenceScores] = useState<Record<ContentType, number>>({
-    'multiple-choice': 85,
-    'flashcards': 78,
-    'writing': 72,
-    'speaking': 68,
-    'listening': 80
-  });
+  const [confidenceScores, setConfidenceScores] = useState(getInitialConfidenceScores());
   
   const { toast } = useToast();
   
   // Load confidence scores on mount
   useEffect(() => {
     const loadConfidenceScores = () => {
-      const scores: Record<ContentType, number> = {} as Record<ContentType, number>;
+      const scores = getInitialConfidenceScores();
       
       contentTypes.forEach(type => {
         scores[type.value] = getConfidenceScore(type.value);

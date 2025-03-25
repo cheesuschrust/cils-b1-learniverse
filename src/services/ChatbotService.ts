@@ -14,7 +14,8 @@ const knowledgeBase: KnowledgeBaseEntry[] = [
     relevance: 0.9,
     lastUpdated: new Date("2023-06-15"),
     keywords: ["free", "premium", "subscription", "pricing", "plan"],
-    version: "1.0"
+    version: "1.0",
+    language: "both"
   },
   {
     id: "kb-2",
@@ -25,7 +26,8 @@ const knowledgeBase: KnowledgeBaseEntry[] = [
     relevance: 0.8,
     lastUpdated: new Date("2023-07-20"),
     keywords: ["grammar", "italian", "lessons", "conjugation", "verbs"],
-    version: "1.1"
+    version: "1.1",
+    language: "both"
   },
   {
     id: "kb-3",
@@ -36,7 +38,8 @@ const knowledgeBase: KnowledgeBaseEntry[] = [
     relevance: 0.85,
     lastUpdated: new Date("2023-08-05"),
     keywords: ["speaking", "pronunciation", "practice", "conversation"],
-    version: "1.0"
+    version: "1.0",
+    language: "both"
   },
   {
     id: "kb-4",
@@ -47,7 +50,8 @@ const knowledgeBase: KnowledgeBaseEntry[] = [
     relevance: 0.75,
     lastUpdated: new Date("2023-09-10"),
     keywords: ["flashcards", "vocabulary", "spaced repetition", "memorization"],
-    version: "1.2"
+    version: "1.2",
+    language: "both"
   },
   {
     id: "kb-5",
@@ -58,12 +62,22 @@ const knowledgeBase: KnowledgeBaseEntry[] = [
     relevance: 0.7,
     lastUpdated: new Date("2023-10-25"),
     keywords: ["support", "help", "technical", "issues"],
-    version: "1.0"
+    version: "1.0",
+    language: "both"
   }
 ];
 
 // Default chatbot settings
 const defaultSettings: ChatbotSettings = {
+  model: "distilbert-base-uncased",
+  temperature: 0.7,
+  maxTokens: 1500,
+  responseTime: "balanced",
+  personality: "educational",
+  defaultLanguage: "auto-detect",
+  escalationThreshold: 3,
+  feedbackEnabled: true,
+  learningEnabled: true,
   enabled: true,
   name: "LinguaBot",
   avatarUrl: "/assets/bot-avatar.png",
@@ -72,8 +86,7 @@ const defaultSettings: ChatbotSettings = {
   maxContextLength: 10,
   confidenceThreshold: 0.6,
   suggestFeedback: true,
-  suggestRelatedQuestions: true,
-  escalationThreshold: 3
+  suggestRelatedQuestions: true
 };
 
 // In-memory storage for active chat sessions
@@ -187,13 +200,13 @@ export const createSession = (userId?: string): ChatSession => {
   
   const newSession: ChatSession = {
     id: uuidv4(),
-    userId,
+    userId: userId || undefined,
     messages: [welcomeMessage],
     startedAt: new Date(),
     lastActivityAt: new Date(),
     context: {
-      userType: userId ? 'premium' : 'free', // Simplified - in a real app, check user subscription
-      language: 'en'
+      userType: userId ? 'student' : 'parent', // Default to 'parent' for anonymous users
+      language: 'english'
     },
     resolved: false,
     escalatedToHuman: false
@@ -257,7 +270,7 @@ export const sendMessage = async (
 export const provideFeedback = (
   sessionId: string,
   messageId: string,
-  helpful: boolean,
+  feedbackType: 'positive' | 'negative' | 'neutral',
   reason?: string
 ): boolean => {
   const session = activeSessions.find(s => s.id === sessionId);
@@ -266,7 +279,7 @@ export const provideFeedback = (
   const message = session.messages.find(m => m.id === messageId);
   if (!message) return false;
   
-  message.feedback = { helpful, reason };
+  message.feedback = feedbackType;
   return true;
 };
 
@@ -311,6 +324,18 @@ export const escalateToHuman = (sessionId: string): boolean => {
   return true;
 };
 
+// Add a knowledge base entry
+export const addKnowledgeBaseEntry = (entryData: Omit<KnowledgeBaseEntry, 'id' | 'lastUpdated'>): KnowledgeBaseEntry => {
+  const newEntry: KnowledgeBaseEntry = {
+    ...entryData,
+    id: uuidv4(),
+    lastUpdated: new Date()
+  };
+  
+  knowledgeBase.push(newEntry);
+  return newEntry;
+};
+
 // Export these methods as the ChatbotService
 export default {
   createSession,
@@ -321,5 +346,6 @@ export default {
   getSettings,
   addTrainingExample,
   endSession,
-  escalateToHuman
+  escalateToHuman,
+  addKnowledgeBaseEntry
 };

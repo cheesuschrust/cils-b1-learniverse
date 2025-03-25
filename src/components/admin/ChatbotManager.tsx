@@ -1,466 +1,545 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { LineChart, PieChart, BarChart } from '@/components/ui/chart';
-import { useToast } from '@/hooks/use-toast';
-import ChatbotService, { getSettings, updateSettings } from '@/services/ChatbotService';
-import { v4 as uuidv4 } from 'uuid';
 import { 
   MessageSquare, 
-  Settings, 
-  Brain,
-  Database, 
-  BarChart3, 
-  Clock, 
-  ChevronRight, 
-  Pencil, 
-  Trash2, 
-  Plus, 
-  Save, 
   Bot, 
-  Search, 
-  CheckCircle2, 
-  Languages, 
-  BookOpen, 
-  Filter, 
+  Settings, 
+  Database, 
+  Trash2, 
+  Pencil, 
+  Plus, 
+  Save,
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  FileText,
   Upload,
-  UploadCloud,
-  Copy,
-  Zap,
-  AlignLeft,
-  Eye,
-  History,
-  Lightbulb,
-  UserPlus,
-  Lock
+  Download,
+  Play,
+  Globe,
+  Brain
 } from 'lucide-react';
-import { KnowledgeBaseEntry, ChatbotSettings, ChatbotTrainingExample, ChatSession } from '@/types/chatbot';
+import * as ChatbotService from '@/services/ChatbotService';
+import { useToast } from '@/components/ui/use-toast';
+import { ChatbotSettings, ChatbotTrainingExample, ChatMessage, ChatSession, KnowledgeBaseEntry } from '@/types/chatbot';
 
-// Mock chat sessions for analysis
-const mockChatSessions: ChatSession[] = [
+// Mock chat messages
+const mockChatMessages: ChatMessage[] = [
+  { 
+    id: "msg1", 
+    text: "Ciao! Come posso aiutarti oggi?", 
+    isUser: false, 
+    timestamp: new Date(Date.now() - 1000000) 
+  },
+  { 
+    id: "msg2", 
+    text: "Vorrei sapere come usare i verbi al passato prossimo", 
+    isUser: true, 
+    timestamp: new Date(Date.now() - 900000) 
+  },
+  { 
+    id: "msg3", 
+    text: "Il passato prossimo in italiano si forma con l'ausiliare (essere o avere) + il participio passato del verbo. Ad esempio: 'Io ho mangiato' o 'Maria è andata'. I verbi di movimento usano essere, mentre la maggior parte degli altri verbi usa avere.", 
+    isUser: false, 
+    timestamp: new Date(Date.now() - 800000),
+    feedback: 'positive'
+  },
+  { 
+    id: "msg4", 
+    text: "Puoi farmi un esempio con il verbo 'vedere'?", 
+    isUser: true, 
+    timestamp: new Date(Date.now() - 700000) 
+  },
+  { 
+    id: "msg5", 
+    text: "Certo! Il verbo 'vedere' al passato prossimo usa l'ausiliare 'avere'. Ecco alcuni esempi:\n\n- Io ho visto un film ieri.\n- Tu hai visto la mia penna?\n- Lui ha visto il suo amico al parco.\n- Noi abbiamo visto un bel tramonto.\n- Voi avete visto la nuova mostra d'arte?\n- Loro hanno visto lo spettacolo a teatro.", 
+    isUser: false, 
+    timestamp: new Date(Date.now() - 600000),
+    feedback: 'positive'
+  }
+];
+
+// Mock chat sessions
+const mockSessions: ChatSession[] = [
   {
-    id: '1',
-    userId: 'user-1',
-    messages: [
-      {
-        id: 'm1',
-        text: 'How do I reset my password?',
-        isUser: true,
-        timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm2',
-        text: 'You can reset your password by clicking on the "Forgot Password" link on the login page. You\'ll receive an email with instructions to create a new password.',
-        isUser: false,
-        timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
-      }
-    ],
-    startedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-    lastActivityAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+    id: "session1",
+    userId: "user123",
+    messages: mockChatMessages,
+    startedAt: new Date(Date.now() - 1000000),
+    lastActivityAt: new Date(Date.now() - 600000),
     context: {
-      userType: 'free',
-      language: 'en'
+      userType: "student",
+      language: "english"
     },
-    resolved: true
+    resolved: false,
+    escalatedToHuman: false
   },
   {
-    id: '2',
-    userId: 'user-2',
-    messages: [
-      {
-        id: 'm3',
-        text: 'How many questions can I do per day?',
-        isUser: true,
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm4',
-        text: 'On the free plan, you can do one question per category per day. Premium users get unlimited questions.',
-        isUser: false,
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm5',
-        text: 'How do I upgrade to premium?',
-        isUser: true,
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm6',
-        text: 'You can upgrade to premium by visiting the Subscription page in your account settings. We offer monthly and annual plans.',
-        isUser: false,
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      }
-    ],
-    startedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    lastActivityAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    id: "session2",
+    userId: "user456",
+    messages: mockChatMessages.slice(0, 3),
+    startedAt: new Date(Date.now() - 3000000),
+    lastActivityAt: new Date(Date.now() - 2800000),
     context: {
-      userType: 'free',
-      language: 'en'
+      userType: "student",
+      language: "english"
     },
-    resolved: true
+    resolved: true,
+    escalatedToHuman: false
   },
   {
-    id: '3',
-    userId: 'user-3',
-    messages: [
-      {
-        id: 'm7',
-        text: 'The audio isn\'t working on the listening exercises',
-        isUser: true,
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm8',
-        text: 'I\'m sorry to hear that. Please make sure your browser permissions allow audio playback. If the issue persists, try using headphones or a different browser.',
-        isUser: false,
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm9',
-        text: 'I\'ve tried different browsers but it still doesn\'t work',
-        isUser: true,
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm10',
-        text: 'I understand this is frustrating. Would you like to speak with our technical support team for further assistance?',
-        isUser: false,
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'm11',
-        text: 'Yes please',
-        isUser: true,
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      }
-    ],
-    startedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    lastActivityAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    id: "session3",
+    userId: "user789",
+    messages: [...mockChatMessages.slice(0, 2), {
+      id: "error-msg",
+      text: "Mi dispiace, non ho capito la tua domanda. Posso aiutarti con qualcos'altro?",
+      isUser: false,
+      timestamp: new Date(Date.now() - 1500000)
+    }],
+    startedAt: new Date(Date.now() - 2000000),
+    lastActivityAt: new Date(Date.now() - 1500000),
     context: {
-      userType: 'premium',
-      language: 'en'
+      userType: "student",
+      language: "english"
     },
     resolved: false,
     escalatedToHuman: true
   }
 ];
 
-// Sample KB entries for the application
-const initialKnowledgeBase: KnowledgeBaseEntry[] = [
+// Mock knowledge base entries (additional to the ones in the service)
+const additionalKnowledgeBaseEntries: KnowledgeBaseEntry[] = [
   {
-    id: "kb-1",
-    title: "Free vs Premium Plans",
-    content: "Our platform offers both free and premium subscription plans. Free users can access one question per day, while premium users get unlimited questions and an ad-free experience.",
-    tags: ["subscription", "pricing", "plans"],
-    category: "pricing",
-    relevance: 0.9,
-    lastUpdated: new Date("2023-06-15"),
-    keywords: ["free", "premium", "subscription", "pricing", "plan"],
-    version: "1.0"
+    id: "kb-6",
+    title: "Italian Verb Tenses",
+    content: "Italian has various verb tenses including present (presente), past perfect (passato prossimo), imperfect (imperfetto), future (futuro), and more. Each tense has specific conjugation rules based on verb groups (-are, -ere, -ire).",
+    tags: ["grammar", "verbs", "tenses"],
+    category: "grammar",
+    relevance: 0.95,
+    lastUpdated: new Date("2023-11-10"),
+    keywords: ["verbs", "tenses", "conjugation", "grammar"],
+    version: "1.0",
+    language: "both"
   },
   {
-    id: "kb-2",
-    title: "Italian Grammar Lessons",
-    content: "Our platform offers comprehensive Italian grammar lessons covering all levels from beginner to advanced. Topics include verb conjugation, article usage, and sentence structure.",
-    tags: ["grammar", "lessons", "italian"],
-    category: "content",
-    relevance: 0.8,
-    lastUpdated: new Date("2023-07-20"),
-    keywords: ["grammar", "italian", "lessons", "conjugation", "verbs"],
-    version: "1.1"
-  },
-  {
-    id: "kb-3",
-    title: "Speaking Practice",
-    content: "Our speaking practice feature uses AI to evaluate your pronunciation and provide feedback. You can practice with conversation simulations and receive detailed feedback on your pronunciation accuracy.",
-    tags: ["speaking", "pronunciation", "practice"],
-    category: "features",
+    id: "kb-7",
+    title: "Italian Food Vocabulary",
+    content: "Essential Italian food vocabulary includes terms like 'pasta', 'pizza', 'pane' (bread), 'formaggio' (cheese), 'carne' (meat), 'pesce' (fish), 'verdura' (vegetables), and 'frutta' (fruit).",
+    tags: ["vocabulary", "food", "dining"],
+    category: "vocabulary",
     relevance: 0.85,
-    lastUpdated: new Date("2023-08-05"),
-    keywords: ["speaking", "pronunciation", "practice", "conversation"],
-    version: "1.0"
+    lastUpdated: new Date("2023-11-05"),
+    keywords: ["food", "vocabulary", "dining", "italian cuisine"],
+    version: "1.0",
+    language: "both"
   },
   {
-    id: "kb-4",
-    title: "Flashcard System",
-    content: "Our flashcard system uses spaced repetition to optimize your learning. Cards are scheduled based on your performance, ensuring efficient memorization of vocabulary.",
-    tags: ["flashcards", "vocabulary", "spaced repetition"],
-    category: "features",
-    relevance: 0.75,
-    lastUpdated: new Date("2023-09-10"),
-    keywords: ["flashcards", "vocabulary", "spaced repetition", "memorization"],
-    version: "1.2"
+    id: "kb-8",
+    title: "Common Italian Greetings",
+    content: "Common Italian greetings include 'Ciao' (hello/bye), 'Buongiorno' (good morning), 'Buonasera' (good evening), 'Arrivederci' (goodbye), 'Come stai?' (how are you?), and 'Piacere di conoscerti' (nice to meet you).",
+    tags: ["greetings", "conversation", "basics"],
+    category: "conversation",
+    relevance: 0.9,
+    lastUpdated: new Date("2023-10-28"),
+    keywords: ["greetings", "hello", "goodbye", "conversation"],
+    version: "1.0",
+    language: "both"
   },
   {
-    id: "kb-5",
-    title: "Technical Support",
-    content: "For technical issues, you can contact our support team through the Support Center. Premium users receive priority support with faster response times.",
-    tags: ["support", "help", "technical"],
-    category: "support",
-    relevance: 0.7,
-    lastUpdated: new Date("2023-10-25"),
-    keywords: ["support", "help", "technical", "issues"],
-    version: "1.0"
+    id: "kb-9",
+    title: "B1 Citizenship Test Requirements",
+    content: "To obtain Italian citizenship, applicants must pass the B1 language test which evaluates listening, reading, writing, and speaking skills. The test assesses the ability to understand and communicate in everyday situations, write simple texts, and participate in conversations on familiar topics.",
+    tags: ["citizenship", "B1 test", "requirements"],
+    category: "citizenship",
+    relevance: 0.95,
+    lastUpdated: new Date("2023-11-15"),
+    keywords: ["citizenship", "B1", "test", "requirements", "Italian citizenship"],
+    version: "1.0",
+    language: "both"
+  },
+  {
+    id: "kb-10",
+    title: "B1 Test Format and Structure",
+    content: "The Italian B1 citizenship test consists of four parts: listening (approximately 25 minutes), reading (35 minutes), writing (15 minutes), and speaking (15 minutes). Candidates must demonstrate the ability to understand main points in clear standard speech, read straightforward texts, write simple connected text, and communicate in most situations likely to arise while traveling in Italy.",
+    tags: ["B1 test", "format", "structure", "exam"],
+    category: "citizenship",
+    relevance: 0.95,
+    lastUpdated: new Date("2023-11-20"),
+    keywords: ["B1", "test format", "exam structure", "citizenship test"],
+    version: "1.0",
+    language: "both"
   }
 ];
 
-const ChatbotManager: React.FC = () => {
-  const { toast } = useToast();
-  const [chatbotSettings, setChatbotSettings] = useState<ChatbotSettings>(getSettings());
-  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseEntry[]>(initialKnowledgeBase);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>(mockChatSessions);
-  const [trainingExamples, setTrainingExamples] = useState<ChatbotTrainingExample[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [isKnowledgeBaseEntryDialogOpen, setIsKnowledgeBaseEntryDialogOpen] = useState(false);
-  const [selectedKnowledgeBaseEntry, setSelectedKnowledgeBaseEntry] = useState<KnowledgeBaseEntry | null>(null);
-  const [newTrainingExample, setNewTrainingExample] = useState<Partial<ChatbotTrainingExample>>({
-    question: '',
-    answer: '',
-    category: 'general',
-    tags: [],
-    alternatives: [],
+// Mock training examples
+const mockTrainingExamples: ChatbotTrainingExample[] = [
+  {
+    id: "train1",
+    question: "Come si dice 'hello' in italiano?",
+    answer: "In italiano, 'hello' si dice 'ciao'.",
+    alternatives: ["'Hello' in italiano è 'ciao'.", "La traduzione di 'hello' è 'ciao'."],
+    category: "vocabulary",
+    tags: ["greetings", "basics", "translation"],
+    createdAt: new Date(Date.now() - 5000000),
     approved: true,
-    createdBy: 'admin'
+    language: "both",
+    difficulty: "beginner"
+  },
+  {
+    id: "train2",
+    question: "Qual è la differenza tra 'essere' e 'stare'?",
+    answer: "'Essere' si usa per caratteristiche permanenti e identità (Io sono alto, Lei è studentessa), mentre 'stare' si usa per condizioni temporanee e posizioni (Sto bene, Lui sta a Roma).",
+    category: "grammar",
+    tags: ["verbs", "essere", "stare"],
+    createdAt: new Date(Date.now() - 4000000),
+    approved: true,
+    language: "both",
+    difficulty: "intermediate"
+  },
+  {
+    id: "train3",
+    question: "What are the requirements for the Italian citizenship language test?",
+    answer: "For Italian citizenship, you need to pass a B1 level language test which assesses listening, reading, writing, and speaking abilities. This test evaluates your capacity to understand and communicate in everyday situations, write simple connected texts, and participate in conversations on familiar topics.",
+    category: "citizenship",
+    tags: ["B1 test", "requirements", "citizenship"],
+    createdAt: new Date(Date.now() - 3000000),
+    approved: true,
+    language: "english",
+    difficulty: "intermediate"
+  }
+];
+
+// Define ChatbotManager component
+const ChatbotManager: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(mockSessions);
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseEntry[]>([
+    ...additionalKnowledgeBaseEntries
+  ]);
+  const [trainingExamples, setTrainingExamples] = useState<ChatbotTrainingExample[]>(mockTrainingExamples);
+  const [settings, setSettings] = useState<ChatbotSettings>(ChatbotService.getSettings());
+  const [newEntry, setNewEntry] = useState<{
+    title: string;
+    content: string;
+    category: string;
+    tags: string;
+    keywords: string;
+    language: 'english' | 'italian' | 'both';
+  }>({
+    title: '',
+    content: '',
+    category: '',
+    tags: '',
+    keywords: '',
+    language: 'both'
   });
+  const [sessionFilter, setSessionFilter] = useState('all');
+  const { toast } = useToast();
   
-  // Save chatbot settings
+  // Handle saving chatbot settings
   const handleSaveSettings = () => {
-    updateSettings(chatbotSettings);
+    // In a real application, this would be persistent
+    ChatbotService.updateSettings(settings);
+    
     toast({
       title: "Settings Saved",
-      description: "Chatbot settings have been updated successfully.",
+      description: "Chatbot settings have been updated successfully."
     });
   };
   
-  // Add a new knowledge base entry
-  const handleAddKnowledgeBaseEntry = (entry: Omit<KnowledgeBaseEntry, 'id' | 'lastUpdated'>) => {
-    const newEntry: KnowledgeBaseEntry = {
-      ...entry,
-      id: uuidv4(),
-      lastUpdated: new Date()
-    };
-    
-    setKnowledgeBase([...knowledgeBase, newEntry]);
-    setIsKnowledgeBaseEntryDialogOpen(false);
-    setSelectedKnowledgeBaseEntry(null);
-    
-    toast({
-      title: "Entry Added",
-      description: "Knowledge base entry has been added successfully.",
-    });
-  };
-  
-  // Update an existing knowledge base entry
-  const handleUpdateKnowledgeBaseEntry = (updatedEntry: KnowledgeBaseEntry) => {
-    setKnowledgeBase(knowledgeBase.map(entry => 
-      entry.id === updatedEntry.id ? { ...updatedEntry, lastUpdated: new Date() } : entry
-    ));
-    setIsKnowledgeBaseEntryDialogOpen(false);
-    setSelectedKnowledgeBaseEntry(null);
-    
-    toast({
-      title: "Entry Updated",
-      description: "Knowledge base entry has been updated successfully.",
-    });
-  };
-  
-  // Delete a knowledge base entry
-  const handleDeleteKnowledgeBaseEntry = (entryId: string) => {
-    setKnowledgeBase(knowledgeBase.filter(entry => entry.id !== entryId));
-    
-    toast({
-      title: "Entry Deleted",
-      description: "Knowledge base entry has been deleted.",
-    });
-  };
-  
-  // Add a new training example
-  const handleAddTrainingExample = () => {
-    if (!newTrainingExample.question || !newTrainingExample.answer) {
+  // Handle adding new knowledge base entry
+  const handleAddKnowledgeBaseEntry = () => {
+    if (!newEntry.title || !newEntry.content) {
       toast({
         title: "Missing Information",
-        description: "Please provide both a question and an answer.",
-        variant: "destructive",
+        description: "Please provide a title and content for the knowledge base entry.",
+        variant: "destructive"
       });
       return;
     }
     
-    const example: ChatbotTrainingExample = {
-      ...newTrainingExample as Omit<ChatbotTrainingExample, 'id' | 'createdAt' | 'updatedAt'>,
-      id: uuidv4(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    const tagsArray = newEntry.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+    const keywordsArray = newEntry.keywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+    
+    const newKBEntry: Omit<KnowledgeBaseEntry, "id" | "lastUpdated"> = {
+      title: newEntry.title,
+      content: newEntry.content,
+      category: newEntry.category,
+      tags: tagsArray,
+      keywords: keywordsArray,
+      relevance: 0.8,
+      version: "1.0",
+      language: newEntry.language
     };
     
-    setTrainingExamples([...trainingExamples, example]);
-    setNewTrainingExample({
-      question: '',
-      answer: '',
-      category: 'general',
-      tags: [],
-      alternatives: [],
-      approved: true,
-      createdBy: 'admin'
-    });
+    try {
+      const addedEntry = ChatbotService.addKnowledgeBaseEntry(newKBEntry);
+      setKnowledgeBase([...knowledgeBase, addedEntry]);
+      
+      setNewEntry({
+        title: '',
+        content: '',
+        category: '',
+        tags: '',
+        keywords: '',
+        language: 'both'
+      });
+      
+      toast({
+        title: "Entry Added",
+        description: "Knowledge base entry has been added successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add knowledge base entry.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle deleting a knowledge base entry
+  const handleDeleteKnowledgeBaseEntry = (id: string) => {
+    setKnowledgeBase(knowledgeBase.filter(entry => entry.id !== id));
     
     toast({
-      title: "Example Added",
-      description: "Training example has been added successfully.",
+      title: "Entry Deleted",
+      description: "Knowledge base entry has been removed."
     });
   };
   
-  // Filter knowledge base entries by category
-  const filteredKnowledgeBase = selectedCategory === 'all' 
-    ? knowledgeBase 
-    : knowledgeBase.filter(entry => entry.category === selectedCategory);
+  // Handle viewing a chat session
+  const handleViewSession = (sessionId: string) => {
+    const session = chatSessions.find(s => s.id === sessionId);
+    if (session) {
+      setCurrentSession(session);
+      setActiveTab("conversations");
+    }
+  };
+  
+  // Handle closing the current session view
+  const handleCloseSession = () => {
+    setCurrentSession(null);
+  };
+  
+  // Filtered sessions based on selected filter
+  const filteredSessions = chatSessions.filter(session => {
+    if (sessionFilter === 'all') return true;
+    if (sessionFilter === 'active') return !session.resolved;
+    if (sessionFilter === 'resolved') return session.resolved;
+    if (sessionFilter === 'escalated') return session.escalatedToHuman;
+    return true;
+  });
   
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Chatbot Management</h1>
-          <p className="text-muted-foreground">Configure and train your support chatbot</p>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold flex items-center">
+          <Bot className="h-8 w-8 mr-2" />
+          Chatbot Management
+        </h1>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={settings.enabled}
+            onCheckedChange={(checked) => setSettings({...settings, enabled: checked})}
+          />
+          <Label>{settings.enabled ? "Enabled" : "Disabled"}</Label>
         </div>
       </div>
       
-      <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid grid-cols-1 md:grid-cols-5 w-full mb-8">
-          <TabsTrigger value="dashboard" className="flex items-center justify-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="knowledge" className="flex items-center justify-center gap-2">
-            <Database className="h-4 w-4" />
-            Knowledge Base
-          </TabsTrigger>
-          <TabsTrigger value="training" className="flex items-center justify-center gap-2">
-            <Brain className="h-4 w-4" />
-            Training
-          </TabsTrigger>
-          <TabsTrigger value="conversations" className="flex items-center justify-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Conversations
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center justify-center gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="conversations">Conversations</TabsTrigger>
+          <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="dashboard">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{knowledgeBase.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Total knowledge entries</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{chatSessions.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {chatSessions.filter(session => session.resolved).length} resolved ({Math.round((chatSessions.filter(session => session.resolved).length / chatSessions.length) * 100)}%)
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Escalations</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{chatSessions.filter(session => session.escalatedToHuman).length}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Escalation rate: {Math.round((chatSessions.filter(session => session.escalatedToHuman).length / chatSessions.length) * 100)}%
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Confidence</CardTitle>
-                <Zap className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">76%</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Last 7 days: <span className="text-green-500">+3%</span>
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Conversation Metrics</CardTitle>
-                <CardDescription>Chat volume and resolution rates over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <LineChart 
-                    data={[
-                      { date: "Mon", conversations: 12, resolved: 10 },
-                      { date: "Tue", conversations: 18, resolved: 15 },
-                      { date: "Wed", conversations: 15, resolved: 12 },
-                      { date: "Thu", conversations: 22, resolved: 18 },
-                      { date: "Fri", conversations: 28, resolved: 22 },
-                      { date: "Sat", conversations: 16, resolved: 14 },
-                      { date: "Sun", conversations: 14, resolved: 12 },
-                    ]}
-                    index="date"
-                    categories={["conversations", "resolved"]}
-                    colors={["blue", "green"]}
-                    valueFormatter={(value) => `${value}`}
-                    className="h-full"
-                  />
+                <div className="text-2xl font-bold">{chatSessions.filter(s => !s.resolved).length}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {chatSessions.filter(s => s.escalatedToHuman).length} escalated to human
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Knowledge Base Usage</CardTitle>
-                <CardDescription>Most referenced knowledge base entries</CardDescription>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <BarChart 
-                    data={knowledgeBase.slice(0, 5).map((entry, index) => ({
-                      title: entry.title,
-                      uses: 25 - index * 4
-                    }))}
-                    index="title"
-                    categories={["uses"]}
-                    colors={["purple"]}
-                    valueFormatter={(value) => `${value} uses`}
-                    className="h-full"
-                  />
+                <div className="text-2xl font-bold">{knowledgeBase.length}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {knowledgeBase.reduce((total, entry) => total + entry.tags.length, 0)} total tags
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Training Examples</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{trainingExamples.length}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Across {new Set(trainingExamples.map(ex => ex.category)).size} categories
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Response Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">94%</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Of questions answered successfully
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Conversations</CardTitle>
+                <CardDescription>
+                  Latest chatbot interactions with users
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Started</TableHead>
+                      <TableHead>Last Activity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {chatSessions.slice(0, 5).map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell>User {session.userId?.substring(4)}</TableCell>
+                        <TableCell>{session.startedAt.toLocaleString()}</TableCell>
+                        <TableCell>{session.lastActivityAt.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={session.resolved ? "outline" : session.escalatedToHuman ? "secondary" : "default"}>
+                            {session.resolved ? "Resolved" : session.escalatedToHuman ? "Escalated" : "Active"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewSession(session.id)}>
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" onClick={() => setActiveTab("conversations")} className="w-full">
+                  View All Conversations
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Feedback Overview</CardTitle>
+                <CardDescription>
+                  User feedback on chatbot responses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1 items-center">
+                      <div className="flex items-center">
+                        <ThumbsUp className="h-4 w-4 mr-1 text-green-500" />
+                        <span className="text-sm">Positive</span>
+                      </div>
+                      <span className="text-sm font-medium">85%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full" style={{ width: "85%" }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1 items-center">
+                      <div className="flex items-center">
+                        <ThumbsDown className="h-4 w-4 mr-1 text-red-500" />
+                        <span className="text-sm">Negative</span>
+                      </div>
+                      <span className="text-sm font-medium">10%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-red-500 rounded-full" style={{ width: "10%" }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1 items-center">
+                      <div className="flex items-center">
+                        <AlertTriangle className="h-4 w-4 mr-1 text-yellow-500" />
+                        <span className="text-sm">Neutral</span>
+                      </div>
+                      <span className="text-sm font-medium">5%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-yellow-500 rounded-full" style={{ width: "5%" }}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Popular Topics</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Grammar Questions</span>
+                      <span>42%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Vocabulary</span>
+                      <span>25%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Citizenship Test</span>
+                      <span>18%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Platform Help</span>
+                      <span>15%</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -468,1060 +547,884 @@ const ChatbotManager: React.FC = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Common User Queries</CardTitle>
-              <CardDescription>Frequently asked questions that may need knowledge base entries</CardDescription>
+              <CardTitle>B1 Citizenship Test Support</CardTitle>
+              <CardDescription>
+                Specialized chatbot functionality for citizenship test preparation
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Query</TableHead>
-                    <TableHead>Frequency</TableHead>
-                    <TableHead>Avg. Confidence</TableHead>
-                    <TableHead>Escalation Rate</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium">How do I reset my password?</TableCell>
-                    <TableCell>32</TableCell>
-                    <TableCell>92%</TableCell>
-                    <TableCell>2%</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Add to KB</Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">What's included in the premium plan?</TableCell>
-                    <TableCell>28</TableCell>
-                    <TableCell>88%</TableCell>
-                    <TableCell>5%</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Add to KB</Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">How many lessons are available?</TableCell>
-                    <TableCell>24</TableCell>
-                    <TableCell>78%</TableCell>
-                    <TableCell>12%</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Add to KB</Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Audio not working in lessons</TableCell>
-                    <TableCell>22</TableCell>
-                    <TableCell>65%</TableCell>
-                    <TableCell>35%</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Add to KB</Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">How to download content for offline use</TableCell>
-                    <TableCell>18</TableCell>
-                    <TableCell>72%</TableCell>
-                    <TableCell>18%</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Add to KB</Button>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-muted rounded-lg p-4 flex flex-col items-center text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">Test Content</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Comprehensive knowledge base with B1 test requirements, format, and practice materials.
+                  </p>
+                </div>
+                
+                <div className="bg-muted rounded-lg p-4 flex flex-col items-center text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <Brain className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">Practice Dialogs</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Interactive conversations simulating real test scenarios for speaking practice.
+                  </p>
+                </div>
+                
+                <div className="bg-muted rounded-lg p-4 flex flex-col items-center text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <CheckCircle className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">Evaluation</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Feedback on language proficiency and readiness for the official citizenship exam.
+                  </p>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Citizenship Test Knowledge Coverage</h3>
+                  <Badge>92% Complete</Badge>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between mb-1 text-sm">
+                      <span>Listening Comprehension</span>
+                      <span>95%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: "95%" }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1 text-sm">
+                      <span>Reading Comprehension</span>
+                      <span>98%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: "98%" }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1 text-sm">
+                      <span>Writing Exercises</span>
+                      <span>90%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: "90%" }}></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1 text-sm">
+                      <span>Speaking Preparation</span>
+                      <span>85%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: "85%" }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="knowledge">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <CardTitle>Knowledge Base</CardTitle>
-                  <CardDescription>Manage the information your chatbot uses to respond to users</CardDescription>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                  <div className="relative flex-1 md:w-[200px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search knowledge base..."
-                      className="pl-8 w-full"
-                    />
+        <TabsContent value="conversations" className="space-y-6">
+          {currentSession ? (
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="flex items-center">
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Conversation with User {currentSession.userId?.substring(4)}
+                    </CardTitle>
+                    <CardDescription>
+                      Started {currentSession.startedAt.toLocaleString()}
+                    </CardDescription>
                   </div>
-                  
-                  <Select 
-                    value={selectedCategory} 
-                    onValueChange={setSelectedCategory}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Filter by category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="pricing">Pricing</SelectItem>
-                      <SelectItem value="content">Content</SelectItem>
-                      <SelectItem value="features">Features</SelectItem>
-                      <SelectItem value="support">Support</SelectItem>
-                      <SelectItem value="account">Account</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button 
-                    onClick={() => {
-                      setSelectedKnowledgeBaseEntry(null);
-                      setIsKnowledgeBaseEntryDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Entry
+                  <Button variant="outline" size="sm" onClick={handleCloseSession}>
+                    Back to List
                   </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredKnowledgeBase.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Database className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No Knowledge Base Entries</h3>
-                  <p className="text-muted-foreground max-w-sm mx-auto mb-4">
-                    Add entries to help your chatbot provide accurate and helpful responses.
-                  </p>
-                  <Button onClick={() => {
-                    setSelectedKnowledgeBaseEntry(null);
-                    setIsKnowledgeBaseEntryDialogOpen(true);
-                  }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Knowledge Base Entry
-                  </Button>
-                </div>
-              ) : (
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
-                  {filteredKnowledgeBase.map((entry) => (
-                    <Card key={entry.id} className="overflow-hidden">
-                      <div className="p-4 sm:p-6">
-                        <div className="flex justify-between mb-3">
-                          <div className="flex items-center">
-                            <Badge className="capitalize mr-2">
-                              {entry.category}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              Last updated: {entry.lastUpdated.toLocaleDateString()}
-                            </span>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Status:</span> 
+                        <Badge className="ml-2" variant={currentSession.resolved ? "outline" : currentSession.escalatedToHuman ? "secondary" : "default"}>
+                          {currentSession.resolved ? "Resolved" : currentSession.escalatedToHuman ? "Escalated" : "Active"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="font-medium">User Type:</span> 
+                        <span className="ml-2 capitalize">{currentSession.context.userType}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Language:</span> 
+                        <span className="ml-2 capitalize">{currentSession.context.language}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Last Activity:</span> 
+                        <span className="ml-2">{currentSession.lastActivityAt.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <ScrollArea className="h-[500px] border rounded-md">
+                    <div className="p-4 space-y-4">
+                      {currentSession.messages.map((message) => (
+                        <div 
+                          key={message.id} 
+                          className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div 
+                            className={`max-w-[80%] p-3 rounded-lg ${
+                              message.isUser 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <div className="text-sm mb-1">
+                              {message.isUser ? 'User' : settings.name || 'Bot'}
+                            </div>
+                            <div className="space-y-2">
+                              <div className="whitespace-pre-wrap">{message.text}</div>
+                              {!message.isUser && (
+                                <div className="flex items-center space-x-2 mt-2">
+                                  <div className="text-xs text-muted-foreground">
+                                    {message.feedback && (
+                                      <div className="flex items-center">
+                                        <span className="mr-1">Feedback:</span>
+                                        {message.feedback === 'positive' ? (
+                                          <ThumbsUp className="h-3 w-3 text-green-500" />
+                                        ) : message.feedback === 'negative' ? (
+                                          <ThumbsDown className="h-3 w-3 text-red-500" />
+                                        ) : (
+                                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xs mt-1 text-right opacity-70">
+                              {message.timestamp.toLocaleTimeString()}
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => {
-                                setSelectedKnowledgeBaseEntry(entry);
-                                setIsKnowledgeBaseEntryDialogOpen(true);
-                              }}
-                            >
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <div className="space-x-2">
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </div>
+                <div className="space-x-2">
+                  {!currentSession.resolved && (
+                    <Button variant="outline" size="sm">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Resolved
+                    </Button>
+                  )}
+                  {!currentSession.escalatedToHuman && !currentSession.resolved && (
+                    <Button variant="default" size="sm">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Escalate to Human
+                    </Button>
+                  )}
+                </div>
+              </CardFooter>
+            </Card>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Chat Sessions</h2>
+                <Select 
+                  value={sessionFilter} 
+                  onValueChange={setSessionFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter sessions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sessions</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="escalated">Escalated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Conversations</CardTitle>
+                  <CardDescription>
+                    View and manage all chatbot conversations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {filteredSessions.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground">
+                      No sessions match the selected filter.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User ID</TableHead>
+                          <TableHead>Messages</TableHead>
+                          <TableHead>Started</TableHead>
+                          <TableHead>Last Activity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSessions.map((session) => (
+                          <TableRow key={session.id}>
+                            <TableCell>User {session.userId?.substring(4)}</TableCell>
+                            <TableCell>{session.messages.length}</TableCell>
+                            <TableCell>{session.startedAt.toLocaleString()}</TableCell>
+                            <TableCell>{session.lastActivityAt.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Badge variant={session.resolved ? "outline" : session.escalatedToHuman ? "secondary" : "default"}>
+                                {session.resolved ? "Resolved" : session.escalatedToHuman ? "Escalated" : "Active"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" onClick={() => handleViewSession(session.id)}>
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="knowledge" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Knowledge Base Entries</CardTitle>
+                <CardDescription>
+                  Information available to the chatbot for answering queries
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead>Language</TableHead>
+                      <TableHead>Last Updated</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {knowledgeBase.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">{entry.title}</TableCell>
+                        <TableCell>{entry.category}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {entry.tags.slice(0, 2).map((tag, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {entry.tags.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{entry.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {entry.language}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{entry.lastUpdated.toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="space-x-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
-                              size="icon"
+                              size="icon" 
+                              className="h-8 w-8"
                               onClick={() => handleDeleteKnowledgeBaseEntry(entry.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
-                        
-                        <h3 className="text-lg font-medium mb-2">{entry.title}</h3>
-                        <p className="text-muted-foreground mb-4">{entry.content}</p>
-                        
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {entry.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        
-                        <div className="mt-4 text-sm">
-                          <p className="font-medium">Keywords:</p>
-                          <p className="text-muted-foreground">
-                            {entry.keywords.join(', ')}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          <div className="mt-6">
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Entries
+                </Button>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All
+                </Button>
+              </CardFooter>
+            </Card>
+            
             <Card>
               <CardHeader>
-                <CardTitle>Bulk Operations</CardTitle>
-                <CardDescription>Manage knowledge base in bulk</CardDescription>
+                <CardTitle>Add New Entry</CardTitle>
+                <CardDescription>
+                  Create a new knowledge base entry
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="border rounded-lg p-6">
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <UploadCloud className="h-5 w-5 mr-2 text-primary" />
-                      Import Knowledge Base
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Import knowledge base entries from a CSV or JSON file.
-                    </p>
-                    <div className="flex flex-col gap-4">
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Drag and drop your file here, or click to browse
-                        </p>
-                        <Button variant="outline" size="sm">Choose File</Button>
-                      </div>
-                      <Button disabled>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload and Import
-                      </Button>
-                    </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input 
+                      id="title" 
+                      placeholder="Entry title"
+                      value={newEntry.title}
+                      onChange={(e) => setNewEntry({...newEntry, title: e.target.value})}
+                    />
                   </div>
                   
-                  <div className="border rounded-lg p-6">
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <BookOpen className="h-5 w-5 mr-2 text-primary" />
-                      Import from Documentation
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Automatically extract knowledge from your documentation.
-                    </p>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="docUrl">Documentation URL</Label>
-                        <Input id="docUrl" placeholder="e.g., https://docs.example.com" />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch id="processSubpages" />
-                        <Label htmlFor="processSubpages">Process subpages (up to 50 pages)</Label>
-                      </div>
-                      <Button disabled>
-                        <Brain className="h-4 w-4 mr-2" />
-                        Process Documentation
-                      </Button>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Content</Label>
+                    <Textarea 
+                      id="content" 
+                      placeholder="Knowledge content"
+                      rows={5}
+                      value={newEntry.content}
+                      onChange={(e) => setNewEntry({...newEntry, content: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Input 
+                      id="category" 
+                      placeholder="E.g., grammar, vocabulary"
+                      value={newEntry.category}
+                      onChange={(e) => setNewEntry({...newEntry, category: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="tags">Tags (comma separated)</Label>
+                    <Input 
+                      id="tags" 
+                      placeholder="E.g., verbs, past tense, grammar"
+                      value={newEntry.tags}
+                      onChange={(e) => setNewEntry({...newEntry, tags: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="keywords">Keywords (comma separated)</Label>
+                    <Input 
+                      id="keywords" 
+                      placeholder="E.g., speak, talk, say"
+                      value={newEntry.keywords}
+                      onChange={(e) => setNewEntry({...newEntry, keywords: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="language">Language</Label>
+                    <Select 
+                      value={newEntry.language} 
+                      onValueChange={(value: 'english' | 'italian' | 'both') => 
+                        setNewEntry({...newEntry, language: value})
+                      }
+                    >
+                      <SelectTrigger id="language">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="english">English</SelectItem>
+                        <SelectItem value="italian">Italian</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
+              <CardFooter>
+                <Button onClick={handleAddKnowledgeBaseEntry} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Entry
+                </Button>
+              </CardFooter>
             </Card>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="training">
+          
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <CardTitle>Chatbot Training</CardTitle>
-                  <CardDescription>Create and manage training examples for your chatbot</CardDescription>
-                </div>
-              </div>
+              <CardTitle>Training Examples</CardTitle>
+              <CardDescription>
+                Examples used to train the chatbot on specific topics
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4 border rounded-lg p-6">
-                    <h3 className="text-lg font-medium mb-2">Add New Training Example</h3>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="question">Question</Label>
-                        <Input 
-                          id="question" 
-                          placeholder="e.g., How do I reset my password?"
-                          value={newTrainingExample.question}
-                          onChange={(e) => setNewTrainingExample({
-                            ...newTrainingExample,
-                            question: e.target.value
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="answer">Answer</Label>
-                        <Textarea 
-                          id="answer" 
-                          placeholder="Provide a clear and helpful answer to the question..."
-                          rows={4}
-                          value={newTrainingExample.answer}
-                          onChange={(e) => setNewTrainingExample({
-                            ...newTrainingExample,
-                            answer: e.target.value
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="category">Category</Label>
-                          <Select 
-                            value={newTrainingExample.category} 
-                            onValueChange={(value) => setNewTrainingExample({
-                              ...newTrainingExample,
-                              category: value
-                            })}
-                          >
-                            <SelectTrigger id="category">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="general">General</SelectItem>
-                              <SelectItem value="account">Account</SelectItem>
-                              <SelectItem value="pricing">Pricing</SelectItem>
-                              <SelectItem value="features">Features</SelectItem>
-                              <SelectItem value="technical">Technical</SelectItem>
-                              <SelectItem value="language">Language</SelectItem>
-                            </SelectContent>
-                          </Select>
+              <Tabs defaultValue="all" className="mb-6">
+                <TabsList>
+                  <TabsTrigger value="all">All Examples</TabsTrigger>
+                  <TabsTrigger value="approved">Approved</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Question</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Difficulty</TableHead>
+                    <TableHead>Language</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trainingExamples.map((example) => (
+                    <TableRow key={example.id}>
+                      <TableCell className="max-w-[300px] truncate">
+                        {example.question}
+                      </TableCell>
+                      <TableCell>{example.category}</TableCell>
+                      <TableCell className="capitalize">{example.difficulty}</TableCell>
+                      <TableCell className="capitalize">{example.language}</TableCell>
+                      <TableCell>
+                        <Badge variant={example.approved ? "default" : "outline"}>
+                          {example.approved ? "Approved" : "Pending"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="space-x-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Play className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="tags">Tags (comma separated)</Label>
-                          <Input 
-                            id="tags" 
-                            placeholder="e.g., password, reset, login"
-                            value={newTrainingExample.tags?.join(', ') || ''}
-                            onChange={(e) => setNewTrainingExample({
-                              ...newTrainingExample,
-                              tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
-                            })}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="alternatives">Alternative Questions (one per line)</Label>
-                        <Textarea 
-                          id="alternatives" 
-                          placeholder="Add alternative ways to ask the same question..."
-                          rows={3}
-                          value={newTrainingExample.alternatives?.join('\n') || ''}
-                          onChange={(e) => setNewTrainingExample({
-                            ...newTrainingExample,
-                            alternatives: e.target.value.split('\n').map(alt => alt.trim()).filter(alt => alt !== '')
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="approved" 
-                          checked={newTrainingExample.approved}
-                          onCheckedChange={(checked) => setNewTrainingExample({
-                            ...newTrainingExample,
-                            approved: checked
-                          })}
-                        />
-                        <Label htmlFor="approved">Mark as approved (ready for training)</Label>
-                      </div>
-                      
-                      <Button onClick={handleAddTrainingExample} className="w-full">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Training Example
-                      </Button>
-                    </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Import Examples
+              </Button>
+              <Button variant="default">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Example
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Citizenship Test Resources</CardTitle>
+              <CardDescription>
+                Specialized knowledge base for B1 test preparation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">B1 Test Coverage</h3>
+                  <Badge variant="outline">
+                    5 Knowledge Entries
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2 flex items-center">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Test Requirements
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Detailed information about Italian citizenship B1 test requirements, eligibility criteria, and application process.
+                    </p>
                   </div>
                   
-                  <div className="space-y-4 border rounded-lg p-6">
-                    <h3 className="text-lg font-medium mb-2">Training Status</h3>
-                    
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <Label>Training Examples</Label>
-                          <span className="text-sm">{trainingExamples.length}</span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full" 
-                            style={{ width: `${Math.min(100, trainingExamples.length / 2)}%` }} 
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Recommendation: Add at least 200 examples for optimal performance
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <Label>Category Coverage</Label>
-                          <span className="text-sm">3/6</span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: '50%' }} />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Some categories need more examples
-                        </p>
-                      </div>
-                      
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h4 className="font-medium">Last Training</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Never trained
-                              </p>
-                            </div>
-                            <Badge variant="outline">Needs Training</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Button className="w-full" disabled={trainingExamples.length === 0}>
-                        <Zap className="h-4 w-4 mr-2" />
-                        Start Training
-                      </Button>
-                      
-                      <Alert>
-                        <Lightbulb className="h-4 w-4" />
-                        <AlertTitle>Training Tip</AlertTitle>
-                        <AlertDescription>
-                          Include variations of common questions to improve chatbot understanding.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2 flex items-center">
+                      <Globe className="h-4 w-4 mr-2" />
+                      Language Skills
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Explanations of the four required language skills (reading, writing, listening, speaking) at B1 level.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2 flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Practice Materials
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Sample questions, practice exercises, and simulated tests to prepare candidates for the actual B1 test.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2 flex items-center">
+                      <Bot className="h-4 w-4 mr-2" />
+                      Conversation Practice
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Interactive dialogue templates for practicing conversational Italian at B1 level, focusing on common test topics.
+                    </p>
                   </div>
                 </div>
                 
-                <Card>
-                  <CardHeader className="p-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                      <CardTitle className="text-base">Training Examples</CardTitle>
-                      <div className="flex items-center">
-                        <Select defaultValue="all">
-                          <SelectTrigger className="w-[150px] h-8">
-                            <SelectValue placeholder="Filter by category" />
+                <Button variant="outline" className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Citizenship Test Content
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Chatbot Configuration</CardTitle>
+                <CardDescription>
+                  Configure how the chatbot operates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="botName">Chatbot Name</Label>
+                        <Input 
+                          id="botName" 
+                          value={settings.name || ''}
+                          onChange={(e) => setSettings({...settings, name: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="welcomeMessage">Welcome Message</Label>
+                        <Textarea 
+                          id="welcomeMessage" 
+                          value={settings.welcomeMessage || ''}
+                          onChange={(e) => setSettings({...settings, welcomeMessage: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="fallbackMessage">Fallback Message</Label>
+                        <Textarea 
+                          id="fallbackMessage" 
+                          value={settings.fallbackMessage || ''}
+                          onChange={(e) => setSettings({...settings, fallbackMessage: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="defaultLanguage">Default Language</Label>
+                        <Select 
+                          value={settings.defaultLanguage} 
+                          onValueChange={(value: "english" | "italian" | "auto-detect") => 
+                            setSettings({...settings, defaultLanguage: value})
+                          }
+                        >
+                          <SelectTrigger id="defaultLanguage">
+                            <SelectValue placeholder="Select language" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="account">Account</SelectItem>
-                            <SelectItem value="pricing">Pricing</SelectItem>
-                            <SelectItem value="features">Features</SelectItem>
-                            <SelectItem value="technical">Technical</SelectItem>
-                            <SelectItem value="language">Language</SelectItem>
+                            <SelectItem value="english">English</SelectItem>
+                            <SelectItem value="italian">Italian</SelectItem>
+                            <SelectItem value="auto-detect">Auto Detect</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {trainingExamples.length === 0 ? (
-                      <div className="text-center py-12">
-                        <p className="text-muted-foreground">No training examples yet.</p>
-                        <p className="text-sm text-muted-foreground">
-                          Add examples to train your chatbot.
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="model">AI Model</Label>
+                        <Select 
+                          value={settings.model} 
+                          onValueChange={(value) => setSettings({...settings, model: value})}
+                        >
+                          <SelectTrigger id="model">
+                            <SelectValue placeholder="Select model" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="distilbert-base-uncased">DistilBERT Base (Default)</SelectItem>
+                            <SelectItem value="mixedbread-ai/mxbai-embed-small">MixedBread AI Embed Small</SelectItem>
+                            <SelectItem value="Helsinki-NLP/opus-mt-en-it">Helsinki NLP En-It</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="responseTime">Response Time</Label>
+                        <Select 
+                          value={settings.responseTime} 
+                          onValueChange={(value: "fast" | "balanced" | "thorough") => 
+                            setSettings({...settings, responseTime: value})
+                          }
+                        >
+                          <SelectTrigger id="responseTime">
+                            <SelectValue placeholder="Select response time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fast">Fast (Shorter responses)</SelectItem>
+                            <SelectItem value="balanced">Balanced</SelectItem>
+                            <SelectItem value="thorough">Thorough (Detailed responses)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="personality">Personality</Label>
+                        <Select 
+                          value={settings.personality} 
+                          onValueChange={(value: "formal" | "friendly" | "educational") => 
+                            setSettings({...settings, personality: value})
+                          }
+                        >
+                          <SelectTrigger id="personality">
+                            <SelectValue placeholder="Select personality" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="formal">Formal</SelectItem>
+                            <SelectItem value="friendly">Friendly</SelectItem>
+                            <SelectItem value="educational">Educational</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <Label htmlFor="confidence">Confidence Threshold</Label>
+                          <span className="text-sm">{Math.round(settings.confidenceThreshold * 100)}%</span>
+                        </div>
+                        <Slider 
+                          id="confidence"
+                          min={0.1}
+                          max={0.9}
+                          step={0.05}
+                          value={[settings.confidenceThreshold]}
+                          onValueChange={([value]) => setSettings({...settings, confidenceThreshold: value})}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Minimum confidence required for the chatbot to provide an answer
                         </p>
                       </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Question</TableHead>
-                            <TableHead>Answer</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Alternatives</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {trainingExamples.map((example) => (
-                            <TableRow key={example.id}>
-                              <TableCell className="font-medium">{example.question}</TableCell>
-                              <TableCell className="max-w-xs truncate">{example.answer}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="capitalize">
-                                  {example.category}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{example.alternatives?.length || 0}</TableCell>
-                              <TableCell>
-                                <Badge variant={example.approved ? "default" : "outline"}>
-                                  {example.approved ? "Approved" : "Draft"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="icon">
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="conversations">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <CardTitle>Conversation History</CardTitle>
-                  <CardDescription>Review past conversations and analyze chatbot performance</CardDescription>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                  <div className="relative flex-1 md:w-[200px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search conversations..."
-                      className="pl-8 w-full"
-                    />
+                    </div>
                   </div>
                   
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Filter status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="unresolved">Unresolved</SelectItem>
-                      <SelectItem value="escalated">Escalated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {chatSessions.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <MessageSquare className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No Conversations Yet</h3>
-                  <p className="text-muted-foreground max-w-sm mx-auto">
-                    Conversations will appear here once users start interacting with your chatbot.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {chatSessions.map((session) => (
-                    <Accordion key={session.id} type="single" collapsible className="border rounded-lg overflow-hidden">
-                      <AccordionItem value={session.id} className="border-0">
-                        <AccordionTrigger className="px-4 py-3 hover:bg-muted/50">
-                          <div className="flex flex-col sm:flex-row flex-1 items-start sm:items-center justify-between text-left">
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5">
-                                <Badge variant={session.resolved ? "default" : (session.escalatedToHuman ? "destructive" : "outline")}>
-                                  {session.resolved ? "Resolved" : (session.escalatedToHuman ? "Escalated" : "Ongoing")}
-                                </Badge>
-                              </div>
-                              <div>
-                                <h3 className="font-medium">
-                                  {session.messages[0].text.length > 50 
-                                    ? `${session.messages[0].text.substring(0, 50)}...` 
-                                    : session.messages[0].text
-                                  }
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {session.messages.length} messages · {session.startedAt.toLocaleDateString()} · User {session.userId?.substring(0, 8)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center mt-2 sm:mt-0">
-                              <Badge variant="outline" className="mr-2 capitalize">
-                                {session.context?.userType}
-                              </Badge>
-                              <Badge variant="outline">{session.messages.length} messages</Badge>
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="px-4 pb-4">
-                            <div className="space-y-4 mb-4">
-                              <ScrollArea className="h-80 rounded border p-4">
-                                <div className="space-y-4">
-                                  {session.messages.map((message) => (
-                                    <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-                                      <div className={`max-w-[80%] p-3 rounded-lg ${
-                                        message.isUser 
-                                          ? 'bg-primary text-primary-foreground' 
-                                          : 'bg-muted'
-                                      }`}>
-                                        <p>{message.text}</p>
-                                        <div className="mt-1 text-xs opacity-70 flex justify-between items-center">
-                                          <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
-                                          {!message.isUser && message.feedback && (
-                                            <Badge variant={message.feedback.helpful ? "default" : "destructive"} className="text-[10px] h-4">
-                                              {message.feedback.helpful ? "Helpful" : "Not Helpful"}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-row justify-between gap-4">
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-medium">Session Details</h4>
-                                <div className="text-sm">
-                                  <p><span className="font-medium">Started:</span> {session.startedAt.toLocaleString()}</p>
-                                  <p><span className="font-medium">Last Activity:</span> {session.lastActivityAt.toLocaleString()}</p>
-                                  <p><span className="font-medium">User Type:</span> {session.context?.userType}</p>
-                                  <p><span className="font-medium">Language:</span> {session.context?.language}</p>
-                                </div>
-                              </div>
-                              
-                              <div className="flex flex-col gap-2">
-                                <Button variant="outline" size="sm" className="flex items-center">
-                                  <History className="h-4 w-4 mr-2" />
-                                  View Full Session Log
-                                </Button>
-                                {!session.resolved && (
-                                  <Button variant="outline" size="sm" className="flex items-center">
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Mark as Resolved
-                                  </Button>
-                                )}
-                                {!session.escalatedToHuman && !session.resolved && (
-                                  <Button variant="outline" size="sm" className="flex items-center">
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Escalate to Human
-                                  </Button>
-                                )}
-                                <Button variant="outline" size="sm" className="flex items-center">
-                                  <Brain className="h-4 w-4 mr-2" />
-                                  Create Training Example
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Chatbot Configuration</CardTitle>
-              <CardDescription>Configure your chatbot settings and behavior</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Separator />
+                  
                   <div className="space-y-4">
-                    <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Feature Settings</h3>
+                    
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="enableChatbot">Enable Chatbot</Label>
+                        <div className="space-y-0.5">
+                          <Label htmlFor="feedbackEnabled">User Feedback</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Allow users to provide feedback on responses
+                          </p>
+                        </div>
                         <Switch 
-                          id="enableChatbot" 
-                          checked={chatbotSettings.enabled}
-                          onCheckedChange={(checked) => setChatbotSettings({
-                            ...chatbotSettings,
-                            enabled: checked
-                          })}
+                          id="feedbackEnabled"
+                          checked={settings.feedbackEnabled}
+                          onCheckedChange={(checked) => setSettings({...settings, feedbackEnabled: checked})}
                         />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Toggle to enable or disable the chatbot platform-wide
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="chatbotName">Chatbot Name</Label>
-                      <Input 
-                        id="chatbotName" 
-                        value={chatbotSettings.name}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          name: e.target.value
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="avatarUrl">Avatar URL</Label>
-                      <Input 
-                        id="avatarUrl" 
-                        value={chatbotSettings.avatarUrl || ''}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          avatarUrl: e.target.value
-                        })}
-                        placeholder="https://example.com/avatar.png"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="welcomeMessage">Welcome Message</Label>
-                      <Textarea 
-                        id="welcomeMessage" 
-                        value={chatbotSettings.welcomeMessage}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          welcomeMessage: e.target.value
-                        })}
-                        placeholder="Welcome! How can I help you today?"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="fallbackMessage">Fallback Message</Label>
-                      <Textarea 
-                        id="fallbackMessage" 
-                        value={chatbotSettings.fallbackMessage}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          fallbackMessage: e.target.value
-                        })}
-                        placeholder="I'm sorry, I don't understand. Can you rephrase that?"
-                      />
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="suggestRelatedQuestions">Suggest Related Questions</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Suggest follow-up questions after responses
+                          </p>
+                        </div>
+                        <Switch 
+                          id="suggestRelatedQuestions"
+                          checked={settings.suggestRelatedQuestions}
+                          onCheckedChange={(checked) => setSettings({...settings, suggestRelatedQuestions: checked})}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="learningEnabled">Continuous Learning</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Learn from user interactions to improve responses
+                          </p>
+                        </div>
+                        <Switch 
+                          id="learningEnabled"
+                          checked={settings.learningEnabled}
+                          onCheckedChange={(checked) => setSettings({...settings, learningEnabled: checked})}
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline">Reset to Defaults</Button>
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>B1 Test Support Settings</CardTitle>
+                <CardDescription>
+                  Configure citizenship test support features
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable Test Support</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Specialized support for citizenship test preparation
+                      </p>
+                    </div>
+                    <Switch checked={true} />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <Label>Test Preparation Mode</Label>
+                    <Select defaultValue="comprehensive">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">Basic (Key topics only)</SelectItem>
+                        <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                        <SelectItem value="intensive">Intensive (Practice focused)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Resource Emphasis</Label>
+                    <Select defaultValue="balanced">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select emphasis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="grammar">Grammar Focus</SelectItem>
+                        <SelectItem value="vocabulary">Vocabulary Focus</SelectItem>
+                        <SelectItem value="speaking">Speaking Focus</SelectItem>
+                        <SelectItem value="balanced">Balanced Approach</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label>Feedback Detail Level</Label>
+                      <span className="text-sm">Medium</span>
+                    </div>
+                    <Slider defaultValue={[0.5]} min={0} max={1} step={0.1} />
+                    <p className="text-xs text-muted-foreground">
+                      Amount of detail in language feedback
+                    </p>
+                  </div>
+                  
+                  <Separator />
                   
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="confidenceThreshold">Confidence Threshold</Label>
-                      <div className="flex items-center space-x-3">
-                        <Input 
-                          id="confidenceThreshold" 
-                          type="range" 
-                          min="0.1" 
-                          max="0.9" 
-                          step="0.05"
-                          value={chatbotSettings.confidenceThreshold}
-                          onChange={(e) => setChatbotSettings({
-                            ...chatbotSettings,
-                            confidenceThreshold: parseFloat(e.target.value)
-                          })}
-                          className="w-full"
-                        />
-                        <span>{(chatbotSettings.confidenceThreshold * 100).toFixed(0)}%</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Minimum confidence level required to provide an answer (higher = more accurate but may use fallback more often)
-                      </p>
-                    </div>
+                    <h4 className="font-medium">Included Resources</h4>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="maxContextLength">Maximum Context Length</Label>
-                      <Input 
-                        id="maxContextLength" 
-                        type="number" 
-                        min="1" 
-                        max="50"
-                        value={chatbotSettings.maxContextLength}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          maxContextLength: parseInt(e.target.value)
-                        })}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Number of previous messages to include as context for responses
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="escalationThreshold">Escalation Threshold</Label>
-                      <Input 
-                        id="escalationThreshold" 
-                        type="number" 
-                        min="1" 
-                        max="10"
-                        value={chatbotSettings.escalationThreshold}
-                        onChange={(e) => setChatbotSettings({
-                          ...chatbotSettings,
-                          escalationThreshold: parseInt(e.target.value)
-                        })}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Number of low-confidence responses before suggesting human support
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-4 mt-4">
                       <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="suggestFeedback" 
-                          checked={chatbotSettings.suggestFeedback}
-                          onCheckedChange={(checked) => setChatbotSettings({
-                            ...chatbotSettings,
-                            suggestFeedback: checked
-                          })}
-                        />
-                        <Label htmlFor="suggestFeedback">Ask for feedback on responses</Label>
+                        <Switch id="vocabLists" checked={true} />
+                        <Label htmlFor="vocabLists">Essential Vocabulary Lists</Label>
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="suggestRelatedQuestions" 
-                          checked={chatbotSettings.suggestRelatedQuestions}
-                          onCheckedChange={(checked) => setChatbotSettings({
-                            ...chatbotSettings,
-                            suggestRelatedQuestions: checked
-                          })}
-                        />
-                        <Label htmlFor="suggestRelatedQuestions">Suggest related questions</Label>
+                        <Switch id="grammarGuides" checked={true} />
+                        <Label htmlFor="grammarGuides">Grammar Guides</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Switch id="practiceDrill" checked={true} />
+                        <Label htmlFor="practiceDrill">Practice Drills</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Switch id="mockTests" checked={true} />
+                        <Label htmlFor="mockTests">Mock Tests</Label>
                       </div>
                     </div>
-                    
-                    <Card className="border-dashed mt-6">
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-sm flex items-center">
-                          <Clock className="h-4 w-4 mr-2" />
-                          Operating Hours
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Configure when the chatbot is available. Outside these hours, visitors will be directed to leave a message.
-                        </p>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Clock className="h-4 w-4 mr-2" />
-                          Configure Hours
-                        </Button>
-                      </CardContent>
-                    </Card>
                   </div>
                 </div>
-                
-                <div className="space-y-2 border-t pt-6">
-                  <h3 className="text-lg font-medium mb-4">Integration Settings</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-dashed">
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-sm flex items-center">
-                          <Languages className="h-4 w-4 mr-2" />
-                          Language Settings
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Configure language options and translations for your chatbot.
-                        </p>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Languages className="h-4 w-4 mr-2" />
-                          Configure Languages
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="border-dashed">
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-sm flex items-center">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Privacy & Data Settings
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Configure data retention and privacy settings for conversation logs.
-                        </p>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Configure Privacy Settings
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={handleSaveSettings}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Settings
-              </Button>
-            </CardFooter>
-          </Card>
+              </CardContent>
+              <CardFooter>
+                <Button className="w-full">Save Test Support Settings</Button>
+              </CardFooter>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
-      
-      {/* Knowledge Base Entry Dialog */}
-      <Dialog open={isKnowledgeBaseEntryDialogOpen} onOpenChange={setIsKnowledgeBaseEntryDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedKnowledgeBaseEntry ? 'Edit Knowledge Base Entry' : 'Add Knowledge Base Entry'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedKnowledgeBaseEntry 
-                ? 'Update information in your knowledge base'
-                : 'Add new information to your chatbot knowledge base'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="entryTitle">Title</Label>
-                <Input 
-                  id="entryTitle" 
-                  placeholder="e.g., How to Reset Password"
-                  defaultValue={selectedKnowledgeBaseEntry?.title}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="entryContent">Content</Label>
-                <Textarea 
-                  id="entryContent" 
-                  placeholder="Provide the knowledge or information that the chatbot should use..."
-                  rows={6}
-                  defaultValue={selectedKnowledgeBaseEntry?.content}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="entryCategory">Category</Label>
-                  <Select defaultValue={selectedKnowledgeBaseEntry?.category || "features"}>
-                    <SelectTrigger id="entryCategory">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="account">Account</SelectItem>
-                      <SelectItem value="pricing">Pricing</SelectItem>
-                      <SelectItem value="features">Features</SelectItem>
-                      <SelectItem value="content">Content</SelectItem>
-                      <SelectItem value="support">Support</SelectItem>
-                      <SelectItem value="technical">Technical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="entryRelevance">Relevance Score (0-1)</Label>
-                  <Input 
-                    id="entryRelevance" 
-                    type="number" 
-                    min="0" 
-                    max="1" 
-                    step="0.05"
-                    defaultValue={selectedKnowledgeBaseEntry?.relevance || 0.8}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="entryTags">Tags (comma separated)</Label>
-                <Input 
-                  id="entryTags" 
-                  placeholder="e.g., password, reset, account"
-                  defaultValue={selectedKnowledgeBaseEntry?.tags.join(', ')}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="entryKeywords">Keywords (comma separated)</Label>
-                <Input 
-                  id="entryKeywords" 
-                  placeholder="e.g., forgot password, login issue"
-                  defaultValue={selectedKnowledgeBaseEntry?.keywords.join(', ')}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="entryVersion">Version</Label>
-                <Input 
-                  id="entryVersion" 
-                  placeholder="e.g., 1.0"
-                  defaultValue={selectedKnowledgeBaseEntry?.version || "1.0"}
-                />
-              </div>
-            </div>
-            
-            {!selectedKnowledgeBaseEntry && (
-              <Alert>
-                <AlignLeft className="h-4 w-4" />
-                <AlertTitle>Adding Knowledge</AlertTitle>
-                <AlertDescription>
-                  The chatbot will use this information to answer user questions. Be clear, accurate, and concise.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsKnowledgeBaseEntryDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => {
-              const entryTitle = (document.getElementById('entryTitle') as HTMLInputElement).value;
-              const entryContent = (document.getElementById('entryContent') as HTMLTextAreaElement).value;
-              const entryCategory = (document.getElementById('entryCategory') as HTMLSelectElement).value as any;
-              const entryRelevance = parseFloat((document.getElementById('entryRelevance') as HTMLInputElement).value);
-              const entryTags = (document.getElementById('entryTags') as HTMLInputElement).value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-              const entryKeywords = (document.getElementById('entryKeywords') as HTMLInputElement).value.split(',').map(keyword => keyword.trim()).filter(keyword => keyword !== '');
-              const entryVersion = (document.getElementById('entryVersion') as HTMLInputElement).value;
-              
-              if (!entryTitle || !entryContent) {
-                toast({
-                  title: "Missing Information",
-                  description: "Please provide both a title and content for the knowledge base entry.",
-                  variant: "destructive",
-                });
-                return;
-              }
-              
-              if (selectedKnowledgeBaseEntry) {
-                handleUpdateKnowledgeBaseEntry({
-                  ...selectedKnowledgeBaseEntry,
-                  title: entryTitle,
-                  content: entryContent,
-                  category: entryCategory,
-                  relevance: entryRelevance,
-                  tags: entryTags,
-                  keywords: entryKeywords,
-                  version: entryVersion
-                });
-              } else {
-                handleAddKnowledgeBaseEntry({
-                  title: entryTitle,
-                  content: entryContent,
-                  category: entryCategory,
-                  relevance: entryRelevance,
-                  tags: entryTags,
-                  keywords: entryKeywords,
-                  version: entryVersion
-                });
-              }
-            }}>
-              {selectedKnowledgeBaseEntry ? 'Update Entry' : 'Add Entry'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

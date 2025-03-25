@@ -1,29 +1,17 @@
-
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/components/ui/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import {
-  Check,
-  Download,
-  Image,
-  Info,
-  Smartphone,
-  Tablet,
-  Upload,
-  Globe,
-  Star,
-  File,
-  Save,
-  ArrowUpRight,
-  AlertTriangle,
-} from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Eye, Plus, Video, Smartphone, Globe, Share2, Search, Star, Download, FileText, Users, BarChart2, Upload, ChevronRight, Settings, Check, Copy, Trash2 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -177,16 +165,16 @@ const AppStoreListing: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-1">
                   <Label htmlFor="language">Language</Label>
-                  <select 
+                  <Select 
                     id="language"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={currentLanguage}
                     onChange={(e) => setCurrentLanguage(e.target.value)}
                   >
                     {languages.map((lang) => (
-                      <option key={lang.code} value={lang.code}>{lang.name}</option>
+                      <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -219,7 +207,7 @@ const AppStoreListing: React.FC = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <textarea 
+                  <Textarea 
                     id="description" 
                     className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={formData.description}
@@ -318,7 +306,7 @@ const AppStoreListing: React.FC = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes for Review</Label>
-                  <textarea 
+                  <Textarea 
                     id="notes" 
                     className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={formData.notes}
@@ -416,7 +404,6 @@ const AppStoreListing: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Similar form fields as for App Store, with Google Play specific considerations */}
                 <div className="flex items-center justify-center p-12">
                   <Button onClick={() => setCurrentTab('app-store')}>
                     <ArrowUpRight className="mr-2 h-4 w-4" />

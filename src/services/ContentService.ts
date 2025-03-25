@@ -1,299 +1,341 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { Flashcard, FlashcardSet } from '@/types/flashcard';
-import { MultipleChoiceQuestion, QuestionSet, QuizAttempt } from '@/types/question';
-import { ContentType } from '@/types/contentType';
 
-// Sample data
-const sampleFlashcards: Flashcard[] = [
-  { 
-    id: '1', 
-    italian: 'casa', 
-    english: 'house', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '2', 
-    italian: 'cibo', 
-    english: 'food', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '3', 
-    italian: 'acqua', 
-    english: 'water', 
-    mastered: true, 
-    level: 5,
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '4', 
-    italian: 'cittadino', 
-    english: 'citizen', 
-    mastered: false, 
-    level: 2,
-    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '5', 
-    italian: 'diritto', 
-    english: 'right (legal)', 
-    mastered: false, 
-    level: 1,
-    dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '6', 
-    italian: 'buongiorno', 
-    english: 'good morning', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '7', 
-    italian: 'grazie', 
-    english: 'thank you', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '8', 
-    italian: 'piacere', 
-    english: 'pleasure/nice to meet you', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '9', 
-    italian: 'scusa', 
-    english: 'excuse me/sorry', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-  { 
-    id: '10', 
-    italian: 'ciao', 
-    english: 'hello/goodbye', 
-    mastered: false, 
-    level: 0,
-    dueDate: new Date(), 
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastReviewed: new Date() 
-  },
-];
-
-// Mock storage - in a real app, this would use IndexedDB, localStorage, or a backend database
-const storage = {
-  flashcards: [...sampleFlashcards],
-  attempts: [],
+// Mock data for flashcards
+const generateMockFlashcards = (): Flashcard[] => {
+  return [
+    {
+      id: '1',
+      italian: 'cane',
+      english: 'dog',
+      mastered: false,
+      level: 0,
+      tags: ['animals', 'basic'],
+      nextReview: new Date(Date.now() + 86400000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '2',
+      italian: 'gatto',
+      english: 'cat',
+      mastered: false,
+      level: 0,
+      tags: ['animals', 'basic'],
+      nextReview: new Date(Date.now() + 86400000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '3',
+      italian: 'casa',
+      english: 'house',
+      mastered: true,
+      level: 4,
+      tags: ['objects', 'home'],
+      nextReview: new Date(Date.now() + 604800000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '4',
+      italian: 'tavolo',
+      english: 'table',
+      mastered: false,
+      level: 2,
+      tags: ['objects', 'furniture', 'home'],
+      nextReview: new Date(Date.now() + 172800000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '5',
+      italian: 'sedia',
+      english: 'chair',
+      mastered: false,
+      level: 1,
+      tags: ['objects', 'furniture', 'home'],
+      nextReview: new Date(Date.now() + 129600000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '6',
+      italian: 'libro',
+      english: 'book',
+      mastered: false,
+      level: 3,
+      tags: ['objects', 'education'],
+      nextReview: new Date(Date.now() + 345600000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '7',
+      italian: 'macchina',
+      english: 'car',
+      mastered: false,
+      level: 1,
+      tags: ['vehicles', 'transportation'],
+      nextReview: new Date(Date.now() + 129600000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '8',
+      italian: 'treno',
+      english: 'train',
+      mastered: false,
+      level: 0,
+      tags: ['vehicles', 'transportation'],
+      nextReview: new Date(Date.now() + 86400000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '9',
+      italian: 'mela',
+      english: 'apple',
+      mastered: false,
+      level: 2,
+      tags: ['food', 'fruits'],
+      nextReview: new Date(Date.now() + 172800000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    },
+    {
+      id: '10',
+      italian: 'banana',
+      english: 'banana',
+      mastered: false,
+      level: 1,
+      tags: ['food', 'fruits'],
+      nextReview: new Date(Date.now() + 129600000),
+      createdAt: new Date(Date.now() - 604800000),
+      updatedAt: new Date(Date.now() - 86400000),
+      lastReviewed: new Date(Date.now() - 259200000)
+    }
+  ];
 };
 
-// Helper to simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Mock data for flashcard sets
+const generateMockFlashcardSets = (flashcards: Flashcard[]): FlashcardSet[] => {
+  return [
+    {
+      id: '1',
+      name: 'Basic Animals',
+      description: 'Common animal names in Italian',
+      cards: flashcards.filter(card => card.tags.includes('animals')),
+      isPublic: true,
+      createdAt: new Date(Date.now() - 1209600000),
+      updatedAt: new Date(Date.now() - 1209600000),
+      creator: 'system',
+      difficulty: 'beginner',
+      category: 'vocabulary',
+      isFavorite: false
+    },
+    {
+      id: '2',
+      name: 'Household Items',
+      description: 'Common items found in a home',
+      cards: flashcards.filter(card => card.tags.includes('home')),
+      isPublic: true,
+      createdAt: new Date(Date.now() - 1209600000),
+      updatedAt: new Date(Date.now() - 1209600000),
+      creator: 'system',
+      difficulty: 'beginner',
+      category: 'vocabulary',
+      isFavorite: true
+    },
+    {
+      id: '3',
+      name: 'Food & Drinks',
+      description: 'Basic food and drink vocabulary',
+      cards: flashcards.filter(card => card.tags.includes('food')),
+      isPublic: true,
+      createdAt: new Date(Date.now() - 1209600000),
+      updatedAt: new Date(Date.now() - 1209600000),
+      creator: 'system',
+      difficulty: 'beginner',
+      category: 'vocabulary',
+      isFavorite: false
+    }
+  ];
+};
 
-export const ContentService = {
-  // Flashcard methods
-  getFlashcards: async (): Promise<Flashcard[]> => {
-    // Simulate API call
-    await delay(300);
-    return [...storage.flashcards];
-  },
+// Initialize with mock data
+let mockFlashcards = generateMockFlashcards();
+let mockFlashcardSets = generateMockFlashcardSets(mockFlashcards);
+
+// Get all flashcards
+export const getAllFlashcards = async (): Promise<Flashcard[]> => {
+  // In a real app, this would fetch from an API or database
+  return Promise.resolve([...mockFlashcards]);
+};
+
+// Add a new flashcard
+export const addFlashcard = async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flashcard> => {
+  const newFlashcard: Flashcard = {
+    ...flashcard,
+    id: uuidv4(),
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
   
-  saveFlashcard: async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'lastReviewed'> | Flashcard): Promise<Flashcard> => {
-    const newCard: Flashcard = {
-      ...('id' in flashcard ? flashcard : { ...flashcard, id: uuidv4() }),
-      createdAt: 'createdAt' in flashcard ? flashcard.createdAt : new Date(),
-      updatedAt: new Date(),
-      lastReviewed: 'lastReviewed' in flashcard ? flashcard.lastReviewed : new Date(),
-    };
-    
-    storage.flashcards.push(newCard);
-    return newCard;
-  },
+  mockFlashcards = [...mockFlashcards, newFlashcard];
   
-  updateFlashcard: async (id: string, updates: Partial<Flashcard>): Promise<Flashcard> => {
-    const index = storage.flashcards.findIndex(card => card.id === id);
-    if (index === -1) {
-      throw new Error(`Flashcard with id ${id} not found`);
-    }
-    
-    const updatedCard = {
-      ...storage.flashcards[index],
-      ...updates,
-      updatedAt: new Date(),
-      lastReviewed: new Date(),
-    };
-    
-    storage.flashcards[index] = updatedCard;
-    return updatedCard;
-  },
+  return Promise.resolve(newFlashcard);
+};
+
+// Update a flashcard
+export const updateFlashcard = async (id: string, updates: Partial<Flashcard>): Promise<Flashcard> => {
+  const index = mockFlashcards.findIndex(card => card.id === id);
   
-  deleteFlashcard: async (id: string): Promise<void> => {
-    const index = storage.flashcards.findIndex(card => card.id === id);
-    if (index === -1) {
-      throw new Error(`Flashcard with id ${id} not found`);
-    }
-    
-    storage.flashcards.splice(index, 1);
-  },
+  if (index === -1) {
+    throw new Error(`Flashcard with id ${id} not found`);
+  }
   
-  importFlashcards: async (fileContent: string, format: 'csv' | 'json' = 'csv'): Promise<Flashcard[]> => {
-    await delay(500);
-    let importedCards: Flashcard[] = [];
-    
-    try {
-      if (format === 'csv') {
-        // Parse CSV content
-        const lines = fileContent.split('\n');
-        const headers = lines[0].split(',');
-        
-        // Find the indices for italian and english columns
-        const italianIndex = headers.findIndex(h => h.toLowerCase().includes('italian') || h.toLowerCase().includes('italiano'));
-        const englishIndex = headers.findIndex(h => h.toLowerCase().includes('english') || h.toLowerCase().includes('inglese'));
-        
-        if (italianIndex === -1 || englishIndex === -1) {
-          throw new Error('CSV file must contain columns for Italian and English words');
-        }
-        
-        // Parse each line (skip header)
-        lines.slice(1).forEach(line => {
-          if (!line.trim()) return; // Skip empty lines
-          
-          const values = line.split(',');
-          const italian = values[italianIndex]?.trim();
-          const english = values[englishIndex]?.trim();
-          
-          if (italian && english) {
-            importedCards.push({
-              id: uuidv4(),
-              italian,
-              english,
-              mastered: false,
-              level: 0,
-              dueDate: new Date(),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              lastReviewed: new Date()
-            });
-          }
-        });
-      } else if (format === 'json') {
-        // Parse JSON content
-        const parsed = JSON.parse(fileContent);
-        
-        if (Array.isArray(parsed)) {
-          importedCards = parsed.map(item => ({
-            id: uuidv4(),
-            italian: item.italian || '',
-            english: item.english || '',
-            mastered: item.mastered || false,
-            level: item.level || 0,
-            dueDate: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            lastReviewed: new Date()
-          }));
-        }
-      }
+  const updatedFlashcard = {
+    ...mockFlashcards[index],
+    ...updates,
+    updatedAt: new Date()
+  };
+  
+  mockFlashcards = [
+    ...mockFlashcards.slice(0, index),
+    updatedFlashcard,
+    ...mockFlashcards.slice(index + 1)
+  ];
+  
+  return Promise.resolve(updatedFlashcard);
+};
+
+// Delete a flashcard
+export const deleteFlashcard = async (id: string): Promise<boolean> => {
+  const initialLength = mockFlashcards.length;
+  mockFlashcards = mockFlashcards.filter(card => card.id !== id);
+  
+  return Promise.resolve(mockFlashcards.length < initialLength);
+};
+
+// Import flashcards from CSV
+export const importFlashcardsFromCSV = async (csvContent: string): Promise<Flashcard[]> => {
+  // Parse CSV content (simple implementation)
+  const rows = csvContent.split('\n').map(row => row.split(','));
+  const headers = rows[0];
+  
+  // Check for required columns
+  const italianIndex = headers.findIndex(h => h.toLowerCase().includes('italian'));
+  const englishIndex = headers.findIndex(h => h.toLowerCase().includes('english'));
+  
+  if (italianIndex === -1 || englishIndex === -1) {
+    throw new Error('CSV must contain columns for Italian and English');
+  }
+  
+  // Process rows into flashcards
+  const newFlashcards: Flashcard[] = [];
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.length >= Math.max(italianIndex, englishIndex) + 1) {
+      const flashcard: Flashcard = {
+        id: uuidv4(),
+        italian: row[italianIndex].trim(),
+        english: row[englishIndex].trim(),
+        mastered: false,
+        level: 0,
+        tags: ['imported'],
+        nextReview: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastReviewed: null
+      };
       
-      // Add imported cards to storage
-      storage.flashcards = [...storage.flashcards, ...importedCards];
-      return importedCards;
-      
-    } catch (error) {
-      console.error('Error importing flashcards:', error);
-      throw new Error('Failed to import flashcards. Please check the file format.');
+      newFlashcards.push(flashcard);
     }
-  },
+  }
   
-  exportFlashcards: async (format: 'csv' | 'json' = 'csv', onlyMastered = false): Promise<string> => {
-    await delay(300);
-    
-    const cardsToExport = onlyMastered 
-      ? storage.flashcards.filter(card => card.mastered) 
-      : storage.flashcards;
-    
-    if (format === 'csv') {
-      // Generate CSV
-      const headers = ['italian', 'english', 'mastered', 'level'];
-      const rows = cardsToExport.map(card => 
-        `${card.italian},${card.english},${card.mastered ? 'true' : 'false'},${card.level}`
-      );
-      
-      return [headers.join(','), ...rows].join('\n');
-    } else {
-      // Generate JSON
-      return JSON.stringify(cardsToExport, null, 2);
-    }
-  },
+  // Add to mock data
+  mockFlashcards = [...mockFlashcards, ...newFlashcards];
   
-  // Question methods
-  getQuestionSets: async (): Promise<QuestionSet[]> => {
-    await delay(300);
-    return []; // Mock implementation
-  },
+  return Promise.resolve(newFlashcards);
+};
+
+// Get all flashcard sets
+export const getAllFlashcardSets = async (): Promise<FlashcardSet[]> => {
+  return Promise.resolve([...mockFlashcardSets]);
+};
+
+// Get a flashcard set by ID
+export const getFlashcardSetById = async (id: string): Promise<FlashcardSet | null> => {
+  const set = mockFlashcardSets.find(set => set.id === id);
+  return Promise.resolve(set || null);
+};
+
+// Create a new flashcard set
+export const createFlashcardSet = async (set: Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt'>): Promise<FlashcardSet> => {
+  const newSet: FlashcardSet = {
+    ...set,
+    id: uuidv4(),
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
   
-  saveQuestionSet: async (questionSet: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuestionSet> => {
-    await delay(300);
-    return {
-      ...questionSet,
-      id: uuidv4(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-  },
+  mockFlashcardSets = [...mockFlashcardSets, newSet];
   
-  // Speaking methods
-  getSpeakingExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
-    await delay(300);
-    return []; // Mock implementation
-  },
+  return Promise.resolve(newSet);
+};
+
+// Update a flashcard set
+export const updateFlashcardSet = async (id: string, updates: Partial<FlashcardSet>): Promise<FlashcardSet> => {
+  const index = mockFlashcardSets.findIndex(set => set.id === id);
   
-  // Listening methods
-  getListeningExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
-    await delay(300);
-    return []; // Mock implementation
-  },
+  if (index === -1) {
+    throw new Error(`Flashcard set with id ${id} not found`);
+  }
   
-  // Writing methods
-  getWritingExercises: async (difficulty?: string, category?: string): Promise<any[]> => {
-    await delay(300);
-    return []; // Mock implementation
-  },
+  const updatedSet = {
+    ...mockFlashcardSets[index],
+    ...updates,
+    updatedAt: new Date()
+  };
+  
+  mockFlashcardSets = [
+    ...mockFlashcardSets.slice(0, index),
+    updatedSet,
+    ...mockFlashcardSets.slice(index + 1)
+  ];
+  
+  return Promise.resolve(updatedSet);
+};
+
+// Delete a flashcard set
+export const deleteFlashcardSet = async (id: string): Promise<boolean> => {
+  const initialLength = mockFlashcardSets.length;
+  mockFlashcardSets = mockFlashcardSets.filter(set => set.id !== id);
+  
+  return Promise.resolve(mockFlashcardSets.length < initialLength);
+};
+
+export default {
+  getAllFlashcards,
+  addFlashcard,
+  updateFlashcard,
+  deleteFlashcard,
+  importFlashcardsFromCSV,
+  getAllFlashcardSets,
+  getFlashcardSetById,
+  createFlashcardSet,
+  updateFlashcardSet,
+  deleteFlashcardSet
 };
