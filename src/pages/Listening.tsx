@@ -1,26 +1,19 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
-import { ConfidenceIndicator } from '@/components/ai/ConfidenceIndicator';
+import { Helmet } from 'react-helmet-async';
+import ConfidenceIndicator from '@/components/ai/ConfidenceIndicator';
+import { Mic, Pause, Play, Volume2, VolumeX, Clock, SkipBack, SkipForward, AlertTriangle, Brain, BookOpen, Award, Check, X } from 'lucide-react';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { 
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, 
-  CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight,
-  RefreshCcw, Music, ListMusic, Headphones, LucideHeadphones
-} from 'lucide-react';
-import { listeningExercises } from '@/data/listeningExercises';
 
 interface ListeningExercise {
   id: string;

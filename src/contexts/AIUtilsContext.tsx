@@ -22,6 +22,8 @@ export interface AIUtilsContextType {
   isProcessing: boolean;
   translateText: (text: string, targetLanguage: string) => Promise<string>;
   isTranslating: boolean;
+  hasActiveMicrophone: boolean;
+  checkMicrophoneAccess: () => Promise<boolean>;
 }
 
 // Create the context with a default value
@@ -39,6 +41,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [confidenceScores, setConfidenceScores] = useState<Record<ContentType, number>>(
     getInitialConfidenceScores()
   );
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState<boolean>(false);
   
   // Set default preferences if not available
   const preferences = aiPreference || getDefaultAIPreferences();
@@ -52,6 +55,11 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
           useWebGPU: true
         });
         console.log('AI service initialized');
+        
+        // Check if microphone is available
+        checkMicrophoneAccess().then(hasAccess => {
+          setHasActiveMicrophone(hasAccess);
+        });
       } catch (error) {
         console.error('Failed to initialize AI service:', error);
       }
@@ -63,6 +71,25 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Toggle AI functionality
   const toggleAI = () => {
     setIsAIEnabled(prev => !prev);
+  };
+
+  // Check microphone access
+  const checkMicrophoneAccess = async (): Promise<boolean> => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return false;
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      
+      // Stop all tracks immediately
+      stream.getTracks().forEach(track => track.stop());
+      
+      return true;
+    } catch (error) {
+      console.warn('Microphone access denied:', error);
+      return false;
+    }
   };
 
   // Text-to-speech function
@@ -230,7 +257,9 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     confidenceScores,
     isProcessing,
     translateText,
-    isTranslating
+    isTranslating,
+    hasActiveMicrophone,
+    checkMicrophoneAccess
   };
   
   return (

@@ -1,21 +1,14 @@
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
-import { ConfidenceIndicator } from '@/components/ai/ConfidenceIndicator';
+import { Helmet } from 'react-helmet-async';
+import ConfidenceIndicator from '@/components/ai/ConfidenceIndicator';
+import { Mic, MicOff, Volume2, Play, CheckCircle2, XCircle, AlertCircle, Clock, Brain, BookOpen, Filter, SkipForward } from 'lucide-react';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { FlashcardPronunciation } from '@/components/flashcards/FlashcardPronunciation';
-import { Mic, Volume, Play, Pause, Loader2, RefreshCcw, XCircle, CheckCircle, Info, VolumeX, AlertCircle } from 'lucide-react';
-import SpeakableWord from '@/components/learning/SpeakableWord';
 
 // Interfaces for speaking exercises
 interface ConversationPrompt {

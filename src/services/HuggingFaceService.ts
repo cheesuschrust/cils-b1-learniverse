@@ -73,7 +73,7 @@ export const loadModel = async (
     };
     
     // Load the model
-    const model_pipeline = await pipeline(task, model, modelOptions);
+    const model_pipeline = await pipeline(task as any, model, modelOptions);
     
     // Store for reuse
     loadedModels.set(modelKey, model_pipeline);
@@ -197,7 +197,7 @@ export const getTextSimilarity = async (text1: string, text2: string) => {
 };
 
 // Calculate cosine similarity between two vectors
-const calculateCosineSimilarity = (vec1: number[], vec2: number[]): number => {
+export const calculateCosineSimilarity = (vec1: number[], vec2: number[]): number => {
   // Dot product
   let dotProduct = 0;
   for (let i = 0; i < vec1.length; i++) {
@@ -227,5 +227,6 @@ export default {
   generateText,
   getTextSimilarity,
   checkWebGPUSupport,
-  getDeviceType
+  getDeviceType,
+  calculateCosineSimilarity
 };

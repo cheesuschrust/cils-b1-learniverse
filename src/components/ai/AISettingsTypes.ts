@@ -45,6 +45,32 @@ export const getInitialConfidenceScores = (): Record<ContentType, number> => {
   };
 };
 
+export const getDisplayableContentTypes = (): ContentType[] => {
+  return [
+    'multiple-choice',
+    'flashcards',
+    'writing',
+    'speaking',
+    'listening'
+  ];
+};
+
+export const getContentTypeLabels = (): Record<ContentType, string> => {
+  return {
+    'multiple-choice': 'Multiple Choice Questions',
+    'flashcards': 'Flashcard Content',
+    'writing': 'Written Exercises',
+    'speaking': 'Speaking Practice',
+    'listening': 'Listening Comprehension',
+    'pdf': 'PDF Documents',
+    'audio': 'Audio Files',
+    'csv': 'CSV Data',
+    'json': 'JSON Data',
+    'txt': 'Text Files',
+    'unknown': 'Unknown Content'
+  };
+};
+
 export const getDefaultAIPreferences = (): AIPreferences => {
   return {
     useWebGPU: true,
