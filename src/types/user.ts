@@ -5,7 +5,7 @@ export interface User {
   displayName?: string;
   firstName?: string;
   lastName?: string;
-  avatar?: string; // Added to fix EnhancedChatbot error
+  avatar?: string;
   role: 'user' | 'admin' | 'teacher';
   createdAt: Date;
   lastLogin?: Date;
@@ -32,5 +32,5 @@ export interface User {
 
 export interface ProtectedRouteProps {
   children: React.ReactNode;
-  adminOnly?: boolean; // Added to fix main.tsx error
+  adminOnly?: boolean;
 }

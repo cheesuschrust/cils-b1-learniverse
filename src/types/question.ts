@@ -35,7 +35,7 @@ export interface MultipleChoiceQuestion extends Question {
 export interface QuestionSet {
   id: string;
   name: string;
-  title?: string; // Added for compatibility
+  title?: string;
   description?: string;
   language: QuestionLanguage;
   category: QuestionCategory;
@@ -45,8 +45,8 @@ export interface QuestionSet {
   updatedAt: Date;
   createdBy?: string;
   isPublic: boolean;
-  attempts?: number; // Added for compatibility
-  bestScore?: number; // Added for compatibility
+  attempts?: number;
+  bestScore?: number;
 }
 
 export interface QuizAttempt {
@@ -80,5 +80,5 @@ export interface QuizStats {
     date: Date;
     score: number;
   }[];
-  questionSets?: QuestionSet[]; // Added for compatibility
+  questionSets?: QuestionSet[];
 }

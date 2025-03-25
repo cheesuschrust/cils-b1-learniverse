@@ -6,6 +6,18 @@ export interface ChatMessage {
   text: string;
   isUser: boolean;
   timestamp: Date;
+  attachments?: {
+    type: string;
+    url: string;
+    name: string;
+  }[];
+  feedback?: {
+    helpful: boolean;
+    reason?: string;
+  };
+  context?: {
+    previousMessageIds?: string[];
+  };
 }
 
 export interface ChatSession {
@@ -19,16 +31,17 @@ export interface ChatSession {
     currentLesson?: string;
     recentTopics?: string[];
     language?: string;
+    userType?: string;
   };
   resolved: boolean;
-  escalatedToHuman: boolean; // Required field that was missing
+  escalatedToHuman: boolean;
 }
 
 export interface ChatbotTrainingExample {
   id: string;
-  prompt: string; // Using prompt instead of question
-  response: string; // Using response instead of answer
-  alternativePrompts?: string[]; // Using alternativePrompts instead of alternatives
+  prompt: string;
+  response: string;
+  alternativePrompts?: string[];
   category: string;
   language: string;
   createdAt: Date;
@@ -66,4 +79,30 @@ export interface ChatbotFeedback {
   rating: number;
   comment?: string;
   createdAt: Date;
+}
+
+export interface ChatbotSettings {
+  enabled: boolean;
+  name: string;
+  avatarUrl: string;
+  welcomeMessage: string;
+  fallbackMessage: string;
+  maxContextLength: number;
+  confidenceThreshold: number;
+  suggestFeedback: boolean;
+  suggestRelatedQuestions: boolean;
+  escalationThreshold: number;
+}
+
+export interface KnowledgeBaseEntry {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  category: string;
+  relevance: number;
+  lastUpdated: Date;
+  keywords: string[];
+  version: string;
+  matchScore?: number;
 }

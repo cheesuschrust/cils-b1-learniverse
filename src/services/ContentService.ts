@@ -2,7 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Flashcard, FlashcardSet } from '@/types/flashcard';
 import { MultipleChoiceQuestion, QuestionSet, QuizAttempt } from '@/types/question';
-import { ContentType } from '@/utils/textAnalysis';
+import { ContentType } from '@/types/contentType';
 
 // Sample data
 const sampleFlashcards: Flashcard[] = [
@@ -13,7 +13,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -23,7 +24,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -33,7 +35,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: true, 
     level: 5,
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -43,7 +46,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 2,
     dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -53,7 +57,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 1,
     dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -63,7 +68,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -73,7 +79,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -83,7 +90,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -93,7 +101,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
   { 
@@ -103,7 +112,8 @@ const sampleFlashcards: Flashcard[] = [
     mastered: false, 
     level: 0,
     dueDate: new Date(), 
-    createdAt: new Date(), 
+    createdAt: new Date(),
+    updatedAt: new Date(),
     lastReviewed: new Date() 
   },
 ];
@@ -129,6 +139,7 @@ export const ContentService = {
     const newCard: Flashcard = {
       ...('id' in flashcard ? flashcard : { ...flashcard, id: uuidv4() }),
       createdAt: 'createdAt' in flashcard ? flashcard.createdAt : new Date(),
+      updatedAt: new Date(),
       lastReviewed: 'lastReviewed' in flashcard ? flashcard.lastReviewed : new Date(),
     };
     
@@ -145,6 +156,7 @@ export const ContentService = {
     const updatedCard = {
       ...storage.flashcards[index],
       ...updates,
+      updatedAt: new Date(),
       lastReviewed: new Date(),
     };
     
@@ -196,6 +208,7 @@ export const ContentService = {
               level: 0,
               dueDate: new Date(),
               createdAt: new Date(),
+              updatedAt: new Date(),
               lastReviewed: new Date()
             });
           }
@@ -213,6 +226,7 @@ export const ContentService = {
             level: item.level || 0,
             dueDate: new Date(),
             createdAt: new Date(),
+            updatedAt: new Date(),
             lastReviewed: new Date()
           }));
         }

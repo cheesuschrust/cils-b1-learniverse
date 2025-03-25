@@ -75,6 +75,6 @@ export interface AdSettings {
   defaultNetwork: AdNetwork;
   frequencyCap: number;
   showToPremiumUsers: boolean;
-  refreshInterval?: number; // Make this optional since it's causing the error
+  refreshInterval?: number;
   blockList: string[];
 }

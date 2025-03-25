@@ -62,3 +62,8 @@ export interface AnalyticsFilters {
   difficulty?: string;
   language?: string;
 }
+
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}

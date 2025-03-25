@@ -16,7 +16,7 @@ export interface ImportResult {
   total: number;
   errors: string[];
   importedCards: Flashcard[];
-  imported: number; // Added for compatibility
+  imported: number;
 }
 
 export interface Flashcard {
@@ -42,7 +42,7 @@ export interface Flashcard {
 export interface FlashcardSet {
   id: string;
   name: string;
-  title?: string; // Added for compatibility
+  title?: string;
   description?: string;
   cards: Flashcard[];
   createdAt: Date;
@@ -67,10 +67,10 @@ export interface FlashcardStudySession {
     responseTime: number;
   }[];
   startedAt: Date;
-  startTime?: Date; // Added for compatibility
-  endTime?: Date; // Added for compatibility
+  startTime?: Date;
+  endTime?: Date;
   completedAt?: Date;
   score: number;
   timeSpent: number;
-  cardsStudied?: number; // Added for compatibility
+  cardsStudied?: number;
 }
