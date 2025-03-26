@@ -1,6 +1,6 @@
-
 import { supabase } from '@/lib/supabase';
-import { QuestionType } from '@/types/question';
+import { Question, QuizAttempt, ReviewSchedule, ReviewPerformance } from '@/types/question';
+import { calculateNextReview, generateReviewSchedule, calculateReviewPerformance } from '@/utils/spacedRepetition';
 
 export interface QuestionGenerationOptions {
   count: number;
@@ -137,7 +137,7 @@ class QuestionService {
   }
 
   /**
-   * Records a user's answer to a question
+   * Records a user's answer to a question and updates spaced repetition data
    */
   async recordQuestionAttempt(
     userId: string,
@@ -145,7 +145,8 @@ class QuestionService {
     answers: Record<string, string>,
     contentType: string,
     scorePercentage: number,
-    timeSpent?: number
+    timeSpent?: number,
+    isReview: boolean = false
   ) {
     try {
       // First, create the attempt record
@@ -160,6 +161,7 @@ class QuestionService {
           time_spent: timeSpent,
           created_at: new Date().toISOString(),
           completed: true,
+          is_review: isReview
         })
         .select();
 
@@ -175,13 +177,15 @@ class QuestionService {
 
       // Now create individual response records for each question
       const responses = [];
+      const questionUpdates = [];
+      
       for (const questionId of questionIds) {
         const userAnswer = answers[questionId] || '';
         
         // Get the correct answer for this question
         const { data: questionData, error: questionError } = await supabase
           .from('questions')
-          .select('correct_answer')
+          .select('correct_answer, difficulty_factor, review_count, next_review_date')
           .eq('id', questionId)
           .single();
 
@@ -200,6 +204,37 @@ class QuestionService {
           time_spent: timeSpent ? timeSpent / questionIds.length : null,
           created_at: new Date().toISOString(),
         });
+        
+        // Update spaced repetition metadata
+        if (isReview) {
+          const currentFactor = questionData.difficulty_factor || 2.5;
+          const reviewCount = (questionData.review_count || 0) + 1;
+          
+          const { nextReviewDate, difficultyFactor } = calculateNextReview(
+            isCorrect,
+            currentFactor,
+            isCorrect ? reviewCount : 0
+          );
+          
+          questionUpdates.push({
+            id: questionId,
+            next_review_date: nextReviewDate.toISOString(),
+            difficulty_factor: difficultyFactor,
+            review_count: isCorrect ? reviewCount : 0,
+            last_reviewed_at: new Date().toISOString()
+          });
+        } else if (!questionData.next_review_date) {
+          // If this is the first time seeing this question, schedule for review
+          const { nextReviewDate, difficultyFactor } = calculateNextReview(isCorrect);
+          
+          questionUpdates.push({
+            id: questionId,
+            next_review_date: nextReviewDate.toISOString(),
+            difficulty_factor: difficultyFactor,
+            review_count: 0,
+            last_reviewed_at: new Date().toISOString()
+          });
+        }
       }
 
       // Insert all responses
@@ -210,6 +245,26 @@ class QuestionService {
 
         if (responsesError) {
           throw responsesError;
+        }
+      }
+      
+      // Update question spaced repetition data
+      if (questionUpdates.length > 0) {
+        for (const update of questionUpdates) {
+          const { error: updateError } = await supabase
+            .from('questions')
+            .update({
+              next_review_date: update.next_review_date,
+              difficulty_factor: update.difficulty_factor,
+              review_count: update.review_count,
+              last_reviewed_at: update.last_reviewed_at,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', update.id);
+            
+          if (updateError) {
+            console.error('Error updating question review data:', updateError);
+          }
         }
       }
 
@@ -360,6 +415,94 @@ class QuestionService {
     } catch (error) {
       console.error('Error fetching question attempts:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get questions due for review
+   * @param userId User ID
+   * @param limit Maximum number of questions to return
+   * @param contentType Optional filter by content type
+   * @returns Array of questions due for review
+   */
+  async getDueReviews(userId: string, limit = 50, contentType?: string) {
+    try {
+      const now = new Date().toISOString();
+      
+      let query = supabase
+        .from('questions')
+        .select('*')
+        .lt('next_review_date', now)
+        .order('next_review_date')
+        .limit(limit);
+        
+      if (contentType) {
+        query = query.eq('content_type', contentType);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching due reviews:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Get review statistics for a user
+   * @param userId User ID
+   * @returns Review schedule and performance metrics
+   */
+  async getReviewStats(userId: string): Promise<{schedule: ReviewSchedule, performance: ReviewPerformance}> {
+    try {
+      // Get all questions with review data
+      const { data: questions, error: questionsError } = await supabase
+        .from('questions')
+        .select('*')
+        .not('next_review_date', 'is', null);
+        
+      if (questionsError) {
+        throw questionsError;
+      }
+      
+      // Get all review attempts
+      const { data: attempts, error: attemptsError } = await supabase
+        .from('question_attempts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_review', true);
+        
+      if (attemptsError) {
+        throw attemptsError;
+      }
+      
+      // Generate statistics
+      const schedule = generateReviewSchedule(questions || []);
+      const performance = calculateReviewPerformance(attempts || []);
+      
+      return { schedule, performance };
+    } catch (error) {
+      console.error('Error fetching review stats:', error);
+      return {
+        schedule: {
+          dueToday: 0,
+          dueThisWeek: 0,
+          dueNextWeek: 0,
+          dueByDate: {}
+        },
+        performance: {
+          totalReviews: 0,
+          correctReviews: 0,
+          efficiency: 0,
+          streakDays: 0,
+          reviewsByCategory: {}
+        }
+      };
     }
   }
 }

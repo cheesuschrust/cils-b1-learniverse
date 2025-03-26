@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   text: string;
@@ -14,6 +13,10 @@ export interface Question {
   type: 'multiple_choice' | 'true_false' | 'fill_blank';
   timeLimit?: number;
   points: number;
+  nextReviewDate?: Date;
+  difficultyFactor?: number;
+  reviewCount?: number;
+  lastReviewedAt?: Date;
 }
 
 export interface QuestionSet {
@@ -51,6 +54,7 @@ export interface QuizAttempt {
   createdAt: Date;
   completed: boolean;
   passed: boolean;
+  isReview?: boolean;
 }
 
 export interface QuizProgress {
@@ -80,4 +84,19 @@ export interface QuizSessionState {
   timeSpentPerQuestion: Record<string, number>;
   score?: number;
   isComplete: boolean;
+}
+
+export interface ReviewSchedule {
+  dueToday: number;
+  dueThisWeek: number;
+  dueNextWeek: number;
+  dueByDate: Record<string, number>;
+}
+
+export interface ReviewPerformance {
+  totalReviews: number;
+  correctReviews: number;
+  efficiency: number;
+  streakDays: number;
+  reviewsByCategory: Record<string, number>;
 }

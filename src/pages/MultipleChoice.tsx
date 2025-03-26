@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, Book, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { Clock, Book, CheckCircle2, XCircle, HelpCircle, History } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { QuestionSet, MultipleChoiceQuestion, QuizAttempt } from '@/types/question';
+import { Question, QuestionSet, MultipleChoiceQuestion, QuizAttempt } from '@/types/question';
 import { useMultipleChoice } from '@/hooks/useMultipleChoice';
 import { Helmet } from 'react-helmet-async';
+import ReviewCounter from '@/components/learning/ReviewCounter';
+import ReviewIndicator from '@/components/learning/ReviewIndicator';
+import ReviewCelebration from '@/components/learning/ReviewCelebration';
+import { isDueForReview } from '@/utils/spacedRepetition';
+import questionService from '@/services/questionService';
 
 const MultipleChoice = () => {
   const navigate = useNavigate();
@@ -30,6 +34,10 @@ const MultipleChoice = () => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTab, setActiveTab] = useState('quiz');
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [dueReviews, setDueReviews] = useState<Question[]>([]);
+  const [allReviewsComplete, setAllReviewsComplete] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Initialize the quiz
   useEffect(() => {
@@ -62,6 +70,41 @@ const MultipleChoice = () => {
     }
   }, [setId, questionSets, navigate, toast, getQuestionSetById]);
   
+  // Load due reviews when review mode is activated
+  useEffect(() => {
+    if (isReviewMode && user) {
+      const loadDueReviews = async () => {
+        try {
+          const reviews = await questionService.getDueReviews(user.id, 20);
+          setDueReviews(reviews);
+          
+          if (reviews.length === 0) {
+            setAllReviewsComplete(true);
+            setShowCelebration(true);
+          } else {
+            setAllReviewsComplete(false);
+            setCurrentQuestionIndex(0);
+            setAnswers({});
+            setIsRevealed(false);
+            setQuizComplete(false);
+            setScore({ correct: 0, incorrect: 0, unanswered: 0 });
+            setStartTime(new Date());
+            setElapsedTime(0);
+          }
+        } catch (error) {
+          console.error('Error loading due reviews:', error);
+          toast({
+            title: 'Error Loading Reviews',
+            description: 'There was a problem loading your due reviews.',
+            variant: 'destructive'
+          });
+        }
+      };
+      
+      loadDueReviews();
+    }
+  }, [isReviewMode, user, toast]);
+  
   // Timer effect
   useEffect(() => {
     if (!startTime || quizComplete) return;
@@ -82,8 +125,10 @@ const MultipleChoice = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Get the current question
-  const currentQuestion = currentSet?.questions[currentQuestionIndex] as MultipleChoiceQuestion | undefined;
+  // Get the current question - use review question if in review mode
+  const currentQuestion = isReviewMode 
+    ? (dueReviews[currentQuestionIndex] as MultipleChoiceQuestion) 
+    : (currentSet?.questions[currentQuestionIndex] as MultipleChoiceQuestion);
   
   // Handle answer selection
   const handleAnswerSelect = (value: string) => {
@@ -107,9 +152,15 @@ const MultipleChoice = () => {
     setIsRevealed(true);
   };
   
+  // Handle review mode toggle
+  const handleReviewModeToggle = (reviewMode: boolean) => {
+    setIsReviewMode(reviewMode);
+    setActiveTab('quiz');
+  };
+  
   // Move to the next question
   const handleNextQuestion = () => {
-    if (!currentSet) return;
+    if ((!currentSet && !isReviewMode) || (!dueReviews.length && isReviewMode)) return;
     
     // Update the score if revealed
     if (isRevealed) {
@@ -123,7 +174,11 @@ const MultipleChoice = () => {
     }
     
     // Check if this was the last question
-    if (currentQuestionIndex >= currentSet.questions.length - 1) {
+    const isLastQuestion = isReviewMode 
+      ? currentQuestionIndex >= dueReviews.length - 1
+      : currentQuestionIndex >= (currentSet?.questions.length || 0) - 1;
+      
+    if (isLastQuestion) {
       completeQuiz();
     } else {
       // Move to the next question
@@ -134,24 +189,26 @@ const MultipleChoice = () => {
   
   // Complete the quiz
   const completeQuiz = () => {
-    if (!currentSet || !user) return;
+    if ((!currentSet && !isReviewMode) || (!user && isReviewMode)) return;
     
     // Calculate final score
-    const totalQuestions = currentSet.questions.length;
+    const questions = isReviewMode ? dueReviews : currentSet?.questions || [];
+    const totalQuestions = questions.length;
     const correctAnswers = score.correct + (isRevealed && isAnswerCorrect() ? 1 : 0);
     const finalScore = Math.round((correctAnswers / totalQuestions) * 100);
     
     // Save the quiz attempt
     const quizAttempt: Omit<QuizAttempt, 'createdAt'> = {
       id: crypto.randomUUID(),
-      userId: user.id,
-      questionSetId: currentSet.id,
+      userId: user?.id || 'guest',
+      questionSetId: isReviewMode ? 'review' : (currentSet?.id || 'unknown'),
       answers: answers,
       score: correctAnswers,
       totalQuestions,
       completedAt: new Date(),
       completed: true,
-      timeSpent: elapsedTime
+      timeSpent: elapsedTime,
+      isReview: isReviewMode
     };
     
     saveQuizAttempt(quizAttempt);
@@ -160,15 +217,47 @@ const MultipleChoice = () => {
     setQuizComplete(true);
     setActiveTab('results');
     
+    // Show celebration if all reviews are complete
+    if (isReviewMode) {
+      setShowCelebration(true);
+      setAllReviewsComplete(true);
+    }
+    
     // Show completion toast
     toast({
-      title: "Quiz Completed",
+      title: isReviewMode ? "Review Completed" : "Quiz Completed",
       description: `You scored ${correctAnswers} out of ${totalQuestions} (${finalScore}%)`,
     });
   };
   
   // Start a new quiz with the same set
   const handleRestartQuiz = () => {
+    // If in review mode, reload due reviews
+    if (isReviewMode && user) {
+      const loadDueReviews = async () => {
+        try {
+          const reviews = await questionService.getDueReviews(user.id, 20);
+          setDueReviews(reviews);
+          
+          if (reviews.length === 0) {
+            setAllReviewsComplete(true);
+            setShowCelebration(true);
+          } else {
+            resetQuiz();
+          }
+        } catch (error) {
+          console.error('Error loading due reviews:', error);
+        }
+      };
+      
+      loadDueReviews();
+    } else {
+      resetQuiz();
+    }
+  };
+  
+  // Reset quiz state
+  const resetQuiz = () => {
     setCurrentQuestionIndex(0);
     setAnswers({});
     setIsRevealed(false);
@@ -179,15 +268,22 @@ const MultipleChoice = () => {
     setActiveTab('quiz');
   };
   
+  // Handle celebration completion
+  const handleCelebrationComplete = () => {
+    setShowCelebration(false);
+  };
+  
   // Go back to the quiz selection
   const handleBackToSets = () => {
     navigate('/dashboard/multiple-choice');
   };
   
   // Calculate progress percentage
-  const progressPercentage = currentSet 
-    ? ((currentQuestionIndex + (isRevealed ? 1 : 0)) / currentSet.questions.length) * 100 
-    : 0;
+  const progressPercentage = isReviewMode 
+    ? ((currentQuestionIndex + (isRevealed ? 1 : 0)) / (dueReviews.length || 1)) * 100 
+    : currentSet 
+      ? ((currentQuestionIndex + (isRevealed ? 1 : 0)) / currentSet.questions.length) * 100 
+      : 0;
   
   // Sample data for demonstration
   const sampleQuestions: MultipleChoiceQuestion[] = [
@@ -239,19 +335,69 @@ const MultipleChoice = () => {
     }
   }, [currentSet, questionSets]);
   
-  if (!currentSet) {
+  if (isReviewMode && allReviewsComplete && !currentQuestion) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Helmet>
+          <title>Reviews Complete | Italian Learning</title>
+        </Helmet>
+        
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Spaced Repetition</h1>
+          <ReviewCounter onReviewModeToggle={handleReviewModeToggle} />
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>All Reviews Complete</CardTitle>
+            <CardDescription>
+              You've finished all your reviews for today. Great job!
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">You're all caught up!</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              Come back tomorrow for more reviews. Consistent review is the key to mastering a language.
+            </p>
+            
+            <Button onClick={() => setIsReviewMode(false)}>
+              Learn New Content
+            </Button>
+          </CardContent>
+        </Card>
+        
+        <ReviewCelebration 
+          isVisible={showCelebration} 
+          onComplete={handleCelebrationComplete} 
+        />
+      </div>
+    );
+  }
+  
+  if (!currentSet && !isReviewMode) {
     return <div className="flex justify-center items-center h-96">Loading quiz...</div>;
+  }
+  
+  if (!currentQuestion) {
+    return <div className="flex justify-center items-center h-96">No questions available</div>;
   }
   
   return (
     <div className="container mx-auto py-6 px-4">
       <Helmet>
-        <title>Multiple Choice Quiz | Italian Learning</title>
+        <title>{isReviewMode ? "Review Mode" : "Multiple Choice Quiz"} | Italian Learning</title>
       </Helmet>
+      
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">{isReviewMode ? "Spaced Repetition" : "Multiple Choice"}</h1>
+        <ReviewCounter onReviewModeToggle={handleReviewModeToggle} />
+      </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="quiz">Quiz</TabsTrigger>
+          <TabsTrigger value="quiz">{isReviewMode ? "Review" : "Quiz"}</TabsTrigger>
           <TabsTrigger value="results" disabled={!quizComplete}>Results</TabsTrigger>
         </TabsList>
         
@@ -259,17 +405,36 @@ const MultipleChoice = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold">{currentSet.title}</h1>
-                <p className="text-muted-foreground">{currentSet.description}</p>
+                <h2 className="text-xl font-bold">
+                  {isReviewMode 
+                    ? "Review Questions" 
+                    : currentSet?.title
+                  }
+                </h2>
+                <p className="text-muted-foreground">
+                  {isReviewMode
+                    ? `Reviewing ${dueReviews.length} question${dueReviews.length !== 1 ? 's' : ''}`
+                    : currentSet?.description
+                  }
+                </p>
               </div>
               
               <div className="flex items-center gap-2">
-                <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                  {currentSet.difficulty}
-                </span>
-                <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm font-medium">
-                  {currentSet.category}
-                </span>
+                {isReviewMode ? (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <History className="h-3 w-3" />
+                    Review Mode
+                  </Badge>
+                ) : (
+                  <>
+                    <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                      {currentSet?.difficulty}
+                    </span>
+                    <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm font-medium">
+                      {currentSet?.category}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             
@@ -277,7 +442,7 @@ const MultipleChoice = () => {
               <div className="flex items-center">
                 <Book className="w-4 h-4 mr-1" />
                 <span>
-                  Question {currentQuestionIndex + 1} of {currentSet.questions.length}
+                  Question {currentQuestionIndex + 1} of {isReviewMode ? dueReviews.length : currentSet?.questions.length}
                 </span>
               </div>
               
@@ -292,9 +457,14 @@ const MultipleChoice = () => {
             {currentQuestion ? (
               <Card className="mt-4">
                 <CardHeader>
-                  <CardTitle>Question {currentQuestionIndex + 1}</CardTitle>
+                  <div className="flex justify-between items-start">
+                    <CardTitle>Question {currentQuestionIndex + 1}</CardTitle>
+                    {isReviewMode && currentQuestion.nextReviewDate && (
+                      <ReviewIndicator question={currentQuestion} showDays />
+                    )}
+                  </div>
                   <CardDescription className="text-lg font-medium text-foreground">
-                    {currentQuestion.question}
+                    {currentQuestion.question || currentQuestion.text}
                   </CardDescription>
                 </CardHeader>
                 
@@ -361,12 +531,16 @@ const MultipleChoice = () => {
                         Show Answer
                       </Button>
                       <Button onClick={handleNextQuestion}>
-                        {currentQuestionIndex >= currentSet.questions.length - 1 ? 'Skip & Finish' : 'Skip'}
+                        {currentQuestionIndex >= (isReviewMode ? dueReviews.length - 1 : (currentSet?.questions.length || 0) - 1) 
+                          ? 'Skip & Finish' 
+                          : 'Skip'}
                       </Button>
                     </>
                   ) : (
                     <Button onClick={handleNextQuestion} className="ml-auto">
-                      {currentQuestionIndex >= currentSet.questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
+                      {currentQuestionIndex >= (isReviewMode ? dueReviews.length - 1 : (currentSet?.questions.length || 0) - 1) 
+                        ? 'Finish' 
+                        : 'Next Question'}
                     </Button>
                   )}
                 </CardFooter>
@@ -376,7 +550,7 @@ const MultipleChoice = () => {
                 <CardContent className="py-10 text-center">
                   <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
                   <p className="mt-4 text-lg font-medium">No questions available</p>
-                  <p className="text-muted-foreground">This quiz set has no questions.</p>
+                  <p className="text-muted-foreground">This set has no questions.</p>
                 </CardContent>
               </Card>
             )}
@@ -388,7 +562,7 @@ const MultipleChoice = () => {
             <CardHeader>
               <CardTitle>Quiz Results</CardTitle>
               <CardDescription>
-                {currentSet.title} - {formatTime(elapsedTime)}
+                {currentSet?.title} - {formatTime(elapsedTime)}
               </CardDescription>
             </CardHeader>
             
@@ -420,11 +594,11 @@ const MultipleChoice = () => {
                 <div className="flex justify-between text-sm">
                   <span>Score</span>
                   <span className="font-medium">
-                    {Math.round((score.correct / currentSet.questions.length) * 100)}%
+                    {Math.round((score.correct / (currentSet?.questions.length || 1)) * 100)}%
                   </span>
                 </div>
                 <Progress
-                  value={(score.correct / currentSet.questions.length) * 100}
+                  value={(score.correct / (currentSet?.questions.length || 1)) * 100}
                   className="h-2"
                 />
               </div>
@@ -448,6 +622,11 @@ const MultipleChoice = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <ReviewCelebration 
+        isVisible={showCelebration} 
+        onComplete={handleCelebrationComplete} 
+      />
     </div>
   );
 };

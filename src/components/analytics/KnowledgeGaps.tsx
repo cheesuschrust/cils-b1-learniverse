@@ -2,6 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Clock } from 'lucide-react';
 
 interface KnowledgeGapsProps {
   data: Array<{
@@ -9,6 +10,7 @@ interface KnowledgeGapsProps {
     count: number;
     difficulty: string[];
     percentage: number;
+    reviewsDue?: number; // Added for review info
   }>;
 }
 
@@ -56,6 +58,16 @@ const KnowledgeGaps: React.FC<KnowledgeGapsProps> = ({ data }) => {
                 {diff}
               </Badge>
             ))}
+            
+            {gap.reviewsDue && gap.reviewsDue > 0 && (
+              <Badge 
+                variant="outline" 
+                className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 ml-auto"
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                {gap.reviewsDue} review{gap.reviewsDue !== 1 ? 's' : ''} due
+              </Badge>
+            )}
           </div>
         </div>
       ))}

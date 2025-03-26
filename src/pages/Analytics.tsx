@@ -1,392 +1,275 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useAnalytics, DateRangeOption } from '@/hooks/useAnalytics';
-import { 
-  TrendingUp, 
-  Calendar, 
-  BarChart as BarChartIcon, 
-  Clock, 
-  Award, 
-  Download,
-  Loader2
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CategoryPerformance } from '@/components/analytics/CategoryPerformance';
+import { KnowledgeGaps } from '@/components/analytics/KnowledgeGaps';
+import { ProgressOverTime } from '@/components/analytics/ProgressOverTime';
+import { SessionAnalysis } from '@/components/analytics/SessionAnalysis';
+import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
+import { StudyRecommendations } from '@/components/analytics/StudyRecommendations';
+import { GoalTracker } from '@/components/analytics/GoalTracker';
+import { AnalyticsReport } from '@/components/analytics/AnalyticsReport';
+import ReviewProgress from '@/components/analytics/ReviewProgress';
+import { useAuth } from '@/contexts/AuthContext';
+import questionService from '@/services/questionService';
+import { ReviewPerformance, ReviewSchedule } from '@/types/question';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ProgressCircle } from '@/components/analytics/ProgressCircle';
-import ProgressOverTime from '@/components/analytics/ProgressOverTime';
-import ActivityHeatmap from '@/components/analytics/ActivityHeatmap';
-import CategoryPerformance from '@/components/analytics/CategoryPerformance';
-import KnowledgeGaps from '@/components/analytics/KnowledgeGaps';
-import SessionAnalysis from '@/components/analytics/SessionAnalysis';
-import GoalTracker from '@/components/analytics/GoalTracker';
-import StudyRecommendations from '@/components/analytics/StudyRecommendations';
-import AnalyticsReport from '@/components/analytics/AnalyticsReport';
-import { useToast } from '@/components/ui/use-toast';
-
-const AnalyticsPage: React.FC = () => {
-  const { 
-    isLoading, 
-    error, 
-    selectedRange, 
-    setSelectedRange,
-    activityData,
-    heatmapData,
-    categoryData,
-    knowledgeGaps,
-    sessionStats,
-    goals,
-    streak,
-    recommendations,
-    refreshData,
-    generateReport
-  } = useAnalytics();
-  
-  const [activeTab, setActiveTab] = useState('overview');
-  const [showingReport, setShowingReport] = useState(false);
-  const { toast } = useToast();
-
-  const handleRangeChange = (range: DateRangeOption) => {
-    setSelectedRange(range);
-  };
-
-  const handleRefresh = () => {
-    refreshData();
-    toast({
-      title: "Data refreshed",
-      description: "Your analytics data has been updated.",
-    });
-  };
-
-  const handleExportClick = async () => {
-    try {
-      setShowingReport(true);
-    } catch (err) {
-      toast({
-        title: "Error generating report",
-        description: "There was a problem creating your analytics report.",
-        variant: "destructive"
-      });
+const Analytics = () => {
+  const { user } = useAuth();
+  const [reviewStats, setReviewStats] = useState<{
+    schedule: ReviewSchedule;
+    performance: ReviewPerformance;
+  }>({
+    schedule: {
+      dueToday: 0,
+      dueThisWeek: 0,
+      dueNextWeek: 0,
+      dueByDate: {}
+    },
+    performance: {
+      totalReviews: 0,
+      correctReviews: 0,
+      efficiency: 0,
+      streakDays: 0,
+      reviewsByCategory: {}
     }
-  };
+  });
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Calculate summary metrics
-  const getTotalQuestionsAnswered = () => {
-    return activityData.reduce((sum, day) => sum + day.total, 0);
-  };
+  useEffect(() => {
+    if (user) {
+      const loadReviewStats = async () => {
+        try {
+          const stats = await questionService.getReviewStats(user.id);
+          setReviewStats(stats);
+        } catch (error) {
+          console.error('Error loading review stats:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadReviewStats();
+    }
+  }, [user]);
   
-  const getAverageScore = () => {
-    const daysWithActivity = activityData.filter(day => day.attempts > 0);
-    if (daysWithActivity.length === 0) return 0;
-    
-    const totalScore = daysWithActivity.reduce((sum, day) => sum + day.score, 0);
-    return Math.round(totalScore / daysWithActivity.length);
-  };
+  // Mock data for demonstration
+  const categoryData = [
+    {
+      category: "Vocabulary",
+      total: 120,
+      correct: 98,
+      masteryPercentage: 82,
+      attempts: 150,
+      averageScore: 78,
+      reviewEfficiency: 90 // Added review data
+    },
+    {
+      category: "Grammar",
+      total: 85,
+      correct: 62,
+      masteryPercentage: 73,
+      attempts: 110,
+      averageScore: 68,
+      reviewEfficiency: 85
+    },
+    {
+      category: "Conversation",
+      total: 45,
+      correct: 40,
+      masteryPercentage: 89,
+      attempts: 50,
+      averageScore: 84,
+      reviewEfficiency: 95
+    },
+    {
+      category: "Reading",
+      total: 65,
+      correct: 50,
+      masteryPercentage: 77,
+      attempts: 80,
+      averageScore: 72,
+      reviewEfficiency: 80
+    }
+  ];
   
-  const getActiveDays = () => {
-    return activityData.filter(day => day.attempts > 0).length;
-  };
-
-  if (showingReport) {
-    return (
-      <AnalyticsReport 
-        onClose={() => setShowingReport(false)}
-        reportData={{
-          activityData,
-          categoryData,
-          knowledgeGaps,
-          sessionStats,
-          goals,
-          streak,
-          recommendations,
-          dateRange: selectedRange
-        }}
-      />
-    );
-  }
-
+  const knowledgeGapsData = [
+    {
+      tag: "Verb Conjugation",
+      count: 28,
+      difficulty: ["intermediate", "advanced"],
+      percentage: 65,
+      reviewsDue: 8  // Added review data
+    },
+    {
+      tag: "Prepositions",
+      count: 22,
+      difficulty: ["beginner", "intermediate"],
+      percentage: 72,
+      reviewsDue: 5
+    },
+    {
+      tag: "Plural Nouns",
+      count: 18,
+      difficulty: ["beginner"],
+      percentage: 80,
+      reviewsDue: 3
+    },
+    {
+      tag: "Past Tense",
+      count: 15,
+      difficulty: ["intermediate", "advanced"],
+      percentage: 60,
+      reviewsDue: 6
+    },
+    {
+      tag: "Food Vocabulary",
+      count: 12,
+      difficulty: ["beginner"],
+      percentage: 85,
+      reviewsDue: 2
+    }
+  ];
+  
   return (
-    <>
+    <div className="container mx-auto py-6 px-4">
       <Helmet>
-        <title>Learning Analytics | Your Learning Progress</title>
+        <title>Learning Analytics | Italian Learning</title>
       </Helmet>
-      <div className="container py-6 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-2 md:flex-row md:justify-between md:items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Learning Analytics</h1>
-            <p className="text-muted-foreground">Track your progress and identify areas for improvement</p>
+      
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Learning Analytics</h1>
+        <AnalyticsReport />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Overall Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              <div className="w-20 h-20 rounded-full border-8 border-primary flex items-center justify-center">
+                <span className="text-2xl font-bold">78%</span>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total questions</p>
+                <p className="text-2xl font-bold">367</p>
+                <p className="text-xs text-muted-foreground">241 correct (66%)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Study Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              <div className="w-20 h-20 rounded-full border-8 border-secondary flex items-center justify-center">
+                <span className="text-2xl font-bold">34</span>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total time</p>
+                <p className="text-2xl font-bold">12:45</p>
+                <p className="text-xs text-muted-foreground">Average 22 mins per session</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <ReviewProgress 
+          reviewPerformance={reviewStats.performance}
+          reviewSchedule={reviewStats.schedule}
+        />
+      </div>
+      
+      <Tabs defaultValue="performance" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-4">
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="goals">Goals</TabsTrigger>
+          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="performance" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Category Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoryPerformance data={categoryData} />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Knowledge Gaps</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <KnowledgeGaps data={knowledgeGapsData} />
+              </CardContent>
+            </Card>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="flex bg-muted rounded-md p-1">
-              <Button 
-                variant={selectedRange === '7d' ? 'secondary' : 'ghost'} 
-                size="sm"
-                onClick={() => handleRangeChange('7d')}
-              >
-                7 days
-              </Button>
-              <Button 
-                variant={selectedRange === '30d' ? 'secondary' : 'ghost'} 
-                size="sm"
-                onClick={() => handleRangeChange('30d')}
-              >
-                30 days
-              </Button>
-              <Button 
-                variant={selectedRange === '90d' ? 'secondary' : 'ghost'} 
-                size="sm"
-                onClick={() => handleRangeChange('90d')}
-              >
-                90 days
-              </Button>
-              <Button 
-                variant={selectedRange === 'all' ? 'secondary' : 'ghost'} 
-                size="sm"
-                onClick={() => handleRangeChange('all')}
-              >
-                All time
-              </Button>
-            </div>
-            <Button size="icon" variant="outline" onClick={handleRefresh}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <TrendingUp className="h-4 w-4" />
-              )}
-            </Button>
-            <Button variant="outline" onClick={handleExportClick}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-        ) : error ? (
           <Card>
-            <CardContent className="py-10">
-              <div className="text-center">
-                <h3 className="text-lg font-medium">Error loading analytics data</h3>
-                <p className="text-muted-foreground mt-2">{error.message}</p>
-                <Button variant="outline" className="mt-4" onClick={() => refreshData()}>
-                  Try again
-                </Button>
-              </div>
+            <CardHeader>
+              <CardTitle>Progress Over Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProgressOverTime />
             </CardContent>
           </Card>
-        ) : (
-          <>
-            {/* Summary metrics */}
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Questions Answered
-                  </CardTitle>
-                  <BarChartIcon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{getTotalQuestionsAnswered()}</div>
-                  <p className="text-xs text-muted-foreground">
-                    During the selected period
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Average Score
-                  </CardTitle>
-                  <Award className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{getAverageScore()}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    Across all content types
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Current Streak
-                  </CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {streak?.currentStreak || 0} days
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {streak?.longestStreak ? `Longest: ${streak.longestStreak} days` : 'Start a streak today!'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="overview">
-              <TabsList className="mb-6">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
-                <TabsTrigger value="insights">Insights</TabsTrigger>
-                <TabsTrigger value="goals">Goals</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <ProgressOverTime data={activityData} />
-                  <CategoryPerformance data={categoryData} />
-                </div>
-                
-                <div className="grid gap-6 md:grid-cols-3">
-                  <Card className="md:col-span-2">
-                    <CardHeader>
-                      <CardTitle>Activity Heatmap</CardTitle>
-                      <CardDescription>
-                        Your activity patterns by day and time
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ActivityHeatmap data={heatmapData} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Study Recommendations</CardTitle>
-                      <CardDescription>
-                        Suggested focus areas
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <StudyRecommendations recommendations={recommendations.slice(0, 3)} />
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="progress" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <ProgressOverTime data={activityData} />
-                  <SessionAnalysis data={sessionStats} />
-                </div>
-                
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Activity Calendar</CardTitle>
-                      <CardDescription>
-                        Your learning activity over time
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ActivityHeatmap data={heatmapData} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Session Time Analysis</CardTitle>
-                      <CardDescription>
-                        Time spent and effective learning periods
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <ProgressCircle 
-                            value={sessionStats?.averageSessionLength || 0} 
-                            maxValue={60}
-                            label="mins"
-                            title="Avg. Session"
-                            size={120}
-                          />
-                        </div>
-                        <div className="text-center">
-                          <ProgressCircle 
-                            value={sessionStats?.timePerQuestion || 0} 
-                            maxValue={120}
-                            label="secs"
-                            title="Per Question"
-                            size={120}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6 space-y-3">
-                        <div>
-                          <p className="text-sm font-medium">Optimal study time</p>
-                          <p className="text-2xl font-bold">
-                            {sessionStats?.optimalTimeOfDay || 'Not enough data'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Completion rate</p>
-                          <p className="text-2xl font-bold">
-                            {sessionStats?.completionRate || 0}%
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="insights" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Knowledge Gaps</CardTitle>
-                      <CardDescription>
-                        Areas where you've struggled the most
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <KnowledgeGaps data={knowledgeGaps} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Content Mastery</CardTitle>
-                      <CardDescription>
-                        Your performance across categories
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <CategoryPerformance data={categoryData} />
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Personalized Study Recommendations</CardTitle>
-                    <CardDescription>
-                      Based on your performance and learning patterns
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <StudyRecommendations recommendations={recommendations} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="goals" className="space-y-6">
-                <GoalTracker goals={goals} />
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
-      </div>
-    </>
+        </TabsContent>
+        
+        <TabsContent value="activity" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity Heatmap</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityHeatmap />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SessionAnalysis />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="goals" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Goal Tracker</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GoalTracker />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="recommendations" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Study Recommendations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StudyRecommendations />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
-export default AnalyticsPage;
+export default Analytics;
