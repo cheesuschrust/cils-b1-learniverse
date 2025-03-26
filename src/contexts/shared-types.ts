@@ -43,14 +43,16 @@ export interface User {
   displayName?: string;
   phoneNumber?: string;
   address?: string;
-  profileImage?: string; // Added this property
-  photoURL?: string; // Added this property
-  avatar?: string; // Added for compatibility
+  profileImage?: string;
+  photoURL?: string;
+  avatar?: string;
   metrics: {
     totalQuestions: number;
     correctAnswers: number;
     streak: number;
   };
+  name?: string;
+  isAdmin?: boolean;
 }
 
 export interface UserPreferences {
@@ -69,7 +71,7 @@ export interface UserPreferences {
   aiModelSize?: string;
   aiProcessingOnDevice?: boolean;
   confidenceScoreVisible?: boolean;
-  bio?: string; // Add the bio property
+  bio?: string;
 }
 
 // Email settings
@@ -106,12 +108,84 @@ export interface EmailSettings {
   temporaryInboxDuration?: number;
 }
 
-// Import required types from other files
-import { License } from "@/types/license";
-import { ChatSession, ChatbotTrainingExample } from "@/types/chatbot";
+// License types - defined here to avoid circular imports
+export type LicenseType = 'university' | 'k12' | 'language-school' | 'corporate';
+export type LicenseStatus = 'active' | 'expired' | 'pending' | 'suspended';
+export type RenewalStatus = 'pending' | 'in-progress' | 'renewed' | 'expired' | 'not-started';
+
+export interface License {
+  id: string;
+  name: string;
+  type: LicenseType;
+  plan: string;
+  seats: number;
+  usedSeats: number;
+  startDate: string;
+  endDate: string;
+  status: LicenseStatus;
+  contactName: string;
+  contactEmail: string;
+  domain: string;
+  customization: {
+    logo: string;
+    colors: {
+      primary: string;
+      secondary: string;
+    };
+  };
+  value: number;
+  renewalStatus: RenewalStatus;
+}
+
+// Chat interfaces
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+}
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messages: ChatMessage[];
+  context?: string;
+}
+
+export interface ChatbotTrainingExample {
+  id: string;
+  query: string;
+  response: string;
+  category: string;
+  createdAt: Date;
+  createdBy: string;
+}
+
+// Import other types
 import { Notification } from "@/types/notification";
 import { Flashcard, FlashcardSet } from "@/types/flashcard";
-import { AdSettings, AdUnit } from "@/types/ad";
+
+// Ad types
+export interface AdUnit {
+  id: string;
+  name: string;
+  type: 'banner' | 'sidebar' | 'interstitial' | 'native';
+  content: string;
+  targetUrl: string;
+  impression: number;
+  clicks: number;
+  active: boolean;
+}
+
+export interface AdSettings {
+  enabled: boolean;
+  placement: string[];
+  frequency: number;
+  userGroupTargeting: string[];
+}
 
 // Mock database
 export interface MockDatabase {

@@ -35,8 +35,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
 }) => {
   const { toast } = useToast();
   const { voicePreference, autoPlayAudio } = useUserPreferences();
-  const { isAIEnabled } = useAIUtils();
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const { isAIEnabled, speakText, isSpeaking, cancelSpeech } = useAIUtils();
   const [error, setError] = useState<string | null>(null);
   
   // Check if speech is supported
@@ -46,10 +45,10 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   useEffect(() => {
     return () => {
       if (isSpeaking) {
-        stopSpeaking();
+        cancelSpeech();
       }
     };
-  }, [isSpeaking]);
+  }, [isSpeaking, cancelSpeech]);
 
   // Auto-play functionality - controlled by user preference
   useEffect(() => {
@@ -87,12 +86,11 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
     
     if (isSpeaking || disabled || !word) return;
     
-    setIsSpeaking(true);
     setError(null);
     
     try {
       console.log(`Speaking word: "${word}" in ${language} language`);
-      await speak(word, language === 'it' ? 'it' : 'en', voicePreference);
+      await speakText(word, language);
       if (onPlayComplete) {
         onPlayComplete();
       }
@@ -105,8 +103,6 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
         description: "Couldn't pronounce this word. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsSpeaking(false);
     }
   };
 

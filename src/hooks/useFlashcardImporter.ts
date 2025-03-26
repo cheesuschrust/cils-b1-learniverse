@@ -9,6 +9,7 @@ const mockImportFlashcards = async (content: string, options: ImportOptions): Pr
     imported: 10,
     importedCards: 10,
     skipped: 0,
+    failed: 0,
     errors: []
   };
 };
@@ -30,9 +31,13 @@ export const useFlashcardImporter = () => {
     try {
       const result = await mockImportFlashcards(content, options);
       
-      // If result doesn't have importedCards but has imported (legacy field), map it
-      if (!result.importedCards && result.imported) {
+      // Ensure result has all required properties
+      if (result.importedCards === undefined) {
         result.importedCards = result.imported;
+      }
+      
+      if (result.failed === undefined) {
+        result.failed = 0;
       }
       
       setImportResult(result);

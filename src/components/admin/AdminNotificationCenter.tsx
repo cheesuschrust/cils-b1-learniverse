@@ -10,9 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import NotificationItem from '@/components/notifications/NotificationItem';
 import { cn } from '@/lib/utils';
+import { Notification } from '@/types/notification';
 
 const AdminNotificationCenter: React.FC = () => {
-  const { notifications, unreadCount, markAllAsRead, getFileProcessingNotifications, markAsRead, dismissNotification } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAllAsRead, 
+    getFileProcessingNotifications, 
+    markAsRead, 
+    dismissNotification 
+  } = useNotifications();
+  
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -116,7 +125,7 @@ const AdminNotificationCenter: React.FC = () => {
     </div>
   );
   
-  function renderNotificationList(notificationList: any[]) {
+  function renderNotificationList(notificationList: Notification[]) {
     if (notificationList.length === 0) {
       return (
         <Card className="flex items-center justify-center p-6">

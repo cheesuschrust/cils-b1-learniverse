@@ -2,15 +2,17 @@
 import { renderHook, act } from '@testing-library/react';
 import { useFlashcardImporter } from './useFlashcardImporter';
 import { useFlashcards } from './useFlashcards';
+import { describe, it, expect, beforeEach, jest } from 'vitest';
+import { ImportFormat } from '@/types/flashcard';
 
 // Mock the useFlashcards hook
-jest.mock('./useFlashcards', () => ({
-  useFlashcards: jest.fn(),
+vi.mock('./useFlashcards', () => ({
+  useFlashcards: vi.fn(),
 }));
 
 describe('useFlashcardImporter Hook', () => {
-  const mockImportFlashcards = jest.fn();
-  const mockExportFlashcards = jest.fn();
+  const mockImportFlashcards = vi.fn();
+  const mockExportFlashcards = vi.fn();
   const mockFlashcardSets = [
     { id: 'set1', name: 'Test Set 1' },
     { id: 'set2', name: 'Test Set 2' },
@@ -18,7 +20,7 @@ describe('useFlashcardImporter Hook', () => {
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Setup default mock implementation
     (useFlashcards as jest.Mock).mockReturnValue({
@@ -28,7 +30,7 @@ describe('useFlashcardImporter Hook', () => {
     });
   });
 
-  test('initializes with correct default values', () => {
+  it('initializes with correct default values', () => {
     const { result } = renderHook(() => useFlashcardImporter());
     
     expect(result.current.importResult).toBeNull();
@@ -37,7 +39,7 @@ describe('useFlashcardImporter Hook', () => {
     expect(result.current.flashcardSets).toEqual(mockFlashcardSets);
   });
 
-  test('handleImport calls importFlashcards with correct params', async () => {
+  it('handleImport calls importFlashcards with correct params', async () => {
     mockImportFlashcards.mockResolvedValueOnce({
       success: true,
       imported: 5,
@@ -48,7 +50,8 @@ describe('useFlashcardImporter Hook', () => {
     const { result } = renderHook(() => useFlashcardImporter());
     
     const content = 'test,csv,content';
-    const options = { format: 'csv' as const, includeExamples: true };
+    const importFormat: ImportFormat = { format: 'csv' };
+    const options = { format: importFormat, includeExamples: true };
     
     let importResult;
     await act(async () => {
@@ -73,7 +76,7 @@ describe('useFlashcardImporter Hook', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  test('handleImport sets loading state correctly', async () => {
+  it('handleImport sets loading state correctly', async () => {
     mockImportFlashcards.mockImplementation(() => {
       return new Promise(resolve => {
         setTimeout(() => {
@@ -91,7 +94,8 @@ describe('useFlashcardImporter Hook', () => {
     
     let promise;
     act(() => {
-      promise = result.current.handleImport('content', { format: 'json' as const });
+      const importFormat: ImportFormat = { format: 'json' };
+      promise = result.current.handleImport('content', { format: importFormat });
       expect(result.current.loading).toBe(true);
     });
     
@@ -102,14 +106,15 @@ describe('useFlashcardImporter Hook', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  test('handleImport handles errors correctly', async () => {
+  it('handleImport handles errors correctly', async () => {
     const errorMessage = 'Import failed';
     mockImportFlashcards.mockRejectedValueOnce(new Error(errorMessage));
     
     const { result } = renderHook(() => useFlashcardImporter());
     
     await act(async () => {
-      await expect(result.current.handleImport('content', { format: 'csv' as const }))
+      const importFormat: ImportFormat = { format: 'csv' };
+      await expect(result.current.handleImport('content', { format: importFormat }))
         .rejects.toThrow(errorMessage);
     });
     
@@ -117,7 +122,7 @@ describe('useFlashcardImporter Hook', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  test('handleExport calls exportFlashcards with correct params', () => {
+  it('handleExport calls exportFlashcards with correct params', () => {
     mockExportFlashcards.mockReturnValueOnce('exported,content');
     
     const { result } = renderHook(() => useFlashcardImporter());
@@ -131,7 +136,7 @@ describe('useFlashcardImporter Hook', () => {
     expect(exportResult).toBe('exported,content');
   });
 
-  test('handleExport handles errors correctly', () => {
+  it('handleExport handles errors correctly', () => {
     const errorMessage = 'Export failed';
     mockExportFlashcards.mockImplementationOnce(() => {
       throw new Error(errorMessage);
@@ -144,12 +149,5 @@ describe('useFlashcardImporter Hook', () => {
     });
     
     expect(result.current.error).toBe(errorMessage);
-  });
-
-  test('exposes ImportOptions and ImportResult types', () => {
-    // This is just a typescript check, not a runtime test
-    const { ImportOptions, ImportResult } = require('./useFlashcardImporter');
-    expect(typeof ImportOptions).toBe('undefined'); // Types don't exist at runtime
-    expect(typeof ImportResult).toBe('undefined'); // Types don't exist at runtime
   });
 });

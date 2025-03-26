@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, Rotate, Server, Cpu, Database, HardDrive } from 'lucide-react';
+import { CheckCircle, AlertCircle, RefreshCw, Server, Cpu, Database, HardDrive } from 'lucide-react';
 import { useAI } from '@/hooks/useAI';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -113,7 +113,7 @@ const SystemTester: React.FC = () => {
   };
   
   const getTestIcon = (test: string, status: string) => {
-    if (status === 'running') return <Rotate className="h-5 w-5 animate-spin" />;
+    if (status === 'running') return <RefreshCw className="h-5 w-5 animate-spin" />;
     if (status === 'success') return <CheckCircle className="h-5 w-5 text-green-500" />;
     if (status === 'error') return <AlertCircle className="h-5 w-5 text-red-500" />;
     

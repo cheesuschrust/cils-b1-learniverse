@@ -10,6 +10,8 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   size = 'md',
   className,
   contentType,
+  showPercentage = false,
+  indicatorClassName,
   ...props
 }) => {
   // Support both value and score props (score is for backward compatibility)
@@ -70,8 +72,13 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
         value={percentage}
         max={100}
         className={cn("rounded-full", getSizeClasses())}
-        indicator={getColorClass()}
+        indicator={indicatorClassName || getColorClass()}
       />
+      {showPercentage && (
+        <div className="text-xs text-center text-muted-foreground mt-1">
+          {percentage}%
+        </div>
+      )}
     </div>
   );
 };

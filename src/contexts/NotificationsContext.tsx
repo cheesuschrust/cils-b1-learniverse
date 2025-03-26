@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
   unreadCount: 0,
-  addNotification: () => {},
+  addNotification: () => '',
   markAsRead: () => {},
   markAllAsRead: () => {},
   dismissNotification: () => {},
@@ -31,7 +31,7 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
   const unreadCount = notifications.filter(n => !n.read).length;
   
   // Add a new notification
-  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): string => {
     const now = new Date();
     const newNotification: Notification = {
       id: uuidv4(),
@@ -50,6 +50,8 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
         variant: notification.type === 'error' ? 'destructive' : 'default',
       });
     }
+    
+    return newNotification.id;
   };
   
   // Mark a notification as read

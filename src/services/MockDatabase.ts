@@ -1,5 +1,7 @@
 
-import { MockDatabase, User, EmailSettings } from "@/contexts/shared-types";
+import { MockDatabase, User, EmailSettings, UserRole, License, LicenseStatus, ChatSession, ChatbotTrainingExample, AdSettings, AdUnit } from "@/contexts/shared-types";
+import { Notification } from "@/types/notification";
+import { Flashcard, FlashcardSet } from "@/types/flashcard";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 
@@ -23,7 +25,7 @@ export const getDatabase = async (): Promise<MockDatabase> => {
     firstName: 'Admin',
     lastName: 'User',
     email: 'admin@italianlearning.app',
-    role: 'admin',
+    role: 'admin' as UserRole,
     isVerified: true,
     createdAt: new Date('2023-01-01'),
     lastLogin: new Date(),
@@ -48,7 +50,9 @@ export const getDatabase = async (): Promise<MockDatabase> => {
       totalQuestions: 1250,
       correctAnswers: 980,
       streak: 75,
-    }
+    },
+    name: 'Admin User',
+    isAdmin: true
   };
   
   const regularUser: User = {
@@ -56,7 +60,7 @@ export const getDatabase = async (): Promise<MockDatabase> => {
     firstName: 'Marco',
     lastName: 'Rossi',
     email: 'user@italianlearning.app',
-    role: 'user',
+    role: 'user' as UserRole,
     isVerified: true,
     createdAt: new Date('2023-03-15'),
     lastLogin: new Date(),
@@ -81,7 +85,9 @@ export const getDatabase = async (): Promise<MockDatabase> => {
       totalQuestions: 450,
       correctAnswers: 320,
       streak: 15,
-    }
+    },
+    name: 'Marco Rossi',
+    isAdmin: false
   };
   
   // Create mock email settings
@@ -113,13 +119,115 @@ export const getDatabase = async (): Promise<MockDatabase> => {
     temporaryInboxDuration: 24 // hours
   };
   
-  // Create mock database with users
+  // Mock licenses
+  const mockLicenses: License[] = [
+    {
+      id: uuidv4(),
+      name: 'University of Florence',
+      type: 'university',
+      plan: 'premium',
+      seats: 500,
+      usedSeats: 342,
+      startDate: '2023-01-01',
+      endDate: '2023-12-31',
+      status: 'active' as LicenseStatus,
+      contactName: 'Prof. Rossi',
+      contactEmail: 'rossi@unifi.it',
+      domain: 'unifi.it',
+      customization: {
+        logo: '/logos/unifi.png',
+        colors: {
+          primary: '#00549F',
+          secondary: '#E6B012'
+        }
+      },
+      value: 10000,
+      renewalStatus: 'pending'
+    }
+  ];
+  
+  // Mock chat sessions
+  const mockChatSessions: ChatSession[] = [];
+  
+  // Mock chatbot training examples
+  const mockChatbotTraining: ChatbotTrainingExample[] = [];
+  
+  // Mock notifications
+  const mockNotifications: Notification[] = [
+    {
+      id: uuidv4(),
+      title: 'Welcome to Italian Learning!',
+      message: 'Thank you for joining our platform. Start your learning journey today!',
+      type: 'info',
+      createdAt: new Date(),
+      read: false,
+      priority: 'normal',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+    }
+  ];
+  
+  // Mock flashcards
+  const mockFlashcards: Flashcard[] = [
+    {
+      id: uuidv4(),
+      italian: 'casa',
+      english: 'house',
+      level: 1,
+      mastered: false,
+      tags: ['basics', 'home'],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      nextReview: new Date(),
+      lastReviewed: null
+    }
+  ];
+  
+  // Mock flashcard sets
+  const mockFlashcardSets: FlashcardSet[] = [
+    {
+      id: uuidv4(),
+      name: 'Basic Italian Vocabulary',
+      description: 'Essential words for beginners',
+      cards: mockFlashcards,
+      tags: ['basics', 'beginner'],
+      creator: admin.id,
+      difficulty: 'beginner',
+      category: 'vocabulary',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      totalCards: 1,
+      masteredCards: 0,
+      isPublic: true,
+      isFavorite: false
+    }
+  ];
+  
+  // Mock ad settings
+  const mockAdSettings: AdSettings = {
+    enabled: false,
+    placement: ['sidebar', 'footer'],
+    frequency: 3,
+    userGroupTargeting: ['free_users']
+  };
+  
+  // Mock ad units
+  const mockAdUnits: AdUnit[] = [];
+  
+  // Create mock database with data
   dbInstance = {
     users: [admin, regularUser],
     logs: [],
     emailSettings,
     resetTokens: new Map(),
-    verificationTokens: new Map()
+    verificationTokens: new Map(),
+    licenses: mockLicenses,
+    chatSessions: mockChatSessions,
+    chatbotTraining: mockChatbotTraining,
+    notifications: mockNotifications,
+    flashcards: mockFlashcards,
+    flashcardSets: mockFlashcardSets,
+    adSettings: mockAdSettings,
+    adUnits: mockAdUnits
   };
   
   // Store the passwords in the exported passwordHash map

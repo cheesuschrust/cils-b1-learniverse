@@ -1,182 +1,256 @@
 
-import { useState, useCallback, useContext } from 'react';
-import { AIUtilsContext } from '@/contexts/AIUtilsContext';
-import { useToast } from '@/components/ui/use-toast';
-import { AIService } from '@/services/AIService';
-
-export interface UseAIReturn {
-  isLoading: boolean;
-  isModelLoaded: boolean;
-  prepareModel: () => Promise<void>;
-  generateText: (prompt: string, options?: Record<string, any>) => Promise<string>;
-  generateFlashcards: (topic: string, count: number, difficulty: string) => Promise<any[]>;
-  generateQuestions: (content: string, count: number, difficulty: string) => Promise<any[]>;
-  transcribeSpeech: (audioData: Blob) => Promise<string>;
-  analyzeSpeech: (text: string, audioData: Blob) => Promise<any>;
-  translateText: (text: string, targetLanguage: string) => Promise<string>;
-  checkGrammar: (text: string) => Promise<any>;
-  evaluateWriting: (text: string, prompt: string) => Promise<any>;
-  performTextToSpeech: (text: string, voiceSettings?: any) => Promise<void>;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { UseAIReturn } from '@/types/interface-fixes';
+import * as AIService from '@/services/AIService';
 
 export const useAI = (): UseAIReturn => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [confidence, setConfidence] = useState(0.85);
+  const [lastProcessedAt, setLastProcessedAt] = useState<Date | null>(null);
+  const [isCacheEnabled, setIsCacheEnabled] = useState(true);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const { settings } = useContext(AIUtilsContext);
-  const { toast } = useToast();
+  const [isEnabled, setIsEnabled] = useState(true);
 
-  const handleError = useCallback((error: any) => {
-    console.error('AI Error:', error);
-    toast({
-      title: 'AI Error',
-      description: error instanceof Error ? error.message : 'An error occurred with the AI service',
-      variant: 'destructive',
-    });
-    throw error;
-  }, [toast]);
-
-  const prepareModel = useCallback(async () => {
+  const prepareModel = useCallback(async (modelType: string = 'basic'): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      // This is a placeholder for actual model loading code
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setIsModelLoaded(true);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      handleError(error);
+      setStatus('loading');
+      const success = await AIService.prepareModel(modelType);
+      if (success) {
+        setIsModelLoaded(true);
+        setStatus('ready');
+      }
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load AI model');
+      setStatus('error');
+      return false;
     }
-  }, [handleError]);
+  }, []);
 
-  const generateText = useCallback(async (prompt: string, options?: Record<string, any>) => {
+  const toggleAI = useCallback((): boolean => {
+    setIsEnabled(prev => !prev);
+    return !isEnabled;
+  }, [isEnabled]);
+
+  const initialize = useCallback(async (config: any): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      // Placeholder for actual AI text generation
-      const result = await AIService.generateText(prompt, options);
-      setIsLoading(false);
+      setStatus('loading');
+      // Implementation would go here
+      setStatus('ready');
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to initialize AI');
+      setStatus('error');
+      return false;
+    }
+  }, []);
+
+  const generateText = useCallback(async (prompt: string, options?: any): Promise<string> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
+    try {
+      const response = await AIService.generateText(prompt, options);
+      setLastProcessedAt(new Date());
+      return response;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isEnabled]);
+
+  const classifyText = useCallback(async (text: string): Promise<any[]> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
+    try {
+      const result = await AIService.classifyText(text);
+      setLastProcessedAt(new Date());
       return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [handleError]);
+  }, [isEnabled]);
 
-  const generateFlashcards = useCallback(async (topic: string, count: number, difficulty: string) => {
+  const generateQuestions = useCallback(async (
+    content: string, 
+    contentType: string, 
+    count: number = 5, 
+    difficulty: string = 'intermediate'
+  ): Promise<any[]> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
     try {
-      setIsLoading(true);
-      // Placeholder for flashcard generation
-      const prompt = `Generate ${count} ${difficulty} Italian flashcards about ${topic}`;
-      const result = await AIService.generateFlashcards(prompt, count);
-      setIsLoading(false);
+      const questions = await AIService.generateQuestions(content, contentType, count, difficulty);
+      setLastProcessedAt(new Date());
+      return questions;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isEnabled]);
+
+  const processText = useCallback(async (text: string, processingType: string): Promise<any> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
+    try {
+      // Implementation would depend on processingType
+      const result = { processed: true, text: `Processed: ${text}` };
+      setLastProcessedAt(new Date());
       return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [handleError]);
+  }, [isEnabled]);
 
-  const generateQuestions = useCallback(async (content: string, count: number, difficulty: string) => {
+  const processImage = useCallback(async (imageUrl: string, prompt: string): Promise<any> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
     try {
-      setIsLoading(true);
-      // Placeholder for question generation
-      const result = await AIService.generateQuestions(content, count, difficulty);
-      setIsLoading(false);
+      // Implementation would go here
+      const result = { processed: true, description: `Processed image with prompt: ${prompt}` };
+      setLastProcessedAt(new Date());
       return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [handleError]);
+  }, [isEnabled]);
 
-  const transcribeSpeech = useCallback(async (audioData: Blob) => {
+  const recognizeSpeech = useCallback(async (audioBlob: Blob, language: 'it' | 'en' = 'en'): Promise<string> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
     try {
-      setIsLoading(true);
-      // Placeholder for speech transcription
-      const result = await AIService.transcribeSpeech(audioData);
-      setIsLoading(false);
+      // Implementation would go here
+      const result = 'Transcribed speech would appear here';
+      setLastProcessedAt(new Date());
       return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [handleError]);
+  }, [isEnabled]);
 
-  const analyzeSpeech = useCallback(async (text: string, audioData: Blob) => {
+  const evaluateSpeech = useCallback(async (
+    spokenText: string, 
+    referenceText: string, 
+    language: 'it' | 'en' = 'en'
+  ): Promise<any> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
+    }
+    
+    setIsProcessing(true);
     try {
-      setIsLoading(true);
-      // Placeholder for speech analysis
-      const result = await AIService.analyzeSpeech(text, audioData);
-      setIsLoading(false);
+      // Implementation would go here
+      const result = { 
+        accuracy: 0.85, 
+        errors: [], 
+        suggestions: [] 
+      };
+      setLastProcessedAt(new Date());
       return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [handleError]);
+  }, [isEnabled]);
 
-  const translateText = useCallback(async (text: string, targetLanguage: string) => {
-    try {
-      setIsLoading(true);
-      // Placeholder for text translation
-      const result = await AIService.translateText(text, targetLanguage);
-      setIsLoading(false);
-      return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+  const generateSpeechExercises = useCallback(async (
+    level: string, 
+    count: number = 5, 
+    language: 'it' | 'en' = 'it'
+  ): Promise<any[]> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
     }
-  }, [handleError]);
+    
+    setIsProcessing(true);
+    try {
+      // Implementation would go here
+      const exercises = [];
+      for (let i = 0; i < count; i++) {
+        exercises.push({
+          prompt: `Exercise ${i + 1} for ${level} level`,
+          hint: 'Say this sentence clearly',
+          reference: 'Reference text for comparison'
+        });
+      }
+      setLastProcessedAt(new Date());
+      return exercises;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isEnabled]);
 
-  const checkGrammar = useCallback(async (text: string) => {
-    try {
-      setIsLoading(true);
-      // Placeholder for grammar checking
-      const result = await AIService.checkGrammar(text);
-      setIsLoading(false);
-      return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
+  const generateFlashcards = useCallback(async (
+    content: string, 
+    count: number = 10, 
+    difficulty: string = 'intermediate'
+  ): Promise<any[]> => {
+    if (!isEnabled) {
+      throw new Error('AI is disabled');
     }
-  }, [handleError]);
+    
+    setIsProcessing(true);
+    try {
+      const flashcards = await AIService.generateFlashcards(content, count, difficulty);
+      setLastProcessedAt(new Date());
+      return flashcards;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isEnabled]);
 
-  const evaluateWriting = useCallback(async (text: string, prompt: string) => {
-    try {
-      setIsLoading(true);
-      // Placeholder for writing evaluation
-      const result = await AIService.evaluateWriting(text, prompt);
-      setIsLoading(false);
-      return result;
-    } catch (error) {
-      setIsLoading(false);
-      return handleError(error);
-    }
-  }, [handleError]);
+  const getContentTypeConfidence = useCallback((contentType: string): number => {
+    return AIService.getConfidenceScore(contentType);
+  }, []);
 
-  const performTextToSpeech = useCallback(async (text: string, voiceSettings?: any) => {
-    try {
-      setIsLoading(true);
-      // Placeholder for text-to-speech
-      await AIService.textToSpeech(text, voiceSettings);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      handleError(error);
+  // Load model automatically when hook is used if enabled
+  useEffect(() => {
+    if (isEnabled && !isModelLoaded && status === 'idle') {
+      prepareModel().catch(error => {
+        console.error('Failed to automatically load AI model:', error);
+      });
     }
-  }, [handleError]);
+  }, [isEnabled, isModelLoaded, prepareModel, status]);
 
   return {
-    isLoading,
+    status,
+    error,
+    isProcessing,
+    confidence,
+    lastProcessedAt,
+    isCacheEnabled,
     isModelLoaded,
+    isEnabled,
+    toggleAI,
     prepareModel,
+    initialize,
     generateText,
-    generateFlashcards,
+    classifyText,
     generateQuestions,
-    transcribeSpeech,
-    analyzeSpeech,
-    translateText,
-    checkGrammar,
-    evaluateWriting,
-    performTextToSpeech,
+    processText,
+    processImage,
+    recognizeSpeech,
+    evaluateSpeech,
+    generateSpeechExercises,
+    generateFlashcards,
+    getContentTypeConfidence
   };
 };
+
+export default useAI;

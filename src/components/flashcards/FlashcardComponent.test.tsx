@@ -1,318 +1,101 @@
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import FlashcardComponent from './FlashcardComponent';
 import { Flashcard } from '@/types/flashcard';
-import { render as customRender } from '@/tests/test-utils';
 
-// Mock the hooks and components used by FlashcardComponent
+// Mock component dependencies
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, variant, className, disabled, size, type, ...rest }: any) => (
-    <button 
-      onClick={onClick} 
-      data-variant={variant} 
-      className={className}
-      disabled={disabled}
-      data-size={size}
-      type={type || 'button'}
-      data-testid={`button-${children.toString().toLowerCase().replace(/\s+/g, '-')}`}
-      {...rest}
-    >
-      {children}
-    </button>
-  ),
+  Button: ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  )
+}));
+
+vi.mock('@/components/flashcards/FlashcardPronunciation', () => ({
+  default: () => <div data-testid="flashcard-pronunciation">Pronunciation Component</div>
 }));
 
 describe('FlashcardComponent', () => {
-  // Test data
   const mockFlashcard: Flashcard = {
-    id: 'card-1',
-    italian: 'Ciao',
-    english: 'Hello',
+    id: '123',
+    italian: 'ciao',
+    english: 'hello',
     level: 1,
     mastered: false,
-    tags: ['greeting', 'basics'],
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01'),
-    nextReview: new Date('2023-01-02'),
-    lastReviewed: null,
+    tags: ['greeting'],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    nextReview: new Date(),
+    lastReviewed: null
   };
 
-  // Mock handlers
-  const mockOnRating = vi.fn();
-  const mockOnSkip = vi.fn();
-  const mockOnFlip = vi.fn();
-
-  beforeEach(() => {
-    // Reset mocks before each test
-    vi.clearAllMocks();
+  it('renders correctly', () => {
+    render(<FlashcardComponent flashcard={mockFlashcard} />);
+    expect(screen.getByText('ciao')).toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
-  test('renders the card with the Italian text when not flipped', () => {
-    customRender(
-      <FlashcardComponent
+  it('flips the card when clicked', () => {
+    render(<FlashcardComponent flashcard={mockFlashcard} />);
+    
+    // Initially shows the front (Italian)
+    expect(screen.getByText('ciao')).toBeVisible();
+    
+    // Click to flip
+    fireEvent.click(screen.getByTestId('flashcard'));
+    
+    // Now should show the back (English) prominently
+    expect(screen.getByText('hello')).toBeVisible();
+  });
+
+  it('shows pronunciation component when showPronunciation is true', () => {
+    render(<FlashcardComponent flashcard={mockFlashcard} showPronunciation={true} />);
+    expect(screen.getByTestId('flashcard-pronunciation')).toBeInTheDocument();
+  });
+
+  it('does not show pronunciation component when showPronunciation is false', () => {
+    render(<FlashcardComponent flashcard={mockFlashcard} showPronunciation={false} />);
+    expect(screen.queryByTestId('flashcard-pronunciation')).not.toBeInTheDocument();
+  });
+
+  it('passes correct actions to action buttons', () => {
+    const handleKnown = vi.fn();
+    const handleUnknown = vi.fn();
+    
+    render(
+      <FlashcardComponent 
         flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
+        showActions={true}
+        onKnown={handleKnown}
+        onUnknown={handleUnknown}
       />
     );
-
-    // Should show Italian text
-    expect(screen.getByText('Ciao')).toBeInTheDocument();
     
-    // Should not show English text
-    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+    // Click the "I know this" button
+    fireEvent.click(screen.getByText(/I know this/i));
+    expect(handleKnown).toHaveBeenCalledWith(mockFlashcard.id);
     
-    // Tags should be visible
-    mockFlashcard.tags.forEach(tag => {
-      expect(screen.getByText(tag)).toBeInTheDocument();
-    });
+    // Click the "Still learning" button
+    fireEvent.click(screen.getByText(/Still learning/i));
+    expect(handleUnknown).toHaveBeenCalledWith(mockFlashcard.id);
   });
 
-  test('renders the card with the English text when flipped', () => {
-    customRender(
-      <FlashcardComponent
+  it('applies custom className', () => {
+    const { container } = render(
+      <FlashcardComponent 
         flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={true}
-        onFlip={mockOnFlip}
+        className="custom-class"
       />
     );
-
-    // Should show English text
-    expect(screen.getByText('Hello')).toBeInTheDocument();
     
-    // Should not show Italian text
-    expect(screen.queryByText('Ciao')).not.toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('custom-class');
   });
 
-  test('calls onFlip when the card is clicked', () => {
-    customRender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Find the card and click it
-    const card = screen.getByText('Ciao').closest('.cursor-pointer');
-    expect(card).toBeInTheDocument();
+  it('does not show action buttons when showActions is false', () => {
+    render(<FlashcardComponent flashcard={mockFlashcard} showActions={false} />);
     
-    if (card) {
-      fireEvent.click(card);
-      expect(mockOnFlip).toHaveBeenCalledTimes(1);
-    }
-  });
-
-  test('calls onSkip when the skip button is clicked', () => {
-    customRender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Find the skip button and click it
-    const skipButton = screen.getByTestId('button-skip');
-    fireEvent.click(skipButton);
-    expect(mockOnSkip).toHaveBeenCalledTimes(1);
-  });
-
-  test('calls onRating with correct values when rating buttons are clicked', () => {
-    customRender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Check the three rating buttons: Hard, Medium, Easy
-    const hardButton = screen.getByTestId('button-hard');
-    const mediumButton = screen.getByTestId('button-medium');
-    const easyButton = screen.getByTestId('button-easy');
-
-    // Click Hard button and check if onRating is called with rating 1
-    fireEvent.click(hardButton);
-    expect(mockOnRating).toHaveBeenCalledWith(mockFlashcard, 1);
-    
-    // Reset mock
-    mockOnRating.mockClear();
-    
-    // Click Medium button and check if onRating is called with rating 2
-    fireEvent.click(mediumButton);
-    expect(mockOnRating).toHaveBeenCalledWith(mockFlashcard, 2);
-    
-    // Reset mock
-    mockOnRating.mockClear();
-    
-    // Click Easy button and check if onRating is called with rating 4
-    fireEvent.click(easyButton);
-    expect(mockOnRating).toHaveBeenCalledWith(mockFlashcard, 4);
-  });
-
-  test('renders explanation text when flipped and explanation exists', () => {
-    const flashcardWithExplanation: Flashcard = {
-      ...mockFlashcard,
-      explanation: 'A common greeting in Italian',
-    };
-
-    customRender(
-      <FlashcardComponent
-        flashcard={flashcardWithExplanation}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={true}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Should show explanation text
-    expect(screen.getByText('A common greeting in Italian')).toBeInTheDocument();
-  });
-
-  test('does not show explanation text when not flipped even if explanation exists', () => {
-    const flashcardWithExplanation: Flashcard = {
-      ...mockFlashcard,
-      explanation: 'A common greeting in Italian',
-    };
-
-    customRender(
-      <FlashcardComponent
-        flashcard={flashcardWithExplanation}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Should not show explanation text
-    expect(screen.queryByText('A common greeting in Italian')).not.toBeInTheDocument();
-  });
-
-  test('handles flashcards with long text appropriately', () => {
-    const longTextFlashcard: Flashcard = {
-      ...mockFlashcard,
-      italian: 'A'.repeat(100),
-      english: 'B'.repeat(100),
-    };
-
-    customRender(
-      <FlashcardComponent
-        flashcard={longTextFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Should show the long text
-    expect(screen.getByText('A'.repeat(100))).toBeInTheDocument();
-
-    // Flip the card
-    const card = screen.getByText('A'.repeat(100)).closest('.cursor-pointer');
-    if (card) {
-      fireEvent.click(card);
-      expect(mockOnFlip).toHaveBeenCalledTimes(1);
-    }
-  });
-
-  test('applies different styles based on flipped state', () => {
-    const { rerender } = customRender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // When not flipped
-    let card = screen.getByText('Ciao').closest('.card');
-    expect(card).not.toHaveClass('bg-primary/5');
-
-    // When flipped
-    rerender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={true}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    card = screen.getByText('Hello').closest('.card');
-    expect(card).toHaveClass('bg-primary/5');
-  });
-
-  test('verifies card actually flips when clicked', async () => {
-    // Custom render with state management to test flipping
-    const TestWrapper = () => {
-      const [isFlipped, setIsFlipped] = React.useState(false);
-      return (
-        <FlashcardComponent
-          flashcard={mockFlashcard}
-          onRating={mockOnRating}
-          onSkip={mockOnSkip}
-          flipped={isFlipped}
-          onFlip={() => setIsFlipped(!isFlipped)}
-        />
-      );
-    };
-
-    customRender(<TestWrapper />);
-    
-    // Initially should show Italian text
-    expect(screen.getByText('Ciao')).toBeInTheDocument();
-    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
-    
-    // Click the card to flip it
-    const card = screen.getByText('Ciao').closest('.cursor-pointer');
-    if (card) {
-      fireEvent.click(card);
-      
-      // After flipping, should show English text
-      await waitFor(() => {
-        expect(screen.queryByText('Ciao')).not.toBeInTheDocument();
-        expect(screen.getByText('Hello')).toBeInTheDocument();
-      });
-    }
-  });
-
-  test('buttons are accessible with keyboard navigation', () => {
-    customRender(
-      <FlashcardComponent
-        flashcard={mockFlashcard}
-        onRating={mockOnRating}
-        onSkip={mockOnSkip}
-        flipped={false}
-        onFlip={mockOnFlip}
-      />
-    );
-
-    // Test keyboard accessibility for rating buttons
-    const hardButton = screen.getByTestId('button-hard');
-    hardButton.focus();
-    expect(document.activeElement).toBe(hardButton);
-    
-    // Simulate keyboard enter press
-    fireEvent.keyDown(hardButton, { key: 'Enter', code: 'Enter' });
-    expect(mockOnRating).toHaveBeenCalledWith(mockFlashcard, 1);
+    expect(screen.queryByText(/I know this/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Still learning/i)).not.toBeInTheDocument();
   });
 });

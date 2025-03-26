@@ -33,6 +33,7 @@ export interface FlashcardSet {
   masteredCards: number;
   isPublic: boolean;
   isFavorite: boolean;
+  dueDate?: Date;
 }
 
 export interface FlashcardReviewStats {
@@ -42,6 +43,14 @@ export interface FlashcardReviewStats {
   lastReviewDate: Date | null;
   averageLevel: number;
   streakDays: number;
+}
+
+export interface FlashcardStats {
+  totalReviews: number;
+  correctReviews: number;
+  averageScore: number;
+  streak: number;
+  lastReviewDate?: Date;
 }
 
 export interface ImportFormat {
@@ -61,18 +70,25 @@ export interface ImportFormat {
 
 export interface ImportOptions {
   format: ImportFormat;
+  separator?: string;
+  hasHeader?: boolean;
+  italianColumn?: number;
+  englishColumn?: number;
   targetSet?: string;
   createNewSet?: boolean;
   newSetName?: string;
   newSetDescription?: string;
   mergeDuplicates?: boolean;
   skipFirstRow?: boolean;
+  setName?: string;
 }
 
 export interface ImportResult {
   success: boolean;
-  cardsImported: number;
-  cardsSkipped: number;
+  imported: number;
+  importedCards: number;
+  skipped: number;
+  failed: number;
   errors: string[];
   newSetId?: string;
 }
