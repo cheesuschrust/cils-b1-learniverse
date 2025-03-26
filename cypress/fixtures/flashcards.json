@@ -1,0 +1,41 @@
+
+{
+  "flashcards": [
+    {
+      "id": "1",
+      "italian": "casa",
+      "english": "house",
+      "level": 0,
+      "mastered": false,
+      "tags": ["basics", "nouns"],
+      "createdAt": "2023-06-01T12:00:00.000Z",
+      "updatedAt": "2023-06-01T12:00:00.000Z",
+      "nextReview": "2023-06-02T12:00:00.000Z",
+      "lastReviewed": null
+    },
+    {
+      "id": "2",
+      "italian": "cane",
+      "english": "dog",
+      "level": 1,
+      "mastered": false,
+      "tags": ["animals"],
+      "createdAt": "2023-06-01T12:00:00.000Z",
+      "updatedAt": "2023-06-01T12:00:00.000Z",
+      "nextReview": "2023-06-03T12:00:00.000Z",
+      "lastReviewed": "2023-06-01T12:00:00.000Z"
+    },
+    {
+      "id": "3",
+      "italian": "gatto",
+      "english": "cat",
+      "level": 2,
+      "mastered": false,
+      "tags": ["animals"],
+      "createdAt": "2023-06-01T12:00:00.000Z",
+      "updatedAt": "2023-06-01T12:00:00.000Z",
+      "nextReview": "2023-06-05T12:00:00.000Z",
+      "lastReviewed": "2023-06-01T12:00:00.000Z"
+    }
+  ]
+}

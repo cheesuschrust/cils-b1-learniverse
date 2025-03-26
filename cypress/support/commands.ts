@@ -1,3 +1,4 @@
+
 import '@testing-library/cypress/add-commands';
 import 'cypress-axe';
 import { addMatchImageSnapshotCommand } from 'cypress-image-snapshot/command';
@@ -140,3 +141,5 @@ declare global {
     }
   }
 }
+
+export {};

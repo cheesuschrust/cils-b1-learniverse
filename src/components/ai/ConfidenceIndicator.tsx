@@ -7,7 +7,6 @@ export interface ConfidenceIndicatorProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  indicatorClassName?: string;
 }
 
 /**
@@ -16,13 +15,11 @@ export interface ConfidenceIndicatorProps {
  * @param score - A number between 0 and 1 (or 0 and 100) representing the confidence
  * @param size - The size of the indicator (sm, md, lg)
  * @param className - Optional additional class for the container
- * @param indicatorClassName - Optional additional class for the indicator itself
  */
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
   size = 'md',
   className,
-  indicatorClassName,
 }) => {
   // Normalize score to 0-100 if it's given as 0-1
   const normalizedScore = score > 1 ? score : score * 100;
@@ -47,9 +44,9 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
       <Progress 
         value={normalizedScore} 
         className={cn(sizeClasses[size], 'bg-muted w-full rounded-full')}
-        // Apply a custom class to the indicator itself
-        // This is implemented as a div inside the Progress component
-        style={{'--progress-indicator-class': indicatorClassName || getColorClass()}}
+        // Apply custom styling directly using CSS classes
+        // We'll use an indicator class with specific background color
+        indicator={getColorClass()}
       />
       <span className="text-xs font-medium w-10 text-right">
         {Math.round(normalizedScore)}%

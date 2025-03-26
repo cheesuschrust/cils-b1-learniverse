@@ -1,0 +1,19 @@
+
+{
+  "id": "1",
+  "email": "test@example.com",
+  "name": "Test User",
+  "role": "user",
+  "preferences": {
+    "theme": "light",
+    "autoPlayAudio": true,
+    "dailyGoal": 15,
+    "emailNotifications": true
+  },
+  "learningStats": {
+    "streak": 7,
+    "wordsLearned": 145,
+    "timeSpent": 1250,
+    "accuracy": 87
+  }
+}

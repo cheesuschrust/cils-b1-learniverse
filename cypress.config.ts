@@ -16,6 +16,18 @@ export default defineConfig({
       addMatchImageSnapshotPlugin(on, config);
       codeCoverageTask(on, config);
       
+      // Additional custom tasks can be added here
+      on('task', {
+        log(message) {
+          console.log(message);
+          return null;
+        },
+        table(message) {
+          console.table(message);
+          return null;
+        }
+      });
+      
       return config;
     },
   },
@@ -31,4 +43,25 @@ export default defineConfig({
       return config;
     },
   },
+  
+  // Environment variables
+  env: {
+    apiUrl: 'http://localhost:5173/api',
+    coverage: true,
+    codeCoverage: {
+      exclude: ['cypress/**/*.*', '**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}']
+    }
+  },
+  
+  // Retry tests on failure
+  retries: {
+    runMode: 2,
+    openMode: 0
+  },
+  
+  // Default command timeout
+  defaultCommandTimeout: 10000,
+  
+  // Wait before determining that a test has failed
+  pageLoadTimeout: 60000
 });

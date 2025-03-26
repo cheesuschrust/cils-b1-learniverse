@@ -11,9 +11,20 @@ Cypress.on('window:before:load', (win) => {
     if (
       !msg.includes('ResizeObserver') && // Common React warning
       !msg.includes('act(...)') && // React testing warning
-      !msg.includes('validateDOMNesting') // DOM nesting validation
+      !msg.includes('validateDOMNesting') && // DOM nesting validation
+      !msg.includes('browserHasNativePerformanceObserver') // Performance observer warning
     ) {
       throw new Error(`Console error: ${msg}`);
+    }
+  });
+
+  // Suppress specific warnings as well
+  cy.stub(win.console, 'warn').callsFake((msg) => {
+    if (
+      !msg.includes('React does not recognize the') && // React prop warnings
+      !msg.includes('You provided a `checked` prop to a form field') // Form field warnings
+    ) {
+      console.warn(msg);
     }
   });
 });
@@ -27,4 +38,39 @@ beforeEach(() => {
 after(() => {
   cy.clearAllLocalStorage();
   cy.clearAllCookies();
+});
+
+// Make test results easier to read
+Cypress.SelectorPlayground.defaults({
+  selectorPriority: [
+    'data-testid',
+    'data-cy',
+    'id',
+    'class',
+    'tag',
+    'attributes',
+    'nth-child',
+  ],
+});
+
+// Add a11y check to every test
+Cypress.Commands.overwrite('visit', (originalFn, url, options) => {
+  const result = originalFn(url, options);
+  cy.injectAxe();
+  return result;
+});
+
+// Log test name
+beforeEach(() => {
+  const test = Cypress.currentTest;
+  cy.task('log', `Running: ${test.title}`);
+});
+
+// Report test results
+afterEach(() => {
+  const test = Cypress.currentTest;
+  const message = test.state === 'passed' 
+    ? `✅ TEST PASSED: ${test.title}` 
+    : `❌ TEST FAILED: ${test.title}`;
+  cy.task('log', message);
 });

@@ -38,11 +38,14 @@ export interface FlashcardStats {
   averageLevel: number;
 }
 
-export type ImportFormat = 'csv' | 'json' | 'anki';
+export type ImportFormat = 'csv' | 'json' | 'anki' | 'txt';
 export interface ImportOptions {
   format: ImportFormat;
   includeExamples?: boolean;
   overwriteExisting?: boolean;
+  italianColumn?: string;
+  englishColumn?: string;
+  tagsColumn?: string;
 }
 
 export interface ImportResult {

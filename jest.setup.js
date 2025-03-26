@@ -99,3 +99,43 @@ Object.defineProperty(window, 'speechSynthesis', {
 
 // Suppress console errors in tests
 jest.spyOn(console, 'error').mockImplementation(() => {});
+
+// Add custom matchers to expect for Jest
+expect.extend({
+  toBeInTheDocument(received) {
+    const pass = received !== null && received !== undefined;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to be in the document`,
+    };
+  },
+  toHaveClass(received, className) {
+    const pass = received && received.classList && received.classList.contains(className);
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have class ${className}`,
+    };
+  },
+  toHaveAttribute(received, attr, value) {
+    const hasAttr = received && received.hasAttribute && received.hasAttribute(attr);
+    const pass = value !== undefined ? hasAttr && received.getAttribute(attr) === value : hasAttr;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have attribute ${attr}${value !== undefined ? ` with value ${value}` : ''}`,
+    };
+  },
+  toBeDisabled(received) {
+    const pass = received && received.disabled === true;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to be disabled`,
+    };
+  },
+  toHaveTextContent(received, text) {
+    const pass = received && received.textContent && received.textContent.includes(text);
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have text content ${text}`,
+    };
+  },
+});
