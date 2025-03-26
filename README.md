@@ -1,69 +1,123 @@
-# Welcome to your Lovable project
 
-## Project info
+# Italian Language Learning App - Testing Suite
 
-**URL**: https://lovable.dev/projects/aaaad6ff-93f7-499a-bb40-9da0b1799077
+This project contains a comprehensive testing suite for an Italian language learning application built with React. The testing suite is designed to ensure 100% functional coverage of the application, including all components, features, and user interactions.
 
-## How can I edit this code?
+## Technology Stack
 
-There are several ways of editing your application.
+- Framework: React
+- Testing Libraries:
+  - Jest and React Testing Library for component testing
+  - Cypress for end-to-end testing
+  - axe-core for accessibility testing
+  - Cypress Image Snapshot for visual regression testing
 
-**Use Lovable**
+## Test Types
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/aaaad6ff-93f7-499a-bb40-9da0b1799077) and start prompting.
+### Unit Tests
 
-Changes made via Lovable will be committed automatically to this repo.
+Unit tests are located in files with the `.test.tsx` or `.test.ts` suffix and focus on testing individual components, hooks, and utility functions in isolation.
 
-**Use your preferred IDE**
+### Component Tests
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Component tests use React Testing Library to test the rendering and behavior of UI components in a simulated DOM environment.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Integration Tests
 
-Follow these steps:
+Integration tests verify that multiple components work together correctly and that data flows properly between them.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### End-to-End Tests
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Cypress end-to-end tests simulate real user interactions with the application and test complete user flows. These tests are located in the `cypress/e2e` directory.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Running Tests
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### Unit and Component Tests
+
+To run Jest tests:
+
+```bash
+npm test
 ```
 
-**Edit a file directly in GitHub**
+To run tests with coverage:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm test -- --coverage
+```
 
-**Use GitHub Codespaces**
+### End-to-End Tests
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+To open Cypress test runner:
 
-## What technologies are used for this project?
+```bash
+npm run cypress:open
+```
 
-This project is built with .
+To run Cypress tests in headless mode:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+npm run cypress:run
+```
 
-## How can I deploy this project?
+## Test Coverage
 
-Simply open [Lovable](https://lovable.dev/projects/aaaad6ff-93f7-499a-bb40-9da0b1799077) and click on Share -> Publish.
+The testing suite aims for 100% functional coverage, testing:
 
-## I want to use a custom domain - is that possible?
+1. All application routes and pages
+2. All interactive elements (buttons, forms, links, etc.)
+3. All features (authentication, exercises, settings, etc.)
+4. Data management (loading states, error states, persistence)
+5. Edge cases and error handling
+6. Accessibility compliance
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Test Documentation
+
+### Coverage Map
+
+The test coverage map is generated automatically when running tests with the coverage flag. The HTML report can be found in the `coverage` directory after running:
+
+```bash
+npm test -- --coverage
+```
+
+### Test Reports
+
+Cypress generates test reports after each run, including:
+- Test execution results
+- Screenshots for failed tests
+- Videos of test runs (when enabled)
+- Performance metrics
+
+## Continuous Integration
+
+The testing suite is integrated with CI/CD workflows:
+
+1. Pre-commit hooks run linting and unit tests
+2. Pull requests trigger full test suites
+3. Scheduled full regression tests run daily
+
+## Accessibility Testing
+
+Accessibility tests verify:
+- Keyboard navigation
+- ARIA attributes
+- Screen reader compatibility
+- Color contrast compliance
+- Focus management
+
+## Visual Regression Testing
+
+Visual regression tests use Cypress Image Snapshot to capture and compare screenshots, ensuring UI consistency across releases.
+
+## Contributing
+
+When adding new features or modifying existing ones, please include appropriate tests. The goal is to maintain 100% test coverage.
+
+1. For new components, add unit tests with `.test.tsx` suffix
+2. For new pages or features, add Cypress E2E tests in the `cypress/e2e` directory
+3. For UI changes, update visual regression tests if needed
+
+## License
+
+This testing suite is part of the Italian Language Learning App and is subject to the same license as the main application.

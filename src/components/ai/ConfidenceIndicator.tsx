@@ -2,48 +2,58 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ConfidenceIndicatorProps } from '@/types/ai';
 
-export const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({ 
+export interface ConfidenceIndicatorProps {
+  score: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  indicatorClassName?: string;
+}
+
+/**
+ * Displays a visual indicator for confidence or accuracy scores
+ * 
+ * @param score - A number between 0 and 1 (or 0 and 100) representing the confidence
+ * @param size - The size of the indicator (sm, md, lg)
+ * @param className - Optional additional class for the container
+ * @param indicatorClassName - Optional additional class for the indicator itself
+ */
+const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
   size = 'md',
-  className = '',
-  indicatorClassName = ''
+  className,
+  indicatorClassName,
 }) => {
+  // Normalize score to 0-100 if it's given as 0-1
+  const normalizedScore = score > 1 ? score : score * 100;
+  
+  // Determine color based on score
   const getColorClass = () => {
-    if (score >= 90) return 'bg-green-500 dark:bg-green-600';
-    if (score >= 70) return 'bg-blue-500 dark:bg-blue-600';
-    if (score >= 50) return 'bg-yellow-500 dark:bg-yellow-600';
-    return 'bg-red-500 dark:bg-red-600';
+    if (normalizedScore >= 80) return 'bg-green-500';
+    if (normalizedScore >= 60) return 'bg-yellow-500';
+    if (normalizedScore >= 40) return 'bg-orange-500';
+    return 'bg-red-500';
   };
-
-  const getSizeClass = () => {
-    switch (size) {
-      case 'sm': return 'h-1.5';
-      case 'lg': return 'h-3';
-      case 'md':
-      default: return 'h-2';
-    }
+  
+  // Determine size classes
+  const sizeClasses = {
+    sm: 'h-1',
+    md: 'h-2',
+    lg: 'h-3',
   };
-
-  const formattedScore = typeof score === 'number' 
-    ? Math.round(score) 
-    : typeof score === 'string' 
-      ? parseInt(score, 10) 
-      : 0;
-
+  
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('flex items-center gap-2', className)} data-testid="confidence-indicator">
       <Progress 
-        value={formattedScore} 
-        className={cn(getSizeClass(), indicatorClassName)} 
-        indicatorClassName={getColorClass()}
+        value={normalizedScore} 
+        className={cn(sizeClasses[size], 'bg-muted w-full rounded-full')}
+        // Apply a custom class to the indicator itself
+        // This is implemented as a div inside the Progress component
+        style={{'--progress-indicator-class': indicatorClassName || getColorClass()}}
       />
-      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-        <span>0%</span>
-        <span>{formattedScore}%</span>
-        <span>100%</span>
-      </div>
+      <span className="text-xs font-medium w-10 text-right">
+        {Math.round(normalizedScore)}%
+      </span>
     </div>
   );
 };
