@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { ContentType } from '@/types/contentType';
 
 // Define the types for AI settings
 interface AISettings {
@@ -26,6 +27,18 @@ interface AIUtilsContextType {
   setLastQuery: (query: string) => void;
   generateContent: (prompt: string, type: string) => Promise<string>;
   analyzePerformance: (data: any) => Promise<any>;
+  isAIEnabled: boolean;
+  toggleAI: () => boolean;
+  speakText: (text: string, language?: string) => Promise<void>;
+  isSpeaking: boolean; 
+  cancelSpeech: () => void;
+  processAudioStream: (callback: (transcript: string, isFinal: boolean) => void) => Promise<() => void>;
+  stopAudioProcessing: () => void;
+  isTranscribing: boolean;
+  translateText: (text: string, targetLang: 'english' | 'italian') => Promise<string>;
+  isTranslating: boolean;
+  hasActiveMicrophone: boolean;
+  checkMicrophoneAccess: () => Promise<boolean>;
 }
 
 // Default settings
@@ -52,11 +65,24 @@ const AIUtilsContext = createContext<AIUtilsContextType>({
   lastQuery: '',
   setLastQuery: () => {},
   generateContent: async () => '',
-  analyzePerformance: async () => ({})
+  analyzePerformance: async () => ({}),
+  isAIEnabled: true,
+  toggleAI: () => true,
+  speakText: async () => {},
+  isSpeaking: false,
+  cancelSpeech: () => {},
+  processAudioStream: async () => () => {},
+  stopAudioProcessing: () => {},
+  isTranscribing: false,
+  translateText: async () => '',
+  isTranslating: false,
+  hasActiveMicrophone: false,
+  checkMicrophoneAccess: async () => false
 });
 
 // Provider component
 export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  // Load settings from local storage or use defaults
   const [settings, setSettings] = useState<AISettings>(() => {
     // Try to load settings from localStorage
     const savedSettings = localStorage.getItem('ai-settings');
@@ -65,6 +91,20 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
+
+  // Flag for AI features enabled/disabled
+  const isAIEnabled = settings.enabled;
+
+  // Toggle AI features on/off
+  const toggleAI = useCallback(() => {
+    const newEnabled = !settings.enabled;
+    updateSettings({ enabled: newEnabled });
+    return newEnabled;
+  }, [settings.enabled]);
 
   // Update settings and save to localStorage
   const updateSettings = (newSettings: Partial<AISettings>) => {
@@ -79,8 +119,12 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
     localStorage.setItem('ai-settings', JSON.stringify(defaultSettings));
   };
 
-  // Simulate content generation - in a real app, this would call an API
+  // Simulate content generation
   const generateContent = async (prompt: string, type: string): Promise<string> => {
+    if (!settings.enabled) {
+      return "AI features are currently disabled. Enable them in settings to use this feature.";
+    }
+    
     setIsProcessing(true);
     try {
       // Simulate API call with timeout
@@ -97,6 +141,13 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
 
   // Simulate performance analysis
   const analyzePerformance = async (data: any): Promise<any> => {
+    if (!settings.enabled) {
+      return {
+        error: "AI features are disabled",
+        message: "Enable AI features in settings to use performance analysis."
+      };
+    }
+    
     setIsProcessing(true);
     try {
       // Simulate API call with timeout
@@ -114,6 +165,195 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
     }
   };
 
+  // Text-to-speech functionality
+  const speakText = async (text: string, language = 'it-IT'): Promise<void> => {
+    if (!settings.enabled) {
+      throw new Error('AI features are disabled');
+    }
+    
+    try {
+      // Cancel any ongoing speech
+      if (isSpeaking) {
+        cancelSpeech();
+      }
+      
+      setIsSpeaking(true);
+      
+      // Use browser's built-in speech synthesis
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language;
+      
+      // Set voice if specified and available
+      if (settings.preferredVoice !== 'default') {
+        const voices = window.speechSynthesis.getVoices();
+        const selectedVoice = voices.find(voice => 
+          voice.name.toLowerCase().includes(settings.preferredVoice.toLowerCase())
+        );
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+      }
+      
+      // Create a promise that resolves when speech ends
+      const speechPromise = new Promise<void>((resolve) => {
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          resolve();
+        };
+        utterance.onerror = (event) => {
+          console.error('Speech error:', event);
+          setIsSpeaking(false);
+          resolve(); // Resolve anyway to prevent hanging promises
+        };
+      });
+      
+      // Start speaking
+      window.speechSynthesis.speak(utterance);
+      
+      return speechPromise;
+    } catch (error) {
+      setIsSpeaking(false);
+      console.error('Error speaking text:', error);
+      throw new Error('Failed to speak text');
+    }
+  };
+
+  // Cancel any ongoing speech
+  const cancelSpeech = () => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // Process audio for speech recognition
+  const processAudioStream = async (callback: (transcript: string, isFinal: boolean) => void): Promise<() => void> => {
+    if (!settings.enabled) {
+      throw new Error('AI features are disabled');
+    }
+    
+    // Check for browser support
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      throw new Error('Speech recognition is not supported in this browser');
+    }
+    
+    try {
+      setIsTranscribing(true);
+      
+      // @ts-ignore - SpeechRecognition is not in the standard lib.dom yet
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      recognition.onresult = (event: any) => {
+        const lastResult = event.results[event.results.length - 1];
+        const transcript = lastResult[0].transcript;
+        const isFinal = lastResult.isFinal;
+        
+        callback(transcript, isFinal);
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsTranscribing(false);
+        throw new Error(`Speech recognition error: ${event.error}`);
+      };
+      
+      recognition.onend = () => {
+        setIsTranscribing(false);
+      };
+      
+      // Start listening
+      recognition.start();
+      
+      // Return a function to stop listening
+      return () => {
+        recognition.stop();
+        setIsTranscribing(false);
+      };
+    } catch (error) {
+      setIsTranscribing(false);
+      console.error('Error starting speech recognition:', error);
+      throw new Error('Failed to start speech recognition');
+    }
+  };
+
+  // Stop audio processing
+  const stopAudioProcessing = () => {
+    // This is a placeholder - the actual stop function is returned by processAudioStream
+    // This function is useful for cases where you don't have access to the returned stop function
+    setIsTranscribing(false);
+  };
+
+  // Translate text between languages
+  const translateText = async (text: string, targetLang: 'english' | 'italian'): Promise<string> => {
+    if (!settings.enabled) {
+      throw new Error('AI features are disabled');
+    }
+    
+    setIsTranslating(true);
+    try {
+      // Simulate API call with timeout
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simple word replacement for demo purposes
+      const italianWords = {
+        hello: 'ciao',
+        goodbye: 'arrivederci',
+        please: 'per favore',
+        thanks: 'grazie',
+        yes: 'sì',
+        no: 'no'
+      };
+      
+      const englishWords = {
+        ciao: 'hello',
+        arrivederci: 'goodbye',
+        'per favore': 'please',
+        grazie: 'thanks',
+        sì: 'yes',
+        no: 'no'
+      };
+      
+      // Very simple translation demo
+      let translatedText = text;
+      
+      if (targetLang === 'italian') {
+        Object.entries(italianWords).forEach(([en, it]) => {
+          translatedText = translatedText.replace(new RegExp(`\\b${en}\\b`, 'gi'), it);
+        });
+      } else {
+        Object.entries(englishWords).forEach(([it, en]) => {
+          translatedText = translatedText.replace(new RegExp(`\\b${it}\\b`, 'gi'), en);
+        });
+      }
+      
+      return `[Translated to ${targetLang}]: ${translatedText}`;
+    } catch (error) {
+      console.error('Error translating text:', error);
+      throw new Error('Failed to translate text');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Check microphone access
+  const checkMicrophoneAccess = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+      setHasActiveMicrophone(true);
+      return true;
+    } catch (error) {
+      console.error('Microphone access error:', error);
+      setHasActiveMicrophone(false);
+      return false;
+    }
+  };
+
   const value = {
     settings,
     updateSettings,
@@ -123,7 +363,19 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
     lastQuery,
     setLastQuery,
     generateContent,
-    analyzePerformance
+    analyzePerformance,
+    isAIEnabled,
+    toggleAI,
+    speakText,
+    isSpeaking,
+    cancelSpeech,
+    processAudioStream,
+    stopAudioProcessing,
+    isTranscribing,
+    translateText,
+    isTranslating,
+    hasActiveMicrophone,
+    checkMicrophoneAccess
   };
 
   return (

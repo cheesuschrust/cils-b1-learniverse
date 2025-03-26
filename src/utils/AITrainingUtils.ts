@@ -1,179 +1,133 @@
-import { ContentType } from '@/types/contentType';
-import AIService from '@/services/AIService';
 
-interface ContentAnalysisResult {
+import { ContentType, ContentFeatures } from '@/types/contentType';
+
+interface ContentAnalysis {
   contentType: ContentType;
   confidence: number;
-  features: {
-    wordCount: number;
-    sentenceCount: number;
-    complexWords: number;
-    questionMarks: number;
-    languageScore: {
-      italian: number;
-      english: number;
-    };
-  };
+  features: ContentFeatures;
 }
 
-// Italian and English common words for language detection
-const ITALIAN_COMMON_WORDS = [
-  'il', 'la', 'i', 'le', 'e', 'di', 'a', 'un', 'una', 'in', 'con', 'su', 'per', 
-  'tra', 'fra', 'che', 'chi', 'cosa', 'come', 'quando', 'dove', 'perché', 'io', 
-  'tu', 'lui', 'lei', 'noi', 'voi', 'loro', 'questo', 'quello', 'questi', 'quelli', 
-  'mio', 'tuo', 'suo', 'nostro', 'vostro', 'sono', 'sei', 'è', 'siamo', 'siete', 
-  'hanno', 'ho', 'hai', 'ha', 'abbiamo', 'avete', 'avere', 'essere', 'fare', 'andare'
-];
-
-const ENGLISH_COMMON_WORDS = [
-  'the', 'and', 'to', 'of', 'a', 'in', 'is', 'that', 'for', 'it', 'with', 'as', 
-  'was', 'on', 'are', 'be', 'by', 'at', 'this', 'have', 'from', 'or', 'had', 'not', 
-  'but', 'what', 'all', 'were', 'when', 'we', 'there', 'can', 'an', 'your', 'which', 
-  'their', 'said', 'if', 'do', 'will', 'each', 'about', 'how', 'up', 'out', 'them', 
-  'then', 'she', 'many', 'some', 'so', 'these', 'would', 'other', 'into', 'has'
-];
-
-// Extract features from content for analysis
-const extractContentFeatures = (text: string) => {
-  // Basic text statistics
-  const wordCount = text.trim().split(/\s+/).length;
-  const sentenceCount = text.split(/[.!?]+/).filter(Boolean).length;
-  const complexWords = text.split(/\s+/).filter(word => word.length > 7).length;
-  const questionMarks = (text.match(/\?/g) || []).length;
-  
-  // Language detection
-  const words = text.toLowerCase().match(/\b(\w+)\b/g) || [];
-  let italianCount = 0;
-  let englishCount = 0;
-  
-  words.forEach(word => {
-    if (ITALIAN_COMMON_WORDS.includes(word)) italianCount++;
-    if (ENGLISH_COMMON_WORDS.includes(word)) englishCount++;
-  });
-  
-  const languageScore = {
-    italian: words.length > 0 ? italianCount / words.length : 0,
-    english: words.length > 0 ? englishCount / words.length : 0
-  };
-  
-  return {
-    wordCount,
-    sentenceCount,
-    complexWords,
-    questionMarks,
-    languageScore
-  };
-};
-
-// Determine content type based on features
-const determineContentType = (features: any): ContentAnalysisResult => {
-  const {
-    wordCount,
-    sentenceCount,
-    questionMarks,
-    languageScore
-  } = features;
-  
-  // Initialize scores for each content type
-  const scores: Record<ContentType, number> = {
-    'multiple-choice': 0,
-    'flashcards': 0,
-    'writing': 0,
-    'speaking': 0,
-    'listening': 0
-  };
-  
-  // Logic for multiple-choice
-  if (questionMarks > 0) {
-    scores['multiple-choice'] += 40;
-    if (questionMarks >= 3) scores['multiple-choice'] += 20;
-  }
-  
-  // Logic for flashcards
-  if (wordCount < 15) {
-    scores['flashcards'] += 30;
-    
-    // Check if it could be a term-definition pair
-    const lines = wordCount.toString().split('\n');
-    if (lines.length === 2) scores['flashcards'] += 30;
-  }
-  
-  // Logic for writing
-  if (wordCount > 50) {
-    scores['writing'] += 30;
-    if (sentenceCount > 3) scores['writing'] += 20;
-  }
-  
-  // Logic for speaking
-  if (wordCount > 10 && wordCount < 100) {
-    scores['speaking'] += 20;
-    
-    // Simple dialogues are likely speaking exercises
-    if ((languageScore.italian > 0.3 || languageScore.english > 0.3) && 
-        (text.includes(':') || text.includes('-'))) {
-      scores['speaking'] += 40;
-    }
-  }
-  
-  // Logic for listening
-  if (sentenceCount > 1 && wordCount > 20) {
-    scores['listening'] += 20;
-    
-    // Narration or dialogue transcripts are common in listening exercises
-    if (text.includes('"') || text.includes('"') || text.includes('said')) {
-      scores['listening'] += 30;
-    }
-  }
-  
-  // Find the highest scoring content type
-  let maxScore = 0;
-  let detectedType: ContentType = 'writing'; // Default
-  
-  for (const type of Object.keys(scores) as ContentType[]) {
-    if (scores[type] > maxScore) {
-      maxScore = scores[type];
-      detectedType = type;
-    }
-  }
-  
-  return {
-    contentType: detectedType,
-    confidence: maxScore / 100, // Normalize to 0-1 range
-    features
-  };
-};
-
-// Analyze text content to determine the type
-export const analyzeContent = (text: string): ContentAnalysisResult => {
-  if (!text || typeof text !== 'string') {
+// Simple content analyzer that works without external AI services
+export function analyzeContent(content: string): ContentAnalysis {
+  if (!content || typeof content !== 'string') {
     return {
       contentType: 'writing',
       confidence: 0.5,
       features: {
         wordCount: 0,
-        sentenceCount: 0,
-        complexWords: 0,
-        questionMarks: 0,
-        languageScore: { italian: 0, english: 0 }
+        sentenceCount: 0
       }
     };
   }
-  
-  const features = extractContentFeatures(text);
-  return determineContentType(features);
-};
 
-// Train the AI model with example content
-export const trainWithContent = (text: string, contentType: ContentType): number => {
-  if (!text || typeof text !== 'string' || !contentType) return 0;
+  // Extract basic features
+  const features = extractContentFeatures(content);
   
-  // Add the training example to our service
-  return AIService.addTrainingExamples(contentType, [
-    { text, type: contentType, features: extractContentFeatures(text) }
-  ]);
-};
+  // Determine content type based on features
+  let contentType: ContentType = 'writing';
+  let confidence = 0.6; // Default confidence
+  
+  // Check for flashcards pattern (term - definition or term: definition patterns)
+  if (
+    (content.includes('\n\n') && content.split('\n\n').length > 1 && content.split('\n\n').length % 2 === 0) ||
+    (content.includes(' - ') && content.split('\n').some(line => line.includes(' - '))) ||
+    (content.includes(': ') && content.split('\n').some(line => line.includes(': ')))
+  ) {
+    contentType = 'flashcards';
+    confidence = 0.75;
+  }
+  // Check for multiple choice pattern (options starting with A., B., C. or 1., 2., 3.)
+  else if (
+    (content.match(/[A-D]\.\s/g) && content.match(/[A-D]\.\s/g)!.length >= 3) ||
+    (content.match(/\d+\.\s/g) && content.match(/\d+\.\s/g)!.length >= 3) ||
+    (content.includes('?') && features.questionMarks! > 0)
+  ) {
+    contentType = 'multiple-choice';
+    confidence = 0.8;
+  }
+  // Check for listening content (audio script, dialogue with speakers)
+  else if (
+    content.includes('[') && content.includes(']') || // Might be timestamps or speaker indicators
+    content.match(/^\w+:/gm) // Speaker notation at beginning of lines
+  ) {
+    contentType = 'listening';
+    confidence = 0.7;
+  }
+  // Check for speaking content (conversation prompts, pronunciation guides)
+  else if (
+    content.includes('Repeat:') ||
+    content.includes('Say:') ||
+    content.includes('Pronunciation:') ||
+    (content.match(/^\w+:/gm) && content.match(/^\w+:/gm)!.length > 3) // Multiple speaker turns
+  ) {
+    contentType = 'speaking';
+    confidence = 0.65;
+  }
+  
+  return {
+    contentType,
+    confidence,
+    features
+  };
+}
 
-// Get confidence score for a content type
-export const getConfidenceScoreForContent = (contentType: ContentType): number => {
-  return AIService.getConfidenceScore(contentType);
+// Extract features from content
+function extractContentFeatures(content: string): ContentFeatures {
+  if (!content || typeof content !== 'string') {
+    return {
+      wordCount: 0,
+      sentenceCount: 0
+    };
+  }
+  
+  // Calculate basic text statistics
+  const wordCount = content.trim().split(/\s+/).length;
+  const sentenceCount = content.split(/[.!?]+/).filter(Boolean).length;
+  const paragraphCount = content.split(/\n\s*\n/).filter(Boolean).length;
+  const questionMarks = (content.match(/\?/g) || []).length;
+  
+  // Simple language detection
+  const italianWords = ['il', 'la', 'di', 'e', 'che', 'un', 'una', 'sono', 'è', 'per', 'non', 'mi', 'si', 'ti', 'ci'];
+  const englishWords = ['the', 'and', 'of', 'to', 'is', 'in', 'that', 'it', 'for', 'you', 'are', 'with', 'on', 'as', 'not'];
+  
+  const words = content.toLowerCase().match(/\b(\w+)\b/g) || [];
+  let italianCount = 0;
+  let englishCount = 0;
+  
+  words.forEach(word => {
+    if (italianWords.includes(word)) italianCount++;
+    if (englishWords.includes(word)) englishCount++;
+  });
+  
+  let language: 'english' | 'italian' | 'mixed' = 'english';
+  
+  if (italianCount > englishCount) {
+    language = 'italian';
+  } else if (italianCount > 0 && englishCount > 0) {
+    language = 'mixed';
+  }
+  
+  return {
+    wordCount,
+    sentenceCount,
+    paragraphCount,
+    questionMarks,
+    language
+  };
+}
+
+// Add additional helper functions for AI training
+export function createTrainingExample(content: string, label: ContentType): any {
+  return {
+    text: content,
+    label,
+    features: extractContentFeatures(content),
+    createdAt: new Date(),
+  };
+}
+
+export default {
+  analyzeContent,
+  extractContentFeatures,
+  createTrainingExample
 };

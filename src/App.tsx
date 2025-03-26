@@ -22,6 +22,7 @@ import Achievements from '@/pages/Achievements';
 import Settings from '@/pages/Settings';
 import AIAssistant from '@/pages/AIAssistant';
 import { Toaster } from '@/components/ui/toaster';
+import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
 import './App.css';
 
 function App() {
@@ -37,44 +38,46 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/email-verification/:token" element={<EmailVerification />} />
-        <Route path="*" element={<NotFound />} />
+    <AIUtilsProvider>
+      <div className="App">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/email-verification/:token" element={<EmailVerification />} />
+          <Route path="*" element={<NotFound />} />
 
-        {/* Protected routes */}
-        <Route element={<ProtectedRoute children={undefined} />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/flashcards" element={<FlashcardsPage />} />
-            <Route path="/multiple-choice" element={<MultipleChoicePage />} />
-            <Route path="/writing" element={<WritingPage />} />
-            <Route path="/speaking" element={<SpeakingPage />} />
-            <Route path="/listening" element={<ListeningPage />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/ai-assistant" element={<AIAssistant />} />
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute children={undefined} />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/flashcards" element={<FlashcardsPage />} />
+              <Route path="/multiple-choice" element={<MultipleChoicePage />} />
+              <Route path="/writing" element={<WritingPage />} />
+              <Route path="/speaking" element={<SpeakingPage />} />
+              <Route path="/listening" element={<ListeningPage />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/ai-assistant" element={<AIAssistant />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Admin routes */}
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} children={undefined} />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/ai" element={<AIManagement />} />
+          {/* Admin routes */}
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} children={undefined} />}>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/ai" element={<AIManagement />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* NotFound route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Toaster />
-    </div>
+          {/* NotFound route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+      </div>
+    </AIUtilsProvider>
   );
 }
 
