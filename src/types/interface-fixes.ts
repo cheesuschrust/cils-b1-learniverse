@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react';
 import { Notification } from '@/contexts/NotificationsContext';
-import { ContentType } from './contentType';
+import { ContentType } from '@/types/contentType';
 
 // Progress component props
 export interface ProgressProps extends React.ComponentPropsWithoutRef<"div"> {
@@ -134,7 +134,7 @@ export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface SupportTicketExtension {
   assignedTo: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: SupportTicketPriority;
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   category: string;
   resolution?: string;
@@ -149,7 +149,6 @@ export interface SupportTicketProps extends SupportTicketExtension {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-  priority: SupportTicketPriority;
 }
 
 // UseAI hook return type
@@ -199,4 +198,17 @@ export interface AIUtilsContextType {
   trainingData: any[];
   addTrainingExample: (example: any) => void;
   loadModel: (modelName: string) => Promise<boolean>;
+  
+  // Extended properties for AIUtils context
+  isAIEnabled?: boolean;
+  toggleAI?: () => void;
+  isSpeaking?: boolean;
+  cancelSpeech?: () => void;
+  processAudioStream?: (stream: MediaStream) => Promise<void>;
+  stopAudioProcessing?: () => void;
+  isTranscribing?: boolean;
+  hasActiveMicrophone?: boolean;
+  checkMicrophoneAccess?: () => Promise<boolean>;
+  translateText?: (text: string, targetLang: string) => Promise<string>;
+  isTranslating?: boolean;
 }

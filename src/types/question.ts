@@ -1,66 +1,83 @@
 
-export interface QuestionBase {
+export interface Question {
   id: string;
-  type: 'multiple-choice' | 'text-input' | 'matching' | 'true-false';
-  question: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
   explanation?: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   category: string;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  language: 'english' | 'italian';
+  language: 'english' | 'italian' | 'both';
+  type: 'multiple_choice' | 'true_false' | 'fill_blank';
+  timeLimit?: number;
+  points: number;
 }
-
-export interface MultipleChoiceQuestion extends QuestionBase {
-  type: 'multiple-choice';
-  options: string[];
-  correctAnswer: string;
-}
-
-export interface TextInputQuestion extends QuestionBase {
-  type: 'text-input';
-  correctAnswers: string[];
-  caseSensitive: boolean;
-}
-
-export interface MatchingQuestion extends QuestionBase {
-  type: 'matching';
-  pairs: { left: string; right: string }[];
-}
-
-export interface TrueFalseQuestion extends QuestionBase {
-  type: 'true-false';
-  correctAnswer: boolean;
-}
-
-export type Question = 
-  | MultipleChoiceQuestion 
-  | TextInputQuestion 
-  | MatchingQuestion 
-  | TrueFalseQuestion;
 
 export interface QuestionSet {
   id: string;
   title: string;
   description: string;
-  questions: Question[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   category: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  language: 'english' | 'italian';
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  isPublic: boolean;
+  timeLimit?: number;
+  passingScore: number;
+  questions: Question[];
+  language: 'english' | 'italian' | 'both';
+  instructions?: string;
 }
 
 export interface QuizAttempt {
   id: string;
   userId: string;
   questionSetId: string;
-  answers: Record<string, string | boolean | number>;
+  startedAt: Date;
+  completedAt?: Date;
   score: number;
-  totalQuestions: number;
-  completedAt: Date;
-  completed: boolean;
-  timeSpent: number; // In seconds
+  timeSpent: number;
+  answers: {
+    questionId: string;
+    selectedAnswer: string;
+    isCorrect: boolean;
+    timeSpent: number;
+  }[];
   createdAt: Date;
+  completed: boolean;
+  passed: boolean;
+}
+
+export interface QuizProgress {
+  questionSetId: string;
+  completed: number;
+  total: number;
+  percentage: number;
+  bestScore: number;
+  lastAttemptDate?: Date;
+  attempts: number;
+}
+
+export interface QuestionStats {
+  totalAnswers: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  avgTimeSpent: number;
+  difficultyScore: number;
+}
+
+export interface QuizSessionState {
+  questionSetId: string;
+  currentQuestionIndex: number;
+  answers: Record<string, string>;
+  startTime: Date;
+  endTime?: Date;
+  timeSpentPerQuestion: Record<string, number>;
+  score?: number;
+  isComplete: boolean;
 }

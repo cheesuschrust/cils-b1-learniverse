@@ -15,7 +15,8 @@ describe('FlashcardComponent', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     nextReview: new Date(),
-    lastReviewed: null
+    lastReviewed: null,
+    examples: []
   };
 
   it('renders the front of the card by default', () => {

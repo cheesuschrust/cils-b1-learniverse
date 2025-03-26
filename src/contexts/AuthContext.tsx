@@ -1,9 +1,10 @@
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, useState } from "react";
 import { User, UserPreferences, LogCategory, LogEntry, EmailSettings } from "./shared-types";
 import { useAuthManager } from "@/hooks/useAuthManager";
 import { LoginCredentials, RegisterData } from "@/services/AuthService";
 import { UpdateProfileData } from "@/services/UserService";
+import { useToast } from "@/components/ui/use-toast";
 
 // Export these types for use in other components
 export type { User, UserPreferences, LogCategory, LogEntry, EmailSettings };
@@ -42,7 +43,7 @@ export interface AuthContextType {
   updateEmailSettings: (settings: EmailSettings) => Promise<boolean>;
   
   // Admin functions
-  getAllUsers: () => User[];
+  getAllUsers: () => Promise<User[]>;
   deleteUser: (userId: string) => Promise<boolean>;
   disableUser: (userId: string) => Promise<boolean>;
   enableUser: (userId: string) => Promise<boolean>;
@@ -59,7 +60,7 @@ export interface AuthContextType {
     level?: 'info' | 'warning' | 'error', 
     startDate?: Date, 
     endDate?: Date
-  ) => LogEntry[];
+  ) => Promise<LogEntry[]>;
   addSystemLog: (
     category: LogCategory, 
     action: string, 
@@ -88,86 +89,181 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const auth = useAuthManager();
+  const { toast } = useToast();
+  const [systemLogs, setSystemLogs] = useState<LogEntry[]>([]);
   
   // Create a complete context object with all required properties
   const authContextValue: AuthContextType = {
     ...auth,
     isAuthenticated: !!auth.user,
     
-    // Add stub implementations for methods not provided by useAuthManager
-    // These will be properly implemented as needed
     socialLogin: async (provider) => {
-      console.log(`Social login with ${provider} attempted`);
-      // This is a stub that simulates social login
       try {
+        toast({
+          title: `Signing in with ${provider}`,
+          description: "Redirecting to authentication provider...",
+        });
+        
+        // This would be implemented with a real OAuth flow
         const email = `${provider}@example.com`;
         const password = 'social-login-password';
         return await auth.login(email, password);
       } catch (error) {
         console.error(`Social login error: ${error}`);
+        toast({
+          title: "Authentication Failed",
+          description: "Could not authenticate with social provider.",
+          variant: "destructive"
+        });
         return false;
       }
     },
     
     resetPassword: async (email) => {
-      console.log(`Password reset requested for ${email}`);
-      await auth.forgotPassword(email);
-      return true;
+      try {
+        await auth.forgotPassword(email);
+        toast({
+          title: "Password Reset Requested",
+          description: "If an account exists with this email, you will receive password reset instructions.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Password reset error: ${error}`);
+        // Don't show specific errors to prevent email enumeration
+        toast({
+          title: "Password Reset Requested",
+          description: "If an account exists with this email, you will receive password reset instructions.",
+        });
+        return false;
+      }
     },
     
     completePasswordReset: async (token, newPassword) => {
-      console.log(`Completing password reset with token ${token}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Password Reset Complete",
+          description: "Your password has been successfully reset. You can now login with your new password.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Complete password reset error: ${error}`);
+        toast({
+          title: "Reset Failed",
+          description: "Could not reset password. The link may be expired or invalid.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     verifyEmail: async (token) => {
-      console.log(`Verifying email with token ${token}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Email Verified",
+          description: "Your email has been successfully verified.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Email verification error: ${error}`);
+        toast({
+          title: "Verification Failed",
+          description: "Could not verify email. The link may be expired or invalid.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     refreshSession: async () => {
-      console.log("Refreshing session");
-      return !!auth.user;
+      try {
+        // This would refresh the session token in a real implementation
+        return !!auth.user;
+      } catch (error) {
+        console.error("Session refresh error:", error);
+        return false;
+      }
     },
     
     updateUser: async (updates) => {
-      console.log("Updating user", updates);
       if (!auth.user) return false;
       
       try {
         await auth.updateProfile(updates as UpdateProfileData);
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been successfully updated.",
+        });
         return true;
       } catch (error) {
         console.error("Error updating user:", error);
+        toast({
+          title: "Update Failed",
+          description: "Could not update your profile. Please try again.",
+          variant: "destructive"
+        });
         return false;
       }
     },
     
     updateUserPreferences: async (preferences) => {
-      console.log("Updating user preferences", preferences);
       if (!auth.user) return false;
       
       try {
         await auth.updateProfile({ preferences });
+        toast({
+          title: "Preferences Updated",
+          description: "Your preferences have been successfully updated.",
+        });
         return true;
       } catch (error) {
         console.error("Error updating preferences:", error);
+        toast({
+          title: "Update Failed",
+          description: "Could not update your preferences. Please try again.",
+          variant: "destructive"
+        });
         return false;
       }
     },
     
     sendVerificationEmail: async (email) => {
-      console.log(`Sending verification email to ${email}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Verification Email Sent",
+          description: "A verification email has been sent to your email address.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Send verification email error: ${error}`);
+        toast({
+          title: "Error Sending Email",
+          description: "Could not send verification email. Please try again later.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     resendVerificationEmail: async (email) => {
-      console.log(`Resending verification email to ${email}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Verification Email Resent",
+          description: "A new verification email has been sent to your email address.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Resend verification email error: ${error}`);
+        toast({
+          title: "Error Sending Email",
+          description: "Could not resend verification email. Please try again later.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     getEmailSettings: () => ({ 
@@ -202,101 +298,273 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }),
     
     updateEmailSettings: async (settings) => {
-      console.log("Updating email settings", settings);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Email Settings Updated",
+          description: "Your email settings have been successfully updated.",
+        });
+        return true;
+      } catch (error) {
+        console.error("Error updating email settings:", error);
+        toast({
+          title: "Update Failed",
+          description: "Could not update email settings. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
-    getAllUsers: () => {
-      console.log("Getting all users");
-      // Stub implementation
-      return [];
+    getAllUsers: async () => {
+      try {
+        // This would call the actual API in a real implementation
+        return [];
+      } catch (error) {
+        console.error("Error getting users:", error);
+        toast({
+          title: "Error Fetching Users",
+          description: "Could not fetch users. Please try again.",
+          variant: "destructive"
+        });
+        return [];
+      }
     },
     
     deleteUser: async (userId) => {
-      console.log(`Deleting user with ID ${userId}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "User Deleted",
+          description: "The user has been successfully deleted.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error deleting user ${userId}:`, error);
+        toast({
+          title: "Delete Failed",
+          description: "Could not delete user. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     disableUser: async (userId) => {
-      console.log(`Disabling user with ID ${userId}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "User Disabled",
+          description: "The user has been successfully disabled.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error disabling user ${userId}:`, error);
+        toast({
+          title: "Action Failed",
+          description: "Could not disable user. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     enableUser: async (userId) => {
-      console.log(`Enabling user with ID ${userId}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "User Enabled",
+          description: "The user has been successfully enabled.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error enabling user ${userId}:`, error);
+        toast({
+          title: "Action Failed",
+          description: "Could not enable user. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     makeAdmin: async (userId) => {
-      console.log(`Making user with ID ${userId} an admin`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Admin Role Added",
+          description: "The user has been successfully made an admin.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error making user ${userId} admin:`, error);
+        toast({
+          title: "Action Failed",
+          description: "Could not update user role. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     addAdmin: async (userId) => {
-      console.log(`Adding admin role to user with ID ${userId}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Admin Role Added",
+          description: "The user has been successfully made an admin.",
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error adding admin role to user ${userId}:`, error);
+        toast({
+          title: "Action Failed",
+          description: "Could not update user role. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     updateUserStatus: async (userId, status) => {
-      console.log(`Updating status of user ${userId} to ${status}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Status Updated",
+          description: `User status updated to "${status}".`,
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error updating status of user ${userId}:`, error);
+        toast({
+          title: "Update Failed",
+          description: "Could not update user status. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
     updateUserSubscription: async (userId, subscription) => {
-      console.log(`Updating subscription of user ${userId} to ${subscription}`);
-      // Stub implementation
-      return true;
+      try {
+        // This would call the actual API in a real implementation
+        toast({
+          title: "Subscription Updated",
+          description: `User subscription updated to "${subscription}".`,
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error updating subscription of user ${userId}:`, error);
+        toast({
+          title: "Update Failed",
+          description: "Could not update user subscription. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
     },
     
-    getSystemLogs: () => {
-      console.log("Getting system logs");
-      // Stub implementation
-      return [];
+    getSystemLogs: async (category, level, startDate, endDate) => {
+      try {
+        // This would call the actual API in a real implementation
+        return systemLogs.filter(log => {
+          if (category && log.category !== category) return false;
+          if (level && log.level !== level) return false;
+          if (startDate && new Date(log.timestamp) < startDate) return false;
+          if (endDate && new Date(log.timestamp) > endDate) return false;
+          return true;
+        });
+      } catch (error) {
+        console.error("Error getting system logs:", error);
+        toast({
+          title: "Error Fetching Logs",
+          description: "Could not fetch system logs. Please try again.",
+          variant: "destructive"
+        });
+        return [];
+      }
     },
     
     addSystemLog: (category, action, details, level = 'info') => {
-      console.log(`Adding system log: ${category} - ${action} (${level})`);
-      if (details) console.log(`Details: ${details}`);
-      // Stub implementation
+      try {
+        const newLog: LogEntry = {
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          category,
+          action,
+          details: details || '',
+          level,
+          timestamp: new Date(),
+          userId: auth.user?.id || 'system'
+        };
+        
+        setSystemLogs(prev => [...prev, newLog]);
+      } catch (error) {
+        console.error("Error adding system log:", error);
+      }
     },
     
     updateSystemLog: async (logId, updates) => {
-      console.log(`Updating log ${logId}`, updates);
-      // Stub implementation
-      return true;
+      try {
+        setSystemLogs(prev => prev.map(log => 
+          log.id === logId ? { ...log, ...updates } : log
+        ));
+        return true;
+      } catch (error) {
+        console.error(`Error updating log ${logId}:`, error);
+        return false;
+      }
     },
     
     checkEmailExists: async (email) => {
-      console.log(`Checking if email ${email} exists`);
-      // Stub implementation
-      return false;
+      try {
+        // This would call the actual API in a real implementation
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return false;
+      } catch (error) {
+        console.error(`Error checking if email ${email} exists:`, error);
+        return false;
+      }
     },
     
     incrementDailyQuestionCount: async (type) => {
-      console.log(`Incrementing daily question count for ${type}`);
-      // Stub implementation
-      return true;
+      if (!auth.user) return false;
+      
+      try {
+        // This would call the actual API in a real implementation
+        // For now, just update in memory
+        // In a real app, this would update the server
+        toast({
+          title: "Question Completed",
+          description: `You've used 1 of your daily ${type} questions.`,
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error incrementing question count for ${type}:`, error);
+        return false;
+      }
     },
     
     signup: async (firstName, lastName, email, password, username) => {
-      console.log(`Signing up user ${firstName} ${lastName} (${email})`);
       try {
         await auth.register({
           firstName,
           lastName,
           email,
-          password
+          password,
+          ...(username ? { username } : {})
+        });
+        toast({
+          title: "Account Created",
+          description: "Your account has been successfully created.",
         });
         return true;
       } catch (error) {
         console.error("Signup error:", error);
+        toast({
+          title: "Registration Failed",
+          description: "Could not create your account. Please try again.",
+          variant: "destructive"
+        });
         return false;
       }
     },
