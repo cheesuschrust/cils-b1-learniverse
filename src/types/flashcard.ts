@@ -3,7 +3,6 @@ export interface Flashcard {
   id: string;
   italian: string;
   english: string;
-  explanation?: string;
   level: number;
   mastered: boolean;
   tags: string[];
@@ -11,48 +10,69 @@ export interface Flashcard {
   updatedAt: Date;
   nextReview: Date;
   lastReviewed: Date | null;
+  explanation?: string;
+  audioUrl?: string;
+  imageUrl?: string;
   examples?: string[];
+  notes?: string;
+  dueDate?: Date;
 }
 
 export interface FlashcardSet {
   id: string;
   name: string;
   description: string;
-  tags: string[];
   cards: Flashcard[];
+  tags: string[];
+  creator: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
   createdAt: Date;
   updatedAt: Date;
   totalCards: number;
   masteredCards: number;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
   isPublic: boolean;
-  creator: string;
   isFavorite: boolean;
 }
 
-export interface FlashcardStats {
-  total: number;
-  mastered: number;
-  dueToday: number;
+export interface FlashcardReviewStats {
+  totalReviews: number;
+  correctReviews: number;
+  masteredCards: number;
+  lastReviewDate: Date | null;
   averageLevel: number;
+  streakDays: number;
 }
 
-export type ImportFormat = 'csv' | 'json' | 'anki' | 'txt';
+export interface ImportFormat {
+  format: 'csv' | 'json' | 'anki' | 'custom';
+  hasHeaders?: boolean;
+  delimiter?: string;
+  enclosure?: string;
+  mapping?: {
+    italian: string | number;
+    english: string | number;
+    tags?: string | number;
+    level?: string | number;
+    mastered?: string | number;
+    [key: string]: string | number | undefined;
+  };
+}
+
 export interface ImportOptions {
   format: ImportFormat;
-  includeExamples?: boolean;
-  overwriteExisting?: boolean;
-  italianColumn?: string;
-  englishColumn?: string;
-  tagsColumn?: string;
+  targetSet?: string;
+  createNewSet?: boolean;
+  newSetName?: string;
+  newSetDescription?: string;
+  mergeDuplicates?: boolean;
+  skipFirstRow?: boolean;
 }
 
 export interface ImportResult {
   success: boolean;
-  imported: number;
-  importedCards?: number; 
-  skipped: number;
+  cardsImported: number;
+  cardsSkipped: number;
   errors: string[];
-  failed?: number;
+  newSetId?: string;
 }

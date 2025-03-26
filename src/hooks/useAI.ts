@@ -1,94 +1,182 @@
 
-import { useState, useCallback } from 'react';
-import { AIStatus } from '@/types/ai';
+import { useState, useCallback, useContext } from 'react';
+import { AIUtilsContext } from '@/contexts/AIUtilsContext';
+import { useToast } from '@/components/ui/use-toast';
+import { AIService } from '@/services/AIService';
 
 export interface UseAIReturn {
+  isLoading: boolean;
   isModelLoaded: boolean;
-  isProcessing: boolean;
-  error: string;
-  status: AIStatus;
-  toggleAI: () => boolean;
-  runAITask: <T>(task: () => Promise<T>, taskName?: string) => Promise<T>;
-  classifyText: (text: string) => Promise<{ type: string; confidence: number }>;
-  checkPronunciation: (text: string, recording: Blob) => Promise<{ accuracy: number; feedback: string }>;
-  speakText: (text: string, language?: 'english' | 'italian') => Promise<void>;
-  stopSpeaking: () => void;
-  isEnabled: boolean;
+  prepareModel: () => Promise<void>;
+  generateText: (prompt: string, options?: Record<string, any>) => Promise<string>;
+  generateFlashcards: (topic: string, count: number, difficulty: string) => Promise<any[]>;
+  generateQuestions: (content: string, count: number, difficulty: string) => Promise<any[]>;
+  transcribeSpeech: (audioData: Blob) => Promise<string>;
+  analyzeSpeech: (text: string, audioData: Blob) => Promise<any>;
+  translateText: (text: string, targetLanguage: string) => Promise<string>;
+  checkGrammar: (text: string) => Promise<any>;
+  evaluateWriting: (text: string, prompt: string) => Promise<any>;
+  performTextToSpeech: (text: string, voiceSettings?: any) => Promise<void>;
 }
 
 export const useAI = (): UseAIReturn => {
-  const [isModelLoaded, setIsModelLoaded] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState('');
-  const [status, setStatus] = useState<AIStatus>('ready');
-  const [isEnabled, setIsEnabled] = useState(true);
-  
-  const toggleAI = useCallback(() => {
-    setIsEnabled(prev => !prev);
-    return !isEnabled;
-  }, [isEnabled]);
-  
-  const runAITask = useCallback(async <T>(task: () => Promise<T>, taskName?: string): Promise<T> => {
-    if (!isEnabled) {
-      throw new Error('AI is disabled');
-    }
-    
-    setIsProcessing(true);
-    setError('');
-    
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const { settings } = useContext(AIUtilsContext);
+  const { toast } = useToast();
+
+  const handleError = useCallback((error: any) => {
+    console.error('AI Error:', error);
+    toast({
+      title: 'AI Error',
+      description: error instanceof Error ? error.message : 'An error occurred with the AI service',
+      variant: 'destructive',
+    });
+    throw error;
+  }, [toast]);
+
+  const prepareModel = useCallback(async () => {
     try {
-      const result = await task();
+      setIsLoading(true);
+      // This is a placeholder for actual model loading code
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsModelLoaded(true);
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      handleError(error);
+    }
+  }, [handleError]);
+
+  const generateText = useCallback(async (prompt: string, options?: Record<string, any>) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for actual AI text generation
+      const result = await AIService.generateText(prompt, options);
+      setIsLoading(false);
       return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error in AI task';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsProcessing(false);
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
     }
-  }, [isEnabled]);
-  
-  const classifyText = useCallback(async (text: string): Promise<{ type: string; confidence: number }> => {
-    return runAITask(async () => {
-      // Mock implementation
-      return { type: 'general', confidence: 87 };
-    }, 'classify text');
-  }, [runAITask]);
-  
-  const checkPronunciation = useCallback(async (text: string, recording: Blob): Promise<{ accuracy: number; feedback: string }> => {
-    return runAITask(async () => {
-      // Mock implementation
-      return { 
-        accuracy: 84, 
-        feedback: 'Good pronunciation! Work on the stress in "difficile".' 
-      };
-    }, 'check pronunciation');
-  }, [runAITask]);
-  
-  const speakText = useCallback(async (text: string, language = 'english'): Promise<void> => {
-    return runAITask(async () => {
-      // Mock implementation
-      console.log(`Speaking: "${text}" in ${language}`);
-    }, 'speak text');
-  }, [runAITask]);
-  
-  const stopSpeaking = useCallback(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+  }, [handleError]);
+
+  const generateFlashcards = useCallback(async (topic: string, count: number, difficulty: string) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for flashcard generation
+      const prompt = `Generate ${count} ${difficulty} Italian flashcards about ${topic}`;
+      const result = await AIService.generateFlashcards(prompt, count);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
     }
-  }, []);
-  
+  }, [handleError]);
+
+  const generateQuestions = useCallback(async (content: string, count: number, difficulty: string) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for question generation
+      const result = await AIService.generateQuestions(content, count, difficulty);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const transcribeSpeech = useCallback(async (audioData: Blob) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for speech transcription
+      const result = await AIService.transcribeSpeech(audioData);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const analyzeSpeech = useCallback(async (text: string, audioData: Blob) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for speech analysis
+      const result = await AIService.analyzeSpeech(text, audioData);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const translateText = useCallback(async (text: string, targetLanguage: string) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for text translation
+      const result = await AIService.translateText(text, targetLanguage);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const checkGrammar = useCallback(async (text: string) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for grammar checking
+      const result = await AIService.checkGrammar(text);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const evaluateWriting = useCallback(async (text: string, prompt: string) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for writing evaluation
+      const result = await AIService.evaluateWriting(text, prompt);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      setIsLoading(false);
+      return handleError(error);
+    }
+  }, [handleError]);
+
+  const performTextToSpeech = useCallback(async (text: string, voiceSettings?: any) => {
+    try {
+      setIsLoading(true);
+      // Placeholder for text-to-speech
+      await AIService.textToSpeech(text, voiceSettings);
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      handleError(error);
+    }
+  }, [handleError]);
+
   return {
+    isLoading,
     isModelLoaded,
-    isProcessing,
-    error,
-    status,
-    toggleAI,
-    runAITask,
-    classifyText,
-    checkPronunciation,
-    speakText,
-    stopSpeaking,
-    isEnabled
+    prepareModel,
+    generateText,
+    generateFlashcards,
+    generateQuestions,
+    transcribeSpeech,
+    analyzeSpeech,
+    translateText,
+    checkGrammar,
+    evaluateWriting,
+    performTextToSpeech,
   };
 };

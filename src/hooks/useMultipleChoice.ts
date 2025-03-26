@@ -1,319 +1,321 @@
 
-import { useState, useEffect, useMemo } from 'react';
-import { MultipleChoiceQuestion, QuestionSet, QuizAttempt, QuizStats, QuestionDifficulty, QuestionCategory } from '@/types/question';
+import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useLocalStorage } from './useLocalStorage';
+import { useToast } from '@/components/ui/use-toast';
+import { generateQuestionSet } from '@/services/questionService';
 
-const DEFAULT_QUESTION_SETS: QuestionSet[] = [
-  {
-    id: '1',
-    title: 'Italian Food Vocabulary',
-    description: 'Basic food vocabulary for beginners',
-    questions: [
-      {
-        id: '1-1',
-        type: 'multiple-choice',
-        question: 'What is "pasta" in Italian?',
-        options: ['Pasta', 'Bread', 'Rice', 'Soup'],
-        correctAnswer: 'Pasta',
-        explanation: 'Pasta is a type of Italian food typically made from durum wheat flour.',
-        difficulty: 'Beginner',
-        category: 'Food',
-        tags: ['food', 'basic', 'italian'],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        language: 'italian'
-      }
-    ],
-    category: 'Food',
-    difficulty: 'Beginner',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    language: 'italian'
-  }
-];
-
-export interface UseMultipleChoiceReturn {
-  questionSets: QuestionSet[];
-  createQuestionSet: (data: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>) => QuestionSet;
-  updateQuestionSet: (id: string, data: Partial<QuestionSet>) => QuestionSet | null;
-  deleteQuestionSet: (id: string) => boolean;
-  
-  createQuestion: (setId: string, data: Omit<MultipleChoiceQuestion, 'id' | 'createdAt' | 'updatedAt'>) => MultipleChoiceQuestion | null;
-  updateQuestion: (setId: string, questionId: string, data: Partial<MultipleChoiceQuestion>) => MultipleChoiceQuestion | null;
-  deleteQuestion: (setId: string, questionId: string) => boolean;
-  
-  quizAttempts: QuizAttempt[];
-  saveQuizAttempt: (data: Omit<QuizAttempt, 'createdAt'>) => QuizAttempt;
-  getQuizStats: () => QuizStats;
-  saveQuestionSet: (questionSet: QuestionSet) => void;
-  getQuestionSetById: (id: string) => QuestionSet | undefined;
+export interface MultipleChoiceQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation?: string;
 }
 
-export const useMultipleChoice = (): UseMultipleChoiceReturn => {
-  const [questionSets, setQuestionSets] = useLocalStorage<QuestionSet[]>('multiple-choice-sets', DEFAULT_QUESTION_SETS);
-  const [quizAttempts, setQuizAttempts] = useLocalStorage<QuizAttempt[]>('quiz-attempts', []);
-  
-  // Create a new question set
-  const createQuestionSet = (data: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>): QuestionSet => {
-    const now = new Date();
+export interface QuestionSet {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  language: 'english' | 'italian';
+  questions: MultipleChoiceQuestion[];
+  createdAt: Date;
+  updatedAt: Date;
+  isPublic: boolean;
+  authorId?: string;
+  authorName?: string;
+  tags?: string[];
+}
+
+export interface QuizAttempt {
+  id: string;
+  quizId: string;
+  date: Date;
+  score: number;
+  questionCount: number;
+  correctAnswers: number;
+  timeSpent: number; // in seconds
+  answeredQuestions: {
+    questionId: string;
+    selectedAnswer: number;
+    isCorrect: boolean;
+    timeTaken?: number; // in seconds
+  }[];
+}
+
+export function useMultipleChoice() {
+  const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
+  const [currentSet, setCurrentSet] = useState<QuestionSet | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
+  const { toast } = useToast();
+
+  // Load question sets from local storage
+  useEffect(() => {
+    try {
+      const savedSets = localStorage.getItem('questionSets');
+      if (savedSets) {
+        setQuestionSets(JSON.parse(savedSets));
+      }
+
+      const savedAttempts = localStorage.getItem('quizAttempts');
+      if (savedAttempts) {
+        setQuizAttempts(JSON.parse(savedAttempts));
+      }
+    } catch (error) {
+      console.error('Error loading question sets:', error);
+    }
+  }, []);
+
+  // Save question sets to local storage when updated
+  useEffect(() => {
+    try {
+      localStorage.setItem('questionSets', JSON.stringify(questionSets));
+    } catch (error) {
+      console.error('Error saving question sets:', error);
+    }
+  }, [questionSets]);
+
+  // Save quiz attempts to local storage when updated
+  useEffect(() => {
+    try {
+      localStorage.setItem('quizAttempts', JSON.stringify(quizAttempts));
+    } catch (error) {
+      console.error('Error saving quiz attempts:', error);
+    }
+  }, [quizAttempts]);
+
+  const createQuestionSet = useCallback((
+    title: string,
+    description: string,
+    category: string,
+    difficulty: 'Beginner' | 'Intermediate' | 'Advanced',
+    language: 'english' | 'italian',
+    questions: MultipleChoiceQuestion[],
+    isPublic: boolean = false,
+    authorId?: string,
+    authorName?: string,
+    tags?: string[]
+  ) => {
     const newSet: QuestionSet = {
-      ...data,
       id: uuidv4(),
-      createdAt: now,
-      updatedAt: now
+      title,
+      description,
+      category,
+      difficulty,
+      language,
+      questions,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isPublic,
+      authorId,
+      authorName,
+      tags,
     };
-    
-    setQuestionSets((prev: QuestionSet[]) => [...prev, newSet]);
+
+    setQuestionSets((prevSets) => [...prevSets, newSet]);
     return newSet;
-  };
-  
-  // Update an existing question set
-  const updateQuestionSet = (id: string, data: Partial<QuestionSet>): QuestionSet | null => {
-    let updatedSet: QuestionSet | null = null;
-    
-    setQuestionSets((prev: QuestionSet[]) => {
-      const index = prev.findIndex(set => set.id === id);
-      if (index === -1) return prev;
+  }, []);
+
+  const updateQuestionSet = useCallback((
+    id: string,
+    updates: Partial<Omit<QuestionSet, 'id' | 'createdAt'>>
+  ) => {
+    setQuestionSets((prevSets) => {
+      const newSets = [...prevSets];
+      const index = newSets.findIndex(set => set.id === id);
       
-      const updatedSets = [...prev];
-      updatedSets[index] = {
-        ...updatedSets[index],
-        ...data,
-        updatedAt: new Date()
-      };
-      
-      updatedSet = updatedSets[index];
-      return updatedSets;
-    });
-    
-    return updatedSet;
-  };
-  
-  // Delete a question set
-  const deleteQuestionSet = (id: string): boolean => {
-    let success = false;
-    
-    setQuestionSets((prev: QuestionSet[]) => {
-      const index = prev.findIndex(set => set.id === id);
-      if (index === -1) return prev;
-      
-      success = true;
-      const updatedSets = [...prev];
-      updatedSets.splice(index, 1);
-      return updatedSets;
-    });
-    
-    return success;
-  };
-  
-  // Create a new question in a set
-  const createQuestion = (setId: string, data: Omit<MultipleChoiceQuestion, 'id' | 'createdAt' | 'updatedAt'>): MultipleChoiceQuestion | null => {
-    let newQuestion: MultipleChoiceQuestion | null = null;
-    
-    setQuestionSets((prev: QuestionSet[]) => {
-      const setIndex = prev.findIndex(set => set.id === setId);
-      if (setIndex === -1) return prev;
-      
-      const now = new Date();
-      newQuestion = {
-        ...data,
-        id: uuidv4(),
-        type: 'multiple-choice',
-        tags: data.tags || [],
-        createdAt: now,
-        updatedAt: now
-      };
-      
-      const updatedSets = [...prev];
-      updatedSets[setIndex] = {
-        ...updatedSets[setIndex],
-        questions: [...updatedSets[setIndex].questions, newQuestion as MultipleChoiceQuestion],
-        updatedAt: now
-      };
-      
-      return updatedSets;
-    });
-    
-    return newQuestion;
-  };
-  
-  // Update an existing question
-  const updateQuestion = (setId: string, questionId: string, data: Partial<MultipleChoiceQuestion>): MultipleChoiceQuestion | null => {
-    let updatedQuestion: MultipleChoiceQuestion | null = null;
-    
-    setQuestionSets((prev: QuestionSet[]) => {
-      const setIndex = prev.findIndex(set => set.id === setId);
-      if (setIndex === -1) return prev;
-      
-      const questionIndex = prev[setIndex].questions.findIndex(q => q.id === questionId);
-      if (questionIndex === -1) return prev;
-      
-      const updatedSets = [...prev];
-      updatedQuestion = {
-        ...updatedSets[setIndex].questions[questionIndex],
-        ...data,
-        updatedAt: new Date()
-      } as MultipleChoiceQuestion;
-      
-      const updatedQuestions = [...updatedSets[setIndex].questions];
-      updatedQuestions[questionIndex] = updatedQuestion;
-      
-      updatedSets[setIndex] = {
-        ...updatedSets[setIndex],
-        questions: updatedQuestions,
-        updatedAt: new Date()
-      };
-      
-      return updatedSets;
-    });
-    
-    return updatedQuestion;
-  };
-  
-  // Delete a question
-  const deleteQuestion = (setId: string, questionId: string): boolean => {
-    let success = false;
-    
-    setQuestionSets((prev: QuestionSet[]) => {
-      const setIndex = prev.findIndex(set => set.id === setId);
-      if (setIndex === -1) return prev;
-      
-      const questionIndex = prev[setIndex].questions.findIndex(q => q.id === questionId);
-      if (questionIndex === -1) return prev;
-      
-      success = true;
-      const updatedSets = [...prev];
-      const updatedQuestions = [...updatedSets[setIndex].questions];
-      updatedQuestions.splice(questionIndex, 1);
-      
-      updatedSets[setIndex] = {
-        ...updatedSets[setIndex],
-        questions: updatedQuestions,
-        updatedAt: new Date()
-      };
-      
-      return updatedSets;
-    });
-    
-    return success;
-  };
-  
-  // Save a quiz attempt
-  const saveQuizAttempt = (data: Omit<QuizAttempt, 'createdAt'>): QuizAttempt => {
-    const newAttempt: QuizAttempt = {
-      ...data,
-      answers: data.answers || {},
-      completed: true,
-      createdAt: new Date()
-    };
-    
-    setQuizAttempts((prev: QuizAttempt[]) => [...prev, newAttempt]);
-    return newAttempt;
-  };
-  
-  // Save a question set (for imported/generated sets)
-  const saveQuestionSet = (questionSet: QuestionSet): void => {
-    setQuestionSets((prev: QuestionSet[]) => {
-      // Check if it already exists
-      const existingIndex = prev.findIndex(set => set.id === questionSet.id);
-      if (existingIndex >= 0) {
-        // Update existing
-        const updatedSets = [...prev];
-        updatedSets[existingIndex] = {
-          ...questionSet,
+      if (index !== -1) {
+        newSets[index] = {
+          ...newSets[index],
+          ...updates,
           updatedAt: new Date()
         };
-        return updatedSets;
-      } else {
-        // Add new
-        return [...prev, questionSet];
       }
-    });
-  };
-  
-  // Get a question set by ID
-  const getQuestionSetById = (id: string): QuestionSet | undefined => {
-    return questionSets.find(set => set.id === id);
-  };
-  
-  // Calculate quiz statistics
-  const getQuizStats = (): QuizStats => {
-    if (quizAttempts.length === 0) {
-      return {
-        totalAttempts: 0,
-        averageScore: 0,
-        bestScore: 0,
-        totalTime: 0,
-        questionSets: []
-      };
-    }
-    
-    const totalAttempts = quizAttempts.length;
-    const totalScore = quizAttempts.reduce((sum, attempt) => sum + attempt.score / attempt.totalQuestions, 0);
-    const averageScore = totalScore / totalAttempts;
-    const bestScore = Math.max(...quizAttempts.map(attempt => attempt.score / attempt.totalQuestions));
-    const totalTime = quizAttempts.reduce((sum, attempt) => sum + (attempt.timeSpent || 0), 0);
-    
-    // Group attempts by question set
-    const setAttempts: Record<string, {
-      id: string;
-      title: string;
-      attempts: number;
-      bestScore: number;
-      totalScore: number;
-    }> = {};
-    
-    quizAttempts.forEach(attempt => {
-      const setId = attempt.questionSetId;
-      const set = questionSets.find(s => s.id === setId);
-      if (!set) return;
       
-      if (!setAttempts[setId]) {
-        setAttempts[setId] = {
-          id: setId,
-          title: set.title,
-          attempts: 0,
-          bestScore: 0,
-          totalScore: 0
+      return newSets;
+    });
+  }, []);
+
+  const deleteQuestionSet = useCallback((id: string) => {
+    setQuestionSets((prevSets) => 
+      prevSets.filter(set => set.id !== id)
+    );
+    
+    // Also delete associated quiz attempts
+    setQuizAttempts((prevAttempts) => 
+      prevAttempts.filter(attempt => attempt.quizId !== id)
+    );
+  }, []);
+
+  const addQuestionToSet = useCallback((
+    setId: string,
+    question: Omit<MultipleChoiceQuestion, 'id'>
+  ) => {
+    const newQuestion: MultipleChoiceQuestion = {
+      id: uuidv4(),
+      ...question
+    };
+
+    setQuestionSets((prevSets) => {
+      const newSets = [...prevSets];
+      const index = newSets.findIndex(set => set.id === setId);
+      
+      if (index !== -1) {
+        newSets[index] = {
+          ...newSets[index],
+          questions: [...newSets[index].questions, newQuestion],
+          updatedAt: new Date()
         };
       }
       
-      const score = attempt.score / attempt.totalQuestions;
-      setAttempts[setId].attempts++;
-      setAttempts[setId].totalScore += score;
-      setAttempts[setId].bestScore = Math.max(setAttempts[setId].bestScore, score);
+      return newSets;
+    });
+
+    return newQuestion;
+  }, []);
+
+  const updateQuestion = useCallback((
+    setId: string,
+    questionId: string,
+    updates: Partial<Omit<MultipleChoiceQuestion, 'id'>>
+  ) => {
+    setQuestionSets((prevSets) => {
+      const newSets = [...prevSets];
+      const setIndex = newSets.findIndex(set => set.id === setId);
+      
+      if (setIndex !== -1) {
+        const questionIndex = newSets[setIndex].questions.findIndex(q => q.id === questionId);
+        
+        if (questionIndex !== -1) {
+          const updatedQuestions = [...newSets[setIndex].questions];
+          updatedQuestions[questionIndex] = {
+            ...updatedQuestions[questionIndex],
+            ...updates
+          };
+          
+          newSets[setIndex] = {
+            ...newSets[setIndex],
+            questions: updatedQuestions,
+            updatedAt: new Date()
+          };
+        }
+      }
+      
+      return newSets;
+    });
+  }, []);
+
+  const removeQuestion = useCallback((
+    setId: string,
+    questionId: string
+  ) => {
+    setQuestionSets((prevSets) => {
+      const newSets = [...prevSets];
+      const setIndex = newSets.findIndex(set => set.id === setId);
+      
+      if (setIndex !== -1) {
+        newSets[setIndex] = {
+          ...newSets[setIndex],
+          questions: newSets[setIndex].questions.filter(q => q.id !== questionId),
+          updatedAt: new Date()
+        };
+      }
+      
+      return newSets;
+    });
+  }, []);
+
+  const generateQuestions = useCallback(async (
+    category: string,
+    difficulty: 'Beginner' | 'Intermediate' | 'Advanced',
+    language: 'english' | 'italian' = 'english',
+    count: number = 5
+  ): Promise<MultipleChoiceQuestion[]> => {
+    setIsLoading(true);
+    try {
+      const generatedQuestions = await generateQuestionSet(
+        category,
+        difficulty,
+        language,
+        count
+      );
+      
+      const formattedQuestions: MultipleChoiceQuestion[] = generatedQuestions.map(q => ({
+        id: uuidv4(),
+        question: q.question,
+        options: q.options,
+        correctAnswerIndex: q.correctAnswerIndex,
+        explanation: q.explanation
+      }));
+      
+      setIsLoading(false);
+      return formattedQuestions;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Error generating questions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate questions. Please try again.',
+        variant: 'destructive',
+      });
+      return [];
+    }
+  }, [toast]);
+
+  const saveQuizAttempt = useCallback((
+    quizId: string,
+    score: number,
+    questionCount: number,
+    correctAnswers: number,
+    timeSpent: number,
+    answeredQuestions: {
+      questionId: string;
+      selectedAnswer: number;
+      isCorrect: boolean;
+      timeTaken?: number;
+    }[]
+  ) => {
+    const newAttempt: QuizAttempt = {
+      id: uuidv4(),
+      quizId,
+      date: new Date(),
+      score,
+      questionCount,
+      correctAnswers,
+      timeSpent,
+      answeredQuestions
+    };
+    
+    setQuizAttempts((prevAttempts) => [...prevAttempts, newAttempt]);
+    
+    toast({
+      title: 'Quiz Completed',
+      description: `You scored ${score.toFixed(1)}% (${correctAnswers}/${questionCount})`,
     });
     
-    const questionSetStats = Object.values(setAttempts).map(set => ({
-      id: set.id,
-      title: set.title,
-      attempts: set.attempts,
-      bestScore: set.bestScore,
-      averageScore: set.totalScore / set.attempts
-    }));
-    
-    return {
-      totalAttempts,
-      averageScore,
-      bestScore,
-      totalTime,
-      questionSets: questionSetStats
-    };
-  };
-  
+    return newAttempt;
+  }, [toast]);
+
+  const getQuizAttemptsForSet = useCallback((setId: string) => {
+    return quizAttempts.filter(attempt => attempt.quizId === setId);
+  }, [quizAttempts]);
+
   return {
     questionSets,
+    currentSet,
+    setCurrentSet,
+    isLoading,
+    quizAttempts,
     createQuestionSet,
     updateQuestionSet,
     deleteQuestionSet,
-    createQuestion,
+    addQuestionToSet,
     updateQuestion,
-    deleteQuestion,
-    quizAttempts,
+    removeQuestion,
+    generateQuestions,
     saveQuizAttempt,
-    getQuizStats,
-    saveQuestionSet,
-    getQuestionSetById
+    getQuizAttemptsForSet
   };
-};
+}

@@ -42,3 +42,32 @@ export interface ProgressProps {
 export interface NotificationItemPropsExtension {
   onRead: (id: string) => void;
 }
+
+// Add missing SupportTicket properties
+export interface SupportTicketExtension {
+  assignedTo?: string;
+}
+
+// Add missing License properties
+export interface LicenseExtension {
+  domain: string;
+}
+
+// Add missing Toast variant types 
+export type ToastVariants = 'default' | 'destructive' | 'success' | 'warning' | 'info';
+
+// Add missing Flashcard Set properties
+export interface FlashcardSetExtension {
+  tags: string[];
+  totalCards?: number;
+  masteredCards?: number;
+  isPublic: boolean;
+  creator: string;
+  isFavorite: boolean;
+  dueDate?: Date;
+}
+
+// Add missing Alert component properties
+export interface AlertProps {
+  variant?: 'default' | 'destructive' | 'outline' | 'warning' | 'success' | 'info';
+}

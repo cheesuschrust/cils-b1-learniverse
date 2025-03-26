@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import FlashcardComponent from './FlashcardComponent';
 import { Flashcard } from '@/types/flashcard';
 import { render as customRender } from '@/tests/test-utils';

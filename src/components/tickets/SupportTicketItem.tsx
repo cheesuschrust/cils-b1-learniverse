@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { Mail, MessageCircle, Calendar, UserCircle, Check, Clock, AlertTriangle } from 'lucide-react';
@@ -6,11 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { SupportTicketExtension } from '@/types/interface-fixes';
 
-export type SupportTicketStatus = 'open' | 'in-progress' | 'resolved' | 'closed';
-export type SupportTicketPriority = 'low' | 'medium' | 'high';
+// Status types aligned with TicketList component
+export type SupportTicketStatus = 'open' | 'in-progress' | 'resolved' | 'closed' | 'pending';
+export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
-export interface SupportTicketProps {
+export interface SupportTicketMessageProps {
+  id: string;
+  message: string;
+  createdAt: string | Date;
+  userId: string;
+  userName: string;
+  isAdmin: boolean;
+}
+
+export interface SupportTicketProps extends SupportTicketExtension {
   id: string;
   subject: string;
   message: string;
@@ -22,15 +34,7 @@ export interface SupportTicketProps {
   userId: string;
   userEmail: string;
   userName: string;
-  assignedTo?: string;
-  responses?: {
-    id: string;
-    message: string;
-    createdAt: string | Date;
-    userId: string;
-    userName: string;
-    isAdmin: boolean;
-  }[];
+  responses?: SupportTicketMessageProps[];
   onReply?: (ticketId: string) => void;
   onClose?: (ticketId: string) => void;
   onReopen?: (ticketId: string) => void;
@@ -57,6 +61,7 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
   const getStatusColor = (status: SupportTicketStatus) => {
     switch (status) {
       case 'open':
+      case 'pending':
         return 'bg-blue-500';
       case 'in-progress':
         return 'bg-yellow-500';
@@ -77,6 +82,8 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
         return <Badge variant="outline" className="text-yellow-500 border-yellow-500">Medium</Badge>;
       case 'high':
         return <Badge variant="outline" className="text-red-500 border-red-500">High</Badge>;
+      case 'urgent':
+        return <Badge variant="outline" className="text-red-500 border-red-500">Urgent</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -89,6 +96,7 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
       case 'medium':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'high':
+      case 'urgent':
         return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -159,6 +167,16 @@ const SupportTicketItem: React.FC<SupportTicketProps> = ({
         <div className="bg-muted p-3 rounded-md text-sm mt-2 mb-3">
           {message}
         </div>
+
+        {assignedTo && (
+          <div className="mt-3 p-2 bg-muted/50 rounded-md text-sm border border-muted">
+            <div className="flex items-center gap-2">
+              <UserCircle className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Assigned to:</span>
+              <span className="font-medium">{assignedTo}</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
           <div className="flex items-center">

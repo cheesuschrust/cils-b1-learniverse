@@ -1,117 +1,173 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Bell, Trash2, BellOff } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import NotificationItem from '@/components/notifications/NotificationItem';
+import NotificationItem from './NotificationItem';
+import { Bell, BellOff, Archive, X } from 'lucide-react';
 
-const GlobalNotificationCenter: React.FC = () => {
+interface GlobalNotificationCenterProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const GlobalNotificationCenter: React.FC<GlobalNotificationCenterProps> = ({
+  open,
+  onOpenChange
+}) => {
+  const [activeTab, setActiveTab] = useState('all');
   const { 
     notifications, 
+    dismissNotification, 
     markAsRead, 
-    dismissNotification,
-    dismissAll
+    markAllAsRead, 
+    dismissAllNotifications 
   } = useNotifications();
+  
+  const allNotifications = notifications;
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const readNotifications = notifications.filter(n => n.read);
 
-  const [activeTab, setActiveTab] = useState<string>('all');
-  
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const filteredNotifications = () => {
+  useEffect(() => {
+    if (!open) {
+      // Reset active tab when dialog closes
+      setActiveTab('all');
+    }
+  }, [open]);
+
+  const handleAction = (id: string, action: string) => {
+    // Handle custom actions from notifications
+    console.log(`Action ${action} triggered for notification ${id}`);
+    
+    // Mark as read automatically when action is taken
+    markAsRead(id);
+  };
+
+  const handleNotificationRead = (id: string) => {
+    markAsRead(id);
+  };
+
+  const getActiveNotifications = () => {
     switch (activeTab) {
       case 'unread':
-        return notifications.filter(n => !n.read);
-      case 'info':
-        return notifications.filter(n => n.type === 'info');
-      case 'alerts':
-        return notifications.filter(n => n.type === 'warning' || n.type === 'error');
+        return unreadNotifications;
+      case 'read':
+        return readNotifications;
+      case 'all':
       default:
-        return notifications;
+        return allNotifications;
     }
   };
-  
-  const handleDismiss = (id: string) => {
-    dismissNotification(id);
-  };
-  
-  const handleAction = (id: string, action: string) => {
-    // Mark as read when action is taken
-    markAsRead(id);
-    
-    // Handle specific actions
-    console.log(`Action ${action} taken on notification ${id}`);
-  };
-  
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            <CardTitle>Notifications</CardTitle>
-            {unreadCount > 0 && (
-              <Badge variant="default" className="ml-2">
-                {unreadCount} new
-              </Badge>
-            )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px] p-0">
+        <DialogHeader className="p-4 pb-2">
+          <DialogTitle>Notification Center</DialogTitle>
+          <DialogDescription>
+            View and manage all your notifications
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs 
+          defaultValue="all" 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <div className="flex justify-between items-center px-4 pb-2">
+            <TabsList>
+              <TabsTrigger value="all">
+                All ({allNotifications.length})
+              </TabsTrigger>
+              <TabsTrigger value="unread">
+                Unread ({unreadNotifications.length})
+              </TabsTrigger>
+              <TabsTrigger value="read">
+                Read ({readNotifications.length})
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={dismissAll}
-            disabled={notifications.length === 0}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All
-          </Button>
-        </div>
-        <CardDescription>
-          Stay informed about system updates and your learning progress
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unread">Unread</TabsTrigger>
-            <TabsTrigger value="info">Info</TabsTrigger>
-            <TabsTrigger value="alerts">Alerts</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value={activeTab}>
-            {filteredNotifications().length > 0 ? (
-              <div className="space-y-4">
-                {filteredNotifications().map((notification) => (
-                  <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    onDismiss={handleDismiss}
-                    onAction={handleAction}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <BellOff className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No notifications to display</p>
-              </div>
-            )}
-          </TabsContent>
+
+          <ScrollArea className="h-[400px] border-t">
+            <TabsContent value="all" className="m-0">
+              {renderNotificationList(getActiveNotifications())}
+            </TabsContent>
+            
+            <TabsContent value="unread" className="m-0">
+              {renderNotificationList(getActiveNotifications())}
+            </TabsContent>
+            
+            <TabsContent value="read" className="m-0">
+              {renderNotificationList(getActiveNotifications())}
+            </TabsContent>
+          </ScrollArea>
         </Tabs>
-      </CardContent>
-    </Card>
+        
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 p-4 pt-2 border-t">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full sm:w-auto"
+            onClick={() => markAllAsRead()}
+          >
+            <BellOff className="h-4 w-4 mr-2" />
+            Mark all as read
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full sm:w-auto"
+            onClick={() => dismissAllNotifications()}
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            Dismiss all
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
+
+  function renderNotificationList(notificationList: any[]) {
+    if (notificationList.length === 0) {
+      return (
+        <div className="flex h-[300px] flex-col items-center justify-center p-6 text-center">
+          <Bell className="h-12 w-12 text-muted-foreground/40 mb-3" />
+          <p className="text-lg font-medium">No notifications</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {activeTab === 'unread' 
+              ? "You've read all your notifications" 
+              : activeTab === 'read' 
+                ? "You have no read notifications" 
+                : "You don't have any notifications yet"}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="divide-y">
+        {notificationList.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onDismiss={dismissNotification}
+            onAction={handleAction}
+            onRead={handleNotificationRead}
+          />
+        ))}
+      </div>
+    );
+  }
 };
 
 export default GlobalNotificationCenter;

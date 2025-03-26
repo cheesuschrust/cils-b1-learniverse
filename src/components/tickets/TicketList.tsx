@@ -1,18 +1,12 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CheckCircle, Clock, AlertCircle, MessageCircle, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-
-export interface SupportTicketMessageProps {
-  id: string;
-  content: string;
-  timestamp: string;
-  isAdmin: boolean;
-}
+import { SupportTicketStatus, SupportTicketPriority, SupportTicketMessageProps, SupportTicketProps } from './SupportTicketItem';
 
 export interface SupportTicketUserProps {
   id: string;
@@ -20,25 +14,6 @@ export interface SupportTicketUserProps {
   email: string;
   avatar: string;
 }
-
-export interface SupportTicketProps {
-  id: string;
-  subject: string;
-  message: string;
-  status: SupportTicketStatus;
-  priority: SupportTicketPriority;
-  category: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  userId: string;
-  userEmail: string;
-  userName: string;
-  user?: SupportTicketUserProps;
-  messages?: SupportTicketMessageProps[];
-}
-
-export type SupportTicketStatus = 'pending' | 'in-progress' | 'resolved' | 'closed';
-export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 interface TicketListProps {
   tickets: SupportTicketProps[];
@@ -54,6 +29,7 @@ const TicketList: React.FC<TicketListProps> = ({
   const getStatusIcon = (status: SupportTicketStatus) => {
     switch (status) {
       case 'pending':
+      case 'open':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'in-progress':
         return <AlertCircle className="h-4 w-4 text-blue-500" />;
@@ -69,6 +45,7 @@ const TicketList: React.FC<TicketListProps> = ({
   const getStatusColor = (status: SupportTicketStatus) => {
     switch (status) {
       case 'pending':
+      case 'open':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
@@ -123,7 +100,6 @@ const TicketList: React.FC<TicketListProps> = ({
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
                   <Avatar className="h-10 w-10 mt-1">
-                    <AvatarImage src={ticket.user?.avatar} alt={ticket.userName} />
                     <AvatarFallback>{ticket.userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
@@ -147,10 +123,10 @@ const TicketList: React.FC<TicketListProps> = ({
                   <div className="text-xs text-muted-foreground">
                     {formatDate(ticket.createdAt)}
                   </div>
-                  {ticket.messages && ticket.messages.length > 0 && (
+                  {ticket.responses && ticket.responses.length > 0 && (
                     <Badge variant="secondary" className="flex items-center">
                       <MessageCircle className="h-3 w-3 mr-1" />
-                      {ticket.messages.length}
+                      {ticket.responses.length}
                     </Badge>
                   )}
                   <Button variant="ghost" size="icon" className="ml-auto">
