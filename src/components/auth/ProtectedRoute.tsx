@@ -1,37 +1,36 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
-interface ProtectedRouteProps {
+export interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAdmin?: boolean;
+  allowedRoles?: string[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false 
+  allowedRoles 
 }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   
+  // Show loading state while checking auth
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
+    return <div>Loading...</div>;
   }
   
-  if (!isAuthenticated) {
+  // If user is not logged in, redirect to login
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
   
-  if (requireAdmin && user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  // If roles are specified, check if user has the required role
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
   }
   
-  return <>{children}</>;
+  // Render children or outlet (for nested routes)
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export default ProtectedRoute;

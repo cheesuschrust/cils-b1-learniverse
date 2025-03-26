@@ -1,97 +1,92 @@
-
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { ThemeProvider } from '@/components/ui/theme-provider';
+import { Routes, Route } from 'react-router-dom';
+import Dashboard from '@/pages/Dashboard';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import NotFound from '@/pages/NotFound';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import AdminLayout from '@/layouts/AdminLayout';
+import DashboardLayout from '@/layouts/DashboardLayout';
+import UserManagement from '@/pages/admin/UserManagement';
+import ContentManagement from '@/pages/admin/ContentManagement';
+import AIManagement from '@/pages/admin/AIManagement';
+import AnalyticsDashboard from '@/pages/admin/AnalyticsDashboard';
+import UserProfile from '@/pages/UserProfile';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import EmailVerification from '@/pages/EmailVerification';
+import FlashcardsPage from '@/pages/Flashcards';
+import MultipleChoicePage from '@/pages/MultipleChoice';
+import WritingPage from '@/pages/Writing';
+import SpeakingPage from '@/pages/Speaking';
+import ListeningPage from '@/pages/Listening';
+import Analytics from '@/pages/Analytics';
+import Achievements from '@/pages/Achievements';
+import Settings from '@/pages/Settings';
+import WordOfDay from '@/pages/WordOfDay';
+import AIAssistant from '@/pages/AIAssistant';  // Import the new page
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { NotificationsProvider } from '@/contexts/NotificationsContext';
-import { GamificationProvider } from '@/contexts/GamificationContext';
-import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
-
-// Pages
-import Index from './pages/Index';
-import Dashboard from './pages/Dashboard';
-import Flashcards from './pages/Flashcards';
-import MultipleChoice from './pages/MultipleChoice';
-import Listening from './pages/Listening';
-import Speaking from './pages/Speaking';
-import Writing from './pages/Writing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import Analytics from './pages/Analytics';
-import Achievements from './pages/Achievements';
-import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-
-// Admin pages
-import AdminDashboard from './pages/admin/Dashboard';
-import UserManagement from './pages/admin/UserManagement';
-import ContentUploader from './pages/admin/ContentUploader';
-import AIManagement from './pages/admin/AIManagement';
-import SystemSettings from './pages/admin/SystemSettings';
-import SupportTickets from './pages/admin/SupportTickets';
+import './App.css';
 
 function App() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <UserPreferencesProvider>
-          <NotificationsProvider>
-            <GamificationProvider>
-              <Router>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  
-                  {/* Protected routes */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/flashcards" element={<Flashcards />} />
-                    <Route path="/multiple-choice" element={<MultipleChoice />} />
-                    <Route path="/listening" element={<Listening />} />
-                    <Route path="/speaking" element={<Speaking />} />
-                    <Route path="/writing" element={<Writing />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/achievements" element={<Achievements />} />
-                  </Route>
-                  
-                  {/* Admin routes */}
-                  <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="content" element={<ContentUploader />} />
-                    <Route path="ai" element={<AIManagement />} />
-                    <Route path="settings" element={<SystemSettings />} />
-                    <Route path="support" element={<SupportTickets />} />
-                  </Route>
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <ScrollToTop />
-              </Router>
-              <Toaster />
-            </GamificationProvider>
-          </NotificationsProvider>
-        </UserPreferencesProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
-}
-
-// Helper component to scroll to top on page changes
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-  
-  return null;
+    // Set initial theme based on system preference
+    const theme = localStorage.getItem('theme') || 'system';
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.classList.add(systemTheme);
+    } else {
+      document.documentElement.classList.add(theme);
+    }
+  }, []);
+
+  return (
+    <div className="App">
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/email-verification/:token" element={<EmailVerification />} />
+        <Route path="*" element={<NotFound />} />
+
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute children={undefined} />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/multiple-choice" element={<MultipleChoicePage />} />
+            <Route path="/writing" element={<WritingPage />} />
+            <Route path="/speaking" element={<SpeakingPage />} />
+            <Route path="/listening" element={<ListeningPage />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/achievements" element={<Achievements />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/word-of-day" element={<WordOfDay />} />
+          </Route>
+          
+          {/* Add the new AI Assistant route */}
+          <Route path="/ai-assistant" element={<AIAssistant />} />
+        </Route>
+
+        {/* Admin routes */}
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} children={undefined} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/content" element={<ContentManagement />} />
+            <Route path="/admin/ai" element={<AIManagement />} />
+            <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+          </Route>
+        </Route>
+
+        {/* NotFound route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </div>
+  );
 }
 
 export default App;
