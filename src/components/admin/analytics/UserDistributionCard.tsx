@@ -1,21 +1,25 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { DonutChart } from '@/components/admin/charts';
+import { DonutChart } from 'recharts';
 
 interface UserDistributionCardProps {
   data: { name: string; value: number }[];
   totalUsers: number;
   showFooter?: boolean;
+  className?: string;
 }
 
 export const UserDistributionCard: React.FC<UserDistributionCardProps> = ({ 
   data, 
   totalUsers,
-  showFooter = false
+  showFooter = false,
+  className
 }) => {
+  const colors = ["#3b82f6", "#22c55e", "#6366f1"];
+
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>User Distribution</CardTitle>
         <CardDescription>
@@ -23,14 +27,25 @@ export const UserDistributionCard: React.FC<UserDistributionCardProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center">
-        <DonutChart
-          data={data}
-          valueKey="value"
-          labelKey="name"
-          colors={["#3b82f6", "#06b6d4", "#4f46e5"]}
-          className={showFooter ? "h-60" : "h-52"}
-        />
+        <div className="h-52 w-full">
+          <DonutChart
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={80}
+            fill="#8884d8"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </DonutChart>
+        </div>
       </CardContent>
+      
       {showFooter && (
         <CardFooter className="pt-0">
           <div className="w-full space-y-1">

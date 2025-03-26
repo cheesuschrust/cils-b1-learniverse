@@ -8,7 +8,10 @@ interface GeographicalDistributionCardProps {
   totalUsers: number;
 }
 
-export const GeographicalDistributionCard: React.FC<GeographicalDistributionCardProps> = ({ data, totalUsers }) => {
+export const GeographicalDistributionCard: React.FC<GeographicalDistributionCardProps> = ({
+  data,
+  totalUsers
+}) => {
   return (
     <Card>
       <CardHeader>
@@ -25,7 +28,9 @@ export const GeographicalDistributionCard: React.FC<GeographicalDistributionCard
                 <div key={index}>
                   <div className="flex justify-between mb-1">
                     <span className="text-sm">{country.name}</span>
-                    <span className="text-sm">{Math.round(country.value / totalUsers * 100)}%</span>
+                    <span className="text-sm">
+                      {Math.round(country.value / totalUsers * 100)}%
+                    </span>
                   </div>
                   <Progress 
                     value={Math.round(country.value / totalUsers * 100)} 

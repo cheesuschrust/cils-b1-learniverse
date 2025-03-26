@@ -11,6 +11,7 @@ export interface Flashcard {
   updatedAt: Date;
   nextReview: Date;
   lastReviewed: Date | null;
+  examples?: string[];
 }
 
 export interface FlashcardSet {
@@ -35,4 +36,18 @@ export interface FlashcardStats {
   mastered: number;
   dueToday: number;
   averageLevel: number;
+}
+
+export type ImportFormat = 'csv' | 'json' | 'anki';
+export interface ImportOptions {
+  format: ImportFormat;
+  includeExamples?: boolean;
+  overwriteExisting?: boolean;
+}
+
+export interface ImportResult {
+  success: boolean;
+  imported: number;
+  skipped: number;
+  errors: string[];
 }

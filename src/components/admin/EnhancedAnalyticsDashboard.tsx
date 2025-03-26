@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, BarChart2, PieChart, Download, RefreshCw, Filter, User as UserIcon, BookOpen, Clock } from 'lucide-react';
@@ -10,15 +11,128 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Bar, BarChart } from '@tremor/react';
-import { Line, LineChart as TremorLineChart } from '@tremor/react';
-import { DonutChart } from '@tremor/react';
+import { BarChart, LineChart, ResponsiveContainer, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import { DateRange } from '@/types/date';
 
+// Import our custom components
+import { UsersStatsCards } from '@/components/admin/analytics/UsersStatsCards';
+import { UserDistributionCard } from '@/components/admin/analytics/UserDistributionCard';
+import { ContentCategoriesCard } from '@/components/admin/analytics/ContentCategoriesCard';
+import { RevenueTrendsCard } from '@/components/admin/analytics/RevenueTrendsCard';
+import { AIPerformanceCard } from '@/components/admin/analytics/AIPerformanceCard';
+import { GeographicalDistributionCard } from '@/components/admin/analytics/GeographicalDistributionCard';
+import { ContentStatsCards } from '@/components/admin/analytics/ContentStatsCards';
+import { AIUsageCards } from '@/components/admin/analytics/AIUsageCards';
+import { AIAccuracyMetricsCard } from '@/components/admin/analytics/AIAccuracyMetricsCard';
+import { ModelUsageCard } from '@/components/admin/analytics/ModelUsageCard';
+import { PerformanceMetricsCard } from '@/components/admin/analytics/PerformanceMetricsCard';
+
+// Define the data for the analytics dashboard
 const analyticsData = {
-  // ... keep existing code (analytics data object) 
+  users: {
+    total: 5428,
+    active: 2875,
+    newToday: 42,
+    growth: 8.2,
+    premium: 1345,
+    free: 4083,
+    retentionRate: 76,
+    averageSessionTime: 28,
+    lastMonthActive: [
+      { date: '2023-01-01', users: 2450 },
+      { date: '2023-01-02', users: 2490 },
+      { date: '2023-01-03', users: 2650 },
+      { date: '2023-01-04', users: 2700 },
+      { date: '2023-01-05', users: 2710 },
+      { date: '2023-01-06', users: 2690 },
+      { date: '2023-01-07', users: 2800 },
+      { date: '2023-01-08', users: 2820 },
+      { date: '2023-01-09', users: 2750 },
+      { date: '2023-01-10', users: 2790 },
+      { date: '2023-01-11', users: 2840 },
+      { date: '2023-01-12', users: 2875 }
+    ],
+    byPlan: [
+      { name: 'Free', value: 4083 },
+      { name: 'Basic', value: 782 },
+      { name: 'Premium', value: 563 }
+    ],
+    byCountry: [
+      { name: 'United States', value: 1856 },
+      { name: 'Italy', value: 1245 },
+      { name: 'United Kingdom', value: 734 },
+      { name: 'Germany', value: 489 },
+      { name: 'France', value: 456 },
+      { name: 'Other', value: 648 }
+    ]
+  },
+  content: {
+    totalLessons: 345,
+    completedLessons: 187594,
+    flashcards: 4256,
+    averageScore: 82.5,
+    popularCategories: [
+      { name: 'Vocabulary', value: 42 },
+      { name: 'Grammar', value: 28 },
+      { name: 'Conversation', value: 16 },
+      { name: 'Reading', value: 14 }
+    ],
+    topPerformingContent: [
+      { name: 'Basic Italian Greetings', completions: 3856, rating: 4.8 },
+      { name: 'Present Tense Verbs', completions: 3245, rating: 4.7 },
+      { name: 'Food and Dining Vocabulary', completions: 2987, rating: 4.9 },
+      { name: 'Travel Phrases', completions: 2876, rating: 4.6 },
+      { name: 'Numbers 1-100', completions: 2754, rating: 4.5 }
+    ]
+  },
+  aiUsage: {
+    totalProcessed: 127543,
+    speechRecognition: 34567,
+    textGeneration: 56789,
+    translation: 23487,
+    flashcardGeneration: 12700,
+    accuracy: {
+      overall: 92.5,
+      speechRecognition: 89.4,
+      textGeneration: 94.7,
+      translation: 96.2,
+      flashcardGeneration: 91.8
+    },
+    byDay: [
+      { day: 'Monday', requests: 18456 },
+      { day: 'Tuesday', requests: 21345 },
+      { day: 'Wednesday', requests: 22567 },
+      { day: 'Thursday', requests: 19876 },
+      { day: 'Friday', requests: 17654 },
+      { day: 'Saturday', requests: 15678 },
+      { day: 'Sunday', requests: 12567 }
+    ]
+  },
+  revenue: {
+    totalMRR: 14876,
+    growth: 12.4,
+    conversionRate: 6.8,
+    averageRevenue: 24.56,
+    bySubscription: [
+      { plan: 'Monthly Basic', count: 452, revenue: 4520 },
+      { plan: 'Monthly Premium', count: 234, revenue: 3510 },
+      { plan: 'Annual Basic', count: 178, revenue: 3204 },
+      { plan: 'Annual Premium', count: 124, revenue: 3472 },
+      { plan: 'Lifetime', count: 34, revenue: 170 }
+    ],
+    byMonth: [
+      { month: 'Jan', revenue: 10245 },
+      { month: 'Feb', revenue: 10876 },
+      { month: 'Mar', revenue: 11567 },
+      { month: 'Apr', revenue: 12345 },
+      { month: 'May', revenue: 12987 },
+      { month: 'Jun', revenue: 13456 },
+      { month: 'Jul', revenue: 13987 },
+      { month: 'Aug', revenue: 14567 },
+      { month: 'Sep', revenue: 14876 }
+    ]
+  }
 };
 
 interface UserTrendsChartProps {
@@ -27,14 +141,19 @@ interface UserTrendsChartProps {
 
 const UserTrendsChart: React.FC<UserTrendsChartProps> = ({ data }) => {
   return (
-    <TremorLineChart
-      data={data}
-      index="name"
-      categories={["users", "newUsers"]}
-      colors={["blue", "green"]}
-      valueFormatter={(value: number) => `${value}`}
-      className="h-72"
-    />
+    <div className="h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="users" name="Total Users" stroke="#3b82f6" activeDot={{ r: 8 }} />
+          <Line type="monotone" dataKey="newUsers" name="New Users" stroke="#22c55e" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
 
@@ -93,6 +212,7 @@ const EnhancedAnalyticsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("30days");
   
+  // Create data for user trends chart
   const userTrendsData = analyticsData.users.lastMonthActive.map((item) => ({
     name: format(new Date(item.date), "MMM d"),
     users: item.users,
@@ -306,12 +426,17 @@ const EnhancedAnalyticsDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <BarChart 
-                data={analyticsData.aiUsage.byDay}
-                xKey="day"
-                yKey="requests"
-                color="#6366f1"
-              />
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analyticsData.aiUsage.byDay}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="requests" fill="#6366f1" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
           

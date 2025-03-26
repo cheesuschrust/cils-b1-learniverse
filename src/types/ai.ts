@@ -28,3 +28,10 @@ export interface AIFeedback {
   explanation: string;
   confidence: number;
 }
+
+export interface ConfidenceIndicatorProps {
+  score: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  indicatorClassName?: string;
+}

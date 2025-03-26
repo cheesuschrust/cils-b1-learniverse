@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { BarChart } from '@/components/admin/charts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AIPerformanceCardProps {
   data: {
@@ -68,12 +68,17 @@ export const AIPerformanceCard: React.FC<AIPerformanceCardProps> = ({ data }) =>
         
         <Separator className="my-6" />
         
-        <BarChart 
-          data={data.byDay}
-          xKey="day"
-          yKey="requests"
-          color="#6366f1"
-        />
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.byDay}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="requests" fill="#6366f1" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

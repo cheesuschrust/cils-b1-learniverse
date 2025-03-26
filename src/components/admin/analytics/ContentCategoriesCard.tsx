@@ -5,11 +5,15 @@ import { Progress } from '@/components/ui/progress';
 
 interface ContentCategoriesCardProps {
   categories: { name: string; value: number }[];
+  className?: string;
 }
 
-export const ContentCategoriesCard: React.FC<ContentCategoriesCardProps> = ({ categories }) => {
+export const ContentCategoriesCard: React.FC<ContentCategoriesCardProps> = ({ 
+  categories,
+  className
+}) => {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>Popular Categories</CardTitle>
         <CardDescription>
