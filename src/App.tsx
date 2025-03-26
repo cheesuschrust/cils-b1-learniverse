@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
@@ -23,61 +23,187 @@ import Settings from '@/pages/Settings';
 import AIAssistant from '@/pages/AIAssistant';
 import { Toaster } from '@/components/ui/toaster';
 import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
+import { ThemeProvider } from '@/components/ui/theme-provider';
+import { GamificationProvider } from '@/contexts/GamificationContext';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
+import FeedbackWidget from '@/components/feedback/FeedbackWidget';
+import HelpDocumentation from '@/components/help/HelpDocumentation';
+import { useAuth } from '@/contexts/AuthContext';
+import { errorReporting, ErrorCategory, ErrorSeverity } from '@/utils/errorReporting';
 import './App.css';
 
 function App() {
+  const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const location = useLocation();
+  
+  // Check if the user needs to see onboarding
   useEffect(() => {
-    // Set initial theme based on system preference
-    const theme = localStorage.getItem('theme') || 'system';
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      document.documentElement.classList.add(systemTheme);
-    } else {
-      document.documentElement.classList.add(theme);
+    if (user && user.hasCompletedOnboarding === false) {
+      setShowOnboarding(true);
     }
-  }, []);
+  }, [user]);
+  
+  // Track page views for analytics
+  useEffect(() => {
+    // Log page view for analytics
+    const pageName = location.pathname || '/';
+    console.log(`Page view: ${pageName}`);
+    
+    // In a real app, you would call your analytics service here
+    // Example: analytics.logPageView(pageName);
+    
+    // Reset any error states when navigating
+    const handleError = (error: Error) => {
+      errorReporting.captureError(
+        error,
+        ErrorSeverity.HIGH,
+        ErrorCategory.UNKNOWN,
+        { route: location.pathname }
+      );
+    };
+    
+    // Listen for errors
+    window.addEventListener('error', (event) => handleError(event.error));
+    
+    return () => {
+      window.removeEventListener('error', (event) => handleError(event.error));
+    };
+  }, [location]);
+  
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
+  
+  // Handle feedback submission
+  const handleFeedbackSubmit = async (feedback: { type: string; message: string }) => {
+    // In a real app, you would send this to your backend
+    console.log('Feedback submitted:', feedback);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return true;
+  };
 
   return (
-    <AIUtilsProvider>
-      <div className="App">
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/email-verification/:token" element={<EmailVerification />} />
-          <Route path="*" element={<NotFound />} />
+    <ThemeProvider defaultTheme="light">
+      <ErrorBoundary>
+        <AIUtilsProvider>
+          <GamificationProvider>
+            <div className="App">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/email-verification/:token" element={<EmailVerification />} />
+                <Route path="*" element={<NotFound />} />
 
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute children={undefined} />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/flashcards" element={<FlashcardsPage />} />
-              <Route path="/multiple-choice" element={<MultipleChoicePage />} />
-              <Route path="/writing" element={<WritingPage />} />
-              <Route path="/speaking" element={<SpeakingPage />} />
-              <Route path="/listening" element={<ListeningPage />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/ai-assistant" element={<AIAssistant />} />
-            </Route>
-          </Route>
+                {/* Protected routes */}
+                <Route element={<ProtectedRoute>
+                  <ErrorBoundary />
+                </ProtectedRoute>}>
+                  <Route element={<DashboardLayout />}>
+                    <Route path="/" element={
+                      <ErrorBoundary>
+                        <Dashboard />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/profile" element={
+                      <ErrorBoundary>
+                        <UserProfile />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/flashcards" element={
+                      <ErrorBoundary>
+                        <FlashcardsPage />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/multiple-choice" element={
+                      <ErrorBoundary>
+                        <MultipleChoicePage />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/writing" element={
+                      <ErrorBoundary>
+                        <WritingPage />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/speaking" element={
+                      <ErrorBoundary>
+                        <SpeakingPage />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/listening" element={
+                      <ErrorBoundary>
+                        <ListeningPage />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/analytics" element={
+                      <ErrorBoundary>
+                        <Analytics />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/achievements" element={
+                      <ErrorBoundary>
+                        <Achievements />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/settings" element={
+                      <ErrorBoundary>
+                        <Settings />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/ai-assistant" element={
+                      <ErrorBoundary>
+                        <AIAssistant />
+                      </ErrorBoundary>
+                    } />
+                  </Route>
+                </Route>
 
-          {/* Admin routes */}
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} children={undefined} />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/ai" element={<AIManagement />} />
-            </Route>
-          </Route>
+                {/* Admin routes */}
+                <Route element={<ProtectedRoute allowedRoles={["admin"]}>
+                  <ErrorBoundary />
+                </ProtectedRoute>}>
+                  <Route element={<AdminLayout />}>
+                    <Route path="/admin/users" element={
+                      <ErrorBoundary>
+                        <UserManagement />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="/admin/ai" element={
+                      <ErrorBoundary>
+                        <AIManagement />
+                      </ErrorBoundary>
+                    } />
+                  </Route>
+                </Route>
 
-          {/* NotFound route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </div>
-    </AIUtilsProvider>
+                {/* NotFound route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              
+              {/* Onboarding flow */}
+              <OnboardingFlow 
+                isOpen={showOnboarding} 
+                onComplete={handleOnboardingComplete} 
+              />
+              
+              {/* Feedback widget */}
+              <FeedbackWidget onSubmit={handleFeedbackSubmit} />
+              
+              {/* Help Documentation (visible on all pages) */}
+              <HelpDocumentation />
+              
+              <Toaster />
+            </div>
+          </GamificationProvider>
+        </AIUtilsProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 

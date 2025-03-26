@@ -6,12 +6,14 @@ import { Question, QuizAttempt, ReviewSchedule, ReviewPerformance } from '@/type
  * @param correct Whether the user answered correctly
  * @param currentFactor Current difficulty factor (defaults to 2.5)
  * @param consecutiveCorrect Number of consecutive correct answers
+ * @param confidenceAdjustment Optional adjustment based on confidence score (0-1)
  * @returns Next review date and updated difficulty factor
  */
 export function calculateNextReview(
   correct: boolean,
   currentFactor: number = 2.5,
-  consecutiveCorrect: number = 0
+  consecutiveCorrect: number = 0,
+  confidenceAdjustment: number = 0
 ): { nextReviewDate: Date; difficultyFactor: number } {
   const now = new Date();
   let days: number;
@@ -38,6 +40,12 @@ export function calculateNextReview(
     
     // Cap difficulty factor at 2.5
     difficultyFactor = Math.min(2.5, difficultyFactor);
+  }
+  
+  // Apply confidence adjustment if provided
+  // Lower confidence means shorter intervals
+  if (confidenceAdjustment > 0) {
+    days = Math.max(1, Math.round(days * (1 - confidenceAdjustment)));
   }
   
   // Maximum interval cap at 60 days
@@ -197,3 +205,11 @@ export function calculateReviewPerformance(attempts: QuizAttempt[]): ReviewPerfo
   
   return performance;
 }
+
+export default {
+  calculateNextReview,
+  isDueForReview,
+  daysUntilReview,
+  generateReviewSchedule,
+  calculateReviewPerformance
+};
