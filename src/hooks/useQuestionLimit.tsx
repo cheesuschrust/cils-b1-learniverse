@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { isPremiumUser, hasReachedDailyLimit, trackQuestionUsage } from "@/lib/supabase";
+import { isPremiumUser, hasReachedDailyLimit, trackQuestionUsage, supabase } from "@/lib/supabase";
 
 // Define question types that can be tracked
 export type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
