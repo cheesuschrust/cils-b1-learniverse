@@ -1,154 +1,147 @@
 
 import React from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { NotificationItemProps } from '@/types/interface-fixes';
 import { formatDistanceToNow } from 'date-fns';
-import { Info, Check, AlertCircle, BellRing, Download, X, ExternalLink } from 'lucide-react';
-import { Notification, NotificationType } from '@/types/notification';
-
-interface NotificationItemProps {
-  notification: Notification;
-  onDismiss: (id: string) => void;
-  onRead: (id: string) => void;
-}
+import { X, Bell, Info, CheckCircle, AlertTriangle, AlertCircle, File, Zap } from 'lucide-react';
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ 
   notification, 
-  onDismiss,
-  onRead 
+  onDismiss, 
+  onRead,
+  onAction 
 }) => {
-  const { id, title, message, type = 'default', createdAt, read, url } = notification;
-  
-  const getTypeIcon = () => {
-    switch (type) {
+  const handleDismiss = () => {
+    onDismiss(notification.id);
+  };
+
+  const handleRead = () => {
+    onRead(notification.id);
+  };
+
+  const handleAction = (action: string) => {
+    if (onAction) {
+      onAction(notification.id, action);
+    }
+  };
+
+  // Get icon based on notification type
+  const getIcon = () => {
+    switch (notification.type) {
       case 'info':
         return <Info className="h-5 w-5 text-blue-500" />;
       case 'success':
-        return <Check className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'warning':
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       case 'error':
         return <AlertCircle className="h-5 w-5 text-red-500" />;
       case 'file-processing':
-        return <Download className="h-5 w-5 text-purple-500" />;
-      case 'system':
-        return <Info className="h-5 w-5 text-gray-500" />;
+        return <File className="h-5 w-5 text-purple-500" />;
+      case 'achievement':
+        return <Zap className="h-5 w-5 text-amber-500" />;
       default:
-        return <BellRing className="h-5 w-5 text-gray-500" />;
+        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
-  
-  const handleClick = () => {
-    if (!read) {
-      onRead(id);
+
+  // Get background color based on priority
+  const getCardClasses = () => {
+    if (notification.read) {
+      return "bg-muted";
     }
     
-    if (url) {
-      window.open(url, '_blank');
+    switch (notification.priority) {
+      case 'high':
+        return "bg-red-50 dark:bg-red-900/20";
+      case 'normal':
+        return "bg-blue-50 dark:bg-blue-900/20";
+      default:
+        return "";
     }
   };
-  
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDismiss(id);
+
+  // Format notification time
+  const getFormattedTime = () => {
+    const timestamp = new Date(notification.timestamp);
+    return formatDistanceToNow(timestamp, { addSuffix: true });
   };
-  
-  const handleMarkAsRead = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onRead(id);
-  };
-  
-  const formattedTime = typeof createdAt === 'string' 
-    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true })
-    : formatDistanceToNow(createdAt, { addSuffix: true });
-  
+
   return (
-    <div 
-      className={cn(
-        "flex p-3 gap-3 rounded-md transition-colors cursor-pointer",
-        read ? "bg-background hover:bg-muted/50" : "bg-primary/5 hover:bg-primary/10",
-        "relative"
-      )}
-      onClick={handleClick}
-    >
-      <div className="mt-1 flex-shrink-0">{getTypeIcon()}</div>
+    <Card className={`mb-3 relative ${getCardClasses()}`}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute right-2 top-2"
+        onClick={handleDismiss}
+      >
+        <X className="h-4 w-4" />
+        <span className="sr-only">Dismiss</span>
+      </Button>
       
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-start">
-          <h4 className={cn(
-            "text-sm font-medium",
-            read ? "text-foreground" : "text-primary"
-          )}>
-            {title}
-          </h4>
-          <span className="text-xs text-muted-foreground">{formattedTime}</span>
+      <CardHeader className="pb-2 pt-6">
+        <div className="flex items-start gap-3">
+          <div className="mt-1">{getIcon()}</div>
+          <div className="flex-1">
+            <CardTitle className="text-base font-semibold">
+              {notification.title}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {getFormattedTime()}
+            </p>
+          </div>
         </div>
+      </CardHeader>
+      
+      <CardContent>
+        <p className="text-sm">{notification.message}</p>
         
-        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{message}</p>
+        {notification.priority === 'high' && (
+          <Badge variant="destructive" className="mt-2">Important</Badge>
+        )}
         
-        {notification.actions && notification.actions.length > 0 && (
-          <div className="flex gap-2 mt-2">
-            {notification.actions.map(action => (
-              <Button 
-                key={action.id} 
-                variant="outline" 
-                size="sm" 
-                className="h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('Action clicked:', action.label);
-                }}
-              >
-                {action.label}
-              </Button>
-            ))}
+        {notification.type === 'file-processing' && (
+          <div className="mt-3">
+            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all" 
+                style={{ width: `${notification.progress || 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Processing: {notification.progress || 0}% complete
+            </p>
           </div>
         )}
-      </div>
+      </CardContent>
       
-      <div className="flex flex-col gap-1">
-        {!read && (
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="h-6 w-6"
-            onClick={handleMarkAsRead}
-            title="Mark as read"
-          >
-            <Check className="h-3.5 w-3.5" />
-          </Button>
-        )}
-        
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="h-6 w-6"
-          onClick={handleDismiss}
-          title="Dismiss"
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
-        
-        {url && (
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(url, '_blank');
-            }}
-            title="Open link"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
-      
-      {!read && (
-        <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary" />
+      {(notification.actions && notification.actions.length > 0) && (
+        <CardFooter className="flex flex-wrap gap-2">
+          {notification.actions.map((action, index) => (
+            <Button 
+              key={index} 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleAction(action.action)}
+            >
+              {action.label}
+            </Button>
+          ))}
+          
+          {!notification.read && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleRead}
+            >
+              Mark as read
+            </Button>
+          )}
+        </CardFooter>
       )}
-    </div>
+    </Card>
   );
 };
 

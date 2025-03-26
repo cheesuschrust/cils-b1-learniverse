@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Flashcard, FlashcardSet, FlashcardStats } from '@/types/flashcard';
+import { Flashcard, FlashcardSet, FlashcardStats } from '@/types/interface-fixes';
 
 const mockFlashcards: Flashcard[] = [
   {
@@ -57,7 +57,13 @@ export interface ImportOptions {
 export interface ImportResult {
   success: boolean;
   importedCards?: Flashcard[];
+  imported?: number;
+  failed?: number;
+  skipped?: number;
+  errors?: string[];
 }
+
+export type ImportFormat = 'csv' | 'json' | 'anki' | 'quizlet';
 
 export interface UseFlashcardsReturn {
   flashcards: Flashcard[];
@@ -88,17 +94,13 @@ export const useFlashcards = (): UseFlashcardsReturn => {
   
   // Calculate stats
   const stats: FlashcardStats = {
-    total: flashcards.length,
-    mastered: flashcards.filter(card => card.mastered).length,
-    dueToday: flashcards.filter(card => {
-      if (!card.nextReview) return false;
-      const today = new Date();
-      const reviewDate = new Date(card.nextReview);
-      return today >= reviewDate && !card.mastered;
-    }).length,
-    averageLevel: flashcards.length 
-      ? flashcards.reduce((sum, card) => sum + card.level, 0) / flashcards.length 
-      : 0
+    totalReviews: flashcards.reduce((sum, card) => sum + (card.lastReviewed ? 1 : 0), 0),
+    correctReviews: flashcards.filter(card => card.level >= 2).length,
+    averageScore: flashcards.length 
+      ? flashcards.reduce((sum, card) => sum + card.level, 0) / flashcards.length * 25 // 0-4 scale to 0-100
+      : 0,
+    streak: 5, // Mock streak value
+    lastReviewDate: new Date(Date.now() - 86400000), // Yesterday
   };
   
   // Create a new flashcard
@@ -278,11 +280,21 @@ export const useFlashcards = (): UseFlashcardsReturn => {
       
       return {
         success: true,
-        importedCards
+        importedCards,
+        imported: importedCards.length,
+        failed: 0,
+        skipped: 0,
+        errors: []
       };
     } catch (error) {
       console.error('Failed to import cards:', error);
-      return { success: false };
+      return { 
+        success: false,
+        imported: 0,
+        failed: cards.length,
+        skipped: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
     }
   };
   

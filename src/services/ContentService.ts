@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Flashcard, FlashcardSet } from '@/types/flashcard';
+import { Flashcard, FlashcardSet } from '@/types/interface-fixes';
 
 // Mock data for flashcards
 const generateMockFlashcards = (): Flashcard[] => {
@@ -135,40 +135,49 @@ const generateMockFlashcardSets = (flashcards: Flashcard[]): FlashcardSet[] => {
       id: '1',
       name: 'Basic Animals',
       description: 'Common animal names in Italian',
+      tags: ['animals', 'vocabulary', 'beginner'],
       cards: flashcards.filter(card => card.tags.includes('animals')),
       isPublic: true,
+      creator: 'system',
+      isFavorite: false,
       createdAt: new Date(Date.now() - 1209600000),
       updatedAt: new Date(Date.now() - 1209600000),
-      creator: 'system',
       difficulty: 'beginner',
       category: 'vocabulary',
-      isFavorite: false
+      totalCards: flashcards.filter(card => card.tags.includes('animals')).length,
+      masteredCards: flashcards.filter(card => card.tags.includes('animals') && card.mastered).length
     },
     {
       id: '2',
       name: 'Household Items',
       description: 'Common items found in a home',
+      tags: ['home', 'furniture', 'objects', 'vocabulary'],
       cards: flashcards.filter(card => card.tags.includes('home')),
       isPublic: true,
+      creator: 'system',
+      isFavorite: true,
       createdAt: new Date(Date.now() - 1209600000),
       updatedAt: new Date(Date.now() - 1209600000),
-      creator: 'system',
       difficulty: 'beginner',
       category: 'vocabulary',
-      isFavorite: true
+      totalCards: flashcards.filter(card => card.tags.includes('home')).length,
+      masteredCards: flashcards.filter(card => card.tags.includes('home') && card.mastered).length
     },
     {
       id: '3',
       name: 'Food & Drinks',
       description: 'Basic food and drink vocabulary',
+      tags: ['food', 'drinks', 'vocabulary', 'beginner'],
       cards: flashcards.filter(card => card.tags.includes('food')),
       isPublic: true,
+      creator: 'system',
+      isFavorite: false,
       createdAt: new Date(Date.now() - 1209600000),
       updatedAt: new Date(Date.now() - 1209600000),
-      creator: 'system',
       difficulty: 'beginner',
       category: 'vocabulary',
-      isFavorite: false
+      totalCards: flashcards.filter(card => card.tags.includes('food')).length,
+      masteredCards: flashcards.filter(card => card.tags.includes('food') && card.mastered).length
     }
   ];
 };

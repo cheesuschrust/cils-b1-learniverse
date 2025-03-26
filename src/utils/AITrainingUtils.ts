@@ -1,178 +1,319 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { ContentType } from '@/utils/textAnalysis';
+import { ContentType } from '@/types/interface-fixes';
 
-interface TrainingExample {
-  id: string;
+// Text sample analysis for content type detection
+interface TextAnalysisResult {
   contentType: ContentType;
-  text: string;
-  metadata: any;
+  confidence: number;
+  features: {
+    [key: string]: number | boolean;
+  };
 }
 
-interface ContentTypeConfidence {
-  contentType: ContentType;
-  confidenceScore: number;
-  exampleCount: number;
-  lastImproved: Date;
+// Features used to detect content types
+interface ContentFeatures {
+  hasHeaders: boolean;
+  csvPattern: boolean;
+  jsonPattern: boolean;
+  italianWords: number;
+  englishWords: number;
+  questionMarks: number;
+  multipleChoiceOptions: boolean;
+  paragraphCount: number;
+  sentenceCount: number;
+  averageSentenceLength: number;
+  dialoguePattern: boolean;
 }
 
-// In a real implementation, this would be stored in a database or local storage
-const mockDatabase = {
-  trainingExamples: [] as TrainingExample[],
-  confidenceScores: {
-    'multiple-choice': { score: 85, count: 12, lastImproved: new Date() },
-    'flashcards': { score: 78, count: 8, lastImproved: new Date() },
-    'writing': { score: 72, count: 6, lastImproved: new Date() },
-    'speaking': { score: 68, count: 5, lastImproved: new Date() },
-    'listening': { score: 80, count: 10, lastImproved: new Date() }
-  } as Record<ContentType, { score: number, count: number, lastImproved: Date }>
-};
+// Italian language detection words
+const ITALIAN_COMMON_WORDS = [
+  'e', 'il', 'la', 'di', 'che', 'è', 'non', 'un', 'per', 'sono', 'ma', 'mi', 'si', 'ho', 'lo',
+  'hai', 'ci', 'ha', 'come', 'con', 'questo', 'se', 'cosa', 'anche', 'perché', 'qui', 'sei',
+  'della', 'sono', 'quando', 'bene', 'ciao', 'grazie', 'molto'
+];
+
+// English language detection words
+const ENGLISH_COMMON_WORDS = [
+  'the', 'and', 'is', 'in', 'it', 'you', 'that', 'was', 'for', 'on', 'are', 'with', 'as', 'they',
+  'be', 'at', 'have', 'this', 'from', 'by', 'had', 'not', 'what', 'but', 'when', 'if', 'well', 'hi',
+  'thank', 'very'
+];
 
 /**
- * Add training examples for a specific content type
- * @param contentType The type of content to train
- * @param examples Array of training examples
- * @returns Number of examples added
+ * Analyze a text sample to detect its content type
  */
-export const addTrainingExamples = (contentType: ContentType, examples: TrainingExample[]): number => {
-  const validExamples = examples.filter(ex => 
-    ex.contentType === contentType && ex.text.trim() !== ''
-  );
-  
-  if (validExamples.length === 0) return 0;
-  
-  // Add examples to the database
-  validExamples.forEach(example => {
-    const exampleWithId = {
-      ...example,
-      id: example.id || uuidv4(),
-      contentType // Ensure correct content type
+export const analyzeContentType = (text: string): TextAnalysisResult => {
+  if (!text || text.trim().length === 0) {
+    return {
+      contentType: 'unknown',
+      confidence: 0.8,
+      features: {}
     };
-    
-    // Check if example already exists
-    const existingIndex = mockDatabase.trainingExamples.findIndex(ex => ex.id === exampleWithId.id);
-    if (existingIndex >= 0) {
-      mockDatabase.trainingExamples[existingIndex] = exampleWithId;
-    } else {
-      mockDatabase.trainingExamples.push(exampleWithId);
-    }
-  });
-  
-  // Update confidence score
-  updateConfidenceScore(contentType, validExamples.length);
-  
-  return validExamples.length;
-};
+  }
 
-/**
- * Remove a training example
- * @param id Example ID to remove
- * @returns Whether the operation was successful
- */
-export const removeTrainingExample = (id: string): boolean => {
-  const initialLength = mockDatabase.trainingExamples.length;
-  mockDatabase.trainingExamples = mockDatabase.trainingExamples.filter(ex => ex.id !== id);
-  return mockDatabase.trainingExamples.length < initialLength;
-};
-
-/**
- * Get training examples for a specific content type
- * @param contentType Type of content
- * @returns Array of training examples
- */
-export const getTrainingExamples = (contentType: ContentType): TrainingExample[] => {
-  return mockDatabase.trainingExamples.filter(ex => ex.contentType === contentType);
-};
-
-/**
- * Get the confidence score for a specific content type
- * @param contentType Type of content
- * @returns Confidence score (0-100)
- */
-export const getConfidenceScore = (contentType: ContentType): number => {
-  return mockDatabase.confidenceScores[contentType]?.score || 50;
-};
-
-/**
- * Get detailed confidence information for all content types
- * @returns Object containing confidence details for each content type
- */
-export const getContentTypeConfidence = (): Record<ContentType, ContentTypeConfidence> => {
-  const contentTypes: ContentType[] = ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
+  const features = extractFeatures(text);
   
-  const result: Record<ContentType, ContentTypeConfidence> = {} as Record<ContentType, ContentTypeConfidence>;
-  
-  contentTypes.forEach(type => {
-    const data = mockDatabase.confidenceScores[type];
-    result[type] = {
-      contentType: type,
-      confidenceScore: data?.score || 50,
-      exampleCount: data?.count || 0,
-      lastImproved: data?.lastImproved || new Date()
+  // Detect based on features
+  if (features.csvPattern) {
+    return {
+      contentType: 'csv',
+      confidence: 0.9,
+      features
     };
-  });
+  }
   
-  return result;
+  if (features.jsonPattern) {
+    return {
+      contentType: 'json',
+      confidence: 0.95,
+      features
+    };
+  }
+  
+  if (text.includes('.mp3') || text.includes('.wav') || text.includes('audio')) {
+    return {
+      contentType: 'audio',
+      confidence: 0.85,
+      features
+    };
+  }
+  
+  if (text.includes('.pdf') || text.includes('PDF')) {
+    return {
+      contentType: 'pdf',
+      confidence: 0.85,
+      features
+    };
+  }
+  
+  if (text.includes('.txt') || (features.paragraphCount > 0 && !features.csvPattern && !features.jsonPattern)) {
+    return {
+      contentType: 'txt',
+      confidence: 0.75,
+      features
+    };
+  }
+  
+  // Detect flashcards content
+  if ((features.italianWords > 3 && features.englishWords > 3) || 
+      text.includes('flashcard') || 
+      text.includes('flash card') ||
+      (text.includes('italian') && text.includes('english'))) {
+    return {
+      contentType: 'flashcards',
+      confidence: 0.85,
+      features
+    };
+  }
+  
+  // Detect listening exercises
+  if ((text.includes('listen') || text.includes('audio') || text.includes('pronunciation')) &&
+      (features.dialoguePattern || features.italianWords > 5)) {
+    return {
+      contentType: 'listening',
+      confidence: 0.8,
+      features
+    };
+  }
+  
+  // Detect writing exercises
+  if (text.includes('write') || text.includes('essay') || text.includes('writing') || 
+      (features.paragraphCount > 2 && features.averageSentenceLength > 10)) {
+    return {
+      contentType: 'writing',
+      confidence: 0.7,
+      features
+    };
+  }
+  
+  // Detect speaking exercises
+  if (text.includes('speak') || text.includes('pronunciation') || text.includes('repeat') ||
+      (features.dialoguePattern && features.italianWords > 5)) {
+    return {
+      contentType: 'speaking',
+      confidence: 0.75,
+      features
+    };
+  }
+  
+  // Detect multiple choice
+  if (features.multipleChoiceOptions || features.questionMarks > 2 || 
+      text.includes('quiz') || text.includes('multiple choice')) {
+    return {
+      contentType: 'multiple-choice',
+      confidence: 0.8,
+      features
+    };
+  }
+  
+  // Default if no better match
+  return {
+    contentType: 'unknown',
+    confidence: 0.6,
+    features
+  };
 };
 
 /**
- * Reset all training data
- * @returns Whether the operation was successful
+ * Extract features from text for content type analysis
  */
-export const resetTrainingData = (): boolean => {
+const extractFeatures = (text: string): ContentFeatures => {
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  const words = text.toLowerCase().split(/\s+/);
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  
+  // CSV detection: first line has commas and possibly headers
+  const hasHeaders = lines.length > 0 && /^[a-zA-Z,]+$/.test(lines[0]);
+  const csvPattern = lines.length > 1 && lines.filter(line => line.includes(',')).length > lines.length * 0.7;
+  
+  // JSON detection
+  const jsonPattern = (text.trim().startsWith('{') && text.trim().endsWith('}')) || 
+                     (text.trim().startsWith('[') && text.trim().endsWith(']'));
+  
+  // Language detection
+  const italianWords = words.filter(word => ITALIAN_COMMON_WORDS.includes(word)).length;
+  const englishWords = words.filter(word => ENGLISH_COMMON_WORDS.includes(word)).length;
+  
+  // Multiple choice detection
+  const questionMarks = (text.match(/\?/g) || []).length;
+  const multipleChoiceOptions = /[A-D]\)\s|\d\)\s|[A-D]\.\s/.test(text);
+  
+  // Text structure analysis
+  const paragraphCount = lines.length;
+  const sentenceCount = sentences.length;
+  const averageSentenceLength = words.length / Math.max(1, sentenceCount);
+  
+  // Dialogue pattern detection (for conversations, listening exercises)
+  const dialoguePattern = /^[A-Z][a-z]+:.*\n/.test(text) || text.split(':').length > 3;
+  
+  return {
+    hasHeaders,
+    csvPattern,
+    jsonPattern,
+    italianWords,
+    englishWords,
+    questionMarks,
+    multipleChoiceOptions,
+    paragraphCount,
+    sentenceCount,
+    averageSentenceLength,
+    dialoguePattern
+  };
+};
+
+/**
+ * Detect the content type of a file based on its name and content
+ */
+export const detectFileContentType = async (file: File): Promise<ContentType> => {
+  // First check by file extension
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  if (extension === 'csv') return 'csv';
+  if (extension === 'json') return 'json';
+  if (extension === 'txt') return 'txt';
+  if (extension === 'pdf') return 'pdf';
+  if (['mp3', 'wav', 'ogg', 'm4a'].includes(extension || '')) return 'audio';
+  
+  // If extension doesn't clearly indicate type, check content
   try {
-    mockDatabase.trainingExamples = [];
+    // Read first 4KB of the file to detect content type
+    const chunk = await readFileChunk(file, 4096);
+    const textContent = new TextDecoder().decode(chunk);
+    const analysis = analyzeContentType(textContent);
     
-    // Reset confidence scores to default values
-    const contentTypes: ContentType[] = ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
-    contentTypes.forEach(type => {
-      mockDatabase.confidenceScores[type] = { 
-        score: 50, 
-        count: 0, 
-        lastImproved: new Date() 
-      };
-    });
-    
-    return true;
+    return analysis.contentType;
   } catch (error) {
-    console.error('Failed to reset training data:', error);
-    return false;
+    console.error('Error detecting file content type:', error);
+    return 'unknown';
   }
 };
 
 /**
- * Update the confidence score for a content type based on new training examples
- * @param contentType Type of content
- * @param newExampleCount Number of new examples added
+ * Read a chunk of a file as an ArrayBuffer
  */
-const updateConfidenceScore = (contentType: ContentType, newExampleCount: number): void => {
-  const currentData = mockDatabase.confidenceScores[contentType] || { 
-    score: 50, 
-    count: 0, 
-    lastImproved: new Date() 
+const readFileChunk = (file: File, size: number): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const blob = file.slice(0, size);
+    
+    reader.onload = (e) => {
+      resolve(e.target?.result as ArrayBuffer);
+    };
+    
+    reader.onerror = (e) => {
+      reject(new Error('Error reading file chunk'));
+    };
+    
+    reader.readAsArrayBuffer(blob);
+  });
+};
+
+/**
+ * Process uploaded content to extract relevant information
+ */
+export const processUploadedContent = async (file: File): Promise<{
+  contentType: ContentType;
+  content: string | ArrayBuffer;
+  metadata: Record<string, any>;
+}> => {
+  const contentType = await detectFileContentType(file);
+  let content: string | ArrayBuffer;
+  const metadata: Record<string, any> = {
+    filename: file.name,
+    filesize: file.size,
+    lastModified: new Date(file.lastModified),
+    contentType
   };
   
-  // Calculate new score based on example count
-  // This is a simplified model - in a real implementation this would be based on model performance
-  const baseScore = currentData.score;
-  const exampleWeight = 0.5; // Weight per example
-  const maxBoost = 10; // Maximum boost from a single batch
+  if (['csv', 'json', 'txt'].includes(contentType) || contentType === 'unknown') {
+    // Read text files
+    content = await readFileAsText(file);
+  } else {
+    // Read binary files
+    content = await readFileAsArrayBuffer(file);
+  }
   
-  // Calculate score boost based on new examples (diminishing returns)
-  const boost = Math.min(maxBoost, newExampleCount * exampleWeight);
-  
-  // Cap the score at 95% - final 5% requires actual performance improvements
-  const newScore = Math.min(95, baseScore + boost);
-  
-  mockDatabase.confidenceScores[contentType] = {
-    score: newScore,
-    count: currentData.count + newExampleCount,
-    lastImproved: new Date()
+  return {
+    contentType,
+    content,
+    metadata
   };
 };
 
-export const analyzeContentForTraining = (content: string): ContentType => {
-  // This would use the training examples to improve content detection
-  // For now, just use the basic detection
-  return import('./textAnalysis').then(module => module.detectContentType(content));
+/**
+ * Read a file as text
+ */
+const readFileAsText = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      resolve(e.target?.result as string);
+    };
+    
+    reader.onerror = (e) => {
+      reject(new Error('Error reading file as text'));
+    };
+    
+    reader.readAsText(file);
+  });
+};
+
+/**
+ * Read a file as ArrayBuffer
+ */
+const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      resolve(e.target?.result as ArrayBuffer);
+    };
+    
+    reader.onerror = (e) => {
+      reject(new Error('Error reading file as ArrayBuffer'));
+    };
+    
+    reader.readAsArrayBuffer(file);
+  });
 };

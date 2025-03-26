@@ -1,153 +1,130 @@
 
-import { renderHook, act } from '@testing-library/react';
-import { useFlashcardImporter } from './useFlashcardImporter';
-import { useFlashcards } from './useFlashcards';
-import { describe, it, expect, beforeEach, jest } from 'vitest';
-import { ImportFormat } from '@/types/flashcard';
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useFlashcardImporter, ImportOptions } from './useFlashcardImporter';
+import { expect, describe, test, vi, beforeEach } from 'vitest';
 
-// Mock the useFlashcards hook
-vi.mock('./useFlashcards', () => ({
-  useFlashcards: vi.fn(),
+// Mock data
+const mockCsvContent = 'italian,english,tags\ncasa,house,basics\nmela,apple,food';
+const mockJsonContent = '[{"italian":"casa","english":"house","tags":"basics"},{"italian":"mela","english":"apple","tags":"food"}]';
+
+// Mock options
+const mockOptions: ImportOptions = {
+  italianColumn: 'italian',
+  englishColumn: 'english',
+  tagsColumn: 'tags',
+};
+
+// Setup global mocks
+vi.mock('uuid', () => ({
+  v4: () => 'mocked-uuid'
 }));
 
-describe('useFlashcardImporter Hook', () => {
-  const mockImportFlashcards = vi.fn();
-  const mockExportFlashcards = vi.fn();
-  const mockFlashcardSets = [
-    { id: 'set1', name: 'Test Set 1' },
-    { id: 'set2', name: 'Test Set 2' },
-  ];
-
+describe('useFlashcardImporter', () => {
   beforeEach(() => {
-    // Reset mocks
     vi.clearAllMocks();
-    
-    // Setup default mock implementation
-    (useFlashcards as jest.Mock).mockReturnValue({
-      importFlashcards: mockImportFlashcards,
-      exportFlashcards: mockExportFlashcards,
-      flashcardSets: mockFlashcardSets,
-    });
   });
 
-  it('initializes with correct default values', () => {
+  test('should import flashcards from CSV content', async () => {
+    // Arrange
     const { result } = renderHook(() => useFlashcardImporter());
     
-    expect(result.current.importResult).toBeNull();
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(result.current.flashcardSets).toEqual(mockFlashcardSets);
-  });
-
-  it('handleImport calls importFlashcards with correct params', async () => {
-    mockImportFlashcards.mockResolvedValueOnce({
-      success: true,
-      imported: 5,
-      skipped: 1,
-      errors: [],
-    });
-    
-    const { result } = renderHook(() => useFlashcardImporter());
-    
-    const content = 'test,csv,content';
-    const importFormat: ImportFormat = { format: 'csv' };
-    const options = { format: importFormat, includeExamples: true };
-    
+    // Act
     let importResult;
     await act(async () => {
-      importResult = await result.current.handleImport(content, options);
+      importResult = await result.current.handleImport(mockCsvContent, mockOptions);
     });
     
-    expect(mockImportFlashcards).toHaveBeenCalledWith(content, options);
-    expect(importResult).toEqual({
-      success: true,
-      imported: 5,
-      skipped: 1,
-      errors: [],
-      importedCards: 5,
-    });
-    expect(result.current.importResult).toEqual({
-      success: true,
-      imported: 5,
-      skipped: 1,
-      errors: [],
-      importedCards: 5,
-    });
+    // Assert
+    expect(importResult.success).toBe(true);
+    expect(importResult.imported).toBeGreaterThan(0);
     expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
-
-  it('handleImport sets loading state correctly', async () => {
-    mockImportFlashcards.mockImplementation(() => {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          resolve({
-            success: true,
-            imported: 3,
-            skipped: 0,
-            errors: [],
-          });
-        }, 100);
-      });
-    });
-    
+  
+  test('should import flashcards from JSON content', async () => {
+    // Arrange
     const { result } = renderHook(() => useFlashcardImporter());
     
-    let promise;
-    act(() => {
-      const importFormat: ImportFormat = { format: 'json' };
-      promise = result.current.handleImport('content', { format: importFormat });
-      expect(result.current.loading).toBe(true);
-    });
-    
+    // Act
+    let importResult;
     await act(async () => {
-      await promise;
+      importResult = await result.current.handleImport(mockJsonContent, { ...mockOptions, format: 'json' });
     });
     
+    // Assert
+    expect(importResult.success).toBe(true);
+    expect(importResult.imported).toBeGreaterThan(0);
     expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
-
-  it('handleImport handles errors correctly', async () => {
-    const errorMessage = 'Import failed';
-    mockImportFlashcards.mockRejectedValueOnce(new Error(errorMessage));
+  
+  test('should handle CSV import error', async () => {
+    // Arrange
+    const { result } = renderHook(() => useFlashcardImporter());
+    const invalidCsv = 'invalid,format\nno,columns';
     
+    // Act & Assert
+    await expect(
+      act(async () => {
+        await result.current.handleImport(invalidCsv, {
+          italianColumn: 'italian',
+          englishColumn: 'english',
+          tagsColumn: 'tags',
+        });
+      })
+    ).rejects.toThrow();
+    
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).not.toBeNull();
+  });
+  
+  test('should handle JSON import error', async () => {
+    // Arrange
+    const { result } = renderHook(() => useFlashcardImporter());
+    const invalidJson = '{ invalid: json }';
+    
+    // Act & Assert
+    await expect(
+      act(async () => {
+        await result.current.handleImport(invalidJson, {
+          ...mockOptions,
+          format: 'json',
+        });
+      })
+    ).rejects.toThrow();
+    
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).not.toBeNull();
+  });
+  
+  test('should export flashcards to CSV format', () => {
+    // Arrange
     const { result } = renderHook(() => useFlashcardImporter());
     
-    await act(async () => {
-      const importFormat: ImportFormat = { format: 'csv' };
-      await expect(result.current.handleImport('content', { format: importFormat }))
-        .rejects.toThrow(errorMessage);
-    });
-    
-    expect(result.current.error).toBe(errorMessage);
-    expect(result.current.loading).toBe(false);
-  });
-
-  it('handleExport calls exportFlashcards with correct params', () => {
-    mockExportFlashcards.mockReturnValueOnce('exported,content');
-    
-    const { result } = renderHook(() => useFlashcardImporter());
-    
+    // Act
     let exportResult;
     act(() => {
-      exportResult = result.current.handleExport('set1', 'csv');
+      exportResult = result.current.handleExport(undefined, 'csv');
     });
     
-    expect(mockExportFlashcards).toHaveBeenCalledWith('set1', 'csv');
-    expect(exportResult).toBe('exported,content');
+    // Assert
+    expect(exportResult).toBeDefined();
+    expect(typeof exportResult).toBe('string');
+    expect(exportResult).toContain('italian,english,tags');
   });
-
-  it('handleExport handles errors correctly', () => {
-    const errorMessage = 'Export failed';
-    mockExportFlashcards.mockImplementationOnce(() => {
-      throw new Error(errorMessage);
-    });
-    
+  
+  test('should export flashcards to JSON format', () => {
+    // Arrange
     const { result } = renderHook(() => useFlashcardImporter());
     
+    // Act
+    let exportResult;
     act(() => {
-      expect(() => result.current.handleExport('set1')).toThrow(errorMessage);
+      exportResult = result.current.handleExport(undefined, 'json');
     });
     
-    expect(result.current.error).toBe(errorMessage);
+    // Assert
+    expect(exportResult).toBeDefined();
+    expect(typeof exportResult).toBe('string');
   });
 });

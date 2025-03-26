@@ -19,7 +19,7 @@ export interface AIPreference {
   optimizationLevel?: number;
   anonymousAnalytics?: boolean;
   contentFiltering?: boolean;
-  // Add missing properties from the error message
+  // Added missing properties from the error message
   enabled?: boolean;
   modelSize?: 'small' | 'medium' | 'large';
   temperature?: number;
@@ -174,4 +174,84 @@ export interface AIUtilsContextTypeExtension {
   isTranslating?: boolean;
   hasActiveMicrophone?: boolean;
   checkMicrophoneAccess?: () => Promise<boolean>;
+}
+
+// Add Flashcard interface
+export interface Flashcard {
+  id: string;
+  italian: string;
+  english: string;
+  level: number;
+  mastered: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  nextReview: Date;
+  lastReviewed: Date | null;
+  explanation?: string;
+}
+
+// Add import format type
+export type ImportFormat = 'csv' | 'json' | 'anki' | 'quizlet';
+
+// Add missing notification item props
+export interface NotificationItemProps {
+  notification: any;
+  onDismiss: (id: string) => void;
+  onRead: (id: string) => void;
+  onAction?: (id: string, action: string) => void;
+}
+
+// Add missing License interface
+export interface License {
+  id: string;
+  name: string;
+  type: "university" | "k12" | "language-school" | "corporate";
+  plan: string;
+  seats: number;
+  usedSeats: number;
+  startDate: string;
+  endDate: string;
+  status: LicenseStatus;
+  contactName: string;
+  contactEmail: string;
+  customization: {
+    logo: string;
+    colors: {
+      primary: string;
+      secondary: string;
+    };
+    domain: string;
+  };
+  value: number;
+  renewalStatus: RenewalStatus;
+  domain: string;
+}
+
+// Add missing AI contexts type extensions
+export interface NotificationsContextType {
+  notifications: any[];
+  addNotification: (notification: any) => void;
+  dismissNotification: (id: string) => void;
+  markAsRead: (id: string) => void;
+  dismissAllNotifications: () => void;
+}
+
+// Add missing FlashcardSet interface
+export interface FlashcardSet {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  cards: Flashcard[];
+  createdAt: Date;
+  updatedAt: Date;
+  totalCards: number;
+  masteredCards: number;
+  category: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  isPublic: boolean;
+  creator: string;
+  isFavorite: boolean;
+  dueDate?: Date;
 }

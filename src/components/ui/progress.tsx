@@ -1,15 +1,16 @@
 
 import * as React from "react";
 import * as ProgressPrimitive from "@radix-ui/react-progress";
+
 import { cn } from "@/lib/utils";
 import { ProgressProps } from "@/types/interface-fixes";
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value = 0, max = 100, indicator, ...props }, ref) => {
-  const percentage = Math.min(Math.round((value / max) * 100), 100);
-
+>(({ className, value, max = 100, indicator, ...props }, ref) => {
+  const percentage = Math.min(Math.max(0, (value / max) * 100), 100);
+  
   return (
     <ProgressPrimitive.Root
       ref={ref}

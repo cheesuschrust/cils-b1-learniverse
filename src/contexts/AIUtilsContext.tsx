@@ -11,6 +11,10 @@ interface AIUtilsContextType {
   cancelSpeech: () => void;
   processAudioStream: (callback: (transcript: string, isFinal: boolean) => void) => Promise<() => void>;
   stopAudioProcessing: () => void;
+  translateText?: (text: string, targetLanguage: string) => Promise<string>;
+  isTranslating?: boolean;
+  hasActiveMicrophone?: boolean;
+  checkMicrophoneAccess?: () => Promise<boolean>;
 }
 
 const AIUtilsContext = createContext<AIUtilsContextType>({
@@ -21,7 +25,11 @@ const AIUtilsContext = createContext<AIUtilsContextType>({
   speakText: async () => {},
   cancelSpeech: () => {},
   processAudioStream: async () => () => {},
-  stopAudioProcessing: () => {}
+  stopAudioProcessing: () => {},
+  translateText: async () => '',
+  isTranslating: false,
+  hasActiveMicrophone: false,
+  checkMicrophoneAccess: async () => false
 });
 
 export const useAIUtils = () => useContext(AIUtilsContext);
@@ -30,6 +38,8 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isAIEnabled, setIsAIEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
   
   const toggleAI = () => {
     setIsAIEnabled(prev => !prev);
@@ -79,6 +89,42 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // In a real implementation, this would stop the audio processing
   };
   
+  const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+    if (!isAIEnabled) {
+      throw new Error('AI features are disabled');
+    }
+    
+    setIsTranslating(true);
+    try {
+      // This would be a real implementation with a translation API
+      // For now, we'll simulate translation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const translatedText = `Translated text to ${targetLanguage}: ${text}`;
+      return translatedText;
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+  
+  const checkMicrophoneAccess = async (): Promise<boolean> => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // If we got here, access was granted
+      setHasActiveMicrophone(true);
+      
+      // Stop all tracks to release the microphone
+      stream.getTracks().forEach(track => track.stop());
+      
+      return true;
+    } catch (error) {
+      console.error("Microphone access denied:", error);
+      setHasActiveMicrophone(false);
+      return false;
+    }
+  };
+  
   return (
     <AIUtilsContext.Provider
       value={{
@@ -89,7 +135,11 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         speakText,
         cancelSpeech,
         processAudioStream,
-        stopAudioProcessing
+        stopAudioProcessing,
+        translateText,
+        isTranslating,
+        hasActiveMicrophone,
+        checkMicrophoneAccess
       }}
     >
       {children}

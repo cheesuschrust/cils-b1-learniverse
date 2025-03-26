@@ -1,147 +1,137 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { Notification, NotificationsContextType, NotificationType } from '@/types/notification';
-import { useToast } from '@/components/ui/use-toast';
+import { NotificationsContextType } from '@/types/interface-fixes';
 
-// Create context with default empty values
+// Define a basic notification type
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'default' | 'info' | 'success' | 'warning' | 'error' | 'file-processing' | 'system' | 'achievement';
+  read: boolean;
+  timestamp: Date;
+  priority?: 'low' | 'normal' | 'high';
+  icon?: string;
+  link?: string;
+  expiresAt?: Date | string;
+  actions?: Array<{
+    label: string;
+    action: string;
+  }>;
+}
+
 const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
-  unreadCount: 0,
-  addNotification: () => '',
-  markAsRead: () => {},
-  markAllAsRead: () => {},
+  addNotification: () => {},
   dismissNotification: () => {},
-  clearNotifications: () => {},
-  dismissAll: () => {},
-  getFileProcessingNotifications: () => [],
+  markAsRead: () => {},
+  dismissAllNotifications: () => {},
 });
 
 export const useNotifications = () => useContext(NotificationsContext);
 
-interface NotificationsProviderProps {
-  children: React.ReactNode;
-}
-
-export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ children }) => {
+export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const { toast } = useToast();
 
-  // Calculate unread count whenever notifications change
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  // Add a new notification
-  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): string => {
-    const now = new Date();
-    const newNotification: Notification = {
-      id: uuidv4(),
-      createdAt: now,
-      read: false,
-      ...notification
-    };
-    
-    setNotifications(prev => [newNotification, ...prev]);
-    
-    // Show toast for new notifications based on priority
-    if (notification.priority === 'high') {
-      toast({
-        title: notification.title,
-        description: notification.message,
-        variant: notification.type === 'error' ? 'destructive' : 'default',
-      });
-    }
-    
-    return newNotification.id;
-  };
-  
-  // Mark a notification as read
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-  
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
-  };
-  
-  // Dismiss (remove) a notification
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-  
-  // Clear all notifications
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
-  
-  // Dismiss all notifications
-  const dismissAll = () => {
-    setNotifications([]);
-  };
-  
-  // Get file processing notifications
-  const getFileProcessingNotifications = () => {
-    return notifications.filter(n => n.type === 'file-processing');
-  };
-  
-  // Load notifications from local storage on component mount
+  // Load notifications from localStorage on mount
   useEffect(() => {
-    const storedNotifications = localStorage.getItem('notifications');
-    if (storedNotifications) {
+    const savedNotifications = localStorage.getItem('notifications');
+    if (savedNotifications) {
       try {
-        const parsedNotifications = JSON.parse(storedNotifications);
-        // Convert string dates back to Date objects
-        const processedNotifications = parsedNotifications.map((n: any) => ({
-          ...n,
-          createdAt: new Date(n.createdAt),
-          expiresAt: n.expiresAt ? new Date(n.expiresAt) : undefined
-        }));
-        setNotifications(processedNotifications);
+        const parsed = JSON.parse(savedNotifications);
+        setNotifications(parsed.map((notification: any) => ({
+          ...notification,
+          timestamp: new Date(notification.timestamp),
+          expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : undefined,
+        })));
       } catch (error) {
-        console.error('Failed to parse stored notifications:', error);
+        console.error('Failed to load notifications:', error);
       }
     }
   }, []);
-  
-  // Save notifications to local storage when they change
+
+  // Save to localStorage when notifications change
   useEffect(() => {
     localStorage.setItem('notifications', JSON.stringify(notifications));
   }, [notifications]);
-  
-  // Clean up expired notifications
+
+  // Add a new notification
+  const addNotification = (notification: Omit<Notification, 'id' | 'read' | 'timestamp'>) => {
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      read: false,
+      timestamp: new Date(),
+      ...notification,
+    };
+
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  // Dismiss a notification by ID
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
+  // Mark a notification as read
+  const markAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, read: true } 
+          : notification
+      )
+    );
+  };
+
+  // Dismiss all notifications
+  const dismissAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Remove expired notifications
   useEffect(() => {
     const now = new Date();
+    
     setNotifications(prev => 
-      prev.filter(n => !n.expiresAt || new Date(n.expiresAt) > now)
+      prev.filter(notification => {
+        if (!notification.expiresAt) return true;
+        
+        const expiryDate = typeof notification.expiresAt === 'string' 
+          ? new Date(notification.expiresAt) 
+          : notification.expiresAt;
+          
+        return expiryDate > now;
+      })
     );
     
-    // Set up interval to check for expired notifications
+    // Check for expired notifications every 60 seconds
     const interval = setInterval(() => {
-      const currentTime = new Date();
+      const now = new Date();
+      
       setNotifications(prev => 
-        prev.filter(n => !n.expiresAt || new Date(n.expiresAt) > currentTime)
+        prev.filter(notification => {
+          if (!notification.expiresAt) return true;
+          
+          const expiryDate = typeof notification.expiresAt === 'string' 
+            ? new Date(notification.expiresAt) 
+            : notification.expiresAt;
+            
+          return expiryDate > now;
+        })
       );
-    }, 60000); // Check every minute
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);
-  
+
   return (
-    <NotificationsContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        addNotification,
+    <NotificationsContext.Provider 
+      value={{ 
+        notifications, 
+        addNotification, 
+        dismissNotification, 
         markAsRead,
-        markAllAsRead,
-        dismissNotification,
-        clearNotifications,
-        dismissAll,
-        getFileProcessingNotifications
+        dismissAllNotifications 
       }}
     >
       {children}

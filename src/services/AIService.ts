@@ -145,10 +145,8 @@ export const addTrainingExamples = async (examples: Array<{input: string, output
   });
 };
 
-/**
- * The default export for backward compatibility
- */
-export default {
+// Export the AIService as a default object for backward compatibility
+const AIService = {
   prepareModel,
   generateText,
   classifyText,
@@ -157,3 +155,5 @@ export default {
   getConfidenceScore,
   addTrainingExamples
 };
+
+export default AIService;
