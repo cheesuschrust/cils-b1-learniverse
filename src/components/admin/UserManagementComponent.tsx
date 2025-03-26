@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { updateUserSubscription } from "@/lib/supabase";
+import UsersStatsCards from "@/components/admin/analytics/UsersStatsCards";
 
 interface User {
   id: string;
@@ -59,6 +60,15 @@ const UserManagementComponent: React.FC = () => {
     role: "user",
     subscription: "free"
   });
+  const [userStats, setUserStats] = useState({
+    total: 0,
+    active: 0,
+    growth: 0,
+    premium: 0,
+    newToday: 0
+  });
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -106,6 +116,35 @@ const UserManagementComponent: React.FC = () => {
       
       setUsers(data || []);
       setFilteredUsers(data || []);
+      
+      // Calculate stats
+      if (data) {
+        const today = new Date().toISOString().split('T')[0];
+        const activeUsers = data.filter(user => user.status === 'active');
+        const premiumUsers = data.filter(user => user.subscription === 'premium');
+        const newToday = data.filter(user => user.created_at.startsWith(today)).length;
+        
+        // Calculate growth (comparing to 30 days ago)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+        
+        const olderUsers = data.filter(user => {
+          const createdDate = new Date(user.created_at).toISOString().split('T')[0];
+          return createdDate < thirtyDaysAgoStr;
+        }).length;
+        
+        const newUsers = data.length - olderUsers;
+        const growth = olderUsers > 0 ? Math.round((newUsers / olderUsers) * 100) : 100;
+        
+        setUserStats({
+          total: data.length,
+          active: activeUsers.length,
+          premium: premiumUsers.length,
+          growth,
+          newToday
+        });
+      }
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
@@ -118,22 +157,82 @@ const UserManagementComponent: React.FC = () => {
     }
   };
   
+  const validateForm = (data: typeof newUser): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!data.firstName.trim()) {
+      errors.firstName = "First name is required";
+    }
+    
+    if (!data.lastName.trim()) {
+      errors.lastName = "Last name is required";
+    }
+    
+    if (!data.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(data.email)) {
+      errors.email = "Email address is invalid";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .single();
+        
+      if (error && error.code !== 'PGSQL_EMPTY_RESULT') {
+        console.error('Error checking email:', error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    }
+  };
+  
   const handleAddUser = async () => {
-    if (!newUser.firstName || !newUser.lastName || !newUser.email) {
+    if (isSubmitting) return;
+    
+    if (!validateForm(newUser)) {
       toast({
-        title: "Required fields missing",
-        description: "Please fill in all required fields",
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
         variant: "destructive"
       });
       return;
     }
     
+    // Check if email already exists
+    const emailExists = await checkEmailExists(newUser.email);
+    if (emailExists) {
+      setFormErrors({...formErrors, email: "This email is already in use"});
+      toast({
+        title: "Email already exists",
+        description: "Please use a different email address",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
-      // First, create the auth user
+      // Generate a random password for the new user
+      const password = generateRandomPassword();
+      
+      // Create auth user with Supabase
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newUser.email,
-        password: generateRandomPassword(), // In a real app, this would be set by the user or sent via email
-        email_confirm: true,
+        email: newUser.email.toLowerCase(),
+        password,
+        email_confirm: true
       });
       
       if (authError) {
@@ -144,16 +243,22 @@ const UserManagementComponent: React.FC = () => {
         throw new Error("Failed to create user account");
       }
       
-      // Now, update the users table with additional information
+      // Insert user data into users table
       const { error: userError } = await supabase
         .from('users')
-        .update({
+        .insert({
+          id: authData.user.id,
+          email: newUser.email.toLowerCase(),
           first_name: newUser.firstName,
           last_name: newUser.lastName,
           role: newUser.role,
           subscription: newUser.subscription,
-        })
-        .eq('id', authData.user.id);
+          status: 'active',
+          is_verified: true,
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString(),
+          last_active: new Date().toISOString()
+        });
         
       if (userError) {
         throw userError;
@@ -164,7 +269,7 @@ const UserManagementComponent: React.FC = () => {
         description: `${newUser.firstName} ${newUser.lastName} has been added successfully`,
       });
       
-      // Reset form and refresh user list
+      // Reset form
       setNewUser({
         firstName: "",
         lastName: "",
@@ -172,7 +277,10 @@ const UserManagementComponent: React.FC = () => {
         role: "user",
         subscription: "free"
       });
+      setFormErrors({});
       setShowAddUserDialog(false);
+      
+      // Refresh user list
       fetchUsers();
       
     } catch (error: any) {
@@ -182,22 +290,59 @@ const UserManagementComponent: React.FC = () => {
         description: "Failed to add user: " + error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
   const handleUpdateUser = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || isSubmitting) return;
+    
+    const userData = {
+      firstName: selectedUser.first_name || "",
+      lastName: selectedUser.last_name || "",
+      email: selectedUser.email,
+      role: selectedUser.role,
+      subscription: selectedUser.subscription
+    };
+    
+    if (!validateForm(userData)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
     
     try {
+      // If email is changed, check if new email already exists
+      if (selectedUser.email !== userData.email) {
+        const emailExists = await checkEmailExists(selectedUser.email);
+        if (emailExists) {
+          setFormErrors({...formErrors, email: "This email is already in use"});
+          toast({
+            title: "Email already exists",
+            description: "Please use a different email address",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
       const { error } = await supabase
         .from('users')
         .update({
           first_name: selectedUser.first_name,
           last_name: selectedUser.last_name,
-          email: selectedUser.email,
+          email: selectedUser.email.toLowerCase(),
           role: selectedUser.role,
           status: selectedUser.status,
           subscription: selectedUser.subscription,
+          last_active: new Date().toISOString()
         })
         .eq('id', selectedUser.id);
         
@@ -210,6 +355,7 @@ const UserManagementComponent: React.FC = () => {
         description: "User information has been updated successfully",
       });
       
+      setFormErrors({});
       setShowEditUserDialog(false);
       fetchUsers();
       
@@ -220,6 +366,8 @@ const UserManagementComponent: React.FC = () => {
         description: "Failed to update user: " + error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -238,11 +386,26 @@ const UserManagementComponent: React.FC = () => {
         }
       }
       
-      // Delete from auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(id);
+      // Confirm before deletion
+      if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+        return;
+      }
       
-      if (authError) {
-        throw authError;
+      // Delete the user using Supabase Admin API
+      const { error } = await supabase.auth.admin.deleteUser(id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Also delete the user from the users table
+      const { error: deleteError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id);
+        
+      if (deleteError) {
+        throw deleteError;
       }
       
       toast({
@@ -266,7 +429,10 @@ const UserManagementComponent: React.FC = () => {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ status })
+        .update({ 
+          status,
+          last_active: new Date().toISOString()
+        })
         .eq('id', id);
         
       if (error) {
@@ -307,7 +473,10 @@ const UserManagementComponent: React.FC = () => {
       
       const { error } = await supabase
         .from('users')
-        .update({ role })
+        .update({ 
+          role,
+          last_active: new Date().toISOString()
+        })
         .eq('id', id);
         
       if (error) {
@@ -358,7 +527,9 @@ const UserManagementComponent: React.FC = () => {
   
   const handleResetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       
       if (error) {
         throw error;
@@ -374,6 +545,51 @@ const UserManagementComponent: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to send password reset: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleExportUsers = () => {
+    try {
+      // Format data for export
+      const exportData = filteredUsers.map(user => ({
+        ID: user.id,
+        FirstName: user.first_name || '',
+        LastName: user.last_name || '',
+        Email: user.email,
+        Role: user.role,
+        Status: user.status,
+        Subscription: user.subscription,
+        LastActive: user.last_active || 'Never',
+        Created: user.created_at,
+      }));
+      
+      // Convert to CSV
+      const headers = Object.keys(exportData[0]).join(',');
+      const rows = exportData.map(row => Object.values(row).join(','));
+      const csv = [headers, ...rows].join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export successful",
+        description: `Exported ${exportData.length} users to CSV`,
+      });
+    } catch (error: any) {
+      console.error('Error exporting users:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export users: " + error.message,
         variant: "destructive"
       });
     }
@@ -421,8 +637,12 @@ const UserManagementComponent: React.FC = () => {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return dateString;
+    }
   };
   
   const generateRandomPassword = () => {
@@ -436,7 +656,12 @@ const UserManagementComponent: React.FC = () => {
 
   return (
     <div className="w-full">
-      <Card className="mb-8">
+      {/* Statistics Section */}
+      <UsersStatsCards 
+        data={userStats}
+      />
+      
+      <Card className="mb-8 mt-8">
         <CardHeader>
           <CardTitle>Filter Users</CardTitle>
           <CardDescription>Search and filter users by various criteria</CardDescription>
@@ -638,7 +863,7 @@ const UserManagementComponent: React.FC = () => {
               <div className="text-sm text-muted-foreground">
                 Showing {filteredUsers.length} of {users.length} users
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExportUsers}>
                 <Download className="mr-2 h-4 w-4" />
                 Export Users
               </Button>
@@ -658,32 +883,44 @@ const UserManagementComponent: React.FC = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="firstName">First Name</Label>
+              <Label htmlFor="firstName">First Name*</Label>
               <Input 
                 id="firstName" 
                 value={newUser.firstName} 
                 onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
                 placeholder="John"
+                className={formErrors.firstName ? "border-red-500" : ""}
               />
+              {formErrors.firstName && (
+                <span className="text-sm text-red-500">{formErrors.firstName}</span>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="lastName">Last Name</Label>
+              <Label htmlFor="lastName">Last Name*</Label>
               <Input 
                 id="lastName" 
                 value={newUser.lastName} 
                 onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
                 placeholder="Doe"
+                className={formErrors.lastName ? "border-red-500" : ""}
               />
+              {formErrors.lastName && (
+                <span className="text-sm text-red-500">{formErrors.lastName}</span>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email*</Label>
               <Input 
                 id="email" 
                 type="email" 
                 value={newUser.email} 
                 onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                 placeholder="john@example.com"
+                className={formErrors.email ? "border-red-500" : ""}
               />
+              {formErrors.email && (
+                <span className="text-sm text-red-500">{formErrors.email}</span>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
@@ -719,14 +956,29 @@ const UserManagementComponent: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddUser}>Add User</Button>
+            <Button variant="outline" onClick={() => {
+              setShowAddUserDialog(false);
+              setFormErrors({});
+            }}>Cancel</Button>
+            <Button onClick={handleAddUser} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Adding...
+                </>
+              ) : (
+                'Add User'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* Edit User Dialog */}
-      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+      <Dialog open={showEditUserDialog} onOpenChange={(open) => {
+        setShowEditUserDialog(open);
+        if (!open) setFormErrors({});
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
@@ -737,29 +989,41 @@ const UserManagementComponent: React.FC = () => {
           {selectedUser && (
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-firstName">First Name</Label>
+                <Label htmlFor="edit-firstName">First Name*</Label>
                 <Input 
                   id="edit-firstName" 
                   value={selectedUser.first_name || ''} 
                   onChange={(e) => setSelectedUser({...selectedUser, first_name: e.target.value})}
+                  className={formErrors.firstName ? "border-red-500" : ""}
                 />
+                {formErrors.firstName && (
+                  <span className="text-sm text-red-500">{formErrors.firstName}</span>
+                )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-lastName">Last Name</Label>
+                <Label htmlFor="edit-lastName">Last Name*</Label>
                 <Input 
                   id="edit-lastName" 
                   value={selectedUser.last_name || ''} 
                   onChange={(e) => setSelectedUser({...selectedUser, last_name: e.target.value})}
+                  className={formErrors.lastName ? "border-red-500" : ""}
                 />
+                {formErrors.lastName && (
+                  <span className="text-sm text-red-500">{formErrors.lastName}</span>
+                )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-email">Email</Label>
+                <Label htmlFor="edit-email">Email*</Label>
                 <Input 
                   id="edit-email" 
                   type="email" 
                   value={selectedUser.email} 
                   onChange={(e) => setSelectedUser({...selectedUser, email: e.target.value})}
+                  className={formErrors.email ? "border-red-500" : ""}
                 />
+                {formErrors.email && (
+                  <span className="text-sm text-red-500">{formErrors.email}</span>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -812,8 +1076,20 @@ const UserManagementComponent: React.FC = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditUserDialog(false)}>Cancel</Button>
-            <Button onClick={handleUpdateUser}>Save Changes</Button>
+            <Button variant="outline" onClick={() => {
+              setShowEditUserDialog(false);
+              setFormErrors({});
+            }}>Cancel</Button>
+            <Button onClick={handleUpdateUser} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
