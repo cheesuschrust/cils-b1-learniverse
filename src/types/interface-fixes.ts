@@ -31,7 +31,7 @@ export interface AIPreference {
 
 // Extend the ConfidenceIndicatorProps interface
 export interface ConfidenceIndicatorProps {
-  value: number;
+  value?: number;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   score?: number; // Added for compatibility with existing code
@@ -51,6 +51,7 @@ export interface ProgressProps {
 // Add the missing NotificationItemProps properties
 export interface NotificationItemPropsExtension {
   onRead: (id: string) => void;
+  onAction?: (id: string, action: string) => void;
 }
 
 // Add missing SupportTicket properties
@@ -115,6 +116,7 @@ export interface UseAIReturn {
   generateSpeechExercises?: (level: string, count?: number, language?: 'it' | 'en') => Promise<any[]>;
   generateFlashcards?: (content: string, count?: number, difficulty?: string) => Promise<any[]>;
   getContentTypeConfidence?: (contentType: string) => number;
+  prepareModel?: () => Promise<boolean>;
 }
 
 // Add missing User properties from error messages
@@ -141,4 +143,35 @@ export interface FlashcardStats {
   averageScore: number;
   streak: number;
   lastReviewDate?: Date;
+  total?: number;
+}
+
+// Add missing FlashcardComponent props
+export interface FlashcardComponentProps {
+  flashcard: Flashcard;
+  onRating: (id: string, rating: number) => void;
+  onSkip: (id: string) => void;
+  flipped: boolean;
+  onFlip: () => void;
+  showPronunciation?: boolean;
+  showActions?: boolean;
+  onKnown?: (id: string) => void;
+  onUnknown?: (id: string) => void;
+  className?: string;
+}
+
+// Add additional NotificationsContextType properties
+export interface NotificationsContextTypeExtension {
+  dismissAllNotifications: () => void;
+}
+
+// Define Content Type
+export type ContentType = 'audio' | 'csv' | 'json' | 'txt' | 'flashcards' | 'listening' | 'writing' | 'speaking' | 'multiple-choice' | 'unknown' | 'pdf';
+
+// Fix AIUtilsContextType by adding missing properties
+export interface AIUtilsContextTypeExtension {
+  translateText?: (text: string, targetLanguage: string) => Promise<string>;
+  isTranslating?: boolean;
+  hasActiveMicrophone?: boolean;
+  checkMicrophoneAccess?: () => Promise<boolean>;
 }

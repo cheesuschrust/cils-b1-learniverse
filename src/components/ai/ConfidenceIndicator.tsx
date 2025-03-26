@@ -15,7 +15,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   ...props
 }) => {
   // Support both value and score props (score is for backward compatibility)
-  const confidenceValue = score !== undefined ? score : value;
+  const confidenceValue = value !== undefined ? value : (score !== undefined ? score : 0);
   
   // Convert confidence value to percentage (0-100)
   const percentage = Math.round(confidenceValue * 100);

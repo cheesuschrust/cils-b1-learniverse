@@ -16,7 +16,7 @@ describe('ConfidenceIndicator', () => {
   });
 
   test('accepts score prop for backward compatibility', () => {
-    render(<ConfidenceIndicator score={0.85} />);
+    render(<ConfidenceIndicator score={0.85} value={0} />);
     
     expect(screen.getByText('Excellent (85%)')).toBeInTheDocument();
   });
