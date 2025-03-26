@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,26 +12,31 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { BarChart, LineChart, DonutChart } from '@/components/admin/charts';
+import { Bar, BarChart } from '@tremor/react';
+import { Line, LineChart as TremorLineChart } from '@tremor/react';
+import { DonutChart } from '@tremor/react';
 import { DateRange } from '@/types/date';
 
-// Import newly created components
-import { 
-  UsersStatsCards,
-  UserTrendsChart,
-  UserDistributionCard,
-  ContentCategoriesCard,
-  RevenueTrendsCard,
-  AIPerformanceCard,
-  GeographicalDistributionCard,
-  ContentStatsCards,
-  AIUsageCards,
-  AIAccuracyMetricsCard,
-  ModelUsageCard,
-  PerformanceMetricsCard
-} from '@/components/admin/analytics';
+const analyticsData = {
+  // ... keep existing code (analytics data object) 
+};
 
-import { analyticsData } from '@/data/analyticsData';
+interface UserTrendsChartProps {
+  data: { name: string; users: number; newUsers: number }[];
+}
+
+const UserTrendsChart: React.FC<UserTrendsChartProps> = ({ data }) => {
+  return (
+    <TremorLineChart
+      data={data}
+      index="name"
+      categories={["users", "newUsers"]}
+      colors={["blue", "green"]}
+      valueFormatter={(value: number) => `${value}`}
+      className="h-72"
+    />
+  );
+};
 
 interface DatePickerWithRangeProps {
   date: DateRange;

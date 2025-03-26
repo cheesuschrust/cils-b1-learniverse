@@ -1,84 +1,43 @@
 
 import React from 'react';
+import { useAI } from '@/hooks/useAI';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Brain, AlertCircle, Cpu } from 'lucide-react';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { CircleCheck, CircleAlert, CircleX } from 'lucide-react';
 
-interface AIStatusProps {
-  showTooltip?: boolean;
-  variant?: 'default' | 'minimal';
-  className?: string;
+export interface AIStatusProps {
+  minimal?: boolean;
 }
 
-const AIStatus: React.FC<AIStatusProps> = ({ 
-  showTooltip = true,
-  variant = 'default',
-  className = ''
-}) => {
-  const { isAIEnabled, modelSize, isProcessing, hasActiveMicrophone } = useAIUtils();
+export const AIStatus: React.FC<AIStatusProps> = ({ minimal = false }) => {
+  const { isModelLoaded, status, error } = useAI();
   
-  // Generate the appropriate icon and text based on status
-  const getStatusContent = () => {
-    if (!isAIEnabled) {
-      return {
-        icon: <AlertCircle className="h-4 w-4 mr-1" />,
-        text: 'AI Disabled',
-        tooltipText: 'AI features are currently disabled. Enable them in settings.',
-        badgeVariant: 'outline' as const
-      };
-    }
-    
-    if (isProcessing) {
-      return {
-        icon: <Brain className="h-4 w-4 mr-1 animate-pulse" />,
-        text: 'Processing',
-        tooltipText: 'AI is currently processing a request.',
-        badgeVariant: 'secondary' as const
-      };
-    }
-    
-    const modelSizeDisplay = modelSize === 'small' 
-      ? 'Small (Fast)' 
-      : modelSize === 'medium' 
-        ? 'Medium (Balanced)' 
-        : 'Large (Accurate)';
-
-    return {
-      icon: <Brain className="h-4 w-4 mr-1" />,
-      text: variant === 'minimal' ? 'AI' : `AI Active (${modelSizeDisplay})`,
-      tooltipText: `AI is enabled and ready to use. Current model: ${modelSizeDisplay}. ${hasActiveMicrophone ? 'Microphone available.' : 'No microphone access.'}`,
-      badgeVariant: 'default' as const
-    };
-  };
-  
-  const { icon, text, tooltipText, badgeVariant } = getStatusContent();
-  
-  // Render with or without tooltip
-  if (showTooltip) {
+  if (minimal) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant={badgeVariant} className={`cursor-help ${className}`}>
-              {icon}
-              {text}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltipText}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center">
+        <Badge variant={isModelLoaded ? "default" : "outline"} className="gap-1">
+          {status === 'ready' && <CircleCheck className="h-3 w-3" />}
+          {status === 'loading' && <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />}
+          {status === 'error' && <CircleX className="h-3 w-3" />}
+          <span className="text-xs">AI {status}</span>
+        </Badge>
+      </div>
     );
   }
   
   return (
-    <Badge variant={badgeVariant} className={className}>
-      {icon}
-      {text}
-    </Badge>
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2 mb-1">
+        <Badge variant={isModelLoaded ? "default" : "outline"} className="gap-1">
+          {status === 'ready' && <CircleCheck className="h-3 w-3" />}
+          {status === 'loading' && <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />}
+          {status === 'error' && <CircleX className="h-3 w-3" />}
+          <span>AI {status}</span>
+        </Badge>
+      </div>
+      
+      {status === 'error' && (
+        <div className="text-sm text-destructive">{error}</div>
+      )}
+    </div>
   );
 };
-
-export default AIStatus;

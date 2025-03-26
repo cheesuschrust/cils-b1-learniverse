@@ -1,203 +1,93 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RotateCw, Volume2, Check, X, Edit, Trash } from 'lucide-react';
 import { Flashcard } from '@/types/flashcard';
-import { cn } from '@/lib/utils';
+import { ArrowUpDown, Check, X } from 'lucide-react';
 
-interface FlashcardComponentProps {
-  card: Flashcard;
-  onFlip?: () => void;
-  onCorrect?: () => void;
-  onIncorrect?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  showControls?: boolean;
-  className?: string;
+export interface FlashcardComponentProps {
+  flashcard: Flashcard;
+  onRating: (card: Flashcard, rating: number) => void;
+  onSkip: () => void;
+  flipped: boolean;
+  onFlip: () => void;
 }
 
 const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
-  card,
-  onFlip,
-  onCorrect,
-  onIncorrect,
-  onEdit,
-  onDelete,
-  showControls = true,
-  className
+  flashcard,
+  onRating,
+  onSkip,
+  flipped,
+  onFlip
 }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const handleRating = (rating: number) => {
+    onRating(flashcard, rating);
+  };
 
-  const handleFlip = () => {
-    if (isAnimating) return;
-    
-    setIsAnimating(true);
-    setIsFlipped(!isFlipped);
-    
-    if (onFlip) {
-      onFlip();
-    }
-    
-    // Reset animation state after animation completes
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 300);
-  };
-  
-  const playAudio = (text: string, language: string) => {
-    // In a real implementation, this would use the text-to-speech API
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === 'italian' ? 'it-IT' : 'en-US';
-    speechSynthesis.speak(utterance);
-  };
-  
   return (
-    <div className={cn("perspective-1000 w-full", className)}>
+    <div className="w-full max-w-md mx-auto">
       <Card 
-        className={cn(
-          "w-full h-full transition-transform duration-300 transform-style-3d cursor-pointer relative",
-          isFlipped ? "rotate-y-180" : "",
-          isAnimating ? "pointer-events-none" : ""
-        )}
-        onClick={handleFlip}
+        className={`relative h-56 cursor-pointer transition-all duration-500 ${
+          flipped ? 'bg-primary/5' : 'bg-card'
+        }`}
+        onClick={onFlip}
       >
-        {/* Front Side (Italian) */}
-        <CardContent 
-          className={cn(
-            "absolute w-full h-full backface-hidden p-6 flex flex-col justify-between",
-            isFlipped ? "invisible" : ""
-          )}
-        >
-          <div className="flex justify-end">
-            <Badge variant={card.mastered ? "default" : "outline"} className={card.mastered ? "bg-green-500" : ""}>
-              {card.mastered ? "Mastered" : `Level ${card.level}`}
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          {flashcard.tags.map((tag, i) => (
+            <Badge key={i} variant="outline" className="text-xs">
+              {tag}
             </Badge>
-          </div>
-          
-          <div className="flex-1 flex items-center justify-center flex-col gap-4 py-6">
-            <h3 className="text-2xl font-bold text-center">{card.italian}</h3>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="rounded-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                playAudio(card.italian, 'italian');
-              }}
-            >
-              <Volume2 className="h-5 w-5 text-primary" />
-            </Button>
-          </div>
-          
-          <div className="text-center text-sm text-muted-foreground">
-            Click to reveal translation
-          </div>
-        </CardContent>
+          ))}
+        </div>
         
-        {/* Back Side (English) */}
-        <CardContent 
-          className={cn(
-            "absolute w-full h-full backface-hidden p-6 rotate-y-180 flex flex-col justify-between",
-            !isFlipped ? "invisible" : ""
-          )}
-        >
-          <div className="flex justify-end">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                playAudio(card.english, 'english');
-              }}
-            >
-              <Volume2 className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <div className="flex-1 flex items-center justify-center flex-col gap-4 py-6">
-            <h3 className="text-2xl font-bold text-center">{card.english}</h3>
-            {card.explanation && (
-              <p className="text-sm text-muted-foreground text-center">{card.explanation}</p>
+        <CardContent className="flex items-center justify-center h-full p-6">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-2">
+              {flipped ? flashcard.english : flashcard.italian}
+            </h3>
+            {flipped && flashcard.explanation && (
+              <p className="text-muted-foreground mt-2">{flashcard.explanation}</p>
             )}
           </div>
-          
-          {showControls && (
-            <div className="flex justify-center gap-2">
-              {onIncorrect && (
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="rounded-full bg-destructive/10 hover:bg-destructive/20 border-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onIncorrect();
-                  }}
-                >
-                  <X className="h-5 w-5 text-destructive" />
-                </Button>
-              )}
-              
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFlip();
-                }}
-              >
-                <RotateCw className="h-5 w-5" />
-              </Button>
-              
-              {onCorrect && (
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="rounded-full bg-green-500/10 hover:bg-green-500/20 border-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCorrect();
-                  }}
-                >
-                  <Check className="h-5 w-5 text-green-500" />
-                </Button>
-              )}
-            </div>
-          )}
-          
-          {onEdit && onDelete && (
-            <div className="absolute bottom-2 right-2 flex gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                <Trash className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
+      
+      <div className="flex justify-between mt-4">
+        <Button variant="outline" onClick={onSkip}>
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          Skip
+        </Button>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="border-red-200 hover:bg-red-50"
+            onClick={() => handleRating(1)}
+          >
+            <X className="h-4 w-4 mr-2 text-red-500" />
+            Hard
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className="border-yellow-200 hover:bg-yellow-50"
+            onClick={() => handleRating(2)}
+          >
+            <X className="h-4 w-4 mr-2 text-yellow-500" />
+            Medium
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className="border-green-200 hover:bg-green-50"
+            onClick={() => handleRating(4)}
+          >
+            <Check className="h-4 w-4 mr-2 text-green-500" />
+            Easy
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

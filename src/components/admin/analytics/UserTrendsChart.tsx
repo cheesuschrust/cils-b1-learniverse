@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LineChart } from '@/components/admin/charts';
+import { LineChart as TremorLineChart } from '@/components/admin/charts';
 
 interface UserTrendsChartProps {
   data: { name: string; users: number; newUsers: number }[];
@@ -8,7 +8,7 @@ interface UserTrendsChartProps {
 
 export const UserTrendsChart: React.FC<UserTrendsChartProps> = ({ data }) => {
   return (
-    <LineChart
+    <TremorLineChart
       data={data}
       xKey="name"
       lines={[
