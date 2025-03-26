@@ -8,12 +8,16 @@ import { render as customRender } from '@/tests/test-utils';
 
 // Mock the hooks and components used by FlashcardComponent
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, variant, className }: any) => (
+  Button: ({ children, onClick, variant, className, disabled, size, type, ...rest }: any) => (
     <button 
       onClick={onClick} 
       data-variant={variant} 
       className={className}
+      disabled={disabled}
+      data-size={size}
+      type={type || 'button'}
       data-testid={`button-${children.toString().toLowerCase().replace(/\s+/g, '-')}`}
+      {...rest}
     >
       {children}
     </button>
@@ -179,6 +183,26 @@ describe('FlashcardComponent', () => {
     expect(screen.getByText('A common greeting in Italian')).toBeInTheDocument();
   });
 
+  test('does not show explanation text when not flipped even if explanation exists', () => {
+    const flashcardWithExplanation: Flashcard = {
+      ...mockFlashcard,
+      explanation: 'A common greeting in Italian',
+    };
+
+    customRender(
+      <FlashcardComponent
+        flashcard={flashcardWithExplanation}
+        onRating={mockOnRating}
+        onSkip={mockOnSkip}
+        flipped={false}
+        onFlip={mockOnFlip}
+      />
+    );
+
+    // Should not show explanation text
+    expect(screen.queryByText('A common greeting in Italian')).not.toBeInTheDocument();
+  });
+
   test('handles flashcards with long text appropriately', () => {
     const longTextFlashcard: Flashcard = {
       ...mockFlashcard,
@@ -235,5 +259,60 @@ describe('FlashcardComponent', () => {
 
     card = screen.getByText('Hello').closest('.card');
     expect(card).toHaveClass('bg-primary/5');
+  });
+
+  test('verifies card actually flips when clicked', async () => {
+    // Custom render with state management to test flipping
+    const TestWrapper = () => {
+      const [isFlipped, setIsFlipped] = React.useState(false);
+      return (
+        <FlashcardComponent
+          flashcard={mockFlashcard}
+          onRating={mockOnRating}
+          onSkip={mockOnSkip}
+          flipped={isFlipped}
+          onFlip={() => setIsFlipped(!isFlipped)}
+        />
+      );
+    };
+
+    customRender(<TestWrapper />);
+    
+    // Initially should show Italian text
+    expect(screen.getByText('Ciao')).toBeInTheDocument();
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+    
+    // Click the card to flip it
+    const card = screen.getByText('Ciao').closest('.cursor-pointer');
+    if (card) {
+      fireEvent.click(card);
+      
+      // After flipping, should show English text
+      await waitFor(() => {
+        expect(screen.queryByText('Ciao')).not.toBeInTheDocument();
+        expect(screen.getByText('Hello')).toBeInTheDocument();
+      });
+    }
+  });
+
+  test('buttons are accessible with keyboard navigation', () => {
+    customRender(
+      <FlashcardComponent
+        flashcard={mockFlashcard}
+        onRating={mockOnRating}
+        onSkip={mockOnSkip}
+        flipped={false}
+        onFlip={mockOnFlip}
+      />
+    );
+
+    // Test keyboard accessibility for rating buttons
+    const hardButton = screen.getByTestId('button-hard');
+    hardButton.focus();
+    expect(document.activeElement).toBe(hardButton);
+    
+    // Simulate keyboard enter press
+    fireEvent.keyDown(hardButton, { key: 'Enter', code: 'Enter' });
+    expect(mockOnRating).toHaveBeenCalledWith(mockFlashcard, 1);
   });
 });
