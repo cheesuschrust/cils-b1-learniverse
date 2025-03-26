@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { isPremiumUser, hasReachedDailyLimit } from "@/lib/supabase";
 
 // Define question types that can be tracked
 export type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
@@ -40,10 +41,12 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
       return false;
     }
     
-    if (user.subscription === "premium") {
+    // Premium users have unlimited access
+    if (isPremiumUser(user.subscription)) {
       return true;
     }
     
+    // Free users get 1 question per day
     return getCurrentCount() < 1;
   };
   
@@ -53,10 +56,11 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
       return 0;
     }
     
-    if (user.subscription === "premium") {
+    if (isPremiumUser(user.subscription)) {
       return "unlimited";
     }
     
+    // Free users get 1 question per day
     return Math.max(0, 1 - getCurrentCount());
   };
   
@@ -74,6 +78,21 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     setIsLoading(true);
     
     try {
+      // Check if user is premium (unlimited access)
+      if (isPremiumUser(user?.subscription)) {
+        return true;
+      }
+      
+      // Check if user has already reached their daily limit
+      if (user && await hasReachedDailyLimit(user.id, countKey)) {
+        toast({
+          title: "Daily Limit Reached",
+          description: "You've reached your daily limit. Upgrade to premium for unlimited access.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
       // Increment the counter and return the result
       const result = await incrementDailyQuestionCount(countKey);
       

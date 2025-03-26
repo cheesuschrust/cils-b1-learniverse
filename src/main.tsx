@@ -61,10 +61,25 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Initialize services
 import AdService from '@/services/AdService';
+import { QuestionService } from '@/services/questionService';
+
+// Initialize services
 AdService.initializeSampleData();
 
+// Seed questions for testing
+// This would be removed in a production app
+QuestionService.seedQuestions().catch(console.error);
+
 // Create a client
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 import '@/styles/main.css';
 import '@/App.css';
@@ -135,6 +150,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
                         <Route path="institutional-licensing" element={<InstitutionalLicensing />} />
                       </Route>
+                      
+                      {/* Auth callback route for Supabase OAuth */}
+                      <Route path="/auth/callback" element={<EmailVerification />} />
                     </Routes>
                   </BrowserRouter>
                   <Toaster />
