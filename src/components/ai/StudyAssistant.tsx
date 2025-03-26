@@ -1,322 +1,480 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Volume2, VolumeX, RefreshCw, ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Toggle } from "@/components/ui/toggle";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { 
+  Bot, 
+  Send, 
+  MessageSquare, 
+  Mic, 
+  Volume2, 
+  HelpCircle, 
+  BookOpen, 
+  FilePlus2, 
+  Loader2,
+  Brain,
+  Sparkles,
+  Volume
+} from "lucide-react";
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { useToast } from "@/hooks/use-toast";
-import { useAI } from '@/hooks/useAI';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
-}
+import { useAuth } from '@/contexts/AuthContext';
 
 const StudyAssistant = () => {
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Hi! I'm your AI study assistant. Ask me about concepts you're learning, request practice questions, or get hints for problems you're stuck on.",
-      role: 'assistant',
-      timestamp: new Date()
-    }
-  ]);
-  const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
-  const [generatedQuestion, setGeneratedQuestion] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat');
-  
+  const { settings, isProcessing } = useAIUtils();
+  const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { generateText, generateQuestions, abort } = useAI();
-  const { speakText, stopSpeaking, settings } = useAIUtils();
+  const [query, setQuery] = useState<string>("");
+  const [tab, setTab] = useState<string>("chat");
+  const [messages, setMessages] = useState<Array<{role: string, content: string}>>([
+    {
+      role: "assistant",
+      content: "Ciao! I'm your Italian language study assistant. How can I help you today? You can ask me questions about grammar, vocabulary, or request practice exercises."
+    }
+  ]);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   
+  // Scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
   
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
+  // Handle sending a message
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!query.trim()) return;
     
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input.trim(),
-      role: 'user',
-      timestamp: new Date()
+    const userMessage = {
+      role: "user",
+      content: query
     };
     
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsProcessing(true);
+    setQuery("");
     
-    try {
-      let response: string;
-      
-      if (activeTab === 'practice') {
-        response = await generateText(`Generate a practice question based on this topic: ${input.trim()}. Include the question and the answer separately.`);
-      } else if (activeTab === 'hint') {
-        response = await generateText(`Provide a helpful hint for this problem without giving away the full answer: ${input.trim()}`);
-      } else {
-        response = await generateText(input.trim());
-      }
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      if (settings.voiceEnabled) {
-        await speakText(response, settings.defaultLanguage || 'english');
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate a response. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  const handleGeneratePracticeQuestion = async () => {
-    setIsGeneratingQuestion(true);
+    // Simulate AI thinking time
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    try {
-      const questions = await generateQuestions("Generate a practice question related to Italian language learning that tests comprehension and grammar", 1, "text-input");
-      if (questions && questions.length > 0) {
-        setGeneratedQuestion(questions[0].question);
-      } else {
-        throw new Error("Failed to generate question");
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate a practice question. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingQuestion(false);
-    }
-  };
-  
-  const toggleVoiceInput = () => {
-    if (isRecording) {
-      stopRecording();
+    // Sample responses based on query content
+    let assistantResponse = "";
+    
+    if (query.toLowerCase().includes("grammar") || query.toLowerCase().includes("verb")) {
+      assistantResponse = "Italian verbs are categorized into three conjugation patterns: -are, -ere, and -ire. Each follows specific rules for different tenses. Would you like me to explain a specific tense or conjugation pattern?";
+    } else if (query.toLowerCase().includes("vocabulary") || query.toLowerCase().includes("word")) {
+      assistantResponse = "Building vocabulary is essential for language learning. I recommend focusing on thematic word groups and using flashcards with spaced repetition. Would you like me to generate some vocabulary flashcards on a specific topic?";
+    } else if (query.toLowerCase().includes("practice") || query.toLowerCase().includes("exercise")) {
+      assistantResponse = "Practice is key to language mastery! I can create custom exercises for you. Would you prefer writing prompts, speaking scenarios, or comprehension questions?";
+    } else if (query.toLowerCase().includes("pronunciation")) {
+      assistantResponse = "Italian pronunciation is fairly consistent once you learn the rules. The most important aspects are vowel sounds, double consonants, and proper stress. Would you like me to explain specific pronunciation rules or provide examples?";
     } else {
-      startRecording();
+      assistantResponse = "I understand you're interested in learning Italian. Could you provide more details about what specific aspect you'd like help with? I can assist with grammar explanations, vocabulary practice, pronunciation guidance, or creating customized exercises.";
     }
+    
+    const botMessage = {
+      role: "assistant",
+      content: assistantResponse
+    };
+    
+    setMessages(prev => [...prev, botMessage]);
   };
   
-  const startRecording = async () => {
-    try {
-      // This is a placeholder for actual speech recognition implementation
-      // In a real implementation, you would use the Web Speech API or a similar service
-      setIsRecording(true);
+  // Handle voice input
+  const handleVoiceInput = () => {
+    setIsRecording(!isRecording);
+    
+    if (!isRecording) {
+      // Start recording - in a real app, we would use the Web Speech API
       toast({
-        title: "Recording started",
-        description: "Speak clearly into your microphone."
+        title: "Voice recording started",
+        description: "Speak clearly into your microphone.",
       });
       
-      // Simulate recording for demo purposes
+      // Simulate speech recognition with timeout
       setTimeout(() => {
-        stopRecording();
-        setInput(input + " [Voice input would be transcribed here]");
+        setIsRecording(false);
+        setQuery("Can you explain Italian article usage?");
+        
+        toast({
+          title: "Voice input received",
+          description: "Text transcribed from your speech.",
+        });
       }, 3000);
-    } catch (error) {
+    } else {
+      // Stop recording
       toast({
-        title: "Error",
-        description: "Could not access microphone. Please check permissions.",
-        variant: "destructive"
+        title: "Voice recording stopped",
       });
-      setIsRecording(false);
     }
   };
   
-  const stopRecording = () => {
-    setIsRecording(false);
+  // Handle text-to-speech
+  const handleTextToSpeech = (text: string) => {
+    setIsSpeaking(true);
+    
+    // In a real app, we would use the Web Speech API
     toast({
-      title: "Recording stopped",
+      title: "Speaking text",
+      description: "Text-to-speech activated.",
+    });
+    
+    // Simulate speech synthesis with timeout
+    setTimeout(() => {
+      setIsSpeaking(false);
+    }, 3000);
+  };
+  
+  // Generate practice materials
+  const generatePractice = (type: string) => {
+    toast({
+      title: `Generating ${type}`,
+      description: "Custom practice material will be ready shortly.",
     });
   };
   
-  const toggleAudioPlayback = async (text: string) => {
-    if (isPlayingAudio) {
-      stopSpeaking();
-      setIsPlayingAudio(false);
-    } else {
-      setIsPlayingAudio(true);
-      await speakText(text, settings.defaultLanguage || 'english');
-      setIsPlayingAudio(false);
-    }
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-  
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader>
-        <CardTitle>AI Study Assistant</CardTitle>
-        <CardDescription>
-          Ask questions, get practice problems, or request hints for difficult concepts.
-        </CardDescription>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-2">
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="practice">Practice Questions</TabsTrigger>
-            <TabsTrigger value="hint">Get Hints</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="flex flex-col space-y-4">
-          <div className="flex flex-col space-y-4 h-[350px] overflow-y-auto p-4 border rounded-md">
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={cn(
-                  "flex flex-col max-w-[80%] rounded-lg p-3",
-                  message.role === 'user' 
-                    ? "bg-primary text-primary-foreground self-end" 
-                    : "bg-muted self-start"
-                )}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                  </div>
-                  {message.role === 'assistant' && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => toggleAudioPlayback(message.content)}
-                      className="ml-2 h-6 w-6 rounded-full"
-                    >
-                      {isPlayingAudio ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                    </Button>
-                  )}
-                </div>
-                <div className="text-xs opacity-70 mt-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
+    <div className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="chat" className="flex items-center gap-1">
+            <MessageSquare className="h-4 w-4 mr-1" />
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="practice" className="flex items-center gap-1">
+            <BookOpen className="h-4 w-4 mr-1" />
+            Practice
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="flex items-center gap-1">
+            <FilePlus2 className="h-4 w-4 mr-1" />
+            Resources
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="chat" className="space-y-4">
+          <Card className="h-[500px] flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center">
+                <Bot className="h-5 w-5 text-primary mr-2" />
+                Study Assistant Chat
+              </CardTitle>
+              <CardDescription>
+                Ask questions about Italian grammar, vocabulary, or request help
+              </CardDescription>
+            </CardHeader>
             
-            {isProcessing && (
-              <div className="flex items-center space-x-2 self-start bg-muted p-3 rounded-lg">
-                <Skeleton className="h-4 w-4 rounded-full animate-pulse" />
-                <Skeleton className="h-4 w-4 rounded-full animate-pulse" />
-                <Skeleton className="h-4 w-4 rounded-full animate-pulse" />
-              </div>
-            )}
-          </div>
-          
-          {activeTab === 'practice' && (
-            <div className="mt-4 p-4 border rounded-md">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium">Generated Practice Question</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleGeneratePracticeQuestion}
-                  disabled={isGeneratingQuestion}
+            <CardContent className="flex-grow overflow-hidden">
+              <ScrollArea className="h-[calc(500px-9rem)]">
+                <div className="space-y-4">
+                  {messages.map((message, index) => (
+                    <div 
+                      key={index} 
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div 
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          message.role === 'user' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium">
+                            {message.role === 'user' ? 'You' : 'Assistant'}
+                          </span>
+                          {message.role === 'assistant' && (
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-6 w-6" 
+                              onClick={() => handleTextToSpeech(message.content)}
+                              disabled={isSpeaking}
+                            >
+                              {isSpeaking ? (
+                                <Volume className="h-3 w-3 animate-pulse" />
+                              ) : (
+                                <Volume2 className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+            </CardContent>
+            
+            <CardFooter className="pt-0">
+              <div className="flex w-full gap-2">
+                <Button
+                  size="icon"
+                  variant={isRecording ? "destructive" : "outline"}
+                  onClick={handleVoiceInput}
+                  className="flex-shrink-0"
                 >
-                  {isGeneratingQuestion ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Generate New Question"}
+                  <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse' : ''}`} />
+                </Button>
+                <Input
+                  placeholder="Ask a question about Italian..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="flex-grow"
+                />
+                <Button onClick={handleSendMessage} disabled={!query.trim()} className="flex-shrink-0">
+                  <Send className="h-4 w-4 mr-2" />
+                  Send
                 </Button>
               </div>
-              
-              {generatedQuestion ? (
-                <div className="p-3 bg-card border rounded-md">
-                  {generatedQuestion}
-                </div>
-              ) : (
-                <div className="text-muted-foreground text-sm">
-                  {isGeneratingQuestion ? (
-                    <div className="flex items-center space-x-2">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Generating a practice question...</span>
-                    </div>
-                  ) : (
-                    "Click the button to generate a practice question"
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-      
-      <CardFooter>
-        <div className="flex w-full space-x-2">
-          <Textarea
-            placeholder={
-              activeTab === 'chat' 
-                ? "Ask a question..." 
-                : activeTab === 'practice' 
-                  ? "Describe the topic for practice questions..." 
-                  : "Describe the problem you need help with..."
-            }
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1"
-            rows={2}
-            disabled={isProcessing}
-          />
-          <div className="flex flex-col space-y-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={toggleVoiceInput} 
-                    disabled={isProcessing}
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
+                <HelpCircle className="h-4 w-4 text-primary mr-2" />
+                Suggested Questions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Badge 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-muted"
+                  onClick={() => setQuery("How do I use definite articles in Italian?")}
+                >
+                  How do I use definite articles?
+                </Badge>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-muted"
+                  onClick={() => setQuery("Can you explain the difference between essere and stare?")}
+                >
+                  Difference between essere and stare?
+                </Badge>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-muted"
+                  onClick={() => setQuery("Give me some basic travel phrases in Italian")}
+                >
+                  Basic travel phrases
+                </Badge>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-muted"
+                  onClick={() => setQuery("How do I form the past tense in Italian?")}
+                >
+                  Past tense formation
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="practice" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Brain className="h-5 w-5 text-primary mr-2" />
+                Generate Practice Materials
+              </CardTitle>
+              <CardDescription>
+                Create custom exercises based on your learning needs
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Exercise Type</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Toggle
+                    variant="outline"
+                    className="flex gap-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    onClick={() => generatePractice("vocabulary")}
                   >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isRecording ? "Stop recording" : "Start voice input"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={!input.trim() || isProcessing}
-            >
-              {isProcessing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    Vocabulary
+                  </Toggle>
+                  <Toggle
+                    variant="outline"
+                    className="flex gap-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    onClick={() => generatePractice("grammar")}
+                  >
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Grammar
+                  </Toggle>
+                  <Toggle
+                    variant="outline"
+                    className="flex gap-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    onClick={() => generatePractice("comprehension")}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1" />
+                    Comprehension
+                  </Toggle>
+                  <Toggle
+                    variant="outline"
+                    className="flex gap-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    onClick={() => generatePractice("conversation")}
+                  >
+                    <Volume2 className="h-4 w-4 mr-1" />
+                    Conversation
+                  </Toggle>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="topic">Topic or Focus</Label>
+                <Input
+                  id="topic"
+                  placeholder="Enter a specific topic, grammar point, or vocabulary theme..."
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="difficulty">Difficulty Level</Label>
+                  <Select defaultValue="intermediate">
+                    <SelectTrigger id="difficulty">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="format">Exercise Format</Label>
+                  <Select defaultValue="multiple-choice">
+                    <SelectTrigger id="format">
+                      <SelectValue placeholder="Select format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                      <SelectItem value="fill-blank">Fill in the Blank</SelectItem>
+                      <SelectItem value="matching">Matching</SelectItem>
+                      <SelectItem value="free-response">Free Response</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch id="include-hints" defaultChecked />
+                <Label htmlFor="include-hints">Include hints and explanations</Label>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Practice Exercise
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="resources" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FilePlus2 className="h-5 w-5 text-primary mr-2" />
+                Learning Resources
+              </CardTitle>
+              <CardDescription>
+                Tailored resources based on your learning progress
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <h3 className="text-base font-medium flex items-center">
+                      <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
+                      Italian Article Usage Guide
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      A comprehensive guide to definite and indefinite articles in Italian, with clear examples and practice exercises.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">Grammar</Badge>
+                      <Badge variant="outline">Beginner</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <h3 className="text-base font-medium flex items-center">
+                      <Volume2 className="h-4 w-4 mr-2 text-green-500" />
+                      Pronunciation Audio Series
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Master Italian pronunciation with this audio series focusing on difficult sounds and natural intonation patterns.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">Speaking</Badge>
+                      <Badge variant="outline">All Levels</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <h3 className="text-base font-medium flex items-center">
+                      <MessageSquare className="h-4 w-4 mr-2 text-purple-500" />
+                      Conversational Phrases Collection
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Essential phrases for everyday conversations in Italian, organized by situation and formality level.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">Vocabulary</Badge>
+                      <Badge variant="outline">Intermediate</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <h3 className="text-base font-medium flex items-center">
+                      <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
+                      Verb Conjugation Practice Set
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Interactive exercises to master regular and irregular verb conjugations in all major tenses.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">Grammar</Badge>
+                      <Badge variant="outline">Advanced</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <h3 className="text-base font-medium flex items-center">
+                      <Brain className="h-4 w-4 mr-2 text-red-500" />
+                      Italian Culture Insights
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Articles and videos about Italian culture, traditions, and regional differences to enhance your cultural understanding.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline">Culture</Badge>
+                      <Badge variant="outline">All Levels</Badge>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

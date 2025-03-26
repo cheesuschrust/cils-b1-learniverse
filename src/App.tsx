@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from '@/pages/Dashboard';
@@ -8,12 +9,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/layouts/AdminLayout';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import UserManagement from '@/pages/admin/UserManagement';
-import ContentManagement from '@/pages/admin/ContentManagement';
 import AIManagement from '@/pages/admin/AIManagement';
-import AnalyticsDashboard from '@/pages/admin/AnalyticsDashboard';
 import UserProfile from '@/pages/UserProfile';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
 import EmailVerification from '@/pages/EmailVerification';
 import FlashcardsPage from '@/pages/Flashcards';
 import MultipleChoicePage from '@/pages/MultipleChoice';
@@ -23,8 +20,7 @@ import ListeningPage from '@/pages/Listening';
 import Analytics from '@/pages/Analytics';
 import Achievements from '@/pages/Achievements';
 import Settings from '@/pages/Settings';
-import WordOfDay from '@/pages/WordOfDay';
-import AIAssistant from '@/pages/AIAssistant';  // Import the new page
+import AIAssistant from '@/pages/AIAssistant';
 import { Toaster } from '@/components/ui/toaster';
 import './App.css';
 
@@ -46,8 +42,6 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/email-verification/:token" element={<EmailVerification />} />
         <Route path="*" element={<NotFound />} />
 
@@ -64,20 +58,15 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/word-of-day" element={<WordOfDay />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
           </Route>
-          
-          {/* Add the new AI Assistant route */}
-          <Route path="/ai-assistant" element={<AIAssistant />} />
         </Route>
 
         {/* Admin routes */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} children={undefined} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/content" element={<ContentManagement />} />
             <Route path="/admin/ai" element={<AIManagement />} />
-            <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
           </Route>
         </Route>
 

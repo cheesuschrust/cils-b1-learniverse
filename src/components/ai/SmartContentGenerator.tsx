@@ -1,427 +1,318 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, BookOpen, FileText, Lightbulb, Sparkles, Copy, Check, ExternalLink } from 'lucide-react';
-import { useAI } from '@/hooks/useAI';
-import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-
-interface Flashcard {
-  id: string;
-  term: string;
-  definition: string;
-}
-
-interface RelatedConcept {
-  title: string;
-  description: string;
-  relation: string;
-}
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, FileText, FlaskConical, BookOpen, BookCopy, Sparkles, Download, Copy, CheckCircle, FileDown } from "lucide-react";
+import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { ContentType, formatContentType } from '@/types/contentType';
 
 const SmartContentGenerator = () => {
-  const [content, setContent] = useState('');
-  const [userLevel, setUserLevel] = useState('intermediate');
-  const [activeTab, setActiveTab] = useState('flashcards');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [simplifiedExplanation, setSimplifiedExplanation] = useState('');
-  const [analogy, setAnalogy] = useState('');
-  const [relatedConcepts, setRelatedConcepts] = useState<RelatedConcept[]>([]);
-  const [conceptTitle, setConceptTitle] = useState('');
-  const [copied, setCopied] = useState(false);
-  
-  const { generateText } = useAI();
+  const { settings, isProcessing, generateContent } = useAIUtils();
   const { toast } = useToast();
+  const [selectedTab, setSelectedTab] = useState<string>("flashcards");
+  const [topic, setTopic] = useState<string>("");
+  const [count, setCount] = useState<number>(5);
+  const [difficulty, setDifficulty] = useState<string>("intermediate");
+  const [includeExamples, setIncludeExamples] = useState<boolean>(true);
+  const [includePronunciation, setIncludePronunciation] = useState<boolean>(true);
+  const [bilingualContent, setBilingualContent] = useState<boolean>(true);
+  const [generatedContent, setGeneratedContent] = useState<string>("");
+  const [contentCopied, setContentCopied] = useState<boolean>(false);
   
-  const generateContent = async () => {
-    if (!content.trim()) {
+  // Handle content generation
+  const handleGenerateContent = async () => {
+    if (!topic.trim()) {
       toast({
-        title: "Input required",
-        description: "Please enter some content to generate from.",
+        title: "Topic required",
+        description: "Please enter a topic for content generation",
         variant: "destructive"
       });
       return;
     }
-    
-    if (!conceptTitle.trim() && activeTab !== 'flashcards') {
-      toast({
-        title: "Concept name required",
-        description: "Please enter a title for the concept.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsGenerating(true);
     
     try {
-      if (activeTab === 'flashcards') {
-        // Generate flashcards
-        const prompt = `Create 5 flashcards from the following content. Format as JSON array with term and definition properties: ${content}`;
-        const response = await generateText(prompt);
-        
-        try {
-          // Extract JSON from the response
-          const jsonString = response.substring(
-            response.indexOf('['),
-            response.lastIndexOf(']') + 1
-          );
-          const parsedFlashcards = JSON.parse(jsonString);
-          
-          // Add IDs to the flashcards
-          const flashcardsWithIds = parsedFlashcards.map((card: any, index: number) => ({
-            ...card,
-            id: `fc-${index + 1}`
-          }));
-          
-          setFlashcards(flashcardsWithIds);
-        } catch (error) {
-          // Fallback if JSON parsing fails
-          const fallbackCards = [];
-          const lines = response.split('\n');
-          
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.includes(':') || line.includes('-')) {
-              const [term, definition] = line.split(/[:|-]/);
-              if (term && definition) {
-                fallbackCards.push({
-                  id: `fc-${i + 1}`,
-                  term: term.trim(),
-                  definition: definition.trim()
-                });
-              }
+      // Here we would call an AI service to generate content
+      const content = await generateContent(topic, selectedTab);
+      
+      // Sample generated content for demonstration
+      let sampleContent = "";
+      
+      switch (selectedTab) {
+        case "flashcards":
+          sampleContent = `# Italian Flashcards on ${topic}\n\n`;
+          for (let i = 1; i <= count; i++) {
+            sampleContent += `## Card ${i}\n`;
+            sampleContent += `- Italian: esempio${i}\n`;
+            sampleContent += `- English: example${i}\n`;
+            if (includePronunciation) {
+              sampleContent += `- Pronunciation: eh-ZEM-pyo\n`;
             }
-          }
-          
-          if (fallbackCards.length > 0) {
-            setFlashcards(fallbackCards);
-          } else {
-            throw new Error("Could not parse flashcards");
-          }
-        }
-      } else if (activeTab === 'simplify') {
-        // Generate simplified explanation
-        const prompt = `Simplify this concept for a ${userLevel} level student: ${conceptTitle}. 
-                       Original content: ${content}
-                       Make it easy to understand while preserving the core information.`;
-        
-        const response = await generateText(prompt);
-        setSimplifiedExplanation(response);
-      } else if (activeTab === 'analogy') {
-        // Generate analogy
-        const prompt = `Create a helpful analogy to explain this concept: ${conceptTitle}. 
-                       The original explanation is: ${content}
-                       The learner's level is: ${userLevel}
-                       Your analogy should make this concept more intuitive and memorable.`;
-        
-        const response = await generateText(prompt);
-        setAnalogy(response);
-      } else if (activeTab === 'related') {
-        // Generate related concepts
-        const prompt = `Identify 3-5 related concepts to "${conceptTitle}" that would help a language learner understand the broader context.
-                       For each concept, provide:
-                       1. The concept name
-                       2. A brief description
-                       3. How it relates to ${conceptTitle}
-                       Format as JSON array with title, description, and relation properties.`;
-        
-        const response = await generateText(prompt);
-        
-        try {
-          // Extract JSON from the response
-          const jsonString = response.substring(
-            response.indexOf('['),
-            response.lastIndexOf(']') + 1
-          );
-          const parsedConcepts = JSON.parse(jsonString);
-          setRelatedConcepts(parsedConcepts);
-        } catch (error) {
-          // Fallback parsing
-          const concepts = [];
-          const sections = response.split(/\d+\./);
-          
-          for (let i = 1; i < sections.length; i++) {
-            const section = sections[i].trim();
-            const lines = section.split('\n').filter(line => line.trim());
-            
-            if (lines.length >= 3) {
-              concepts.push({
-                title: lines[0].replace(/^[^a-zA-Z0-9]*/, '').trim(),
-                description: lines[1].replace(/^[^a-zA-Z0-9]*/, '').trim(),
-                relation: lines[2].replace(/^[^a-zA-Z0-9]*/, '').trim()
-              });
+            if (includeExamples) {
+              sampleContent += `- Example: Questo è un esempio.\n`;
             }
+            sampleContent += "\n";
           }
+          break;
           
-          if (concepts.length > 0) {
-            setRelatedConcepts(concepts);
-          } else {
-            throw new Error("Could not parse related concepts");
+        case "quiz":
+          sampleContent = `# Multiple Choice Quiz on ${topic}\n\n`;
+          for (let i = 1; i <= count; i++) {
+            sampleContent += `## Question ${i}\n`;
+            sampleContent += `What is the Italian word for "example"?\n\n`;
+            sampleContent += `A) essempio\n`;
+            sampleContent += `B) esempio\n`;
+            sampleContent += `C) esembio\n`;
+            sampleContent += `D) esemplo\n\n`;
+            sampleContent += `Answer: B\n\n`;
           }
-        }
+          break;
+          
+        case "conversation":
+          sampleContent = `# Conversation Practice on ${topic}\n\n`;
+          sampleContent += `Person A: Buongiorno! Come stai?\n`;
+          sampleContent += `Person B: Sto bene, grazie! E tu?\n`;
+          sampleContent += `Person A: Anche io sto bene. Hai sentito parlare di ${topic}?\n`;
+          sampleContent += `Person B: Sì, è molto interessante. Mi piacerebbe saperne di più.\n`;
+          break;
+          
+        case "passage":
+          sampleContent = `# Reading Passage on ${topic}\n\n`;
+          sampleContent += `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ac pretium nunc, eget vestibulum risus. Donec eget auctor enim. Pellentesque at dictum nisi. In hac habitasse platea dictumst. Donec a vehicula arcu, vel sagittis odio. Vivamus eget tellus a lorem viverra tincidunt.\n\n`;
+          sampleContent += `Praesent id fermentum felis. Sed in aliquet odio. Duis tempus consequat lectus, sit amet facilisis nulla imperdiet at. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Morbi hendrerit justo in porttitor blandit.`;
+          break;
+          
+        default:
+          sampleContent = `Generated content for ${topic} in ${selectedTab} format.`;
       }
+      
+      setGeneratedContent(sampleContent);
     } catch (error) {
+      console.error("Error generating content:", error);
       toast({
         title: "Generation failed",
         description: "There was an error generating content. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsGenerating(false);
     }
   };
   
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Handle content copy
+  const handleCopyContent = () => {
+    navigator.clipboard.writeText(generatedContent);
+    setContentCopied(true);
     
     toast({
-      title: "Copied to clipboard",
-      description: "Content has been copied to your clipboard"
+      title: "Content copied",
+      description: "The generated content has been copied to your clipboard.",
+      variant: "default"
+    });
+    
+    setTimeout(() => setContentCopied(false), 2000);
+  };
+  
+  // Handle content download
+  const handleDownloadContent = () => {
+    const element = document.createElement("a");
+    const file = new Blob([generatedContent], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${selectedTab}_${topic.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    toast({
+      title: "Content downloaded",
+      description: "The generated content has been downloaded as a text file.",
+      variant: "default"
     });
   };
   
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader>
-        <CardTitle>Smart Content Generator</CardTitle>
-        <CardDescription>
-          Transform your content into flashcards, explanations, and more.
-        </CardDescription>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-          <TabsList className="grid grid-cols-4">
-            <TabsTrigger value="flashcards">
-              <BookOpen className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Flashcards</span>
-            </TabsTrigger>
-            <TabsTrigger value="simplify">
-              <FileText className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Simplify</span>
-            </TabsTrigger>
-            <TabsTrigger value="analogy">
-              <Lightbulb className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Analogy</span>
-            </TabsTrigger>
-            <TabsTrigger value="related">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Related</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="space-y-4">
-          {activeTab !== 'flashcards' && (
-            <div className="space-y-2">
-              <Label htmlFor="concept-title">Concept Name</Label>
-              <Input 
-                id="concept-title"
-                placeholder="Enter the name of the concept" 
-                value={conceptTitle}
-                onChange={(e) => setConceptTitle(e.target.value)}
-              />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5 text-primary" />
+            AI Content Generator
+          </CardTitle>
+          <CardDescription>
+            Create custom learning materials tailored to your needs
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="flashcards" onValueChange={(value) => setSelectedTab(value)}>
+            <TabsList className="grid grid-cols-4 mb-4">
+              <TabsTrigger value="flashcards" className="flex items-center gap-1">
+                <BookCopy className="h-4 w-4 md:mr-1" />
+                <span className="hidden md:inline">Flashcards</span>
+              </TabsTrigger>
+              <TabsTrigger value="quiz" className="flex items-center gap-1">
+                <FileText className="h-4 w-4 md:mr-1" />
+                <span className="hidden md:inline">Quiz</span>
+              </TabsTrigger>
+              <TabsTrigger value="conversation" className="flex items-center gap-1">
+                <BookOpen className="h-4 w-4 md:mr-1" />
+                <span className="hidden md:inline">Conversation</span>
+              </TabsTrigger>
+              <TabsTrigger value="passage" className="flex items-center gap-1">
+                <FileText className="h-4 w-4 md:mr-1" />
+                <span className="hidden md:inline">Passage</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="topic">Topic or Theme</Label>
+                <Input
+                  id="topic"
+                  placeholder="Enter a topic, theme, or specific subject..."
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="difficulty">Difficulty Level</Label>
+                  <Select 
+                    value={difficulty} 
+                    onValueChange={setDifficulty}
+                  >
+                    <SelectTrigger id="difficulty">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Number of Items ({count})</Label>
+                  <Slider
+                    value={[count]}
+                    min={1}
+                    max={20}
+                    step={1}
+                    onValueChange={(value) => setCount(value[0])}
+                    className="py-4"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="include-examples"
+                    checked={includeExamples}
+                    onCheckedChange={setIncludeExamples}
+                  />
+                  <Label htmlFor="include-examples">Include Examples</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="include-pronunciation"
+                    checked={includePronunciation}
+                    onCheckedChange={setIncludePronunciation}
+                  />
+                  <Label htmlFor="include-pronunciation">Add Pronunciation</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="bilingual-content"
+                    checked={bilingualContent}
+                    onCheckedChange={setBilingualContent}
+                  />
+                  <Label htmlFor="bilingual-content">Bilingual Content</Label>
+                </div>
+              </div>
             </div>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="content-input">Content</Label>
-            <Textarea 
-              id="content-input"
-              placeholder="Paste your content here" 
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={6}
-              className="resize-none"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="user-level">Learning Level</Label>
-            <Select value={userLevel} onValueChange={setUserLevel}>
-              <SelectTrigger id="user-level">
-                <SelectValue placeholder="Select level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="advanced">Advanced</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
+          </Tabs>
+        </CardContent>
+        <CardFooter>
           <Button 
-            onClick={generateContent} 
-            disabled={isGenerating || !content.trim()}
+            onClick={handleGenerateContent}
+            disabled={isProcessing || !topic.trim()}
             className="w-full"
           >
-            {isGenerating ? (
+            {isProcessing ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                <span>Generating...</span>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                <span>Generate {
-                  activeTab === 'flashcards' ? 'Flashcards' : 
-                  activeTab === 'simplify' ? 'Simplified Explanation' :
-                  activeTab === 'analogy' ? 'Analogy' : 'Related Concepts'
-                }</span>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Content
               </>
             )}
           </Button>
-          
-          <TabsContent value="flashcards" className="space-y-4 mt-4 border-t pt-4">
-            {flashcards.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Generated Flashcards</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => copyToClipboard(
-                      flashcards.map(card => `${card.term}: ${card.definition}`).join('\n\n')
-                    )}
-                  >
-                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                    <span>Copy All</span>
-                  </Button>
-                </div>
-                
-                <ScrollArea className="h-[300px] rounded-md border p-4">
-                  <div className="space-y-4">
-                    {flashcards.map((card) => (
-                      <Card key={card.id} className="p-4">
-                        <div className="font-medium">Term: {card.term}</div>
-                        <div className="text-sm mt-2">Definition: {card.definition}</div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+        </CardFooter>
+      </Card>
+      
+      {generatedContent && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Generated Content
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1"
+                  onClick={handleCopyContent}
+                >
+                  {contentCopied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1"
+                  onClick={handleDownloadContent}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Download
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Enter your content and click Generate to create flashcards
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="simplify" className="space-y-4 mt-4 border-t pt-4">
-            {simplifiedExplanation ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Simplified Explanation</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => copyToClipboard(simplifiedExplanation)}
-                  >
-                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                    <span>Copy</span>
-                  </Button>
-                </div>
-                
-                <Card className="p-4">
-                  <div className="whitespace-pre-wrap">{simplifiedExplanation}</div>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Enter a concept and content to generate a simplified explanation
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="analogy" className="space-y-4 mt-4 border-t pt-4">
-            {analogy ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Analogy for {conceptTitle}</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => copyToClipboard(analogy)}
-                  >
-                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                    <span>Copy</span>
-                  </Button>
-                </div>
-                
-                <Card className="p-4">
-                  <div className="whitespace-pre-wrap">{analogy}</div>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Lightbulb className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Enter a concept and content to generate a helpful analogy
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="related" className="space-y-4 mt-4 border-t pt-4">
-            {relatedConcepts.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Related to {conceptTitle}</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => copyToClipboard(
-                      relatedConcepts.map(concept => 
-                        `${concept.title}:\n${concept.description}\nRelation: ${concept.relation}`
-                      ).join('\n\n')
-                    )}
-                  >
-                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                    <span>Copy All</span>
-                  </Button>
-                </div>
-                
-                <ScrollArea className="h-[300px] rounded-md border p-4">
-                  <div className="space-y-4">
-                    {relatedConcepts.map((concept, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="font-medium">{concept.title}</div>
-                        <div className="text-sm mt-2">{concept.description}</div>
-                        <div className="text-xs text-muted-foreground mt-3">
-                          <Badge variant="outline" className="font-normal">Relation</Badge> {concept.relation}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ExternalLink className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Enter a concept to discover related concepts
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        </div>
-      </CardContent>
-    </Card>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[300px] rounded-md border p-4 bg-muted/30">
+              <pre className="text-sm whitespace-pre-wrap font-mono">
+                {generatedContent}
+              </pre>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
 
