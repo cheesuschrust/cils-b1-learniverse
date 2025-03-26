@@ -2,14 +2,7 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-
-interface ConfidenceIndicatorProps {
-  score?: number;
-  value?: number;
-  showLabel?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-}
+import { ConfidenceIndicatorProps } from '@/types/interface-fixes';
 
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
@@ -17,6 +10,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   showLabel = true,
   size = 'md',
   className,
+  contentType,
 }) => {
   // Use score or value property
   const confidenceValue = score !== undefined ? score * 100 : value !== undefined ? value : 0;
@@ -60,12 +54,28 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
         return 'h-2';
     }
   };
+
+  // Get label text based on content type
+  const getLabelText = () => {
+    if (!contentType) return 'Confidence';
+    
+    switch (contentType) {
+      case 'writing':
+        return 'Writing Quality';
+      case 'speaking':
+        return 'Pronunciation';
+      case 'listening':
+        return 'Comprehension';
+      default:
+        return 'Confidence';
+    }
+  };
   
   return (
     <div className={cn('space-y-1', className)}>
       {showLabel && (
         <div className="flex justify-between items-center">
-          <span className={cn('font-medium', getSizeClasses())}>Confidence</span>
+          <span className={cn('font-medium', getSizeClasses())}>{getLabelText()}</span>
           <span className={cn('font-medium', getSizeClasses(), getColorClass())}>
             {getConfidenceText()} ({Math.round(confidenceValue)}%)
           </span>
