@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import { signInWithOAuth } from "@/lib/supabase";
 import {
   Form,
   FormControl,
@@ -23,6 +26,7 @@ import {
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional().default(false)
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -37,27 +41,35 @@ const Login = () => {
     apple: boolean;
   }>({ google: false, apple: false });
   
-  // Get the intended destination from location state, or default to /app/dashboard
-  const from = location.state?.from?.pathname || "/app/dashboard";
+  // Get the intended destination from location state, or default to /dashboard
+  const from = location.state?.from?.pathname || "/dashboard";
   
   // Define form with validation
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      email: localStorage.getItem("rememberedEmail") || "",
       password: "",
+      rememberMe: !!localStorage.getItem("rememberedEmail")
     },
   });
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/app/dashboard");
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
+      // Save or remove email from localStorage based on rememberMe
+      if (data.rememberMe) {
+        localStorage.setItem("rememberedEmail", data.email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+      
       const success = await login(data.email, data.password);
       if (success) {
         toast({
@@ -65,13 +77,13 @@ const Login = () => {
           description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
         });
         // Navigate to the dashboard with the correct path
-        navigate("/app/dashboard");
+        navigate("/dashboard");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Please check your credentials and try again.",
         variant: "destructive"
       });
     }
@@ -82,24 +94,16 @@ const Login = () => {
       // Set loading state for the specific provider
       setIsSocialLoading(prev => ({ ...prev, [provider]: true }));
       
-      // Call the social login method from AuthContext
-      const success = await login(`${provider}@example.com`, 'social-login-password');
-      
-      if (success) {
-        toast({
-          title: "Login successful",
-          description: `Welcome to CILS B2 Cittadinanza Question of the Day!`,
-        });
-        navigate(from);
-      }
-    } catch (error) {
+      // Call Supabase OAuth sign in
+      await signInWithOAuth(provider);
+      // Note: The rest is handled by the redirect flow and auth state change detection
+    } catch (error: any) {
       console.error(`${provider} login error:`, error);
       toast({
         title: "Login failed",
-        description: `Could not log in with ${provider}. Please try again.`,
+        description: error.message || `Could not log in with ${provider}. Please try again.`,
         variant: "destructive"
       });
-    } finally {
       setIsSocialLoading(prev => ({ ...prev, [provider]: false }));
     }
   };
@@ -203,6 +207,26 @@ const Login = () => {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="rememberMe"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Remember me
+                      </FormLabel>
+                    </div>
                   </FormItem>
                 )}
               />

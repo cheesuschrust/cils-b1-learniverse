@@ -1,266 +1,131 @@
-import React, { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+
+import React from 'react';
+import { Helmet } from 'react-helmet-async';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import ContentUploadForm from '@/components/admin/ContentUploadForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/components/ui/use-toast';
-import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useAI } from '@/hooks/useAI';
-import { detectLanguage, ContentType } from '@/utils/textAnalysis';
-import useFileProcessor from '@/hooks/useFileProcessor';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
 
 const ContentUploader = () => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [content, setContent] = useState('');
-  const [contentType, setContentType] = useState<ContentType>('writing');
-  const [language, setLanguage] = useState<'english' | 'italian'>('english');
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error' | 'loading'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { toast } = useToast();
-  const { isModelLoaded } = useAI();
-  const {
-    file,
-    handleFileUpload,
-    isProcessing: isFileProcessing,
-    errorMessage: fileErrorMessage,
-  } = useFileProcessor();
-  
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    const detectedLanguage = detectLanguage(e.target.value);
-    setLanguage(detectedLanguage === 'italian' ? 'italian' : 'english');
-  };
-  
-  const handleUpload = async () => {
-    if (!title || !description || !content) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields before uploading.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setUploadStatus('loading');
-    setErrorMessage(null);
-    
-    try {
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setUploadStatus('success');
-      toast({
-        title: "Upload Successful",
-        description: "Content uploaded successfully!",
-      });
-      
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setContent('');
-      setContentType('writing');
-      setLanguage('english');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'An unexpected error occurred';
-      setUploadStatus('error');
-      setErrorMessage(message);
-      toast({
-        title: "Upload Failed",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setUploadStatus('idle');
-    }
-  };
-  
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) {
-      toast({
-        title: "No Files Selected",
-        description: "Please select at least one file to upload.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      await handleFileUpload(selectedFile);
-    }
-  }, [handleFileUpload, toast]);
-  
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold text-center mb-8 animate-fade-in">
-        Content Uploader
-      </h1>
+    <>
+      <Helmet>
+        <title>Content Uploader - Admin</title>
+      </Helmet>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column - Manual Input */}
-        <div className="animate-fade-up">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Input</CardTitle>
-              <CardDescription>
-                Enter content details manually
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Title of the content"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  placeholder="Brief description of the content"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Enter your content here"
-                  value={content}
-                  onChange={handleContentChange}
-                  className="min-h-[100px]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contentType">Content Type</Label>
-                <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select content type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                    <SelectItem value="flashcards">Flashcards</SelectItem>
-                    <SelectItem value="writing">Writing</SelectItem>
-                    <SelectItem value="speaking">Speaking</SelectItem>
-                    <SelectItem value="listening">Listening</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select value={language} onValueChange={(value) => setLanguage(value as 'english' | 'italian')}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="english">English</SelectItem>
-                    <SelectItem value="italian">Italian</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {uploadStatus === 'error' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              )}
-              
-              <Button onClick={handleUpload} disabled={uploadStatus === 'loading' || !isModelLoaded} className="w-full">
-                {uploadStatus === 'loading' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Upload Content"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="container max-w-6xl mx-auto py-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Content Uploader</h1>
+            <p className="text-muted-foreground mt-1">
+              Upload and manage content for your learning platform
+            </p>
+          </div>
+          
+          <div className="mt-4 md:mt-0">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/content-analysis">
+                View Content Analysis
+              </Link>
+            </Button>
+          </div>
         </div>
         
-        {/* Right Column - File Upload */}
-        <div className="animate-fade-up">
-          <Card>
-            <CardHeader>
-              <CardTitle>File Upload</CardTitle>
-              <CardDescription>
-                Upload content from a file
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="file">Select File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  accept=".txt,.md,.csv,.json"
-                  onChange={handleFileSelect}
-                  disabled={isFileProcessing}
-                />
-              </div>
-              
-              {file && (
-                <div className="rounded-md border px-4 py-3 bg-muted">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="text-green-500 h-5 w-5" />
-                    <p className="text-sm font-medium">
-                      {file.name} - {file.size} bytes
-                    </p>
-                  </div>
+        <Tabs defaultValue="upload">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="upload">Upload Content</TabsTrigger>
+            <TabsTrigger value="help">Help & Guidelines</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="upload">
+            <ContentUploadForm />
+          </TabsContent>
+          
+          <TabsContent value="help">
+            <Card>
+              <CardHeader>
+                <CardTitle>Content Upload Guidelines</CardTitle>
+                <CardDescription>
+                  Learn how to create effective learning content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2 text-primary" />
+                    Supported File Formats
+                  </h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>Text files (.txt) - Plain text content</li>
+                    <li>PDF documents (.pdf) - Formatted documents</li>
+                    <li>Word documents (.doc, .docx) - Microsoft Word documents</li>
+                  </ul>
                 </div>
-              )}
-              
-              {fileErrorMessage && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{fileErrorMessage}</AlertDescription>
-                </Alert>
-              )}
-              
-              {isFileProcessing ? (
-                <Button disabled className="w-full">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing File...
-                </Button>
-              ) : (
-                <Button variant="secondary" asChild className="w-full">
-                  <label htmlFor="file">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Choose File
-                  </label>
-                </Button>
-              )}
-              
-              {content && (
-                <div className="space-y-2 mt-4">
-                  <Label>Extracted Content</Label>
-                  <Textarea
-                    value={content}
-                    readOnly
-                    className="min-h-[100px] text-sm"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Content Type: {contentType}
+                
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2 text-primary" />
+                    Content Types
+                  </h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>
+                      <strong>Flashcards</strong> - Vocabulary terms or concepts with definitions
+                    </li>
+                    <li>
+                      <strong>Multiple Choice</strong> - Questions with multiple answer options
+                    </li>
+                    <li>
+                      <strong>Writing</strong> - Writing prompts and exercises
+                    </li>
+                    <li>
+                      <strong>Speaking</strong> - Speaking exercises and pronunciation practice
+                    </li>
+                    <li>
+                      <strong>Listening</strong> - Audio-based comprehension exercises
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2 text-primary" />
+                    Content Processing
+                  </h3>
+                  <p>
+                    When you upload content, our system will:
+                  </p>
+                  <ol className="list-decimal pl-6 space-y-1">
+                    <li>Analyze the document content</li>
+                    <li>Extract key concepts, terms, and topics</li>
+                    <li>Generate appropriate questions based on the content type</li>
+                    <li>Create a structured learning resource</li>
+                  </ol>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Note: Processing time may vary depending on the file size and complexity.
                   </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2 text-primary" />
+                    Best Practices
+                  </h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>Use clear, concise language</li>
+                    <li>Structure your content with headings and sections</li>
+                    <li>For vocabulary lists, use a consistent format (term: definition)</li>
+                    <li>Include diverse examples to illustrate concepts</li>
+                    <li>Balance difficulty levels for better learning progression</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </>
   );
 };
 

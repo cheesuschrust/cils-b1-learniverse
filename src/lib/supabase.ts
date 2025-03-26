@@ -100,3 +100,61 @@ export const trackQuestionUsage = async (
   
   return true;
 };
+
+// Function to get OAuth providers
+export const getOAuthProviders = () => {
+  return {
+    google: {
+      name: 'Google',
+      icon: 'google',
+    },
+    apple: {
+      name: 'Apple',
+      icon: 'apple',
+    }
+  };
+};
+
+// Function to sign in with OAuth provider
+export const signInWithOAuth = async (provider: 'google' | 'apple') => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  
+  if (error) throw error;
+  return data;
+};
+
+// Function to get user subscription status
+export const getUserSubscription = async (userId: string): Promise<string> => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('subscription')
+    .eq('id', userId)
+    .single();
+    
+  if (error) {
+    console.error('Error getting user subscription:', error);
+    return 'free';
+  }
+  
+  return data?.subscription || 'free';
+};
+
+// Function to update user subscription
+export const updateUserSubscription = async (userId: string, subscription: 'free' | 'premium'): Promise<boolean> => {
+  const { error } = await supabase
+    .from('users')
+    .update({ subscription })
+    .eq('id', userId);
+    
+  if (error) {
+    console.error('Error updating user subscription:', error);
+    return false;
+  }
+  
+  return true;
+};

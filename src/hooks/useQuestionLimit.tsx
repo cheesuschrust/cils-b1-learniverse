@@ -1,8 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { isPremiumUser, hasReachedDailyLimit } from "@/lib/supabase";
+import { isPremiumUser, hasReachedDailyLimit, trackQuestionUsage } from "@/lib/supabase";
 
 // Define question types that can be tracked
 export type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
@@ -20,20 +20,46 @@ export interface UseQuestionLimitResult {
  * Hook to manage question usage limits based on subscription status
  */
 export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => {
-  const { user, incrementDailyQuestionCount, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [usedCount, setUsedCount] = useState(0);
   
   // Normalize type to match keys in dailyQuestionCounts
   const countKey = type === "multipleChoice" ? "multipleChoice" : type;
   
-  // Get current count for this question type
-  const getCurrentCount = (): number => {
-    if (!user || !user.dailyQuestionCounts) {
-      return 0;
-    }
-    return user.dailyQuestionCounts[countKey] || 0;
-  };
+  // Load current count from Supabase when the component mounts
+  useEffect(() => {
+    const loadUsageCount = async () => {
+      if (!isAuthenticated || !user) return;
+      
+      setIsLoading(true);
+      try {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data, error } = await supabase
+          .from('usage_tracking')
+          .select('count')
+          .eq('user_id', user.id)
+          .eq('question_type', countKey)
+          .eq('date', today)
+          .single();
+          
+        if (!error && data) {
+          setUsedCount(data.count);
+        } else if (error && error.code !== 'PGSQL_EMPTY_RESULT') {
+          console.error('Error fetching usage count:', error);
+        }
+      } catch (error) {
+        console.error('Failed to load usage count:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUsageCount();
+  }, [isAuthenticated, user, countKey]);
   
   // Determine if user can access content based on subscription and usage
   const canAccessContent = (): boolean => {
@@ -47,7 +73,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     }
     
     // Free users get 1 question per day
-    return getCurrentCount() < 1;
+    return usedCount < 1;
   };
   
   // Calculate remaining questions based on subscription type
@@ -61,12 +87,12 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     }
     
     // Free users get 1 question per day
-    return Math.max(0, 1 - getCurrentCount());
+    return Math.max(0, 1 - usedCount);
   };
   
   // Function to track question usage
-  const trackQuestionUsage = async (): Promise<boolean> => {
-    if (!isAuthenticated) {
+  const handleTrackQuestionUsage = async (): Promise<boolean> => {
+    if (!isAuthenticated || !user) {
       toast({
         title: "Authentication Required",
         description: "Please log in to access this content",
@@ -79,12 +105,12 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     
     try {
       // Check if user is premium (unlimited access)
-      if (isPremiumUser(user?.subscription)) {
+      if (isPremiumUser(user.subscription)) {
         return true;
       }
       
       // Check if user has already reached their daily limit
-      if (user && await hasReachedDailyLimit(user.id, countKey)) {
+      if (await hasReachedDailyLimit(user.id, countKey)) {
         toast({
           title: "Daily Limit Reached",
           description: "You've reached your daily limit. Upgrade to premium for unlimited access.",
@@ -93,13 +119,16 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
         return false;
       }
       
-      // Increment the counter and return the result
-      const result = await incrementDailyQuestionCount(countKey);
+      // Track the usage in Supabase
+      const result = await trackQuestionUsage(user.id, countKey);
       
-      if (!result) {
+      if (result) {
+        // Update local state if tracking was successful
+        setUsedCount(prev => prev + 1);
+      } else {
         toast({
-          title: "Daily Limit Reached",
-          description: "You've reached your daily limit. Upgrade to premium for unlimited access.",
+          title: "Error Tracking Usage",
+          description: "There was a problem tracking your question usage. Please try again.",
           variant: "destructive"
         });
       }
@@ -107,6 +136,11 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
       return result;
     } catch (error) {
       console.error("Error tracking question usage:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
       return false;
     } finally {
       setIsLoading(false);
@@ -118,7 +152,7 @@ export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => 
     canAccessContent: canAccessContent(),
     isLoading,
     remainingQuestions: getRemainingQuestions(),
-    usedQuestions: getCurrentCount(),
-    trackQuestionUsage
+    usedQuestions: usedCount,
+    trackQuestionUsage: handleTrackQuestionUsage
   };
 };
