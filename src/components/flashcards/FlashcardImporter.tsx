@@ -1,300 +1,397 @@
 
-import React, { useState, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import React, { useState, useCallback, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
-import { useFlashcardImporter, ImportOptions } from '@/hooks/useFlashcardImporter';
-import { Upload, FileText, Database, Check, AlertTriangle, FileX, Table } from 'lucide-react';
-import { ImportFormat } from '@/types/interface-fixes';
+import { ImportFormat, Flashcard } from '@/types/interface-fixes';
+import { useFlashcardImporter } from '@/hooks/useFlashcardImporter';
+import { Upload, FileUp, AlertCircle } from 'lucide-react';
 
 interface FlashcardImporterProps {
-  onImportComplete?: (result: any) => void;
+  onImportComplete?: (flashcards: Partial<Flashcard>[]) => void;
   onCancel?: () => void;
 }
 
-const FlashcardImporter: React.FC<FlashcardImporterProps> = ({ 
-  onImportComplete, 
-  onCancel 
+const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
+  onImportComplete,
+  onCancel
 }) => {
-  const [activeTab, setActiveTab] = useState<string>('csv');
-  const [csvContent, setCsvContent] = useState<string>('');
-  const [jsonContent, setJsonContent] = useState<string>('');
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [importOptions, setImportOptions] = useState<ImportOptions>({
-    italianColumn: 'italian',
-    englishColumn: 'english',
-    tagsColumn: 'tags'
-  });
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>('');
-  
-  const { handleImport, loading, error, importResult } = useFlashcardImporter();
   const { toast } = useToast();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [step, setStep] = useState<'format' | 'mapping' | 'preview'>('format');
+  const [previewData, setPreviewData] = useState<Partial<Flashcard>[]>([]);
   
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    setIsUploading(true);
-    setUploadError(null);
-    setFileName(file.name);
-    
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      
-      if (file.name.endsWith('.csv')) {
-        setCsvContent(content);
-        setActiveTab('csv');
-      } else if (file.name.endsWith('.json')) {
-        setJsonContent(content);
-        setActiveTab('json');
-      } else {
-        setUploadError('Unsupported file format. Please upload a CSV or JSON file.');
-      }
-      
-      setIsUploading(false);
-    };
-    
-    reader.onerror = () => {
-      setUploadError('Error reading file');
-      setIsUploading(false);
-    };
-    
-    reader.readAsText(file);
-  }, []);
-  
-  const handleImportClick = async () => {
-    try {
-      let content = '';
-      let format: ImportFormat = 'csv';
-      
-      if (activeTab === 'csv') {
-        content = csvContent;
-        format = 'csv';
-      } else if (activeTab === 'json') {
-        content = jsonContent;
-        format = 'json';
-      } else if (activeTab === 'anki') {
-        format = 'anki';
-      } else if (activeTab === 'quizlet') {
-        format = 'quizlet';
-      }
-      
-      if (!content && (format === 'csv' || format === 'json')) {
-        setUploadError('Please provide content to import');
-        return;
-      }
-      
-      const result = await handleImport(content, {
-        ...importOptions,
-        format
-      });
-      
+  // Use the custom hook
+  const {
+    importFromFile,
+    updateImportFormat,
+    importFormat,
+    isImporting,
+    error
+  } = useFlashcardImporter({
+    onImportComplete: (flashcards) => {
+      setPreviewData(flashcards);
       toast({
-        title: 'Import Complete',
-        description: `Successfully imported ${result.imported} flashcards.`,
+        title: "Import Successful",
+        description: `${flashcards.length} flashcards have been imported.`,
       });
-      
       if (onImportComplete) {
-        onImportComplete(result);
+        onImportComplete(flashcards);
       }
-    } catch (err) {
+    },
+    onError: (err) => {
       toast({
-        title: 'Import Failed',
-        description: err instanceof Error ? err.message : 'An unknown error occurred',
-        variant: 'destructive',
+        title: "Import Failed",
+        description: err.message,
+        variant: "destructive",
       });
+    }
+  });
+  
+  // Handle file selection
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      
+      // Auto-detect format from file extension
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension === 'csv') {
+        updateImportFormat({ type: 'csv' });
+      } else if (extension === 'json') {
+        updateImportFormat({ type: 'json' });
+      } else if (extension === 'xlsx' || extension === 'xls') {
+        updateImportFormat({ type: 'excel' });
+      } else if (extension === 'txt') {
+        // Could be Anki or Quizlet, let user decide
+      }
     }
   };
   
-  return (
-    <Card className="w-full max-w-3xl">
-      <CardHeader>
-        <CardTitle>Import Flashcards</CardTitle>
-        <CardDescription>
-          Import flashcards from various formats including CSV, JSON, Anki, and Quizlet
-        </CardDescription>
-      </CardHeader>
+  // Update format type
+  const handleFormatTypeChange = (value: string) => {
+    updateImportFormat({ 
+      type: value as 'csv' | 'json' | 'anki' | 'quizlet' | 'excel' 
+    });
+  };
+  
+  // Update field mapping
+  const handleFieldMapChange = (field: string, value: string) => {
+    updateImportFormat({
+      fieldMap: {
+        ...importFormat.fieldMap,
+        [field]: value
+      }
+    });
+  };
+  
+  // Toggle headers
+  const handleHeaderToggle = (checked: boolean) => {
+    updateImportFormat({ hasHeader: checked });
+  };
+  
+  // Update delimiter
+  const handleDelimiterChange = (e: ChangeEvent<HTMLInputElement>) => {
+    updateImportFormat({ delimiter: e.target.value });
+  };
+  
+  // Start import process
+  const handleImport = useCallback(async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a file to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await importFromFile(selectedFile);
+      setStep('preview');
+    } catch (err) {
+      // Error is already handled by the hook
+    }
+  }, [selectedFile, importFromFile, toast]);
+  
+  // Finish import and call completion handler
+  const handleFinish = useCallback(() => {
+    if (previewData.length > 0 && onImportComplete) {
+      onImportComplete(previewData);
+    }
+  }, [previewData, onImportComplete]);
+  
+  // Render format selection step
+  const renderFormatStep = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>File Format</Label>
+        <Select value={importFormat.type} onValueChange={handleFormatTypeChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select file format" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="csv">CSV File</SelectItem>
+            <SelectItem value="json">JSON File</SelectItem>
+            <SelectItem value="anki">Anki Deck</SelectItem>
+            <SelectItem value="quizlet">Quizlet Export</SelectItem>
+            <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="px-6">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="csv">CSV</TabsTrigger>
-            <TabsTrigger value="json">JSON</TabsTrigger>
-            <TabsTrigger value="anki">Anki</TabsTrigger>
-            <TabsTrigger value="quizlet">Quizlet</TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-center w-full">
-              <label 
-                htmlFor="file-upload" 
-                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/40 hover:bg-muted/60"
+      <div className="space-y-2">
+        <Label>Upload File</Label>
+        <div className="border-2 border-dashed rounded-md p-6 text-center">
+          {selectedFile ? (
+            <div className="space-y-2">
+              <FileUp className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="text-sm font-medium">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(selectedFile.size / 1024).toFixed(1)} KB
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedFile(null)}
               >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                  <p className="mb-2 text-sm text-muted-foreground">
-                    <span className="font-semibold">Click to upload</span> or drag and drop
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activeTab === 'csv' && 'CSV (.csv)'}
-                    {activeTab === 'json' && 'JSON (.json)'}
-                    {activeTab === 'anki' && 'Anki (.apkg)'}
-                    {activeTab === 'quizlet' && 'Quizlet (.txt)'}
-                  </p>
-                </div>
-                <Input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  accept={
-                    activeTab === 'csv' ? '.csv' : 
-                    activeTab === 'json' ? '.json' : 
-                    activeTab === 'anki' ? '.apkg' : 
-                    '.txt'
-                  }
-                  onChange={handleFileUpload}
-                  disabled={isUploading}
-                />
-              </label>
+                Change File
+              </Button>
             </div>
-            
-            {fileName && (
-              <div className="flex items-center p-2 bg-muted/30 rounded">
-                <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-sm">{fileName}</span>
-              </div>
-            )}
-            
-            {uploadError && (
-              <div className="flex items-center p-2 bg-destructive/10 text-destructive rounded">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <span className="text-sm">{uploadError}</span>
-              </div>
-            )}
-            
-            <TabsContent value="csv" className="m-0">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="italianColumn">Italian Column</Label>
-                    <Input
-                      id="italianColumn"
-                      placeholder="italian"
-                      value={importOptions.italianColumn}
-                      onChange={(e) => setImportOptions({ ...importOptions, italianColumn: e.target.value })}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="englishColumn">English Column</Label>
-                    <Input
-                      id="englishColumn"
-                      placeholder="english"
-                      value={importOptions.englishColumn}
-                      onChange={(e) => setImportOptions({ ...importOptions, englishColumn: e.target.value })}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="tagsColumn">Tags Column (Optional)</Label>
-                    <Input
-                      id="tagsColumn"
-                      placeholder="tags"
-                      value={importOptions.tagsColumn}
-                      onChange={(e) => setImportOptions({ ...importOptions, tagsColumn: e.target.value })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="csvContent">CSV Content</Label>
-                  <Textarea
-                    id="csvContent"
-                    placeholder="Paste your CSV content here (including headers)"
-                    value={csvContent}
-                    onChange={(e) => setCsvContent(e.target.value)}
-                    rows={10}
-                    className="font-mono text-sm"
+          ) : (
+            <>
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Drag and drop your file here, or click to select
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <label>
+                  <Input
+                    type="file"
+                    accept=".csv,.json,.txt,.xlsx,.xls"
+                    className="hidden"
+                    onChange={handleFileChange}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Example format: italian,english,tags
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="json" className="m-0">
-              <div className="space-y-2">
-                <Label htmlFor="jsonContent">JSON Content</Label>
-                <Textarea
-                  id="jsonContent"
-                  placeholder='Paste your JSON content here (format: [{"italian": "casa", "english": "house", "tags": ["basics"]}])'
-                  value={jsonContent}
-                  onChange={(e) => setJsonContent(e.target.value)}
-                  rows={10}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Must be an array of objects with at least "italian" and "english" properties
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="anki" className="m-0">
-              <div className="p-8 text-center">
-                <Database className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Anki Import</h3>
-                <p className="text-muted-foreground mb-4">
-                  Upload an Anki package (.apkg) file to import flashcards
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Note: This feature is still in development
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="quizlet" className="m-0">
-              <div className="p-8 text-center">
-                <Table className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Quizlet Import</h3>
-                <p className="text-muted-foreground mb-4">
-                  Upload a text file exported from Quizlet to import flashcards
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Note: This feature is still in development
-                </p>
-              </div>
-            </TabsContent>
-          </div>
-        </CardContent>
-      </Tabs>
+                  Select File
+                </label>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
       
-      <CardFooter className="justify-between">
+      {/* Format-specific options */}
+      {importFormat.type === 'csv' && (
+        <div className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="delimiter">Delimiter</Label>
+            <Input
+              id="delimiter"
+              value={importFormat.delimiter || ','}
+              onChange={handleDelimiterChange}
+              placeholder="Delimiter character"
+              className="w-full"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hasHeader"
+              checked={importFormat.hasHeader}
+              onCheckedChange={handleHeaderToggle}
+            />
+            <Label htmlFor="hasHeader">File has header row</Label>
+          </div>
+        </div>
+      )}
+      
+      <CardFooter className="flex justify-between px-0">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        
-        <Button onClick={handleImportClick} disabled={loading}>
-          {loading ? (
-            <>Loading...</>
-          ) : (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Import Flashcards
-            </>
-          )}
+        <Button
+          onClick={() => setStep('mapping')}
+          disabled={!selectedFile}
+        >
+          Next
         </Button>
       </CardFooter>
+    </div>
+  );
+  
+  // Render field mapping step
+  const renderMappingStep = () => (
+    <div className="space-y-4">
+      <div className="text-sm text-muted-foreground mb-4">
+        Map the fields from your import file to the flashcard properties.
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="italian-field">Italian Field</Label>
+          <Input
+            id="italian-field"
+            value={importFormat.fieldMap.italian}
+            onChange={(e) => handleFieldMapChange('italian', e.target.value)}
+            placeholder="Column name for Italian text"
+            className="w-full"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="english-field">English Field</Label>
+          <Input
+            id="english-field"
+            value={importFormat.fieldMap.english}
+            onChange={(e) => handleFieldMapChange('english', e.target.value)}
+            placeholder="Column name for English text"
+            className="w-full"
+          />
+        </div>
+        
+        <Separator />
+        
+        <div className="space-y-2">
+          <Label htmlFor="tags-field">Tags Field (Optional)</Label>
+          <Input
+            id="tags-field"
+            value={importFormat.fieldMap.tags || ''}
+            onChange={(e) => handleFieldMapChange('tags', e.target.value)}
+            placeholder="Column name for tags"
+            className="w-full"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="level-field">Level Field (Optional)</Label>
+          <Input
+            id="level-field"
+            value={importFormat.fieldMap.level || ''}
+            onChange={(e) => handleFieldMapChange('level', e.target.value)}
+            placeholder="Column name for level"
+            className="w-full"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="mastered-field">Mastered Field (Optional)</Label>
+          <Input
+            id="mastered-field"
+            value={importFormat.fieldMap.mastered || ''}
+            onChange={(e) => handleFieldMapChange('mastered', e.target.value)}
+            placeholder="Column name for mastered status"
+            className="w-full"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="examples-field">Examples Field (Optional)</Label>
+          <Input
+            id="examples-field"
+            value={importFormat.fieldMap.examples || ''}
+            onChange={(e) => handleFieldMapChange('examples', e.target.value)}
+            placeholder="Column name for examples"
+            className="w-full"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="explanation-field">Explanation Field (Optional)</Label>
+          <Input
+            id="explanation-field"
+            value={importFormat.fieldMap.explanation || ''}
+            onChange={(e) => handleFieldMapChange('explanation', e.target.value)}
+            placeholder="Column name for explanation"
+            className="w-full"
+          />
+        </div>
+      </div>
+      
+      <CardFooter className="flex justify-between px-0">
+        <Button variant="outline" onClick={() => setStep('format')}>
+          Back
+        </Button>
+        <Button onClick={handleImport} disabled={isImporting}>
+          {isImporting ? 'Importing...' : 'Import'}
+        </Button>
+      </CardFooter>
+    </div>
+  );
+  
+  // Render preview step
+  const renderPreviewStep = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Import Preview</h3>
+          <p className="text-sm text-muted-foreground">
+            {previewData.length} flashcards imported successfully.
+          </p>
+        </div>
+      </div>
+      
+      <div className="max-h-80 overflow-y-auto border rounded-md">
+        {previewData.length > 0 ? (
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Italian</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">English</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Tags</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {previewData.map((card, index) => (
+                <tr key={index} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                  <td className="px-4 py-2 text-sm">{card.italian}</td>
+                  <td className="px-4 py-2 text-sm">{card.english}</td>
+                  <td className="px-4 py-2 text-sm">{Array.isArray(card.tags) ? card.tags.join(', ') : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-4 text-center text-muted-foreground">
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <p>No data to preview.</p>
+          </div>
+        )}
+      </div>
+      
+      <CardFooter className="flex justify-between px-0">
+        <Button variant="outline" onClick={() => setStep('mapping')}>
+          Back
+        </Button>
+        <Button onClick={handleFinish}>
+          Finish
+        </Button>
+      </CardFooter>
+    </div>
+  );
+  
+  return (
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Import Flashcards</CardTitle>
+      </CardHeader>
+      
+      <CardContent>
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-4 mb-4 text-destructive text-sm flex items-start">
+            <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+            <div>{error.message}</div>
+          </div>
+        )}
+        
+        {step === 'format' && renderFormatStep()}
+        {step === 'mapping' && renderMappingStep()}
+        {step === 'preview' && renderPreviewStep()}
+      </CardContent>
     </Card>
   );
 };

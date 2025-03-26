@@ -1,350 +1,371 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { Flashcard, FlashcardSet } from '@/types/interface-fixes';
+import { ContentType, ContentFeatures } from '@/types/contentType';
+import AIService from './AIService';
+import { analyzeContent } from '@/utils/AITrainingUtils';
 
-// Mock data for flashcards
-const generateMockFlashcards = (): Flashcard[] => {
-  return [
-    {
-      id: '1',
-      italian: 'cane',
-      english: 'dog',
-      mastered: false,
-      level: 0,
-      tags: ['animals', 'basic'],
-      nextReview: new Date(Date.now() + 86400000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '2',
-      italian: 'gatto',
-      english: 'cat',
-      mastered: false,
-      level: 0,
-      tags: ['animals', 'basic'],
-      nextReview: new Date(Date.now() + 86400000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '3',
-      italian: 'casa',
-      english: 'house',
-      mastered: true,
-      level: 4,
-      tags: ['objects', 'home'],
-      nextReview: new Date(Date.now() + 604800000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '4',
-      italian: 'tavolo',
-      english: 'table',
-      mastered: false,
-      level: 2,
-      tags: ['objects', 'furniture', 'home'],
-      nextReview: new Date(Date.now() + 172800000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '5',
-      italian: 'sedia',
-      english: 'chair',
-      mastered: false,
-      level: 1,
-      tags: ['objects', 'furniture', 'home'],
-      nextReview: new Date(Date.now() + 129600000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '6',
-      italian: 'libro',
-      english: 'book',
-      mastered: false,
-      level: 3,
-      tags: ['objects', 'education'],
-      nextReview: new Date(Date.now() + 345600000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '7',
-      italian: 'macchina',
-      english: 'car',
-      mastered: false,
-      level: 1,
-      tags: ['vehicles', 'transportation'],
-      nextReview: new Date(Date.now() + 129600000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '8',
-      italian: 'treno',
-      english: 'train',
-      mastered: false,
-      level: 0,
-      tags: ['vehicles', 'transportation'],
-      nextReview: new Date(Date.now() + 86400000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '9',
-      italian: 'mela',
-      english: 'apple',
-      mastered: false,
-      level: 2,
-      tags: ['food', 'fruits'],
-      nextReview: new Date(Date.now() + 172800000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    },
-    {
-      id: '10',
-      italian: 'banana',
-      english: 'banana',
-      mastered: false,
-      level: 1,
-      tags: ['food', 'fruits'],
-      nextReview: new Date(Date.now() + 129600000),
-      createdAt: new Date(Date.now() - 604800000),
-      updatedAt: new Date(Date.now() - 86400000),
-      lastReviewed: new Date(Date.now() - 259200000)
-    }
-  ];
+export interface ContentServiceOptions {
+  cacheResults?: boolean;
+  returnRawData?: boolean;
+}
+
+// Cache for content analysis results
+const contentAnalysisCache = new Map<string, any>();
+
+// Helper to create a simple hash for caching
+const createContentHash = (content: string): string => {
+  let hash = 0;
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString();
 };
 
-// Mock data for flashcard sets
-const generateMockFlashcardSets = (flashcards: Flashcard[]): FlashcardSet[] => {
-  return [
-    {
-      id: '1',
-      name: 'Basic Animals',
-      description: 'Common animal names in Italian',
-      tags: ['animals', 'vocabulary', 'beginner'],
-      cards: flashcards.filter(card => card.tags.includes('animals')),
-      isPublic: true,
-      creator: 'system',
-      isFavorite: false,
-      createdAt: new Date(Date.now() - 1209600000),
-      updatedAt: new Date(Date.now() - 1209600000),
-      difficulty: 'beginner',
-      category: 'vocabulary',
-      totalCards: flashcards.filter(card => card.tags.includes('animals')).length,
-      masteredCards: flashcards.filter(card => card.tags.includes('animals') && card.mastered).length
-    },
-    {
-      id: '2',
-      name: 'Household Items',
-      description: 'Common items found in a home',
-      tags: ['home', 'furniture', 'objects', 'vocabulary'],
-      cards: flashcards.filter(card => card.tags.includes('home')),
-      isPublic: true,
-      creator: 'system',
-      isFavorite: true,
-      createdAt: new Date(Date.now() - 1209600000),
-      updatedAt: new Date(Date.now() - 1209600000),
-      difficulty: 'beginner',
-      category: 'vocabulary',
-      totalCards: flashcards.filter(card => card.tags.includes('home')).length,
-      masteredCards: flashcards.filter(card => card.tags.includes('home') && card.mastered).length
-    },
-    {
-      id: '3',
-      name: 'Food & Drinks',
-      description: 'Basic food and drink vocabulary',
-      tags: ['food', 'drinks', 'vocabulary', 'beginner'],
-      cards: flashcards.filter(card => card.tags.includes('food')),
-      isPublic: true,
-      creator: 'system',
-      isFavorite: false,
-      createdAt: new Date(Date.now() - 1209600000),
-      updatedAt: new Date(Date.now() - 1209600000),
-      difficulty: 'beginner',
-      category: 'vocabulary',
-      totalCards: flashcards.filter(card => card.tags.includes('food')).length,
-      masteredCards: flashcards.filter(card => card.tags.includes('food') && card.mastered).length
-    }
-  ];
-};
-
-// Initialize with mock data
-let mockFlashcards = generateMockFlashcards();
-let mockFlashcardSets = generateMockFlashcardSets(mockFlashcards);
-
-// Get all flashcards
-export const getAllFlashcards = async (): Promise<Flashcard[]> => {
-  // In a real app, this would fetch from an API or database
-  return Promise.resolve([...mockFlashcards]);
-};
-
-// Add a new flashcard
-export const addFlashcard = async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flashcard> => {
-  const newFlashcard: Flashcard = {
-    ...flashcard,
-    id: uuidv4(),
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  mockFlashcards = [...mockFlashcards, newFlashcard];
-  
-  return Promise.resolve(newFlashcard);
-};
-
-// Update a flashcard
-export const updateFlashcard = async (id: string, updates: Partial<Flashcard>): Promise<Flashcard> => {
-  const index = mockFlashcards.findIndex(card => card.id === id);
-  
-  if (index === -1) {
-    throw new Error(`Flashcard with id ${id} not found`);
+// Extract content features
+export const extractContentFeatures = (content: string): ContentFeatures => {
+  if (!content || typeof content !== 'string') {
+    return {
+      wordCount: 0,
+      sentenceCount: 0
+    };
   }
   
-  const updatedFlashcard = {
-    ...mockFlashcards[index],
-    ...updates,
-    updatedAt: new Date()
-  };
+  // Calculate basic text statistics
+  const wordCount = content.trim().split(/\s+/).length;
+  const sentenceCount = content.split(/[.!?]+/).filter(Boolean).length;
+  const paragraphCount = content.split(/\n\s*\n/).filter(Boolean).length;
+  const questionMarks = (content.match(/\?/g) || []).length;
   
-  mockFlashcards = [
-    ...mockFlashcards.slice(0, index),
-    updatedFlashcard,
-    ...mockFlashcards.slice(index + 1)
-  ];
+  // Language detection
+  const italianWords = ['il', 'la', 'di', 'e', 'che', 'un', 'una', 'sono', 'è', 'per', 'non', 'mi', 'si', 'ti', 'ci'];
+  const englishWords = ['the', 'and', 'of', 'to', 'is', 'in', 'that', 'it', 'for', 'you', 'are', 'with', 'on', 'as', 'not'];
   
-  return Promise.resolve(updatedFlashcard);
-};
-
-// Delete a flashcard
-export const deleteFlashcard = async (id: string): Promise<boolean> => {
-  const initialLength = mockFlashcards.length;
-  mockFlashcards = mockFlashcards.filter(card => card.id !== id);
+  const words = content.toLowerCase().match(/\b(\w+)\b/g) || [];
+  let italianCount = 0;
+  let englishCount = 0;
   
-  return Promise.resolve(mockFlashcards.length < initialLength);
-};
-
-// Import flashcards from CSV
-export const importFlashcardsFromCSV = async (csvContent: string): Promise<Flashcard[]> => {
-  // Parse CSV content (simple implementation)
-  const rows = csvContent.split('\n').map(row => row.split(','));
-  const headers = rows[0];
+  words.forEach(word => {
+    if (italianWords.includes(word)) italianCount++;
+    if (englishWords.includes(word)) englishCount++;
+  });
   
-  // Check for required columns
-  const italianIndex = headers.findIndex(h => h.toLowerCase().includes('italian'));
-  const englishIndex = headers.findIndex(h => h.toLowerCase().includes('english'));
+  let language: 'english' | 'italian' | 'mixed' = 'english';
   
-  if (italianIndex === -1 || englishIndex === -1) {
-    throw new Error('CSV must contain columns for Italian and English');
+  if (italianCount > englishCount) {
+    language = 'italian';
+  } else if (italianCount > 0 && englishCount > 0) {
+    language = 'mixed';
   }
   
-  // Process rows into flashcards
-  const newFlashcards: Flashcard[] = [];
+  return {
+    wordCount,
+    sentenceCount,
+    paragraphCount,
+    questionMarks,
+    language
+  };
+};
+
+// Detect the type of content
+export const detectContentType = async (content: string, options: ContentServiceOptions = {}): Promise<{
+  type: ContentType;
+  confidence: number;
+  features: ContentFeatures;
+}> => {
+  if (!content || typeof content !== 'string') {
+    return {
+      type: 'writing',
+      confidence: 0.5,
+      features: extractContentFeatures('')
+    };
+  }
   
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (row.length >= Math.max(italianIndex, englishIndex) + 1) {
-      const flashcard: Flashcard = {
-        id: uuidv4(),
-        italian: row[italianIndex].trim(),
-        english: row[englishIndex].trim(),
-        mastered: false,
-        level: 0,
-        tags: ['imported'],
-        nextReview: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastReviewed: null
-      };
+  // Check cache first if caching is enabled
+  if (options.cacheResults) {
+    const contentHash = createContentHash(content);
+    const cachedResult = contentAnalysisCache.get(contentHash);
+    if (cachedResult) {
+      return cachedResult;
+    }
+  }
+  
+  // Use local analysis
+  const analysis = analyzeContent(content);
+  
+  // Convert to the expected return format
+  const result = {
+    type: analysis.contentType,
+    confidence: analysis.confidence,
+    features: analysis.features
+  };
+  
+  // Cache the result if caching is enabled
+  if (options.cacheResults) {
+    const contentHash = createContentHash(content);
+    contentAnalysisCache.set(contentHash, result);
+  }
+  
+  return result;
+};
+
+// Parse structured content
+export const parseStructuredContent = (content: string, type: ContentType): any => {
+  // Different parsing strategies based on content type
+  if (type === 'multiple-choice') {
+    return parseMultipleChoiceContent(content);
+  } else if (type === 'flashcards') {
+    return parseFlashcardContent(content);
+  } else if (type === 'writing') {
+    return parseWritingContent(content);
+  } else if (type === 'speaking') {
+    return parseSpeakingContent(content);
+  } else if (type === 'listening') {
+    return parseListeningContent(content);
+  }
+  
+  // Default parsing just returns the content
+  return { text: content };
+};
+
+// Parse multiple choice content
+const parseMultipleChoiceContent = (content: string): any => {
+  const lines = content.split('\n').filter(line => line.trim());
+  const questions = [];
+  let currentQuestion: any = null;
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // New question starts with a number or a question mark
+    if (/^\d+[\.\)]/.test(trimmedLine) || /^Q[\.\:]/i.test(trimmedLine) || trimmedLine.endsWith('?')) {
+      if (currentQuestion) {
+        questions.push(currentQuestion);
+      }
       
-      newFlashcards.push(flashcard);
+      currentQuestion = {
+        question: trimmedLine.replace(/^\d+[\.\)]/, '').trim(),
+        options: [],
+        correctAnswer: null
+      };
+    } 
+    // Option line
+    else if (/^[A-D][\.\)]/.test(trimmedLine) && currentQuestion) {
+      const option = trimmedLine.replace(/^[A-D][\.\)]/, '').trim();
+      currentQuestion.options.push(option);
+      
+      // If this line has a marker for correct answer
+      if (trimmedLine.includes('(correct)') || trimmedLine.includes('*')) {
+        currentQuestion.correctAnswer = option.replace('(correct)', '').replace('*', '').trim();
+      }
+    }
+    // Explanation line
+    else if (/^explanation:/i.test(trimmedLine) && currentQuestion) {
+      currentQuestion.explanation = trimmedLine.replace(/^explanation:/i, '').trim();
+    }
+    // Assume it's part of the current question or option
+    else if (currentQuestion) {
+      if (currentQuestion.options.length > 0) {
+        currentQuestion.options[currentQuestion.options.length - 1] += ' ' + trimmedLine;
+      } else {
+        currentQuestion.question += ' ' + trimmedLine;
+      }
     }
   }
   
-  // Add to mock data
-  mockFlashcards = [...mockFlashcards, ...newFlashcards];
-  
-  return Promise.resolve(newFlashcards);
-};
-
-// Get all flashcard sets
-export const getAllFlashcardSets = async (): Promise<FlashcardSet[]> => {
-  return Promise.resolve([...mockFlashcardSets]);
-};
-
-// Get a flashcard set by ID
-export const getFlashcardSetById = async (id: string): Promise<FlashcardSet | null> => {
-  const set = mockFlashcardSets.find(set => set.id === id);
-  return Promise.resolve(set || null);
-};
-
-// Create a new flashcard set
-export const createFlashcardSet = async (set: Omit<FlashcardSet, 'id' | 'createdAt' | 'updatedAt'>): Promise<FlashcardSet> => {
-  const newSet: FlashcardSet = {
-    ...set,
-    id: uuidv4(),
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  mockFlashcardSets = [...mockFlashcardSets, newSet];
-  
-  return Promise.resolve(newSet);
-};
-
-// Update a flashcard set
-export const updateFlashcardSet = async (id: string, updates: Partial<FlashcardSet>): Promise<FlashcardSet> => {
-  const index = mockFlashcardSets.findIndex(set => set.id === id);
-  
-  if (index === -1) {
-    throw new Error(`Flashcard set with id ${id} not found`);
+  if (currentQuestion) {
+    questions.push(currentQuestion);
   }
   
-  const updatedSet = {
-    ...mockFlashcardSets[index],
-    ...updates,
-    updatedAt: new Date()
+  return { 
+    questions,
+    count: questions.length
   };
-  
-  mockFlashcardSets = [
-    ...mockFlashcardSets.slice(0, index),
-    updatedSet,
-    ...mockFlashcardSets.slice(index + 1)
-  ];
-  
-  return Promise.resolve(updatedSet);
 };
 
-// Delete a flashcard set
-export const deleteFlashcardSet = async (id: string): Promise<boolean> => {
-  const initialLength = mockFlashcardSets.length;
-  mockFlashcardSets = mockFlashcardSets.filter(set => set.id !== id);
+// Parse flashcard content
+const parseFlashcardContent = (content: string): any => {
+  const lines = content.split('\n').filter(line => line.trim());
+  const cards = [];
   
-  return Promise.resolve(mockFlashcardSets.length < initialLength);
+  // Handle tab/comma-separated format (term\tdefinition)
+  if (content.includes('\t') || (content.includes(',') && !content.includes('\n\n'))) {
+    const separator = content.includes('\t') ? '\t' : ',';
+    
+    for (const line of lines) {
+      const parts = line.split(separator);
+      if (parts.length >= 2) {
+        cards.push({
+          term: parts[0].trim(),
+          definition: parts[1].trim()
+        });
+      }
+    }
+  } 
+  // Handle block format (term\n\ndefinition\n\nterm\n\ndefinition)
+  else {
+    for (let i = 0; i < lines.length; i += 2) {
+      if (i + 1 < lines.length) {
+        cards.push({
+          term: lines[i].trim(),
+          definition: lines[i + 1].trim()
+        });
+      }
+    }
+  }
+  
+  return {
+    cards,
+    count: cards.length
+  };
 };
 
-export default {
-  getAllFlashcards,
-  addFlashcard,
-  updateFlashcard,
-  deleteFlashcard,
-  importFlashcardsFromCSV,
-  getAllFlashcardSets,
-  getFlashcardSetById,
-  createFlashcardSet,
-  updateFlashcardSet,
-  deleteFlashcardSet
+// Parse writing content
+const parseWritingContent = (content: string): any => {
+  const paragraphs = content.split(/\n\s*\n/).filter(para => para.trim());
+  
+  return {
+    text: content,
+    paragraphs,
+    paragraphCount: paragraphs.length,
+    wordCount: content.split(/\s+/).filter(Boolean).length
+  };
 };
+
+// Parse speaking content
+const parseSpeakingContent = (content: string): any => {
+  // Detect if it's a dialogue
+  const isDialogue = /^[A-Za-z]+\s*:/.test(content) || content.includes(':\n');
+  let speakers = [];
+  
+  if (isDialogue) {
+    const speakerMatches = content.match(/^([A-Za-z]+)\s*:/gm) || [];
+    speakers = [...new Set(speakerMatches.map(match => match.replace(':', '').trim()))];
+  }
+  
+  return {
+    text: content,
+    isDialogue,
+    speakers,
+    speakerCount: speakers.length,
+    wordCount: content.split(/\s+/).filter(Boolean).length
+  };
+};
+
+// Parse listening content
+const parseListeningContent = (content: string): any => {
+  // Detect if it's a script with time codes
+  const hasTimeCodes = /\[\d{2}:\d{2}\]/.test(content);
+  const segments = hasTimeCodes ? content.split(/\[\d{2}:\d{2}\]/).filter(Boolean) : [];
+  
+  return {
+    text: content,
+    hasTimeCodes,
+    segments: segments.length > 0 ? segments : [content],
+    segmentCount: segments.length > 0 ? segments.length : 1,
+    wordCount: content.split(/\s+/).filter(Boolean).length
+  };
+};
+
+// Generate content based on parameters
+export const generateContent = async (
+  contentType: ContentType,
+  parameters: any,
+  options: ContentServiceOptions = {}
+): Promise<any> => {
+  const prompt = buildGenerationPrompt(contentType, parameters);
+  
+  try {
+    const generatedText = await AIService.generateText(prompt, {
+      temperature: 0.7,
+      maxLength: 2048
+    });
+    
+    const parsedContent = parseStructuredContent(generatedText, contentType);
+    
+    return {
+      rawText: options.returnRawData ? generatedText : undefined,
+      content: parsedContent,
+      contentType
+    };
+  } catch (error) {
+    console.error('Error generating content:', error);
+    throw new Error(`Failed to generate ${contentType} content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Build prompt for content generation
+const buildGenerationPrompt = (contentType: ContentType, parameters: any): string => {
+  let basePrompt = `Generate ${contentType} content `;
+  
+  // Add common parameters
+  if (parameters.topic) {
+    basePrompt += `on the topic of "${parameters.topic}" `;
+  }
+  
+  if (parameters.level) {
+    basePrompt += `at ${parameters.level} level `;
+  }
+  
+  if (parameters.language) {
+    basePrompt += `in ${parameters.language} `;
+  }
+  
+  // Add type-specific parameters
+  if (contentType === 'multiple-choice') {
+    basePrompt += `\nGenerate ${parameters.count || 5} multiple choice questions `;
+    basePrompt += `each with ${parameters.optionCount || 4} options. `;
+    basePrompt += 'Mark the correct answer with (correct).';
+  } else if (contentType === 'flashcards') {
+    basePrompt += `\nGenerate ${parameters.count || 5} flashcards in the format: `;
+    basePrompt += 'term\ndefinition\n\n';
+    
+    if (parameters.language === 'italian') {
+      basePrompt += 'The term should be in Italian and the definition in English.';
+    }
+  } else if (contentType === 'writing') {
+    basePrompt += `\nGenerate a writing prompt `;
+    
+    if (parameters.wordCount) {
+      basePrompt += `suggesting a response of approximately ${parameters.wordCount} words. `;
+    }
+    
+    if (parameters.paragraphCount) {
+      basePrompt += `It should inspire a response with about ${parameters.paragraphCount} paragraphs. `;
+    }
+  } else if (contentType === 'speaking') {
+    basePrompt += `\nGenerate a speaking exercise `;
+    
+    if (parameters.isDialogue) {
+      basePrompt += 'in dialogue format with speaker names followed by colons. ';
+      basePrompt += `Include ${parameters.speakerCount || 2} speakers. `;
+    } else {
+      basePrompt += 'as a monologue or speech exercise. ';
+    }
+  } else if (contentType === 'listening') {
+    basePrompt += `\nGenerate a listening comprehension exercise `;
+    
+    if (parameters.hasTimeCodes) {
+      basePrompt += 'with time codes in the format [MM:SS]. ';
+    }
+    
+    if (parameters.questionCount) {
+      basePrompt += `Include ${parameters.questionCount} comprehension questions at the end. `;
+    }
+  }
+  
+  // Finalize the prompt
+  basePrompt += `\nMake it educational and appropriate for language learning.`;
+  
+  return basePrompt;
+};
+
+// Export the service as an object
+const ContentService = {
+  extractContentFeatures,
+  detectContentType,
+  parseStructuredContent,
+  generateContent
+};
+
+export default ContentService;

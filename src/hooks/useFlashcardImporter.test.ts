@@ -1,130 +1,186 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useFlashcardImporter, ImportOptions } from './useFlashcardImporter';
-import { expect, describe, test, vi, beforeEach } from 'vitest';
+import useFlashcardImporter from './useFlashcardImporter';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock data
-const mockCsvContent = 'italian,english,tags\ncasa,house,basics\nmela,apple,food';
-const mockJsonContent = '[{"italian":"casa","english":"house","tags":"basics"},{"italian":"mela","english":"apple","tags":"food"}]';
-
-// Mock options
-const mockOptions: ImportOptions = {
-  italianColumn: 'italian',
-  englishColumn: 'english',
-  tagsColumn: 'tags',
-};
-
-// Setup global mocks
-vi.mock('uuid', () => ({
-  v4: () => 'mocked-uuid'
+// Mock Papa.parse
+vi.mock('papaparse', () => ({
+  parse: vi.fn((csv, options) => {
+    const rows = csv.trim().split('\n');
+    
+    if (options.header) {
+      const headers = rows[0].split(options.delimiter || ',');
+      const data = rows.slice(1).map(row => {
+        const values = row.split(options.delimiter || ',');
+        const obj: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          obj[header] = values[index];
+        });
+        return obj;
+      });
+      return { data, errors: [] };
+    } else {
+      const data = rows.map(row => row.split(options.delimiter || ','));
+      return { data, errors: [] };
+    }
+  })
 }));
 
 describe('useFlashcardImporter', () => {
+  const mockCSVData = `italian,english,tags
+ciao,hello,greeting
+grazie,thank you,polite
+casa,house,noun`;
+
+  const mockJSONData = JSON.stringify([
+    { italian: 'ciao', english: 'hello', tags: 'greeting' },
+    { italian: 'grazie', english: 'thank you', tags: 'polite' },
+    { italian: 'casa', english: 'house', tags: 'noun' }
+  ]);
+
+  let onImportComplete: any;
+  let onError: any;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    onImportComplete = vi.fn();
+    onError = vi.fn();
   });
 
-  test('should import flashcards from CSV content', async () => {
-    // Arrange
+  it('should initialize with default import format', () => {
     const { result } = renderHook(() => useFlashcardImporter());
-    
-    // Act
-    let importResult;
-    await act(async () => {
-      importResult = await result.current.handleImport(mockCsvContent, mockOptions);
+    expect(result.current.importFormat).toEqual({
+      type: 'csv',
+      fieldMap: {
+        italian: 'italian',
+        english: 'english',
+        tags: 'tags',
+        level: 'level',
+        mastered: 'mastered',
+        examples: 'examples',
+        explanation: 'explanation'
+      },
+      delimiter: ',',
+      hasHeader: true
     });
-    
-    // Assert
-    expect(importResult.success).toBe(true);
-    expect(importResult.imported).toBeGreaterThan(0);
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
   });
-  
-  test('should import flashcards from JSON content', async () => {
-    // Arrange
+
+  it('should update import format', () => {
     const { result } = renderHook(() => useFlashcardImporter());
     
-    // Act
-    let importResult;
-    await act(async () => {
-      importResult = await result.current.handleImport(mockJsonContent, { ...mockOptions, format: 'json' });
-    });
-    
-    // Assert
-    expect(importResult.success).toBe(true);
-    expect(importResult.imported).toBeGreaterThan(0);
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-  
-  test('should handle CSV import error', async () => {
-    // Arrange
-    const { result } = renderHook(() => useFlashcardImporter());
-    const invalidCsv = 'invalid,format\nno,columns';
-    
-    // Act & Assert
-    await expect(
-      act(async () => {
-        await result.current.handleImport(invalidCsv, {
-          italianColumn: 'italian',
-          englishColumn: 'english',
-          tagsColumn: 'tags',
-        });
-      })
-    ).rejects.toThrow();
-    
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).not.toBeNull();
-  });
-  
-  test('should handle JSON import error', async () => {
-    // Arrange
-    const { result } = renderHook(() => useFlashcardImporter());
-    const invalidJson = '{ invalid: json }';
-    
-    // Act & Assert
-    await expect(
-      act(async () => {
-        await result.current.handleImport(invalidJson, {
-          ...mockOptions,
-          format: 'json',
-        });
-      })
-    ).rejects.toThrow();
-    
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).not.toBeNull();
-  });
-  
-  test('should export flashcards to CSV format', () => {
-    // Arrange
-    const { result } = renderHook(() => useFlashcardImporter());
-    
-    // Act
-    let exportResult;
     act(() => {
-      exportResult = result.current.handleExport(undefined, 'csv');
+      result.current.updateImportFormat({ type: 'json' });
     });
     
-    // Assert
-    expect(exportResult).toBeDefined();
-    expect(typeof exportResult).toBe('string');
-    expect(exportResult).toContain('italian,english,tags');
-  });
-  
-  test('should export flashcards to JSON format', () => {
-    // Arrange
-    const { result } = renderHook(() => useFlashcardImporter());
+    expect(result.current.importFormat.type).toBe('json');
     
-    // Act
-    let exportResult;
     act(() => {
-      exportResult = result.current.handleExport(undefined, 'json');
+      result.current.updateImportFormat({ 
+        fieldMap: { 
+          ...result.current.importFormat.fieldMap,
+          italian: 'term',
+          english: 'definition'
+        }
+      });
     });
     
-    // Assert
-    expect(exportResult).toBeDefined();
-    expect(typeof exportResult).toBe('string');
+    expect(result.current.importFormat.fieldMap.italian).toBe('term');
+    expect(result.current.importFormat.fieldMap.english).toBe('definition');
+  });
+
+  it('should import from CSV text', async () => {
+    const { result } = renderHook(() => 
+      useFlashcardImporter({ onImportComplete, onError })
+    );
+    
+    await act(async () => {
+      await result.current.importFromText(mockCSVData, 'csv');
+    });
+    
+    expect(result.current.isImporting).toBe(false);
+    expect(result.current.error).toBe(null);
+    expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ italian: 'ciao', english: 'hello' }),
+      expect.objectContaining({ italian: 'grazie', english: 'thank you' }),
+      expect.objectContaining({ italian: 'casa', english: 'house' })
+    ]));
+  });
+
+  it('should import from JSON text', async () => {
+    const { result } = renderHook(() => 
+      useFlashcardImporter({ onImportComplete, onError })
+    );
+    
+    act(() => {
+      result.current.updateImportFormat({ type: 'json' });
+    });
+    
+    await act(async () => {
+      await result.current.importFromText(mockJSONData, 'json');
+    });
+    
+    expect(result.current.isImporting).toBe(false);
+    expect(result.current.error).toBe(null);
+    expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ italian: 'ciao', english: 'hello' }),
+      expect.objectContaining({ italian: 'grazie', english: 'thank you' }),
+      expect.objectContaining({ italian: 'casa', english: 'house' })
+    ]));
+  });
+
+  it('should handle errors during import', async () => {
+    const { result } = renderHook(() => 
+      useFlashcardImporter({ onImportComplete, onError })
+    );
+    
+    // Force JSON parsing error
+    await act(async () => {
+      try {
+        await result.current.importFromText('{invalid:json}', 'json');
+      } catch (err) {
+        // Expected error
+      }
+    });
+    
+    expect(result.current.isImporting).toBe(false);
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(onImportComplete).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
+  });
+
+  it('should map fields correctly using custom field mapping', async () => {
+    const { result } = renderHook(() => 
+      useFlashcardImporter({ onImportComplete, onError })
+    );
+    
+    const customCSV = `term,definition,categories
+ciao,hello,greeting
+grazie,thank you,polite`;
+    
+    act(() => {
+      result.current.updateImportFormat({
+        fieldMap: {
+          italian: 'term',
+          english: 'definition',
+          tags: 'categories'
+        }
+      });
+    });
+    
+    await act(async () => {
+      await result.current.importFromText(customCSV, 'csv');
+    });
+    
+    expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ 
+        italian: 'ciao', 
+        english: 'hello',
+        tags: ['greeting']
+      }),
+      expect.objectContaining({ 
+        italian: 'grazie', 
+        english: 'thank you',
+        tags: ['polite']
+      })
+    ]));
   });
 });

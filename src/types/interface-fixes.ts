@@ -78,6 +78,15 @@ export interface FlashcardComponentProps {
   autoFlip?: boolean;
   autoFlipDelay?: number;
   size?: 'sm' | 'md' | 'lg';
+  flashcard?: Flashcard;
+  onRating?: (card: Flashcard, rating: number) => void;
+  onSkip?: () => void;
+  flipped?: boolean;
+  showPronunciation?: boolean;
+  showActions?: boolean;
+  onKnown?: () => void;
+  onUnknown?: () => void;
+  className?: string;
 }
 
 // AI Preferences interface
@@ -94,6 +103,14 @@ export interface AIPreference {
   defaultModelSize: string;
   useWebGPU: boolean;
   anonymousAnalytics: boolean;
+  processOnDevice?: boolean;
+  cacheModels?: boolean;
+  temperature?: number;
+  contentFiltering?: boolean;
+  dataCollection?: boolean;
+  assistanceLevel?: string;
+  processingSetting?: string;
+  autoLoadModels?: boolean;
 }
 
 // Import format interface
@@ -112,7 +129,9 @@ export interface ImportFormat {
   hasHeader?: boolean;
 }
 
-// Support Ticket interface extension
+// Support Ticket interfaces
+export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface SupportTicketExtension {
   assignedTo: string;
   priority: 'low' | 'medium' | 'high';
@@ -121,6 +140,16 @@ export interface SupportTicketExtension {
   resolution?: string;
   attachments?: string[];
   relatedTickets?: string[];
+}
+
+export interface SupportTicketProps extends SupportTicketExtension {
+  id: string;
+  title: string;
+  description: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  priority: SupportTicketPriority;
 }
 
 // UseAI hook return type
@@ -132,6 +161,13 @@ export interface UseAIReturn {
   isLoading: boolean;
   error: Error | null;
   abort: () => void;
+  generateFlashcards?: (topic: string, count: number, difficulty: string) => Promise<any[]>;
+  isProcessing?: boolean;
+  classifyText?: (text: string) => Promise<any>;
+  isModelLoaded?: boolean;
+  status?: string;
+  loadModel?: (modelName: string) => Promise<boolean>;
+  generateQuestions?: (content: string, count: number, type: string) => Promise<any[]>;
 }
 
 // ConfidenceIndicator props
@@ -142,4 +178,25 @@ export interface ConfidenceIndicatorProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   contentType?: string;
+}
+
+// AIUtils context
+export interface AIUtilsContextType {
+  settings: AIPreference;
+  updateSettings: (settings: Partial<AIPreference>) => void;
+  speakText: (text: string, language: 'english' | 'italian') => Promise<void>;
+  stopSpeaking: () => void;
+  voices: SpeechSynthesisVoice[];
+  isLoading: boolean;
+  isModelLoaded: boolean;
+  isProcessing: boolean;
+  status: string;
+  feedbackSettings: any;
+  updateFeedbackSettings: (settings: any) => void;
+  confidenceScores: Record<ContentType, number>;
+  updateConfidenceScore: (contentType: ContentType, score: number) => void;
+  resetSettings: () => void;
+  trainingData: any[];
+  addTrainingExample: (example: any) => void;
+  loadModel: (modelName: string) => Promise<boolean>;
 }

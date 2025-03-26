@@ -71,6 +71,13 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
     }
   };
   
+  // Get the appropriate indicator class based on confidence level
+  const getIndicatorClass = () => {
+    if (confidenceValue >= 80) return 'bg-green-500';
+    if (confidenceValue >= 60) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+  
   return (
     <div className={cn('space-y-1', className)}>
       {showLabel && (
@@ -84,9 +91,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
       <Progress 
         value={confidenceValue} 
         className={cn(getProgressHeight())}
-        indicator={confidenceValue >= 80 ? 'bg-green-500' : 
-                 confidenceValue >= 60 ? 'bg-yellow-500' : 
-                 'bg-red-500'}
+        indicator={getIndicatorClass()}
       />
     </div>
   );

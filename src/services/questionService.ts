@@ -1,135 +1,348 @@
 
-import { MultipleChoiceQuestion } from '@/types/question';
-import AIService from '@/services/AIService';
+import { Question, QuestionSet, QuizAttempt, MultipleChoiceQuestion, TextInputQuestion, MatchingQuestion, TrueFalseQuestion } from '@/types/question';
+import { v4 as uuidv4 } from 'uuid';
 
-export interface GeneratedQuestion {
-  question: string;
-  options: string[];
-  correctAnswerIndex: number;
-  explanation?: string;
-}
+// Local storage keys
+const QUESTION_SETS_KEY = 'question-sets';
+const QUIZ_ATTEMPTS_KEY = 'quiz-attempts';
 
-// Function to generate multiple choice questions using AI
-export const generateQuestionSet = async (
-  category: string,
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced',
-  language: 'english' | 'italian' = 'english',
-  count: number = 5
-): Promise<GeneratedQuestion[]> => {
-  try {
-    const prompt = `
-Generate ${count} ${difficulty.toLowerCase()} level ${language} multiple choice questions about ${category}.
-For each question, provide 4 options with one correct answer.
-Include an explanation for the correct answer.
-
-Return only JSON in this exact format:
-[{
-  "question": "Question text",
-  "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-  "correctAnswerIndex": 0, // Index of the correct answer in the options array
-  "explanation": "Explanation of why this is the correct answer"
-}]
-`;
-
-    const result = await AIService.generateText(prompt, { 
-      maxLength: 2048,
-      temperature: 0.7
-    });
-
-    // Parse the JSON response
-    try {
-      // Extract the JSON part from the response
-      const jsonMatch = result.match(/\[.*\]/s);
-      if (!jsonMatch) {
-        throw new Error("No valid JSON found in the response");
-      }
-      
-      const jsonStr = jsonMatch[0].replace(/```(json)?|```/g, '');
-      const questions = JSON.parse(jsonStr);
-      
-      return questions.slice(0, count); // Ensure we only return the requested number
-    } catch (parseError) {
-      console.error("Error parsing AI response:", parseError);
-      console.log("Raw AI response:", result);
-      throw new Error("Failed to parse the generated questions");
-    }
-  } catch (error) {
-    console.error("Error generating questions:", error);
-    throw error;
-  }
+// Initialize from localStorage
+const loadQuestionSets = (): QuestionSet[] => {
+  const savedSets = localStorage.getItem(QUESTION_SETS_KEY);
+  return savedSets ? JSON.parse(savedSets) : [];
 };
 
-// Function to evaluate a student's answer and provide feedback
-export const evaluateAnswer = async (
-  userAnswer: string,
-  correctAnswer: string,
+const loadQuizAttempts = (): QuizAttempt[] => {
+  const savedAttempts = localStorage.getItem(QUIZ_ATTEMPTS_KEY);
+  return savedAttempts ? JSON.parse(savedAttempts) : [];
+};
+
+// Save to localStorage
+const saveQuestionSets = (sets: QuestionSet[]): void => {
+  localStorage.setItem(QUESTION_SETS_KEY, JSON.stringify(sets));
+};
+
+const saveQuizAttempts = (attempts: QuizAttempt[]): void => {
+  localStorage.setItem(QUIZ_ATTEMPTS_KEY, JSON.stringify(attempts));
+};
+
+// Create and manage question sets
+export const createQuestionSet = (set: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>): QuestionSet => {
+  const now = new Date();
+  const newSet: QuestionSet = {
+    id: uuidv4(),
+    createdAt: now,
+    updatedAt: now,
+    ...set
+  };
+  
+  const sets = loadQuestionSets();
+  sets.push(newSet);
+  saveQuestionSets(sets);
+  
+  return newSet;
+};
+
+export const updateQuestionSet = (id: string, updates: Partial<QuestionSet>): QuestionSet | null => {
+  const sets = loadQuestionSets();
+  const index = sets.findIndex(set => set.id === id);
+  
+  if (index === -1) return null;
+  
+  const updated: QuestionSet = {
+    ...sets[index],
+    ...updates,
+    updatedAt: new Date()
+  };
+  
+  sets[index] = updated;
+  saveQuestionSets(sets);
+  
+  return updated;
+};
+
+export const deleteQuestionSet = (id: string): boolean => {
+  const sets = loadQuestionSets();
+  const index = sets.findIndex(set => set.id === id);
+  
+  if (index === -1) return false;
+  
+  sets.splice(index, 1);
+  saveQuestionSets(sets);
+  
+  return true;
+};
+
+export const getQuestionSets = (): QuestionSet[] => {
+  return loadQuestionSets();
+};
+
+export const getQuestionSetById = (id: string): QuestionSet | null => {
+  const sets = loadQuestionSets();
+  return sets.find(set => set.id === id) || null;
+};
+
+// Create and manage questions
+export const createQuestion = <T extends Question>(
+  setId: string, 
+  question: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
+): T | null => {
+  const sets = loadQuestionSets();
+  const setIndex = sets.findIndex(set => set.id === setId);
+  
+  if (setIndex === -1) return null;
+  
+  const now = new Date();
+  const newQuestion = {
+    id: uuidv4(),
+    createdAt: now,
+    updatedAt: now,
+    ...question
+  } as T;
+  
+  sets[setIndex].questions.push(newQuestion);
+  sets[setIndex].updatedAt = now;
+  saveQuestionSets(sets);
+  
+  return newQuestion;
+};
+
+export const updateQuestion = <T extends Question>(
+  setId: string,
+  questionId: string,
+  updates: Partial<T>
+): T | null => {
+  const sets = loadQuestionSets();
+  const setIndex = sets.findIndex(set => set.id === setId);
+  
+  if (setIndex === -1) return null;
+  
+  const questionIndex = sets[setIndex].questions.findIndex(q => q.id === questionId);
+  
+  if (questionIndex === -1) return null;
+  
+  const updated = {
+    ...sets[setIndex].questions[questionIndex],
+    ...updates,
+    updatedAt: new Date()
+  } as T;
+  
+  sets[setIndex].questions[questionIndex] = updated;
+  sets[setIndex].updatedAt = new Date();
+  saveQuestionSets(sets);
+  
+  return updated;
+};
+
+export const deleteQuestion = (setId: string, questionId: string): boolean => {
+  const sets = loadQuestionSets();
+  const setIndex = sets.findIndex(set => set.id === setId);
+  
+  if (setIndex === -1) return false;
+  
+  const questionIndex = sets[setIndex].questions.findIndex(q => q.id === questionId);
+  
+  if (questionIndex === -1) return false;
+  
+  sets[setIndex].questions.splice(questionIndex, 1);
+  sets[setIndex].updatedAt = new Date();
+  saveQuestionSets(sets);
+  
+  return true;
+};
+
+// Quiz attempts
+export const saveQuizAttempt = (attempt: Omit<QuizAttempt, 'createdAt'>): QuizAttempt => {
+  const newAttempt: QuizAttempt = {
+    ...attempt,
+    createdAt: new Date()
+  };
+  
+  const attempts = loadQuizAttempts();
+  attempts.push(newAttempt);
+  saveQuizAttempts(attempts);
+  
+  return newAttempt;
+};
+
+export const getQuizAttempts = (userId?: string): QuizAttempt[] => {
+  const attempts = loadQuizAttempts();
+  return userId ? attempts.filter(a => a.userId === userId) : attempts;
+};
+
+export const getQuizAttemptsForSet = (setId: string, userId?: string): QuizAttempt[] => {
+  const attempts = loadQuizAttempts();
+  return attempts.filter(a => 
+    a.questionSetId === setId && 
+    (userId ? a.userId === userId : true)
+  );
+};
+
+// Helper functions
+export const createMultipleChoiceQuestion = (
+  setId: string,
   question: string,
+  options: string[],
+  correctAnswer: string,
+  explanation?: string,
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' = 'Intermediate',
+  category: string = 'General',
+  tags: string[] = [],
   language: 'english' | 'italian' = 'english'
-): Promise<string> => {
-  try {
-    const prompt = `
-Question: ${question}
-Correct answer: ${correctAnswer}
-User's answer: ${userAnswer}
+): MultipleChoiceQuestion | null => {
+  return createQuestion<MultipleChoiceQuestion>(setId, {
+    type: 'multiple-choice',
+    question,
+    options,
+    correctAnswer,
+    explanation,
+    difficulty,
+    category,
+    tags,
+    language
+  });
+};
 
-Evaluate the user's answer and provide helpful feedback in ${language}.
-If the answer is correct, explain why. If incorrect, explain what's wrong and what the right approach would be.
-Keep your response under 150 words.
-`;
+export const createTextInputQuestion = (
+  setId: string,
+  question: string,
+  correctAnswers: string[],
+  caseSensitive: boolean = false,
+  explanation?: string,
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' = 'Intermediate',
+  category: string = 'General',
+  tags: string[] = [],
+  language: 'english' | 'italian' = 'english'
+): TextInputQuestion | null => {
+  return createQuestion<TextInputQuestion>(setId, {
+    type: 'text-input',
+    question,
+    correctAnswers,
+    caseSensitive,
+    explanation,
+    difficulty,
+    category,
+    tags,
+    language
+  });
+};
 
-    const result = await AIService.generateText(prompt, {
-      maxLength: 512,
-      temperature: 0.7
+export const createMatchingQuestion = (
+  setId: string,
+  question: string,
+  pairs: { left: string; right: string }[],
+  explanation?: string,
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' = 'Intermediate',
+  category: string = 'General',
+  tags: string[] = [],
+  language: 'english' | 'italian' = 'english'
+): MatchingQuestion | null => {
+  return createQuestion<MatchingQuestion>(setId, {
+    type: 'matching',
+    question,
+    pairs,
+    explanation,
+    difficulty,
+    category,
+    tags,
+    language
+  });
+};
+
+export const createTrueFalseQuestion = (
+  setId: string,
+  question: string,
+  correctAnswer: boolean,
+  explanation?: string,
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' = 'Intermediate',
+  category: string = 'General',
+  tags: string[] = [],
+  language: 'english' | 'italian' = 'english'
+): TrueFalseQuestion | null => {
+  return createQuestion<TrueFalseQuestion>(setId, {
+    type: 'true-false',
+    question,
+    correctAnswer,
+    explanation,
+    difficulty,
+    category,
+    tags,
+    language
+  });
+};
+
+// Initialize with sample data if no questions exist
+export const initializeWithSampleData = (): void => {
+  const sets = loadQuestionSets();
+  
+  if (sets.length === 0) {
+    const sampleSet = createQuestionSet({
+      title: 'Italian Basics Sample Quiz',
+      description: 'A sample quiz to demonstrate the multiple choice feature.',
+      questions: [],
+      category: 'Vocabulary',
+      difficulty: 'Beginner',
+      language: 'english'
     });
-
-    return result.trim();
-  } catch (error) {
-    console.error("Error evaluating answer:", error);
-    throw new Error("Failed to evaluate the answer. Please try again.");
+    
+    createMultipleChoiceQuestion(
+      sampleSet.id,
+      'What is the Italian word for "hello"?',
+      ['Ciao', 'Arrivederci', 'Grazie', 'Prego'],
+      'Ciao',
+      'Ciao is a casual greeting in Italian, equivalent to "hello" or "hi" in English.',
+      'Beginner',
+      'Vocabulary',
+      ['greeting', 'basic'],
+      'english'
+    );
+    
+    createMultipleChoiceQuestion(
+      sampleSet.id,
+      'Which of these is NOT an Italian word for a type of pasta?',
+      ['Spaghetti', 'Penne', 'Panini', 'Linguine'],
+      'Panini',
+      'Panini is actually the Italian word for sandwiches. The other options are all types of pasta.',
+      'Beginner',
+      'Food',
+      ['food', 'pasta'],
+      'english'
+    );
+    
+    createMultipleChoiceQuestion(
+      sampleSet.id,
+      'What is the Italian word for "thank you"?',
+      ['Prego', 'Grazie', 'Scusi', 'Per favore'],
+      'Grazie',
+      '"Grazie" means "thank you" in Italian. "Prego" means "you\'re welcome".',
+      'Beginner',
+      'Vocabulary',
+      ['greeting', 'polite'],
+      'english'
+    );
   }
 };
 
-// Function to check if an answer is correct (for multiple choice)
-export const checkAnswer = (
-  selectedAnswerIndex: number,
-  correctAnswerIndex: number
-): { correct: boolean; score: number } => {
-  const correct = selectedAnswerIndex === correctAnswerIndex;
-  return {
-    correct,
-    score: correct ? 1 : 0
-  };
+// Initialize sample data when module is imported
+initializeWithSampleData();
+
+// Export the service
+const questionService = {
+  createQuestionSet,
+  updateQuestionSet,
+  deleteQuestionSet,
+  getQuestionSets,
+  getQuestionSetById,
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
+  saveQuizAttempt,
+  getQuizAttempts,
+  getQuizAttemptsForSet,
+  createMultipleChoiceQuestion,
+  createTextInputQuestion,
+  createMatchingQuestion,
+  createTrueFalseQuestion
 };
 
-// Function to generate quiz statistics
-export const generateQuizStats = (
-  correctAnswers: number,
-  totalQuestions: number,
-  timeSpent: number
-): {
-  score: number;
-  percentageCorrect: number;
-  averageTimePerQuestion: number;
-  performanceRating: 'excellent' | 'good' | 'average' | 'needs-improvement';
-} => {
-  const percentageCorrect = (correctAnswers / totalQuestions) * 100;
-  const averageTimePerQuestion = timeSpent / totalQuestions;
-  
-  let performanceRating: 'excellent' | 'good' | 'average' | 'needs-improvement';
-  if (percentageCorrect >= 90) {
-    performanceRating = 'excellent';
-  } else if (percentageCorrect >= 75) {
-    performanceRating = 'good';
-  } else if (percentageCorrect >= 60) {
-    performanceRating = 'average';
-  } else {
-    performanceRating = 'needs-improvement';
-  }
-  
-  return {
-    score: correctAnswers,
-    percentageCorrect,
-    averageTimePerQuestion,
-    performanceRating
-  };
-};
+export default questionService;
