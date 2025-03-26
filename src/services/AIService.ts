@@ -1,159 +1,189 @@
 
-/**
- * AIService.ts - Service for AI-related functionality
- */
+import axios from 'axios';
+import { ContentType } from '@/types/contentType';
+import { v4 as uuidv4 } from 'uuid';
 
-// Default confidence scores for different content types
-const DEFAULT_CONFIDENCE_SCORES: Record<string, number> = {
-  'writing': 0.85,
-  'speaking': 0.78,
-  'listening': 0.92,
-  'multiple-choice': 0.95,
-  'flashcards': 0.88,
-  'text': 0.90,
-  'audio': 0.82,
-  'pdf': 0.75,
-  'csv': 0.98,
-  'json': 0.99,
-  'unknown': 0.50
+// In-memory storage for training examples
+const trainingExamples: Record<string, any[]> = {
+  'multiple-choice': [],
+  'flashcards': [],
+  'writing': [],
+  'speaking': [],
+  'listening': []
 };
 
-/**
- * Get confidence score for a specific content type
- */
-export const getConfidenceScore = (contentType: string): number => {
-  return DEFAULT_CONFIDENCE_SCORES[contentType.toLowerCase()] || 0.5;
+// Mock confidence scores
+const confidenceScores: Record<string, number> = {
+  'multiple-choice': 78,
+  'flashcards': 82,
+  'writing': 69,
+  'speaking': 74,
+  'listening': 65
 };
 
-/**
- * Prepare AI model for use
- */
-export const prepareModel = async (modelType = 'general'): Promise<boolean> => {
-  console.log(`Preparing AI model: ${modelType}`);
-  // Simulate model loading
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(true), 1000);
-  });
-};
+interface AIServiceOptions {
+  maxLength?: number;
+  temperature?: number;
+  model?: string;
+  stream?: boolean;
+}
 
-/**
- * Generate text using AI
- */
-export const generateText = async (prompt: string, options: any = {}): Promise<string> => {
-  console.log(`Generating text for prompt: ${prompt.substring(0, 30)}...`);
+class AIService {
+  private static apiUrl = '/api/ai';
+  private static apiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
   
-  // Simulate AI text generation
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const responses = [
-        "This is a simulated AI response based on the prompt.",
-        "Here's what I think about your question...",
-        "Let me analyze this further and provide a detailed explanation.",
-        "Based on my understanding, I would suggest the following approach."
-      ];
+  /**
+   * Generate text using an AI model
+   */
+  static async generateText(prompt: string, options: AIServiceOptions = {}): Promise<string> {
+    try {
+      // Use environment variables or fallback to default
+      const apiKey = this.apiKey || 'test-api-key';
       
-      resolve(responses[Math.floor(Math.random() * responses.length)]);
-    }, 1500);
-  });
-};
-
-/**
- * Classify text into categories
- */
-export const classifyText = async (text: string): Promise<Array<{category: string, confidence: number}>> => {
-  console.log(`Classifying text: ${text.substring(0, 30)}...`);
-  
-  // Simulate text classification
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { category: 'grammar', confidence: 0.85 },
-        { category: 'vocabulary', confidence: 0.78 },
-        { category: 'pronunciation', confidence: 0.65 }
-      ]);
-    }, 1000);
-  });
-};
-
-/**
- * Generate questions based on content
- */
-export const generateQuestions = async (
-  content: string, 
-  contentType: string, 
-  count = 5, 
-  difficulty = 'intermediate'
-): Promise<Array<{question: string, answers: string[], correctIndex: number}>> => {
-  console.log(`Generating ${count} ${difficulty} questions for ${contentType}`);
-  
-  // Simulate question generation
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const questions = [];
-      for (let i = 0; i < count; i++) {
-        questions.push({
-          question: `Sample question ${i + 1} about "${content.substring(0, 20)}..."?`,
-          answers: [
-            "Answer option 1",
-            "Answer option 2",
-            "Answer option 3",
-            "Answer option 4"
-          ],
-          correctIndex: Math.floor(Math.random() * 4)
-        });
+      // For demo purposes, we'll simulate an API call
+      if (process.env.NODE_ENV === 'test' || !apiKey) {
+        console.log('Simulating AI text generation in test/dev mode');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return `AI generated response for: ${prompt.substring(0, 50)}...`;
       }
-      resolve(questions);
-    }, 2000);
-  });
-};
-
-/**
- * Generate flashcards based on content
- */
-export const generateFlashcards = async (
-  content: string,
-  count = 10,
-  difficulty = 'intermediate'
-): Promise<Array<{italian: string, english: string, examples?: string[]}>> => {
-  console.log(`Generating ${count} ${difficulty} flashcards`);
+      
+      // Real API call
+      const response = await axios.post(this.apiUrl + '/generate', {
+        prompt,
+        maxLength: options.maxLength || 1024,
+        temperature: options.temperature || 0.7,
+        model: options.model || 'gpt-4o-mini'
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      
+      return response.data.text;
+    } catch (error) {
+      console.error('Error generating text with AI:', error);
+      throw new Error('Failed to generate text. Please try again later.');
+    }
+  }
   
-  // Simulate flashcard generation
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const cards = [];
-      for (let i = 0; i < count; i++) {
-        cards.push({
-          italian: `Italian term ${i + 1}`,
-          english: `English translation ${i + 1}`,
-          examples: [`Example sentence in Italian ${i + 1}`, `Another example ${i + 1}`]
-        });
+  /**
+   * Classify text content
+   */
+  static async classifyText(text: string): Promise<{ label: string; score: number }[]> {
+    try {
+      // For demo/test purposes
+      if (process.env.NODE_ENV === 'test' || !this.apiKey) {
+        console.log('Simulating AI classification in test/dev mode');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Return mock classification
+        return [
+          { label: 'Writing Exercise', score: 0.82 },
+          { label: 'Conversation', score: 0.65 },
+          { label: 'Grammar Example', score: 0.43 }
+        ];
       }
-      resolve(cards);
-    }, 1500);
-  });
-};
-
-/**
- * Add training examples to improve AI performance
- */
-export const addTrainingExamples = async (examples: Array<{input: string, output: string}>): Promise<boolean> => {
-  console.log(`Adding ${examples.length} training examples`);
+      
+      // Real API call
+      const response = await axios.post(this.apiUrl + '/classify', {
+        text
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+      
+      return response.data.classifications;
+    } catch (error) {
+      console.error('Error classifying text with AI:', error);
+      throw new Error('Failed to classify text. Please try again later.');
+    }
+  }
   
-  // Simulate adding training examples
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(true), 1000);
-  });
+  /**
+   * Generate an image based on a prompt
+   */
+  static async generateImage(prompt: string, size: '256x256' | '512x512' | '1024x1024' = '512x512'): Promise<string> {
+    try {
+      // For demo/test purposes
+      if (process.env.NODE_ENV === 'test' || !this.apiKey) {
+        console.log('Simulating AI image generation in test/dev mode');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Return a placeholder image
+        return `https://placehold.co/${size.replace('x', '/')}?text=AI+Image`;
+      }
+      
+      // Real API call
+      const response = await axios.post(this.apiUrl + '/generate-image', {
+        prompt,
+        size
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+      
+      return response.data.url;
+    } catch (error) {
+      console.error('Error generating image with AI:', error);
+      throw new Error('Failed to generate image. Please try again later.');
+    }
+  }
+  
+  /**
+   * Add training examples for content type recognition
+   */
+  static addTrainingExamples(contentType: ContentType, examples: any[]): number {
+    // Add examples to the in-memory storage
+    if (!trainingExamples[contentType]) {
+      trainingExamples[contentType] = [];
+    }
+    
+    const validExamples = examples.filter(example => 
+      example && example.text && typeof example.text === 'string');
+    
+    trainingExamples[contentType].push(...validExamples);
+    
+    // Update confidence score
+    this.updateConfidenceScore(contentType);
+    
+    return validExamples.length;
+  }
+  
+  /**
+   * Update confidence score for a content type
+   */
+  private static updateConfidenceScore(contentType: ContentType): void {
+    const count = trainingExamples[contentType]?.length || 0;
+    
+    // Simulate improved confidence with more examples
+    // Formula: base score + log(count + 1) * 10, max 100
+    const baseScore = confidenceScores[contentType] || 60;
+    const newScore = Math.min(baseScore + Math.log(count + 1) * 10, 100);
+    
+    confidenceScores[contentType] = Math.round(newScore);
+  }
+  
+  /**
+   * Get confidence score for a content type
+   */
+  static getConfidenceScore(contentType: ContentType): number {
+    return confidenceScores[contentType] || 60;
+  }
+}
+
+// Function to get confidence score for a content type
+export const getConfidenceScore = (contentType: ContentType): number => {
+  return AIService.getConfidenceScore(contentType);
 };
 
-// Export the AIService as a default object for backward compatibility
-const AIService = {
-  prepareModel,
-  generateText,
-  classifyText,
-  generateQuestions,
-  generateFlashcards,
-  getConfidenceScore,
-  addTrainingExamples
+// Function to add training examples
+export const addTrainingExamples = (contentType: ContentType, examples: any[]): number => {
+  return AIService.addTrainingExamples(contentType, examples);
 };
 
 export default AIService;

@@ -20,6 +20,8 @@ const alertVariants = cva(
           "border-green-500/50 text-green-700 dark:text-green-500 dark:border-green-500 [&>svg]:text-green-600",
         info: 
           "border-blue-500/50 text-blue-700 dark:text-blue-500 dark:border-blue-500 [&>svg]:text-blue-600",
+        secondary:
+          "bg-secondary text-secondary-foreground",
       },
     },
     defaultVariants: {

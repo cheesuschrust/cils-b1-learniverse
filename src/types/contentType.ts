@@ -1,17 +1,33 @@
 
-/**
- * ContentType represents the different types of content that can be 
- * processed by the AI system.
- */
 export type ContentType = 
-  | 'multiple-choice' 
-  | 'flashcards' 
-  | 'writing' 
-  | 'speaking' 
-  | 'listening'
-  | 'pdf'
-  | 'audio'
-  | 'csv'
-  | 'json'
-  | 'txt'
-  | 'unknown';
+  | 'multiple-choice'
+  | 'flashcards'
+  | 'writing'
+  | 'speaking'
+  | 'listening';
+
+export interface ContentFeatures {
+  // Multiple choice features
+  hasOptions?: boolean;
+  optionCount?: number;
+  hasCorrectAnswer?: boolean;
+  
+  // Flashcard features
+  hasFrontAndBack?: boolean;
+  isTermDefinition?: boolean;
+  
+  // Writing features
+  textLength?: number;
+  paragraphCount?: number;
+  hasPrompt?: boolean;
+  
+  // Speaking features
+  isDialogue?: boolean;
+  hasPronunciation?: boolean;
+  
+  // Common features
+  wordCount?: number;
+  sentenceCount?: number;
+  questionMarks?: number;
+  language?: 'english' | 'italian' | 'mixed';
+}

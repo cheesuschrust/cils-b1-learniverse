@@ -1,145 +1,118 @@
 
-import React, { createContext, useContext, useState } from 'react';
-import { speak, stopSpeaking as stopSpeech } from '@/utils/textToSpeech';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import AIService from '@/services/AIService';
+import { ContentType } from '@/types/contentType';
+import { defaultAISettings, AISettings, AIFeedbackSettings, defaultAIFeedbackSettings } from '@/components/ai/AISettingsTypes';
 
 interface AIUtilsContextType {
-  isAIEnabled: boolean;
-  toggleAI: () => void;
-  isSpeaking: boolean;
-  isTranscribing: boolean;
-  speakText: (text: string, language?: string) => Promise<void>;
-  cancelSpeech: () => void;
-  processAudioStream: (callback: (transcript: string, isFinal: boolean) => void) => Promise<() => void>;
-  stopAudioProcessing: () => void;
-  translateText?: (text: string, targetLanguage: string) => Promise<string>;
-  isTranslating?: boolean;
-  hasActiveMicrophone?: boolean;
-  checkMicrophoneAccess?: () => Promise<boolean>;
+  isModelLoaded: boolean;
+  isProcessing: boolean;
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  feedbackSettings: AIFeedbackSettings;
+  aiSettings: AISettings;
+  setFeedbackSettings: (settings: AIFeedbackSettings) => void;
+  setAISettings: (settings: AISettings) => void;
+  generateText: (prompt: string) => Promise<string>;
+  classifyText: (text: string) => Promise<{ label: string; score: number }[]>;
+  generateImage: (prompt: string, size?: '256x256' | '512x512' | '1024x1024') => Promise<string>;
+  addTrainingExamples: (contentType: ContentType, examples: any[]) => number;
+  getConfidenceScore: (contentType: ContentType) => number;
 }
 
-const AIUtilsContext = createContext<AIUtilsContextType>({
-  isAIEnabled: true,
-  toggleAI: () => {},
-  isSpeaking: false,
-  isTranscribing: false,
-  speakText: async () => {},
-  cancelSpeech: () => {},
-  processAudioStream: async () => () => {},
-  stopAudioProcessing: () => {},
-  translateText: async () => '',
-  isTranslating: false,
-  hasActiveMicrophone: false,
-  checkMicrophoneAccess: async () => false
+export const AIUtilsContext = createContext<AIUtilsContextType>({
+  isModelLoaded: false,
+  isProcessing: false,
+  status: 'idle',
+  feedbackSettings: defaultAIFeedbackSettings,
+  aiSettings: defaultAISettings,
+  setFeedbackSettings: () => {},
+  setAISettings: () => {},
+  generateText: async () => '',
+  classifyText: async () => [],
+  generateImage: async () => '',
+  addTrainingExamples: () => 0,
+  getConfidenceScore: () => 0,
 });
 
-export const useAIUtils = () => useContext(AIUtilsContext);
+export const useAI = () => useContext(AIUtilsContext);
 
-export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAIEnabled, setIsAIEnabled] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
+export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [isModelLoaded, setIsModelLoaded] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('ready');
+  const [feedbackSettings, setFeedbackSettings] = useState<AIFeedbackSettings>(defaultAIFeedbackSettings);
+  const [aiSettings, setAISettings] = useState<AISettings>(defaultAISettings);
   
-  const toggleAI = () => {
-    setIsAIEnabled(prev => !prev);
-    return !isAIEnabled;
-  };
-  
-  const speakText = async (text: string, language = 'en-US') => {
-    if (!isAIEnabled) {
-      throw new Error('AI features are disabled');
-    }
-    
-    setIsSpeaking(true);
+  // Generate text using AI
+  const generateText = async (prompt: string): Promise<string> => {
     try {
-      await speak(text, language === 'it' ? 'it' : 'en');
-    } finally {
-      setIsSpeaking(false);
-    }
-  };
-  
-  const cancelSpeech = () => {
-    stopSpeech();
-    setIsSpeaking(false);
-  };
-  
-  const processAudioStream = async (callback: (transcript: string, isFinal: boolean) => void): Promise<() => void> => {
-    if (!isAIEnabled) {
-      throw new Error('AI features are disabled');
-    }
-    
-    setIsTranscribing(true);
-    
-    // This would be a real implementation with the Web Speech API or a custom speech recognition service
-    // For now, we'll simulate transcription
-    const timer = setTimeout(() => {
-      callback("Simulated transcription", true);
-      setIsTranscribing(false);
-    }, 2000);
-    
-    return () => {
-      clearTimeout(timer);
-      setIsTranscribing(false);
-    };
-  };
-  
-  const stopAudioProcessing = () => {
-    setIsTranscribing(false);
-    // In a real implementation, this would stop the audio processing
-  };
-  
-  const translateText = async (text: string, targetLanguage: string): Promise<string> => {
-    if (!isAIEnabled) {
-      throw new Error('AI features are disabled');
-    }
-    
-    setIsTranslating(true);
-    try {
-      // This would be a real implementation with a translation API
-      // For now, we'll simulate translation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const translatedText = `Translated text to ${targetLanguage}: ${text}`;
-      return translatedText;
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-  
-  const checkMicrophoneAccess = async (): Promise<boolean> => {
-    try {
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // If we got here, access was granted
-      setHasActiveMicrophone(true);
-      
-      // Stop all tracks to release the microphone
-      stream.getTracks().forEach(track => track.stop());
-      
-      return true;
+      setIsProcessing(true);
+      const result = await AIService.generateText(prompt, {
+        maxLength: aiSettings.maxTokens,
+        temperature: aiSettings.temperature,
+        model: aiSettings.model,
+        stream: aiSettings.enableStreaming
+      });
+      return result;
     } catch (error) {
-      console.error("Microphone access denied:", error);
-      setHasActiveMicrophone(false);
-      return false;
+      console.error('Error in generateText:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
     }
+  };
+  
+  // Classify text using AI
+  const classifyText = async (text: string): Promise<{ label: string; score: number }[]> => {
+    try {
+      setIsProcessing(true);
+      return await AIService.classifyText(text);
+    } catch (error) {
+      console.error('Error in classifyText:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Generate image using AI
+  const generateImage = async (prompt: string, size: '256x256' | '512x512' | '1024x1024' = '512x512'): Promise<string> => {
+    try {
+      setIsProcessing(true);
+      return await AIService.generateImage(prompt, size);
+    } catch (error) {
+      console.error('Error in generateImage:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Add training examples
+  const addTrainingExamples = (contentType: ContentType, examples: any[]): number => {
+    return AIService.addTrainingExamples(contentType, examples);
+  };
+  
+  // Get confidence score
+  const getConfidenceScore = (contentType: ContentType): number => {
+    return AIService.getConfidenceScore(contentType);
   };
   
   return (
     <AIUtilsContext.Provider
       value={{
-        isAIEnabled,
-        toggleAI,
-        isSpeaking,
-        isTranscribing,
-        speakText,
-        cancelSpeech,
-        processAudioStream,
-        stopAudioProcessing,
-        translateText,
-        isTranslating,
-        hasActiveMicrophone,
-        checkMicrophoneAccess
+        isModelLoaded,
+        isProcessing,
+        status,
+        feedbackSettings,
+        aiSettings,
+        setFeedbackSettings,
+        setAISettings,
+        generateText,
+        classifyText,
+        generateImage,
+        addTrainingExamples,
+        getConfidenceScore,
       }}
     >
       {children}

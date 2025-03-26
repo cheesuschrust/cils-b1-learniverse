@@ -1,96 +1,99 @@
 
 import { ContentType } from '@/types/contentType';
 
-export interface AIModelInfo {
-  id: string;
-  name: string;
-  provider: string;
-  task: string;
-  size: string;
-  languages: string[];
-  huggingFaceId: string;
+export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'mistral-small' | 'claude-instant';
+
+export interface AISettings {
+  model: AIModel;
+  temperature: number;
+  maxTokens: number;
+  enableStreaming: boolean;
+  prioritizeSpeed: boolean;
+  enableLocalModel: boolean;
+  localModelPath?: string;
 }
 
-export interface AIPreferences {
-  useWebGPU: boolean;
-  autoLoadModels: boolean;
-  cacheModels: boolean;
-  defaultLanguage: 'english' | 'italian' | 'auto';
-  processingSetting: 'fast' | 'balanced' | 'high-quality';
-  defaultModelSize: 'small' | 'medium' | 'large';
-  optimizationLevel: number;
-  anonymousAnalytics: boolean;
-  contentFiltering: boolean;
-  voiceRate: number;
-  voicePitch: number;
-  englishVoiceURI: string | null;
-  italianVoiceURI: string | null;
-  processOnDevice?: boolean;
-  dataCollection?: boolean;
-  assistanceLevel?: number;
+export interface AIAccessConfig {
+  apiKey?: string;
+  useProxyEndpoint: boolean;
+  proxyEndpoint?: string;
+  rateLimit: number; // Requests per minute
+  cacheDuration: number; // In minutes
 }
 
-export type AIModelCategory = 'text' | 'speech' | 'translation';
+export interface AIFeedbackSettings {
+  detailedFeedback: boolean;
+  includeExamples: boolean;
+  suggestCorrections: boolean;
+  language: 'english' | 'italian' | 'both';
+  feedbackLevel: 'beginner' | 'intermediate' | 'advanced';
+}
 
+export interface AIFeatureFlags {
+  enableImageGeneration: boolean;
+  enableVoiceRecognition: boolean;
+  enablePronunciationFeedback: boolean;
+  enableContentCreation: boolean;
+  enablePersonalization: boolean;
+}
+
+export interface AIUsageMetrics {
+  tokensUsed: number;
+  requestsMade: number;
+  lastReset: Date;
+  quotaLimit: number;
+}
+
+// Initialize default confidence scores for content types
 export const getInitialConfidenceScores = (): Record<ContentType, number> => {
   return {
-    'multiple-choice': 85,
-    'flashcards': 80,
-    'writing': 75,
-    'speaking': 70,
-    'listening': 90,
-    'pdf': 65,
-    'audio': 80,
-    'csv': 95,
-    'json': 95,
-    'txt': 85,
-    'unknown': 50
+    'multiple-choice': 78,
+    'flashcards': 82,
+    'writing': 69,
+    'speaking': 74,
+    'listening': 65
   };
 };
 
-export const getDisplayableContentTypes = (): ContentType[] => {
-  return [
-    'multiple-choice',
-    'flashcards',
-    'writing',
-    'speaking',
-    'listening'
-  ];
+// Default AI settings
+export const defaultAISettings: AISettings = {
+  model: 'gpt-4o-mini',
+  temperature: 0.7,
+  maxTokens: 1024,
+  enableStreaming: true,
+  prioritizeSpeed: false,
+  enableLocalModel: false
 };
 
-export const getContentTypeLabels = (): Record<ContentType, string> => {
-  return {
-    'multiple-choice': 'Multiple Choice Questions',
-    'flashcards': 'Flashcard Content',
-    'writing': 'Written Exercises',
-    'speaking': 'Speaking Practice',
-    'listening': 'Listening Comprehension',
-    'pdf': 'PDF Documents',
-    'audio': 'Audio Files',
-    'csv': 'CSV Data',
-    'json': 'JSON Data',
-    'txt': 'Text Files',
-    'unknown': 'Unknown Content'
-  };
+// Default AI access configuration
+export const defaultAIAccessConfig: AIAccessConfig = {
+  useProxyEndpoint: true,
+  rateLimit: 60,
+  cacheDuration: 60 // 1 hour
 };
 
-export const getDefaultAIPreferences = (): AIPreferences => {
-  return {
-    useWebGPU: true,
-    autoLoadModels: false,
-    cacheModels: true,
-    defaultLanguage: 'italian',
-    processingSetting: 'balanced',
-    defaultModelSize: 'medium',
-    optimizationLevel: 5,
-    anonymousAnalytics: true,
-    contentFiltering: true,
-    voiceRate: 1,
-    voicePitch: 1,
-    englishVoiceURI: null,
-    italianVoiceURI: null,
-    processOnDevice: true,
-    dataCollection: true,
-    assistanceLevel: 5
-  };
+// Default AI feedback settings
+export const defaultAIFeedbackSettings: AIFeedbackSettings = {
+  detailedFeedback: true,
+  includeExamples: true,
+  suggestCorrections: true,
+  language: 'english',
+  feedbackLevel: 'intermediate'
+};
+
+// Default AI feature flags
+export const defaultAIFeatureFlags: AIFeatureFlags = {
+  enableImageGeneration: true,
+  enableVoiceRecognition: true,
+  enablePronunciationFeedback: true,
+  enableContentCreation: false,
+  enablePersonalization: true
+};
+
+// Default AI usage metrics
+export const defaultAIUsageMetrics: AIUsageMetrics = {
+  tokensUsed: 0,
+  requestsMade: 0,
+  lastReset: new Date(),
+  quotaLimit: 100000
 };

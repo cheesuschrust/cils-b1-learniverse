@@ -1,319 +1,210 @@
 
-import { ContentType } from '@/types/interface-fixes';
+import { ContentType, ContentFeatures } from '@/types/contentType';
 
-// Text sample analysis for content type detection
-interface TextAnalysisResult {
-  contentType: ContentType;
-  confidence: number;
-  features: {
-    [key: string]: number | boolean;
-  };
+// Training examples for each content type with features
+interface TrainingData {
+  text: string;
+  features: Record<string, number | boolean>;
 }
 
-// Features used to detect content types
-interface ContentFeatures {
-  hasHeaders: boolean;
-  csvPattern: boolean;
-  jsonPattern: boolean;
-  italianWords: number;
-  englishWords: number;
-  questionMarks: number;
-  multipleChoiceOptions: boolean;
-  paragraphCount: number;
-  sentenceCount: number;
-  averageSentenceLength: number;
-  dialoguePattern: boolean;
-}
+// Multiple-choice specific features
+const extractMultipleChoiceFeatures = (text: string): Record<string, number | boolean> => {
+  const hasOptions = text.includes('A)') || text.includes('B)') || text.includes('1.') || text.includes('2.');
+  const optionCount = (text.match(/\b[A-D]\)|\b\d+\./g) || []).length;
+  const hasCorrectAnswer = /correct|answer|right/i.test(text);
+  
+  const features: Record<string, number | boolean> = {
+    hasOptions,
+    optionCount,
+    hasCorrectAnswer,
+    questionMarks: (text.match(/\?/g) || []).length,
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
+  
+  return features;
+};
 
-// Italian language detection words
-const ITALIAN_COMMON_WORDS = [
-  'e', 'il', 'la', 'di', 'che', 'è', 'non', 'un', 'per', 'sono', 'ma', 'mi', 'si', 'ho', 'lo',
-  'hai', 'ci', 'ha', 'come', 'con', 'questo', 'se', 'cosa', 'anche', 'perché', 'qui', 'sei',
-  'della', 'sono', 'quando', 'bene', 'ciao', 'grazie', 'molto'
-];
+// Flashcard specific features
+const extractFlashcardFeatures = (text: string): Record<string, number | boolean> => {
+  const lines = text.trim().split('\n').filter(Boolean);
+  const hasFrontAndBack = lines.length >= 2;
+  const isTermDefinition = lines.length === 2 && lines[0].length < 30 && lines[1].length > 30;
+  
+  const features: Record<string, number | boolean> = {
+    hasFrontAndBack,
+    isTermDefinition,
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
+  
+  return features;
+};
 
-// English language detection words
-const ENGLISH_COMMON_WORDS = [
-  'the', 'and', 'is', 'in', 'it', 'you', 'that', 'was', 'for', 'on', 'are', 'with', 'as', 'they',
-  'be', 'at', 'have', 'this', 'from', 'by', 'had', 'not', 'what', 'but', 'when', 'if', 'well', 'hi',
-  'thank', 'very'
-];
+// Writing specific features
+const extractWritingFeatures = (text: string): Record<string, number | boolean> => {
+  const paragraphs = text.split('\n\n').filter(Boolean);
+  const sentences = text.split(/[.!?]+/).filter(Boolean);
+  
+  const features: Record<string, number | boolean> = {
+    paragraphCount: paragraphs.length,
+    sentenceCount: sentences.length,
+    hasPrompt: /prompt|write about|essay on/i.test(text),
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
+  
+  return features;
+};
 
-/**
- * Analyze a text sample to detect its content type
- */
-export const analyzeContentType = (text: string): TextAnalysisResult => {
-  if (!text || text.trim().length === 0) {
-    return {
-      contentType: 'unknown',
-      confidence: 0.8,
-      features: {}
-    };
-  }
+// Speaking specific features
+const extractSpeakingFeatures = (text: string): Record<string, number | boolean> => {
+  const isDialogue = /Person A|Person B|Speaker 1|Speaker 2|A:|B:/i.test(text);
+  const hasPronunciation = /pronunc|accent|stress|intonation/i.test(text);
+  
+  const features: Record<string, number | boolean> = {
+    isDialogue,
+    hasPronunciation,
+    questionMarks: (text.match(/\?/g) || []).length,
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
+  
+  return features;
+};
 
-  const features = extractFeatures(text);
+// Listening specific features
+const extractListeningFeatures = (text: string): Record<string, number | boolean> => {
+  const hasAudioReference = /listen|audio|recording|hear/i.test(text);
+  const hasFillInBlanks = /fill in|blank|missing/i.test(text);
   
-  // Detect based on features
-  if (features.csvPattern) {
-    return {
-      contentType: 'csv',
-      confidence: 0.9,
-      features
-    };
+  const features: Record<string, number | boolean> = {
+    hasAudioReference,
+    hasFillInBlanks,
+    questionMarks: (text.match(/\?/g) || []).length,
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
+  
+  return features;
+};
+
+// Extract features from text based on content type
+export const extractFeatures = (text: string, contentType?: ContentType): Record<string, number | boolean> => {
+  if (contentType) {
+    switch (contentType) {
+      case 'multiple-choice':
+        return extractMultipleChoiceFeatures(text);
+      case 'flashcards':
+        return extractFlashcardFeatures(text);
+      case 'writing':
+        return extractWritingFeatures(text);
+      case 'speaking':
+        return extractSpeakingFeatures(text);
+      case 'listening':
+        return extractListeningFeatures(text);
+    }
   }
   
-  if (features.jsonPattern) {
-    return {
-      contentType: 'json',
-      confidence: 0.95,
-      features
-    };
-  }
-  
-  if (text.includes('.mp3') || text.includes('.wav') || text.includes('audio')) {
-    return {
-      contentType: 'audio',
-      confidence: 0.85,
-      features
-    };
-  }
-  
-  if (text.includes('.pdf') || text.includes('PDF')) {
-    return {
-      contentType: 'pdf',
-      confidence: 0.85,
-      features
-    };
-  }
-  
-  if (text.includes('.txt') || (features.paragraphCount > 0 && !features.csvPattern && !features.jsonPattern)) {
-    return {
-      contentType: 'txt',
-      confidence: 0.75,
-      features
-    };
-  }
-  
-  // Detect flashcards content
-  if ((features.italianWords > 3 && features.englishWords > 3) || 
-      text.includes('flashcard') || 
-      text.includes('flash card') ||
-      (text.includes('italian') && text.includes('english'))) {
-    return {
-      contentType: 'flashcards',
-      confidence: 0.85,
-      features
-    };
-  }
-  
-  // Detect listening exercises
-  if ((text.includes('listen') || text.includes('audio') || text.includes('pronunciation')) &&
-      (features.dialoguePattern || features.italianWords > 5)) {
-    return {
-      contentType: 'listening',
-      confidence: 0.8,
-      features
-    };
-  }
-  
-  // Detect writing exercises
-  if (text.includes('write') || text.includes('essay') || text.includes('writing') || 
-      (features.paragraphCount > 2 && features.averageSentenceLength > 10)) {
-    return {
-      contentType: 'writing',
-      confidence: 0.7,
-      features
-    };
-  }
-  
-  // Detect speaking exercises
-  if (text.includes('speak') || text.includes('pronunciation') || text.includes('repeat') ||
-      (features.dialoguePattern && features.italianWords > 5)) {
-    return {
-      contentType: 'speaking',
-      confidence: 0.75,
-      features
-    };
-  }
-  
-  // Detect multiple choice
-  if (features.multipleChoiceOptions || features.questionMarks > 2 || 
-      text.includes('quiz') || text.includes('multiple choice')) {
-    return {
-      contentType: 'multiple-choice',
-      confidence: 0.8,
-      features
-    };
-  }
-  
-  // Default if no better match
+  // Extract general features if no content type is provided
   return {
-    contentType: 'unknown',
-    confidence: 0.6,
-    features
+    textLength: text.length,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+    questionMarks: (text.match(/\?/g) || []).length,
+    sentenceCount: text.split(/[.!?]+/).filter(Boolean).length,
+    paragraphCount: text.split('\n\n').filter(Boolean).length,
   };
 };
 
-/**
- * Extract features from text for content type analysis
- */
-const extractFeatures = (text: string): ContentFeatures => {
-  const lines = text.split('\n').filter(line => line.trim().length > 0);
-  const words = text.toLowerCase().split(/\s+/);
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+// Detect content type from text features
+export const detectContentType = (text: string): ContentType => {
+  const multipleChoiceFeatures = extractMultipleChoiceFeatures(text);
+  const flashcardFeatures = extractFlashcardFeatures(text);
+  const writingFeatures = extractWritingFeatures(text);
+  const speakingFeatures = extractSpeakingFeatures(text);
+  const listeningFeatures = extractListeningFeatures(text);
   
-  // CSV detection: first line has commas and possibly headers
-  const hasHeaders = lines.length > 0 && /^[a-zA-Z,]+$/.test(lines[0]);
-  const csvPattern = lines.length > 1 && lines.filter(line => line.includes(',')).length > lines.length * 0.7;
-  
-  // JSON detection
-  const jsonPattern = (text.trim().startsWith('{') && text.trim().endsWith('}')) || 
-                     (text.trim().startsWith('[') && text.trim().endsWith(']'));
-  
-  // Language detection
-  const italianWords = words.filter(word => ITALIAN_COMMON_WORDS.includes(word)).length;
-  const englishWords = words.filter(word => ENGLISH_COMMON_WORDS.includes(word)).length;
-  
-  // Multiple choice detection
-  const questionMarks = (text.match(/\?/g) || []).length;
-  const multipleChoiceOptions = /[A-D]\)\s|\d\)\s|[A-D]\.\s/.test(text);
-  
-  // Text structure analysis
-  const paragraphCount = lines.length;
-  const sentenceCount = sentences.length;
-  const averageSentenceLength = words.length / Math.max(1, sentenceCount);
-  
-  // Dialogue pattern detection (for conversations, listening exercises)
-  const dialoguePattern = /^[A-Z][a-z]+:.*\n/.test(text) || text.split(':').length > 3;
-  
-  return {
-    hasHeaders,
-    csvPattern,
-    jsonPattern,
-    italianWords,
-    englishWords,
-    questionMarks,
-    multipleChoiceOptions,
-    paragraphCount,
-    sentenceCount,
-    averageSentenceLength,
-    dialoguePattern
+  // Simple scoring based on feature presence
+  let scores = {
+    'multiple-choice': 0,
+    'flashcards': 0,
+    'writing': 0,
+    'speaking': 0,
+    'listening': 0
   };
-};
-
-/**
- * Detect the content type of a file based on its name and content
- */
-export const detectFileContentType = async (file: File): Promise<ContentType> => {
-  // First check by file extension
-  const extension = file.name.split('.').pop()?.toLowerCase();
   
-  if (extension === 'csv') return 'csv';
-  if (extension === 'json') return 'json';
-  if (extension === 'txt') return 'txt';
-  if (extension === 'pdf') return 'pdf';
-  if (['mp3', 'wav', 'ogg', 'm4a'].includes(extension || '')) return 'audio';
+  // Score multiple-choice
+  if (multipleChoiceFeatures.hasOptions) scores['multiple-choice'] += 3;
+  if (multipleChoiceFeatures.optionCount >= 3) scores['multiple-choice'] += 2;
+  if (multipleChoiceFeatures.hasCorrectAnswer) scores['multiple-choice'] += 1;
+  if (multipleChoiceFeatures.questionMarks > 0) scores['multiple-choice'] += 1;
   
-  // If extension doesn't clearly indicate type, check content
-  try {
-    // Read first 4KB of the file to detect content type
-    const chunk = await readFileChunk(file, 4096);
-    const textContent = new TextDecoder().decode(chunk);
-    const analysis = analyzeContentType(textContent);
-    
-    return analysis.contentType;
-  } catch (error) {
-    console.error('Error detecting file content type:', error);
-    return 'unknown';
-  }
-};
-
-/**
- * Read a chunk of a file as an ArrayBuffer
- */
-const readFileChunk = (file: File, size: number): Promise<ArrayBuffer> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    const blob = file.slice(0, size);
-    
-    reader.onload = (e) => {
-      resolve(e.target?.result as ArrayBuffer);
-    };
-    
-    reader.onerror = (e) => {
-      reject(new Error('Error reading file chunk'));
-    };
-    
-    reader.readAsArrayBuffer(blob);
+  // Score flashcards
+  if (flashcardFeatures.hasFrontAndBack) scores['flashcards'] += 3;
+  if (flashcardFeatures.isTermDefinition) scores['flashcards'] += 3;
+  if ((flashcardFeatures.wordCount as number) < 30) scores['flashcards'] += 1;
+  
+  // Score writing
+  if ((writingFeatures.paragraphCount as number) > 1) scores['writing'] += 2;
+  if ((writingFeatures.sentenceCount as number) > 5) scores['writing'] += 2;
+  if ((writingFeatures.textLength as number) > 200) scores['writing'] += 3;
+  if (writingFeatures.hasPrompt) scores['writing'] += 1;
+  
+  // Score speaking
+  if (speakingFeatures.isDialogue) scores['speaking'] += 3;
+  if (speakingFeatures.hasPronunciation) scores['speaking'] += 3;
+  if (speakingFeatures.questionMarks as number > 1) scores['speaking'] += 1;
+  
+  // Score listening
+  if (listeningFeatures.hasAudioReference) scores['listening'] += 3;
+  if (listeningFeatures.hasFillInBlanks) scores['listening'] += 2;
+  
+  // Find the content type with the highest score
+  let maxScore = 0;
+  let detectedType: ContentType = 'writing'; // Default
+  
+  Object.entries(scores).forEach(([type, score]) => {
+    if (score > maxScore) {
+      maxScore = score;
+      detectedType = type as ContentType;
+    }
   });
+  
+  return detectedType;
 };
 
-/**
- * Process uploaded content to extract relevant information
- */
-export const processUploadedContent = async (file: File): Promise<{
-  contentType: ContentType;
-  content: string | ArrayBuffer;
-  metadata: Record<string, any>;
-}> => {
-  const contentType = await detectFileContentType(file);
-  let content: string | ArrayBuffer;
-  const metadata: Record<string, any> = {
-    filename: file.name,
-    filesize: file.size,
-    lastModified: new Date(file.lastModified),
-    contentType
-  };
+// Get confidence score for a content type prediction
+export const getTypeConfidence = (text: string, contentType: ContentType): number => {
+  const features = extractFeatures(text, contentType);
+  const detectedType = detectContentType(text);
   
-  if (['csv', 'json', 'txt'].includes(contentType) || contentType === 'unknown') {
-    // Read text files
-    content = await readFileAsText(file);
-  } else {
-    // Read binary files
-    content = await readFileAsArrayBuffer(file);
+  // Base confidence if detected type matches
+  let confidence = detectedType === contentType ? 0.7 : 0.3;
+  
+  // Adjust confidence based on feature strength
+  switch (contentType) {
+    case 'multiple-choice':
+      if (features.hasOptions) confidence += 0.15;
+      if ((features.optionCount as number) >= 3) confidence += 0.1;
+      break;
+    case 'flashcards':
+      if (features.hasFrontAndBack) confidence += 0.2;
+      if (features.isTermDefinition) confidence += 0.1;
+      break;
+    case 'writing':
+      if ((features.paragraphCount as number) > 1) confidence += 0.1;
+      if ((features.textLength as number) > 200) confidence += 0.15;
+      break;
+    case 'speaking':
+      if (features.isDialogue) confidence += 0.15;
+      if (features.hasPronunciation) confidence += 0.15;
+      break;
+    case 'listening':
+      if (features.hasAudioReference) confidence += 0.2;
+      if (features.hasFillInBlanks) confidence += 0.1;
+      break;
   }
   
-  return {
-    contentType,
-    content,
-    metadata
-  };
-};
-
-/**
- * Read a file as text
- */
-const readFileAsText = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    
-    reader.onerror = (e) => {
-      reject(new Error('Error reading file as text'));
-    };
-    
-    reader.readAsText(file);
-  });
-};
-
-/**
- * Read a file as ArrayBuffer
- */
-const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      resolve(e.target?.result as ArrayBuffer);
-    };
-    
-    reader.onerror = (e) => {
-      reject(new Error('Error reading file as ArrayBuffer'));
-    };
-    
-    reader.readAsArrayBuffer(file);
-  });
+  // Cap confidence between 0 and 1
+  return Math.min(Math.max(confidence, 0), 1);
 };

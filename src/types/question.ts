@@ -1,58 +1,53 @@
 
-// Type definitions for questions across the app
-
-export type QuestionType = 'multiple-choice' | 'text' | 'audio' | 'image' | 'matching' | 'fill-in-blank' | 'true-false';
-export type QuestionDifficulty = 'Beginner' | 'Intermediate' | 'Advanced';
-export type QuestionCategory = 
-  | 'Vocabulary' 
-  | 'Grammar' 
-  | 'Reading' 
-  | 'Listening' 
-  | 'Speaking' 
-  | 'Writing'
-  | 'Culture'
-  | 'Food'
-  | 'Travel'
-  | 'Business'
-  | 'Medicine'
-  | 'Technology'
-  | string; // Allow custom categories
-
-export interface Question {
+export interface QuestionBase {
   id: string;
-  type: QuestionType;
+  type: 'multiple-choice' | 'text-input' | 'matching' | 'true-false';
   question: string;
   explanation?: string;
-  audio?: string;
-  image?: string;
-  difficulty: QuestionDifficulty;
-  category: QuestionCategory;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  category: string;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  language?: 'english' | 'italian';
+  language: 'english' | 'italian';
 }
 
-export interface MultipleChoiceQuestion extends Question {
+export interface MultipleChoiceQuestion extends QuestionBase {
   type: 'multiple-choice';
   options: string[];
   correctAnswer: string;
 }
 
-export interface TextQuestion extends Question {
-  type: 'text';
-  correctAnswer: string;
-  acceptableAnswers?: string[];
+export interface TextInputQuestion extends QuestionBase {
+  type: 'text-input';
+  correctAnswers: string[];
+  caseSensitive: boolean;
 }
+
+export interface MatchingQuestion extends QuestionBase {
+  type: 'matching';
+  pairs: { left: string; right: string }[];
+}
+
+export interface TrueFalseQuestion extends QuestionBase {
+  type: 'true-false';
+  correctAnswer: boolean;
+}
+
+export type Question = 
+  | MultipleChoiceQuestion 
+  | TextInputQuestion 
+  | MatchingQuestion 
+  | TrueFalseQuestion;
 
 export interface QuestionSet {
   id: string;
   title: string;
   description: string;
-  questions: MultipleChoiceQuestion[];
-  category: QuestionCategory;
-  difficulty: QuestionDifficulty;
-  language?: 'english' | 'italian';
+  questions: Question[];
+  category: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  language: 'english' | 'italian';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,35 +56,11 @@ export interface QuizAttempt {
   id: string;
   userId: string;
   questionSetId: string;
-  answers: Record<string, string>;
+  answers: Record<string, string | boolean | number>;
   score: number;
   totalQuestions: number;
   completedAt: Date;
   completed: boolean;
-  timeSpent: number;
+  timeSpent: number; // In seconds
   createdAt: Date;
-}
-
-export interface QuizStats {
-  totalAttempts: number;
-  averageScore: number;
-  bestScore: number;
-  totalTime: number;
-  questionSets: {
-    id: string;
-    title: string;
-    attempts: number;
-    bestScore: number;
-    averageScore: number;
-  }[];
-}
-
-export interface QuestionProgress {
-  userId: string;
-  questionId: string;
-  correctAttempts: number;
-  totalAttempts: number;
-  lastAttempt: Date;
-  mastered: boolean;
-  nextReviewDate?: Date;
 }

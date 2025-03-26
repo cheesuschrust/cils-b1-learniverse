@@ -1,147 +1,175 @@
 
 import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  Info, 
+  X, 
+  FilePlus, 
+  Bell, 
+  Award, 
+  ExternalLink, 
+  Check
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { NotificationItemProps } from '@/types/interface-fixes';
-import { formatDistanceToNow } from 'date-fns';
-import { X, Bell, Info, CheckCircle, AlertTriangle, AlertCircle, File, Zap } from 'lucide-react';
+import { Notification } from '@/contexts/NotificationsContext';
+import { cn } from '@/lib/utils';
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ 
-  notification, 
-  onDismiss, 
+interface NotificationItemProps {
+  notification: Notification;
+  onDismiss?: () => void;
+  onRead?: () => void;
+  showControls?: boolean;
+  maxHeight?: number;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onDismiss,
   onRead,
-  onAction 
+  showControls = false,
+  maxHeight = 300
 }) => {
-  const handleDismiss = () => {
-    onDismiss(notification.id);
+  // Format timestamp
+  const formatTime = (date: Date) => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    
+    return date.toLocaleDateString();
   };
-
-  const handleRead = () => {
-    onRead(notification.id);
-  };
-
-  const handleAction = (action: string) => {
-    if (onAction) {
-      onAction(notification.id, action);
-    }
-  };
-
+  
   // Get icon based on notification type
   const getIcon = () => {
     switch (notification.type) {
-      case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />;
       case 'success':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       case 'error':
         return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
       case 'file-processing':
-        return <File className="h-5 w-5 text-purple-500" />;
+        return <FilePlus className="h-5 w-5 text-indigo-500" />;
+      case 'system':
+        return <Bell className="h-5 w-5 text-purple-500" />;
       case 'achievement':
-        return <Zap className="h-5 w-5 text-amber-500" />;
+        return <Award className="h-5 w-5 text-amber-500" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
+        return <Info className="h-5 w-5 text-gray-500" />;
     }
-  };
-
-  // Get background color based on priority
-  const getCardClasses = () => {
-    if (notification.read) {
-      return "bg-muted";
-    }
-    
-    switch (notification.priority) {
-      case 'high':
-        return "bg-red-50 dark:bg-red-900/20";
-      case 'normal':
-        return "bg-blue-50 dark:bg-blue-900/20";
-      default:
-        return "";
-    }
-  };
-
-  // Format notification time
-  const getFormattedTime = () => {
-    const timestamp = new Date(notification.timestamp);
-    return formatDistanceToNow(timestamp, { addSuffix: true });
   };
 
   return (
-    <Card className={`mb-3 relative ${getCardClasses()}`}>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="absolute right-2 top-2"
-        onClick={handleDismiss}
-      >
-        <X className="h-4 w-4" />
-        <span className="sr-only">Dismiss</span>
-      </Button>
-      
-      <CardHeader className="pb-2 pt-6">
-        <div className="flex items-start gap-3">
-          <div className="mt-1">{getIcon()}</div>
-          <div className="flex-1">
-            <CardTitle className="text-base font-semibold">
-              {notification.title}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              {getFormattedTime()}
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <p className="text-sm">{notification.message}</p>
-        
-        {notification.priority === 'high' && (
-          <Badge variant="destructive" className="mt-2">Important</Badge>
-        )}
-        
-        {notification.type === 'file-processing' && (
-          <div className="mt-3">
-            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all" 
-                style={{ width: `${notification.progress || 0}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Processing: {notification.progress || 0}% complete
-            </p>
-          </div>
-        )}
-      </CardContent>
-      
-      {(notification.actions && notification.actions.length > 0) && (
-        <CardFooter className="flex flex-wrap gap-2">
-          {notification.actions.map((action, index) => (
-            <Button 
-              key={index} 
-              variant="outline" 
-              size="sm"
-              onClick={() => handleAction(action.action)}
-            >
-              {action.label}
-            </Button>
-          ))}
-          
-          {!notification.read && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleRead}
-            >
-              Mark as read
-            </Button>
-          )}
-        </CardFooter>
+    <div 
+      className={cn(
+        "relative p-4 hover:bg-muted/50 transition-colors",
+        notification.read ? "opacity-80" : "bg-muted/30"
       )}
-    </Card>
+    >
+      <div className="flex">
+        <div className="mr-3 mt-0.5">
+          {notification.icon ? (
+            <span className="flex h-6 w-6 items-center justify-center">{getIcon()}</span>
+          ) : (
+            getIcon()
+          )}
+        </div>
+        
+        <div className="flex-1 overflow-hidden">
+          <div className="flex items-start justify-between">
+            <h4 className={cn(
+              "font-medium text-sm",
+              !notification.read && "font-semibold"
+            )}>
+              {notification.title}
+            </h4>
+            
+            {showControls && (
+              <div className="flex gap-1 ml-2">
+                {!notification.read && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-5 w-5" 
+                    onClick={onRead}
+                    title="Mark as read"
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5" 
+                  onClick={onDismiss}
+                  title="Dismiss"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <div 
+            className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words"
+            style={{ maxHeight: maxHeight ? `${maxHeight}px` : 'none', overflow: 'hidden' }}
+          >
+            {notification.message}
+          </div>
+          
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {formatTime(notification.timestamp instanceof Date ? notification.timestamp : new Date(notification.timestamp))}
+            </span>
+            
+            {notification.link && (
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="h-auto p-0 text-xs flex items-center gap-1"
+                asChild
+              >
+                <a href={notification.link} target="_blank" rel="noopener noreferrer">
+                  View <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+            )}
+            
+            {notification.priority === 'high' && (
+              <span className="text-xs font-medium text-red-500">High priority</span>
+            )}
+          </div>
+          
+          {notification.actions && notification.actions.length > 0 && (
+            <div className="mt-2 flex gap-2">
+              {notification.actions.map((action, index) => (
+                <Button 
+                  key={index} 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => {
+                    // Action would typically dispatch an event or call a handler
+                    console.log(`Action "${action.action}" clicked for notification ${notification.id}`);
+                  }}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -26,6 +26,9 @@ const NotificationsContext = createContext<NotificationsContextType>({
   dismissNotification: () => {},
   markAsRead: () => {},
   dismissAllNotifications: () => {},
+  unreadCount: 0,
+  markAllAsRead: () => {},
+  getFileProcessingNotifications: () => [],
 });
 
 export const useNotifications = () => useContext(NotificationsContext);
@@ -55,6 +58,9 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('notifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  // Calculate unread count
+  const unreadCount = notifications.filter(notification => !notification.read).length;
+
   // Add a new notification
   const addNotification = (notification: Omit<Notification, 'id' | 'read' | 'timestamp'>) => {
     const newNotification: Notification = {
@@ -83,9 +89,21 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
   // Dismiss all notifications
   const dismissAllNotifications = () => {
     setNotifications([]);
+  };
+
+  // Get file processing notifications
+  const getFileProcessingNotifications = () => {
+    return notifications.filter(notification => notification.type === 'file-processing');
   };
 
   // Remove expired notifications
@@ -131,7 +149,10 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         addNotification, 
         dismissNotification, 
         markAsRead,
-        dismissAllNotifications 
+        dismissAllNotifications,
+        unreadCount,
+        markAllAsRead,
+        getFileProcessingNotifications
       }}
     >
       {children}
