@@ -10,7 +10,8 @@ export const handlers = [
   }),
   
   http.post('/api/login', async ({ request }) => {
-    const { email, password } = await request.json();
+    const data = await request.json();
+    const { email, password } = data;
     
     if (email === 'test@example.com' && password === 'password123') {
       return HttpResponse.json({

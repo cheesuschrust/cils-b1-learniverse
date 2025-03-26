@@ -51,7 +51,7 @@ export interface ImportOptions {
 export interface ImportResult {
   success: boolean;
   imported: number;
-  importedCards?: number;
+  importedCards?: number; 
   skipped: number;
   errors: string[];
   failed?: number;

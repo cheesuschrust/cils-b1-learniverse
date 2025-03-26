@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
 import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import '@testing-library/jest-dom'; // Add this import to provide the missing matchers
 
 // Import any other providers that your app uses
 

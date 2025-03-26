@@ -4,53 +4,42 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 export interface ConfidenceIndicatorProps {
-  score: number;
+  value: number;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-/**
- * Displays a visual indicator for confidence or accuracy scores
- * 
- * @param score - A number between 0 and 1 (or 0 and 100) representing the confidence
- * @param size - The size of the indicator (sm, md, lg)
- * @param className - Optional additional class for the container
- */
-const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
-  score,
+export const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
+  value,
   size = 'md',
-  className,
+  className
 }) => {
-  // Normalize score to 0-100 if it's given as 0-1
-  const normalizedScore = score > 1 ? score : score * 100;
-  
-  // Determine color based on score
-  const getColorClass = () => {
-    if (normalizedScore >= 80) return 'bg-green-500';
-    if (normalizedScore >= 60) return 'bg-yellow-500';
-    if (normalizedScore >= 40) return 'bg-orange-500';
+  // Determine the color based on the confidence score
+  const getIndicatorClass = (score: number) => {
+    if (score >= 90) return 'bg-green-500';
+    if (score >= 70) return 'bg-green-400';
+    if (score >= 50) return 'bg-yellow-400';
+    if (score >= 30) return 'bg-orange-400';
     return 'bg-red-500';
   };
-  
-  // Determine size classes
+
+  // Size classes
   const sizeClasses = {
-    sm: 'h-1',
+    sm: 'h-1.5',
     md: 'h-2',
-    lg: 'h-3',
+    lg: 'h-3'
   };
-  
+
   return (
-    <div className={cn('flex items-center gap-2', className)} data-testid="confidence-indicator">
+    <div className={cn('flex flex-col', className)} data-testid="confidence-indicator">
       <Progress 
-        value={normalizedScore} 
-        className={cn(sizeClasses[size], 'bg-muted w-full rounded-full')}
-        // Apply custom styling directly using CSS classes
-        // We'll use an indicator class with specific background color
-        indicator={getColorClass()}
+        value={value} 
+        className={cn(sizeClasses[size])} 
+        indicator={getIndicatorClass(value)}
       />
-      <span className="text-xs font-medium w-10 text-right">
-        {Math.round(normalizedScore)}%
-      </span>
+      <div className="text-xs text-muted-foreground mt-1 text-right">
+        {value}% confidence
+      </div>
     </div>
   );
 };
