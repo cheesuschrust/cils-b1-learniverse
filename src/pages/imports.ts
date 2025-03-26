@@ -1,39 +1,43 @@
-
-// Authentication
-export { default as Login } from './Login';
-export { default as SignUp } from './Signup';
-export { default as PasswordReset } from './ResetPassword';
-export { default as EmailVerification } from './EmailVerification';
-
-// User Dashboard
+// Pages
 export { default as Dashboard } from './Dashboard';
-export { default as Flashcards } from './Flashcards';
-export { default as Lessons } from './Dashboard';
-export { default as SpeakingPractice } from './Speaking';
-export { default as ListeningExercises } from './Listening';
-export { default as WritingExercises } from './Writing';
-export { default as MultipleChoice } from './MultipleChoice';
-export { default as LearningCalendar } from './Calendar';
+export { default as Login } from './Login';
+export { default as Signup } from './Signup';
+export { default as ResetPassword } from './ResetPassword';
+export { default as EmailVerification } from './EmailVerification';
 export { default as UserProfile } from './UserProfile';
 export { default as Settings } from './Settings';
-export { default as Communities } from './Dashboard';
-export { default as ProgressTracker } from './Dashboard';
+export { default as PrivacyPolicy } from './PrivacyPolicy';
+export { default as Documentation } from './Documentation';
+export { default as NotFound } from './NotFound';
+export { default as Index } from './Index';
 export { default as Support } from './Support';
 export { default as SupportCenter } from './SupportCenter';
-export { default as Documentation } from './Documentation';
+export { default as Flashcards } from './Flashcards';
+export { default as MultipleChoice } from './MultipleChoice';
+export { default as Listening } from './Listening';
+export { default as Speaking } from './Speaking';
+export { default as Writing } from './Writing';
+export { default as Calendar } from './Calendar';
+export { default as ContentPage } from './ContentPage';
+export { default as SubscriptionPage } from './SubscriptionPage';
+export { default as Analytics } from './Analytics';
 
-// Admin
+// Admin Pages
 export { default as AdminDashboard } from './admin/Dashboard';
 export { default as UserManagement } from './admin/UserManagement';
 export { default as ContentUploader } from './admin/ContentUploader';
-export { default as FileUploader } from './admin/FileUploader';
-export { default as AdminSettings } from './admin/SystemSettings';
-export { default as ContentAnalysis } from './admin/ContentAnalysis';
-export { default as AIManagement } from './admin/AIManagement';
-export { default as SystemLogs } from './admin/SystemLogs';
+export { default as AdminAnalyticsDashboardPage } from './admin/AdminAnalyticsDashboard';
 export { default as SupportTickets } from './admin/SupportTickets';
-export { default as SystemTests } from './admin/SystemTests';
-export { default as InstitutionalLicensing } from './admin/InstitutionalLicensing';
-export { default as AdminAnalyticsDashboard } from './admin/AdminAnalyticsDashboard';
-export { default as AdManagement } from './admin/AdManagement';
 export { default as ChatbotManagement } from './admin/ChatbotManagement';
+export { default as SystemSettings } from './admin/SystemSettings';
+export { default as SEOManager } from './admin/SEOManager';
+export { default as EmailSettings } from './admin/EmailSettings';
+export { default as AdManagement } from './admin/AdManagement';
+export { default as EcommerceIntegration } from './admin/EcommerceIntegration';
+export { default as AppStoreListing } from './admin/AppStoreListing';
+export { default as InstitutionalLicensing } from './admin/InstitutionalLicensing';
+export { default as AIManagement } from './admin/AIManagement';
+export { default as AISetupWizard } from './admin/AISetupWizard';
+export { default as SystemLogs } from './admin/SystemLogs';
+export { default as ContentAnalysis } from './admin/ContentAnalysis';
+export { default as SystemTests } from './admin/SystemTests';
