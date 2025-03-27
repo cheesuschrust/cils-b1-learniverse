@@ -34,8 +34,8 @@ export interface Flashcard {
   id: string;
   front?: string; // New property
   back?: string; // New property
-  italian?: string; // Old property
-  english?: string; // Old property
+  italian: string; // Required per error message
+  english: string; // Required per error message
   examples?: string[];
   notes?: string;
   tags?: string[];
@@ -81,6 +81,7 @@ export interface FlashcardStats {
   mastered?: number; // Added for compatibility
   total?: number; // Added for compatibility
   learning?: number; // Added for compatibility
+  toReview?: number; // Added for compatibility with useFlashcards
 }
 
 // Expanded FlashcardComponentProps interface to include all needed properties
@@ -127,7 +128,7 @@ export interface SupportTicketExtension {
 // Add missing NotificationsContextType interface
 export interface NotificationsContextType {
   notifications: any[];
-  addNotification: (notification: any) => void;
+  addNotification: (notification: any) => string;
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
   clearAll: () => void;
@@ -226,7 +227,7 @@ export interface Toast {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
-  variant?: "default" | "destructive";
+  variant?: "default" | "destructive" | "success" | "warning";
   duration?: number; // Added for compatibility
 }
 
@@ -243,12 +244,35 @@ export interface AISetupWizardProps {
   onComplete: () => void;
 }
 
+// Update interfaces for AuthContextType
+export interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  error: Error | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  signup?: (data: any) => Promise<void>;
+  resetPassword?: (token: string, newPassword: string) => Promise<void>;
+  forgotPassword?: (email: string) => Promise<void>;
+  verifyEmail?: (token: string) => Promise<void>;
+  resendVerificationEmail?: (email: string) => Promise<boolean>;
+  updateProfile?: (userId: string, data: any) => Promise<any>;
+  updatePassword?: (userId: string, newPassword: string) => Promise<void>;
+  socialLogin?: (provider: string) => Promise<boolean>;
+  addSystemLog?: (action: string, details: string, level?: string) => void;
+  incrementDailyQuestionCount?: (questionType: string) => Promise<boolean>;
+  getEmailSettings?: () => Promise<any>;
+  updateEmailSettings?: (settings: any) => Promise<void>;
+  getSystemLogs?: () => Promise<any[]>;
+  updateSystemLog?: (id: string, data: any) => Promise<void>;
+}
+
 // Export for Jest test utilities
 export type ValueType = string | number;
 
 export interface ChatSession {
   id: string;
-  userId: string;
+  userId?: string;
   title?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -266,3 +290,32 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
 }
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type?: string;
+  createdAt: Date | string;
+  timestamp?: Date | string;
+  read: boolean;
+  actions?: { id: string; label: string }[];
+  url?: string;
+  metadata?: Record<string, any>;
+  userId?: string;
+  priority?: 'low' | 'normal' | 'high';
+  icon?: string;
+  link?: string;
+  expiresAt?: Date | string;
+}
+
+export interface ContentType {
+  id: string;
+  name: string;
+  description: string;
+  features: string[];
+  enabled: boolean;
+}
+
+export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'mistral-small' | 'claude-instant' | 'small' | 'medium' | 'large';

@@ -1,93 +1,54 @@
 
 declare module 'jest-axe' {
-  import { ElementHandle } from '@playwright/test';
+  import { AxeResults } from 'axe-core';
 
-  interface AxeResults {
-    violations: AxeViolation[];
-    passes: AxePass[];
-    incomplete: AxeIncomplete[];
-    inapplicable: AxeInapplicable[];
+  export interface JestAxeConfigureOptions {
+    globalOptions?: Record<string, any>;
+    rules?: Record<string, { enabled: boolean }>;
+    checks?: Record<string, { enabled: boolean }>;
   }
 
-  interface AxeViolation {
+  export interface ToAXEMatchers<R = any> {
+    toHaveNoViolations(): R;
+  }
+
+  export interface AxeRuleObject {
     id: string;
-    impact: 'minor' | 'moderate' | 'serious' | 'critical';
-    tags: string[];
-    description: string;
-    help: string;
-    helpUrl: string;
-    nodes: AxeNode[];
+    enabled: boolean;
   }
 
-  interface AxePass {
-    id: string;
-    tags: string[];
-    description: string;
-    help: string;
-    helpUrl: string;
-    nodes: AxeNode[];
-  }
-
-  interface AxeIncomplete {
-    id: string;
-    impact: 'minor' | 'moderate' | 'serious' | 'critical';
-    tags: string[];
-    description: string;
-    help: string;
-    helpUrl: string;
-    nodes: AxeNode[];
-  }
-
-  interface AxeInapplicable {
-    id: string;
-    tags: string[];
-    description: string;
-    help: string;
-    helpUrl: string;
-    nodes: AxeNode[];
-  }
-
-  interface AxeNode {
-    html: string;
-    impact: 'minor' | 'moderate' | 'serious' | 'critical';
-    target: string[];
-    failureSummary?: string;
-  }
-
-  interface AxeOptions {
-    reporter?: 'v1' | 'v2';
+  export interface JestAxeOptions {
     runOnly?: {
       type: 'tag' | 'rule';
       values: string[];
+    } | string[] | string;
+    rules?: AxeRuleObject[];
+    context?: {
+      include?: string[][] | string[];
+      exclude?: string[][] | string[];
     };
-    rules?: Record<string, Omit<RunOptions, 'checks'> & {
-      checks?: Record<string, Partial<RunOptions>>;
-    }>;
+    elementRef?: boolean;
+    iframes?: boolean;
+    selectors?: boolean;
+    resultTypes?: string[];
+    xpath?: boolean;
   }
 
-  interface RunOptions {
-    enabled: boolean;
-    id?: string;
-    selector?: string;
-    matches?: string;
-    excludeHidden?: boolean;
-    options?: Record<string, unknown>;
-  }
-
-  function configureAxe(options: AxeOptions): AxeOptions;
-  function configureAxe(options: AxeOptions): Partial<AxeOptions>;
-
-  function axe(
-    element: HTMLElement | ElementHandle,
-    options?: Partial<AxeOptions>
-  ): Promise<AxeResults>;
-
-  function toHaveNoViolations(): void;
+  export function configureAxe(options: JestAxeConfigureOptions): void;
+  export function axe(html: Element | string, options?: JestAxeOptions): Promise<AxeResults>;
+  export function toHaveNoViolations(): {
+    compare(received: AxeResults): { pass: boolean; message: () => string };
+  };
   
-  namespace axe {
-    const configure: typeof configureAxe;
-  }
+  export function getViolations(results: AxeResults): Array<any>;
+  
+  export interface JestMatchers<R> extends ToAXEMatchers<R> {}
+}
 
-  export { axe, toHaveNoViolations, configureAxe };
-  export default axe;
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toHaveNoViolations(): R;
+    }
+  }
 }

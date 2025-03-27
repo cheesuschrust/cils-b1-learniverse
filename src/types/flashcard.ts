@@ -16,6 +16,8 @@ export interface Flashcard {
   examples?: string[];
   notes?: string;
   dueDate?: Date;
+  front?: string; // Added for compatibility with new version
+  back?: string; // Added for compatibility with new version
 }
 
 export interface FlashcardSet {
@@ -51,6 +53,7 @@ export interface FlashcardStats {
   averageScore: number;
   streak: number;
   lastReviewDate?: Date;
+  toReview?: number; // Added for compatibility
 }
 
 export interface ImportFormat {
@@ -91,4 +94,27 @@ export interface ImportResult {
   failed: number;
   errors: string[];
   newSetId?: string;
+}
+
+// FlashcardComponent props interface
+export interface FlashcardComponentProps {
+  flashcard: Flashcard;
+  onFlip?: () => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
+  onRating?: (rating: number) => void;
+  onSkip?: () => void;
+  onKnown?: () => void;
+  onUnknown?: () => void;
+  showControls?: boolean;
+  showHints?: boolean;
+  showPronunciation?: boolean;
+  showActions?: boolean;
+  autoFlip?: boolean;
+  frontLabel?: string;
+  backLabel?: string;
+  flipped?: boolean;
+  className?: string;
+  card?: Flashcard; // Legacy property for tests
 }

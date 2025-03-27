@@ -16,7 +16,7 @@ export interface User {
   id: string;
   email: string;
   username?: string;
-  firstName?: string; // Camel case property names
+  firstName?: string; 
   lastName?: string;
   first_name?: string; // Including snake case properties for backward compatibility
   last_name?: string;
@@ -27,6 +27,7 @@ export interface User {
   createdAt: Date;
   created_at?: Date; // Snake case property for backward compatibility
   updatedAt: Date; // Required property
+  updated_at?: Date; // Snake case property for backward compatibility
   lastLogin?: Date;
   last_login?: Date; // Snake case property for backward compatibility 
   lastActive?: Date;
@@ -39,7 +40,7 @@ export interface User {
   isAdmin?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
   subscription?: 'free' | 'premium' | 'trial';
-  preferences?: UserPreferences;
+  preferences: UserPreferences;
   preferred_language?: 'english' | 'italian' | 'both';
   preferredLanguage?: 'english' | 'italian' | 'both';
   dailyQuestionCounts?: {
@@ -50,7 +51,7 @@ export interface User {
     speaking: number;
     [key: string]: number;
   };
-  metrics?: {
+  metrics: {
     totalQuestions: number;
     correctAnswers: number;
     streak: number;

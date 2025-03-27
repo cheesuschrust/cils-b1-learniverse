@@ -12,6 +12,7 @@ export interface AdSettings {
   placement?: string[]; // For compatibility
   frequency?: number;  // For compatibility
   userGroupTargeting?: string[]; // For compatibility
+  networks?: string[]; // For compatibility with existing code
 }
 
 export interface AdUnit {
@@ -25,7 +26,7 @@ export interface AdUnit {
   clicks: number;
   revenue: number;
   lastUpdated: Date;
-  content?: string; // For compatibility
+  content: string; // Required for compatibility
   targetUrl?: string; // For compatibility
   impression?: number; // For compatibility
 }

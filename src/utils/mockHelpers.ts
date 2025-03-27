@@ -2,17 +2,17 @@
 import { User, UserRole } from '@/types/user';
 import { DocumentMeta, ParsedDocument } from '@/types/document';
 import { ChatMessage, ChatSession } from '@/types/chatbot';
-import { IAuthService, AuthResponse } from '@/types/service';
 import { ServiceFactory } from '@/services/ServiceFactory';
+import { IAuthService, AuthResponse, IDocumentService } from '@/types/service';
 
 /**
  * Create a mock user for testing
  */
 export const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 'test-user-id',
-  email: 'test@example.com',
   firstName: 'Test',
   lastName: 'User',
+  email: 'test@example.com',
   username: 'testuser',
   role: 'user' as UserRole,
   isVerified: true,
@@ -26,6 +26,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   last_login: new Date(),
   last_active: new Date(),
   created_at: new Date(),
+  updated_at: new Date(),
   preferences: {
     theme: 'light',
     emailNotifications: true,
@@ -37,6 +38,14 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   status: 'active',
   preferredLanguage: 'english',
   preferred_language: 'english',
+  displayName: 'Test User',
+  name: 'Test User',
+  isAdmin: false,
+  photoURL: '',
+  profileImage: '',
+  avatar: '',
+  phoneNumber: '',
+  address: '',
   dailyQuestionCounts: {
     flashcards: 0,
     multipleChoice: 0,
@@ -49,14 +58,6 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
     correctAnswers: 0,
     streak: 0
   },
-  displayName: 'Test User',
-  photoURL: '',
-  profileImage: '',
-  phoneNumber: '',
-  address: '',
-  avatar: '',
-  name: 'Test User',
-  isAdmin: false,
   ...overrides
 });
 
@@ -103,12 +104,11 @@ export const createMockParsedDocument = (overrides: Partial<ParsedDocument> = {}
  * Create a mock chat message for testing
  * This has been modified to be compatible with different ChatMessage interfaces
  */
-export const createMockChatMessage = (overrides: Partial<ChatMessage> = {}): any => ({
+export const createMockChatMessage = (overrides: Partial<any> = {}): any => ({
   id: 'test-message-id',
   content: 'Hello, this is a test message',
   text: 'Hello, this is a test message', // For compatibility
   isUser: true, // For compatibility
-  role: 'user', // For compatibility
   timestamp: new Date(),
   ...overrides
 });
@@ -117,7 +117,7 @@ export const createMockChatMessage = (overrides: Partial<ChatMessage> = {}): any
  * Create a mock chat session for testing
  * This has been modified to be compatible with different ChatSession interfaces
  */
-export const createMockChatSession = (overrides: Partial<ChatSession> = {}): any => ({
+export const createMockChatSession = (overrides: Partial<any> = {}): any => ({
   id: 'test-session-id',
   userId: 'test-user-id',
   title: 'Test Chat Session', // For compatibility
@@ -130,12 +130,10 @@ export const createMockChatSession = (overrides: Partial<ChatSession> = {}): any
   messages: [
     createMockChatMessage({
       id: 'test-message-id-1',
-      role: 'user', // For compatibility
       isUser: true // For compatibility
     }),
     createMockChatMessage({
       id: 'test-message-id-2',
-      role: 'assistant', // For compatibility
       isUser: false, // For compatibility
       content: 'Hello, how can I help you today?',
       text: 'Hello, how can I help you today?',
@@ -166,16 +164,42 @@ export const createMockAuthService = (): IAuthService => ({
 });
 
 /**
+ * Create mock document service for testing
+ */
+export const createMockDocumentService = (overrides: Partial<IDocumentService> = {}): IDocumentService => ({
+  uploadDocument: jest.fn().mockResolvedValue({ 
+    path: '/documents/test.pdf', 
+    url: 'https://example.com/documents/test.pdf' 
+  }),
+  parseDocumentContent: jest.fn().mockResolvedValue(createMockParsedDocument()),
+  saveDocumentMetadata: jest.fn().mockResolvedValue('test-doc-id'),
+  ...overrides
+});
+
+/**
  * Setup mock service factory for testing
  */
-export const setupMockServiceFactory = (): void => {
+export const createMockServiceFactory = (): ServiceFactory => {
   const factory = ServiceFactory.getInstance();
   factory.injectServices({
     authService: createMockAuthService(),
-    documentService: {
-      uploadDocument: jest.fn().mockResolvedValue({ path: '/test.pdf', url: 'https://example.com/test.pdf' }),
-      parseDocumentContent: jest.fn().mockResolvedValue(createMockParsedDocument()),
-      saveDocumentMetadata: jest.fn().mockResolvedValue('document-id')
-    }
+    documentService: createMockDocumentService()
   });
+  return factory;
 };
+
+/**
+ * Wait for all pending promises to resolve
+ */
+export const flushPromises = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
+
+/**
+ * Create a mock event object
+ */
+export const createMockEvent = (
+  overrides: Partial<Event | React.SyntheticEvent> = {}
+): Partial<Event | React.SyntheticEvent> => ({
+  preventDefault: jest.fn(),
+  stopPropagation: jest.fn(),
+  ...overrides
+});

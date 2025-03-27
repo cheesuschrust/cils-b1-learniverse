@@ -113,3 +113,16 @@ export interface AIServiceInterface {
   abortRequest(requestId: string): void;
   abortAllRequests(): void;
 }
+
+// Add AIStatus type for AIStatus component
+export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+// Add ConfidenceIndicatorProps for ConfidenceIndicator component
+export interface ConfidenceIndicatorProps {
+  score: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  indicatorClassName?: string;
+  contentType?: string;
+  value?: number;
+}

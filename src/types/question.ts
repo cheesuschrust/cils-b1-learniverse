@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   text: string;
@@ -17,6 +18,7 @@ export interface Question {
   difficultyFactor?: number;
   reviewCount?: number;
   lastReviewedAt?: Date;
+  question?: string; // Added for compatibility
 }
 
 export interface QuestionSet {
@@ -99,4 +101,16 @@ export interface ReviewPerformance {
   efficiency: number;
   streakDays: number;
   reviewsByCategory: Record<string, number>;
+}
+
+// For backward compatibility with older code
+export interface MultipleChoiceQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
+  category: string;
+  language: 'english' | 'italian';
 }
