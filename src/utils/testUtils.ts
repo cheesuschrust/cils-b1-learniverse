@@ -128,3 +128,17 @@ export const fillInput = (labelOrTestId: string, value: string): void => {
     fireEvent.change(input, { target: { value } });
   }
 };
+
+/**
+ * Render a component with props for testing
+ */
+export function renderWithProps<T>(Component: React.ComponentType<T>, props: T): RenderResult {
+  return render(<Component {...props} />);
+}
+
+/**
+ * Mock function with proper type annotations
+ */
+export const mockFunction = (param: string): string => {
+  return `mocked_${param}`;
+};

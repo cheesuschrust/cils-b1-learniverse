@@ -203,5 +203,24 @@ export const createMockEvent = (
   ...overrides
 });
 
+/**
+ * Mock Component for testing
+ */
+export const MockComponent: React.FC<{prop?: string}> = ({prop}) => <div data-testid="mock">{prop}</div>;
+
+/**
+ * Example regex pattern with proper termination
+ */
+export const mockRegex = /pattern/;
+
+/**
+ * Complex mock component with proper JSX structure
+ */
+export const ComplexMock: React.FC = () => (
+  <div>
+    <span>Test</span>
+  </div>
+);
+
 // Re-export testing utilities for convenience
 export * from '@testing-library/react';
