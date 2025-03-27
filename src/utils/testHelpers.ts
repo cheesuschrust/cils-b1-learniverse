@@ -11,7 +11,7 @@ import { ServiceFactory } from '@/services/ServiceFactory';
 import { IAuthService } from '@/types/service';
 
 /**
- * Create a custom render method that includes all providers
+ * Options for the custom render function
  */
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
@@ -48,7 +48,7 @@ export function renderWithProviders(
   });
 
   // Create a component wrapper with configurable providers
-  const Wrapper = ({ children }: { children: React.ReactNode }) => {
+  const Wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => {
     let wrappedElement = <>{children}</>;
 
     // Apply providers in the correct order
@@ -83,7 +83,7 @@ export function renderWithProviders(
 }
 
 /**
- * Create a mock user
+ * Create a mock user for testing
  */
 export const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 'test-user-id',
@@ -121,7 +121,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
 });
 
 /**
- * Create a mock document
+ * Create a mock document for testing
  */
 export const createMockDocument = (overrides: Partial<DocumentMeta> = {}): DocumentMeta => ({
   id: 'test-doc-id',
@@ -136,7 +136,7 @@ export const createMockDocument = (overrides: Partial<DocumentMeta> = {}): Docum
 });
 
 /**
- * Create a mock parsed document
+ * Create a mock parsed document for testing
  */
 export const createMockParsedDocument = (overrides: Partial<ParsedDocument> = {}): ParsedDocument => ({
   text: 'This is a test document content.',
@@ -160,7 +160,7 @@ export const createMockParsedDocument = (overrides: Partial<ParsedDocument> = {}
 });
 
 /**
- * Create mock auth service
+ * Create mock auth service for testing
  */
 export const createMockAuthService = (): IAuthService => ({
   login: jest.fn().mockResolvedValue({ user: createMockUser() }),
@@ -205,4 +205,3 @@ export const createMockEvent = (
 
 // Re-export testing utilities for convenience
 export * from '@testing-library/react';
-

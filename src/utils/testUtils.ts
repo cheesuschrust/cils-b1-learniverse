@@ -6,7 +6,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Create a custom render method that includes providers
+/**
+ * Options for the custom render function
+ */
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
   initialEntries?: string[];
