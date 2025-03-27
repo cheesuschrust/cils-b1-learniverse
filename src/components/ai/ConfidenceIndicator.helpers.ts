@@ -8,14 +8,19 @@
  * @param score Score value (can be percentage or decimal)
  * @returns Normalized score as percentage (0-100)
  */
-export const normalizeScore = (score: number): number => {
+export const normalizeScore = (score: number | string | null | undefined): number => {
   // Handle invalid inputs (null, undefined, NaN)
-  if (score === null || score === undefined || isNaN(score)) {
+  if (score === null || score === undefined || (typeof score === 'number' && isNaN(score))) {
     return 0;
   }
   
+  // Convert string to number if needed
+  const numericScore = typeof score === 'string' ? parseFloat(score) : score;
+  
   // If score is in decimal format (0-1), convert to percentage
-  const percentageScore = score <= 1 ? Math.round(score * 100) : Math.round(score);
+  const percentageScore = typeof numericScore === 'number' && numericScore <= 1 
+    ? Math.round(numericScore * 100) 
+    : Math.round(numericScore as number);
   
   // Ensure score is within valid range (0-100)
   return Math.min(Math.max(percentageScore, 0), 100);

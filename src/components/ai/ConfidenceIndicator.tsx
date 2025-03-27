@@ -6,6 +6,16 @@ import { normalizeScore, getConfidenceLabel, getConfidenceColor, getContentTypeT
 
 /**
  * Visual indicator for AI confidence scores
+ * 
+ * This component displays a confidence score for AI operations with visual feedback.
+ * It can handle both percentage (0-100) and decimal (0-1) score formats.
+ * 
+ * @param props.score - The confidence score (0-100 or 0-1)
+ * @param props.value - Alternative score property for backward compatibility
+ * @param props.size - Size variant for the indicator (sm, md, lg)
+ * @param props.className - Additional class names for the container
+ * @param props.indicatorClassName - Additional class names for the progress bar
+ * @param props.contentType - Type of content being evaluated (e.g., 'writing', 'speaking')
  */
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
