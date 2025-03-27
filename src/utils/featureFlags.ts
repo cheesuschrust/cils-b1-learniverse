@@ -11,12 +11,12 @@ const DEFAULT_FLAGS = {
   notifications: true,
   gamification: true,
   
-  // AI features
-  aiAssistant: true,
-  aiContentGeneration: true,
-  aiTranslation: true,
-  aiPronunciation: true,
-  aiPersonalization: true,
+  // AI features - set to false by default to ensure build stability
+  aiAssistant: false,
+  aiContentGeneration: false,
+  aiTranslation: false,
+  aiPronunciation: false,
+  aiPersonalization: false,
   
   // Learning features
   spacedRepetition: true,
@@ -26,10 +26,10 @@ const DEFAULT_FLAGS = {
   listeningPractice: true,
   
   // Advanced features
-  analyticsReports: true,
+  analyticsReports: false,
   exportToCSV: true,
   importFromCSV: true,
-  documentsUpload: true
+  documentsUpload: false
 };
 
 // Override flags based on environment

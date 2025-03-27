@@ -1,215 +1,184 @@
 
-import { Question, QuizAttempt, ReviewSchedule, ReviewPerformance } from '@/types/question';
-
 /**
- * Calculate the next review date based on user performance
- * @param correct Whether the user answered correctly
- * @param currentFactor Current difficulty factor (defaults to 2.5)
- * @param consecutiveCorrect Number of consecutive correct answers
- * @param confidenceAdjustment Optional adjustment based on confidence score (0-1)
- * @returns Next review date and updated difficulty factor
+ * Simplified spaced repetition utilities
  */
-export function calculateNextReview(
+
+import { Flashcard } from '@/types/interface-fixes';
+import { isFeatureEnabled } from '@/utils/featureFlags';
+import { ErrorCategory, ErrorSeverity, errorMonitoring } from '@/utils/errorMonitoring';
+
+// Calculate next review date based on difficulty and correctness
+export const calculateNextReview = (
   correct: boolean,
-  currentFactor: number = 2.5,
+  difficultyFactor: number = 2.5, 
   consecutiveCorrect: number = 0,
   confidenceAdjustment: number = 0
-): { nextReviewDate: Date; difficultyFactor: number } {
-  const now = new Date();
-  let days: number;
-  let difficultyFactor = currentFactor;
-  
-  if (!correct) {
-    // Reset the interval if answer was incorrect
-    days = 1;
-    // Decrease difficulty factor but not below 1.3
-    difficultyFactor = Math.max(1.3, currentFactor - 0.2);
-  } else {
-    // SM-2 algorithm for spacing
-    if (consecutiveCorrect === 0) {
-      days = 1;
-    } else if (consecutiveCorrect === 1) {
-      days = 3;
+): { nextReviewDate: Date; difficultyFactor: number } => {
+  try {
+    // Adjust difficulty factor based on answer
+    let newDifficultyFactor = difficultyFactor;
+    
+    if (correct) {
+      // If answered correctly, increase the difficulty factor slightly
+      newDifficultyFactor = Math.min(3.0, difficultyFactor + 0.1);
     } else {
-      // Interval progression based on difficulty factor
-      days = Math.round(consecutiveCorrect * currentFactor);
+      // If answered incorrectly, decrease the difficulty factor 
+      newDifficultyFactor = Math.max(1.3, difficultyFactor - 0.2);
     }
     
-    // Increase difficulty factor slightly for correct answers
-    difficultyFactor = currentFactor + 0.1;
+    // Calculate days until next review
+    let daysUntilNextReview: number;
     
-    // Cap difficulty factor at 2.5
-    difficultyFactor = Math.min(2.5, difficultyFactor);
-  }
-  
-  // Apply confidence adjustment if provided
-  // Lower confidence means shorter intervals
-  if (confidenceAdjustment > 0) {
-    days = Math.max(1, Math.round(days * (1 - confidenceAdjustment)));
-  }
-  
-  // Maximum interval cap at 60 days
-  days = Math.min(days, 60);
-  
-  // Calculate next review date
-  const nextReviewDate = new Date(now);
-  nextReviewDate.setDate(now.getDate() + days);
-  
-  return { nextReviewDate, difficultyFactor };
-}
-
-/**
- * Check if a review is due
- * @param nextReviewDate The date when the next review is due
- * @returns True if review is due, false otherwise
- */
-export function isDueForReview(nextReviewDate: Date): boolean {
-  const now = new Date();
-  return nextReviewDate <= now;
-}
-
-/**
- * Calculate days until next review
- * @param nextReviewDate The date when the next review is due
- * @returns Number of days until review is due, null if already due
- */
-export function daysUntilReview(nextReviewDate: Date): number | null {
-  const now = new Date();
-  
-  if (nextReviewDate <= now) {
-    return null; // Review is already due
-  }
-  
-  const diffTime = nextReviewDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays;
-}
-
-/**
- * Generate schedule of upcoming reviews
- * @param questions Array of questions with next review dates
- * @returns Schedule of reviews grouped by timeframe
- */
-export function generateReviewSchedule(questions: Question[]): ReviewSchedule {
-  const now = new Date();
-  const oneWeekFromNow = new Date(now);
-  oneWeekFromNow.setDate(now.getDate() + 7);
-  const twoWeeksFromNow = new Date(now);
-  twoWeeksFromNow.setDate(now.getDate() + 14);
-  
-  // Initialize review schedule
-  const schedule: ReviewSchedule = {
-    dueToday: 0,
-    dueThisWeek: 0,
-    dueNextWeek: 0,
-    dueByDate: {}
-  };
-  
-  // Filter out questions without review dates
-  const reviewQuestions = questions.filter(q => q.nextReviewDate);
-  
-  // Process each question
-  reviewQuestions.forEach(question => {
-    if (!question.nextReviewDate) return;
-    
-    const reviewDate = new Date(question.nextReviewDate);
-    const dateString = reviewDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Update counts by timeframe
-    if (reviewDate <= now) {
-      schedule.dueToday++;
-    } else if (reviewDate <= oneWeekFromNow) {
-      schedule.dueThisWeek++;
-    } else if (reviewDate <= twoWeeksFromNow) {
-      schedule.dueNextWeek++;
+    if (!correct) {
+      // If answered incorrectly, review again soon
+      daysUntilNextReview = 1;
+    } else {
+      // Calculate days based on consecutive correct answers and difficulty factor
+      switch (consecutiveCorrect) {
+        case 0: 
+          daysUntilNextReview = 1; 
+          break;
+        case 1: 
+          daysUntilNextReview = 3; 
+          break;
+        case 2: 
+          daysUntilNextReview = 7; 
+          break;
+        case 3: 
+          daysUntilNextReview = 14; 
+          break;
+        case 4: 
+          daysUntilNextReview = 30; 
+          break;
+        default: 
+          daysUntilNextReview = 60; 
+          break;
+      }
+      
+      // Apply difficulty factor
+      daysUntilNextReview = Math.round(daysUntilNextReview * newDifficultyFactor);
+      
+      // Apply confidence adjustment (reduce interval if confidence is low)
+      if (confidenceAdjustment > 0) {
+        daysUntilNextReview = Math.max(1, Math.round(daysUntilNextReview * (1 - confidenceAdjustment)));
+      }
     }
     
-    // Update counts by specific date
-    if (!schedule.dueByDate[dateString]) {
-      schedule.dueByDate[dateString] = 0;
-    }
-    schedule.dueByDate[dateString]++;
-  });
-  
-  return schedule;
-}
-
-/**
- * Calculate review performance metrics
- * @param attempts Array of quiz attempts that were reviews
- * @returns Performance metrics for reviews
- */
-export function calculateReviewPerformance(attempts: QuizAttempt[]): ReviewPerformance {
-  if (!attempts || attempts.length === 0) {
+    // Calculate next review date
+    const nextReviewDate = new Date();
+    nextReviewDate.setDate(nextReviewDate.getDate() + daysUntilNextReview);
+    
     return {
-      totalReviews: 0,
-      correctReviews: 0,
-      efficiency: 0,
-      streakDays: 0,
-      reviewsByCategory: {}
+      nextReviewDate,
+      difficultyFactor: newDifficultyFactor
+    };
+  } catch (error) {
+    errorMonitoring.captureError(
+      error instanceof Error ? error : new Error('Error calculating next review'),
+      ErrorSeverity.ERROR,
+      ErrorCategory.UNKNOWN,
+      { correct, difficultyFactor, consecutiveCorrect }
+    );
+    
+    // Fallback to a simple default in case of error
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return {
+      nextReviewDate: tomorrow,
+      difficultyFactor: 2.5
     };
   }
-  
-  // Initialize performance metrics
-  const performance: ReviewPerformance = {
-    totalReviews: 0,
-    correctReviews: 0,
-    efficiency: 0,
-    streakDays: 0,
-    reviewsByCategory: {}
-  };
-  
-  // Track unique days with reviews
-  const uniqueDays = new Set<string>();
-  
-  // Track categories
-  const categoryCounts: Record<string, number> = {};
-  
-  // Process each attempt
-  attempts.forEach(attempt => {
-    // Skip non-review attempts
-    if (!attempt.isReview) return;
+};
+
+// Check if a card is due for review
+export const isDueForReview = (date: Date): boolean => {
+  const now = new Date();
+  return date <= now;
+};
+
+// Calculate days until review
+export const daysUntilReview = (date: Date): number => {
+  const now = new Date();
+  const diffTime = date.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// Generate review schedule for a set of flashcards
+export const generateReviewSchedule = (flashcards: Flashcard[] = []): any => {
+  try {
+    // Group cards by review date
+    const dueByDate: Record<string, number> = {};
+    const dueToday: Flashcard[] = [];
+    const overdue: Flashcard[] = [];
+    const upcoming: Flashcard[] = [];
     
-    // Update total reviews
-    performance.totalReviews += attempt.answers.length;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0];
     
-    // Update correct reviews
-    const correctAnswers = attempt.answers.filter(a => a.isCorrect);
-    performance.correctReviews += correctAnswers.length;
+    flashcards.forEach(card => {
+      if (!card.nextReview) return;
+      
+      const reviewDate = new Date(card.nextReview);
+      const dateStr = reviewDate.toISOString().split('T')[0];
+      
+      // Count cards due on each date
+      dueByDate[dateStr] = (dueByDate[dateStr] || 0) + 1;
+      
+      // Categorize cards
+      if (dateStr === today) {
+        dueToday.push(card);
+      } else if (isDueForReview(reviewDate)) {
+        overdue.push(card);
+      } else {
+        upcoming.push(card);
+      }
+    });
     
-    // Track unique days
-    if (attempt.completedAt) {
-      const dayString = new Date(attempt.completedAt).toISOString().split('T')[0];
-      uniqueDays.add(dayString);
-    }
+    // Sort upcoming by date
+    upcoming.sort((a, b) => {
+      const dateA = new Date(a.nextReview || 0);
+      const dateB = new Date(b.nextReview || 0);
+      return dateA.getTime() - dateB.getTime();
+    });
     
-    // Track categories (assuming attempt has category info)
-    const category = attempt.questionSetId; // Use as fallback
-    if (!categoryCounts[category]) {
-      categoryCounts[category] = 0;
-    }
-    categoryCounts[category] += attempt.answers.length;
-  });
-  
-  // Calculate efficiency (% correct)
-  performance.efficiency = performance.totalReviews > 0 
-    ? Math.round((performance.correctReviews / performance.totalReviews) * 100) 
-    : 0;
-  
-  // Set streak days (number of unique days with reviews)
-  performance.streakDays = uniqueDays.size;
-  
-  // Set reviews by category
-  performance.reviewsByCategory = categoryCounts;
-  
-  return performance;
-}
+    return {
+      dueByDate,
+      dueToday,
+      overdue,
+      upcoming,
+      totalDue: dueToday.length + overdue.length,
+      nextWeekCount: Object.entries(dueByDate)
+        .filter(([date]) => {
+          const dateObj = new Date(date);
+          const diffDays = Math.ceil((dateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays > 0 && diffDays <= 7;
+        })
+        .reduce((sum, [_, count]) => sum + count, 0)
+    };
+  } catch (error) {
+    errorMonitoring.captureError(
+      error instanceof Error ? error : new Error('Error generating review schedule'),
+      ErrorSeverity.ERROR,
+      ErrorCategory.UNKNOWN,
+      { flashcardsCount: flashcards.length }
+    );
+    
+    // Return empty schedule in case of error
+    return {
+      dueByDate: {},
+      dueToday: [],
+      overdue: [],
+      upcoming: [],
+      totalDue: 0,
+      nextWeekCount: 0
+    };
+  }
+};
 
 export default {
   calculateNextReview,
   isDueForReview,
   daysUntilReview,
-  generateReviewSchedule,
-  calculateReviewPerformance
+  generateReviewSchedule
 };
