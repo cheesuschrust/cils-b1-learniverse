@@ -1,80 +1,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { UseAIReturn } from '@/types/ai';
-
-/**
- * Simplified AI service stub for testing and development
- */
-const AIServiceStub = {
-  generateText: async (prompt: string, options?: any): Promise<string> => {
-    // Simulate AI response based on prompt
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    if (prompt.includes('error')) {
-      throw new Error('Simulated error in AI processing');
-    }
-    
-    return `AI response to: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`;
-  },
-  
-  classifyText: async (text: string): Promise<Array<{ label: string; score: number }>> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-      { label: 'grammar', score: 0.8 },
-      { label: 'vocabulary', score: 0.7 },
-      { label: 'comprehension', score: 0.6 }
-    ];
-  },
-  
-  getConfidenceScore: (contentType: string): number => {
-    const scores: Record<string, number> = {
-      'flashcards': 82,
-      'multiple-choice': 78,
-      'writing': 69,
-      'speaking': 74,
-      'listening': 65
-    };
-    
-    return scores[contentType] || 70;
-  },
-  
-  generateFlashcards: async (topic: string, count: number = 5, difficulty: string = 'intermediate'): Promise<any[]> => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return Array.from({ length: count }, (_, i) => ({
-      id: `card-${i + 1}`,
-      front: `${topic} term ${i + 1}`,
-      back: `Definition ${i + 1} for ${topic}`,
-      difficulty
-    }));
-  },
-  
-  generateQuestions: async (content: string, count: number = 5, type: string = 'multiple-choice'): Promise<any[]> => {
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    
-    return Array.from({ length: count }, (_, i) => ({
-      id: `question-${i + 1}`,
-      text: `Question ${i + 1} about ${content.substring(0, 20)}...`,
-      type,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: 'Option A'
-    }));
-  },
-  
-  abortRequest: (requestId: string): void => {
-    console.log(`Aborting request ${requestId}`);
-  },
-  
-  abortAllRequests: (): void => {
-    console.log('Aborting all requests');
-  },
-  
-  addTrainingExamples: (contentType: string, examples: any[]): number => {
-    console.log(`Added ${examples.length} training examples for ${contentType}`);
-    return examples.length;
-  }
-};
+import AIServiceStub from '@/services/AIServiceStub';
 
 /**
  * Simplified hook for AI capabilities
@@ -83,24 +10,27 @@ export const useAISimplified = (): UseAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [status, setStatus] = useState('idle');
+  const [status, setStatus] = useState<string>('idle');
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Create a new abort controller
-  const createAbortController = () => {
+  const createAbortController = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
     return abortControllerRef.current;
-  };
+  }, []);
 
   // Generate text using the AI model
   const generateText = useCallback(async (prompt: string, options?: any): Promise<string> => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      // Create abort controller for this request
+      createAbortController();
       
       // Use the stub service
       const result = await AIServiceStub.generateText(prompt, options);
@@ -110,10 +40,10 @@ export const useAISimplified = (): UseAIReturn => {
     } catch (err) {
       setIsLoading(false);
       const errorMessage = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       throw errorMessage;
     }
-  }, []);
+  }, [createAbortController]);
 
   // Get confidence score for a content type
   const getConfidenceScore = useCallback(async (text: string, contentType: string): Promise<number> => {
@@ -122,7 +52,7 @@ export const useAISimplified = (): UseAIReturn => {
       return AIServiceStub.getConfidenceScore(contentType);
     } catch (err) {
       const errorMessage = err instanceof Error ? err : new Error('Failed to get confidence score');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       return 60; // Default fallback score
     }
   }, []);
@@ -132,6 +62,9 @@ export const useAISimplified = (): UseAIReturn => {
     try {
       setIsProcessing(true);
       setError(null);
+      
+      // Create abort controller for this request
+      createAbortController();
       
       // Use the stub service for classification
       const classifications = await AIServiceStub.classifyText(text);
@@ -145,10 +78,10 @@ export const useAISimplified = (): UseAIReturn => {
     } catch (err) {
       setIsProcessing(false);
       const errorMessage = err instanceof Error ? err : new Error('Failed to classify text');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       throw errorMessage;
     }
-  }, []);
+  }, [createAbortController]);
 
   // Generate flashcards
   const generateFlashcards = useCallback(async (
@@ -160,6 +93,9 @@ export const useAISimplified = (): UseAIReturn => {
       setIsProcessing(true);
       setError(null);
       
+      // Create abort controller for this request
+      createAbortController();
+      
       // Use the stub service
       const flashcards = await AIServiceStub.generateFlashcards(topic, count, difficulty);
       
@@ -168,10 +104,10 @@ export const useAISimplified = (): UseAIReturn => {
     } catch (err) {
       setIsProcessing(false);
       const errorMessage = err instanceof Error ? err : new Error('Failed to generate flashcards');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       throw errorMessage;
     }
-  }, []);
+  }, [createAbortController]);
 
   // Generate questions
   const generateQuestions = useCallback(async (
@@ -183,6 +119,9 @@ export const useAISimplified = (): UseAIReturn => {
       setIsProcessing(true);
       setError(null);
       
+      // Create abort controller for this request
+      createAbortController();
+      
       // Use the stub service
       const questions = await AIServiceStub.generateQuestions(content, count, type);
       
@@ -191,10 +130,82 @@ export const useAISimplified = (): UseAIReturn => {
     } catch (err) {
       setIsProcessing(false);
       const errorMessage = err instanceof Error ? err : new Error('Failed to generate questions');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       throw errorMessage;
     }
-  }, []);
+  }, [createAbortController]);
+
+  // Translate text to target language
+  const translateText = useCallback(async (
+    text: string, 
+    targetLang: 'english' | 'italian'
+  ): Promise<string> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Create abort controller for this request
+      createAbortController();
+      
+      // Use prompt template for translation
+      const sourceLang = targetLang === 'english' ? 'italian' : 'english';
+      const prompt = `Translate the following ${sourceLang} text to ${targetLang}: ${text}`;
+      
+      // Use the generative text API for translation
+      const result = await AIServiceStub.generateText(prompt, { temperature: 0.3 });
+      
+      setIsLoading(false);
+      return result;
+    } catch (err) {
+      setIsLoading(false);
+      const errorMessage = err instanceof Error ? err : new Error('Failed to translate text');
+      setError(errorMessage);
+      throw errorMessage;
+    }
+  }, [createAbortController, generateText]);
+
+  // Check grammar and provide corrections
+  const checkGrammar = useCallback(async (
+    text: string, 
+    lang: 'english' | 'italian'
+  ): Promise<{text: string, corrections: any[]}> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Create abort controller for this request
+      createAbortController();
+      
+      // Use prompt template for grammar checking
+      const prompt = `Check the grammar of the following ${lang} text and provide corrections: ${text}`;
+      
+      // Use the generative text API for grammar checking
+      const result = await AIServiceStub.generateText(prompt, { temperature: 0.2 });
+      
+      // Parse corrections from the result (simplified mock implementation)
+      const corrections: any[] = [];
+      
+      // Add a few mock corrections
+      if (text.length > 10) {
+        corrections.push({
+          original: text.split(' ')[0],
+          correction: text.split(' ')[0] + ' (corrected)',
+          position: 0
+        });
+      }
+      
+      setIsLoading(false);
+      return {
+        text: result,
+        corrections
+      };
+    } catch (err) {
+      setIsLoading(false);
+      const errorMessage = err instanceof Error ? err : new Error('Failed to check grammar');
+      setError(errorMessage);
+      throw errorMessage;
+    }
+  }, [createAbortController, generateText]);
 
   // Load model
   const loadModel = useCallback(async (modelName: string): Promise<boolean> => {
@@ -213,7 +224,7 @@ export const useAISimplified = (): UseAIReturn => {
       setIsLoading(false);
       setStatus('Error loading model');
       const errorMessage = err instanceof Error ? err : new Error('Failed to load model');
-      setError(errorMessage as Error);
+      setError(errorMessage);
       return false;
     }
   }, []);
@@ -243,7 +254,9 @@ export const useAISimplified = (): UseAIReturn => {
     isModelLoaded,
     status,
     loadModel,
-    generateQuestions
+    generateQuestions,
+    translateText,
+    checkGrammar
   };
 };
 

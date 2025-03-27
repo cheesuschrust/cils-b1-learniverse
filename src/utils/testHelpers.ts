@@ -200,7 +200,7 @@ export const createMockEvent = (
 ): Partial<Event | React.SyntheticEvent> => ({
   preventDefault: jest.fn(),
   stopPropagation: jest.fn(),
-  ...overrides,
+  ...overrides
 });
 
 // Re-export testing utilities for convenience

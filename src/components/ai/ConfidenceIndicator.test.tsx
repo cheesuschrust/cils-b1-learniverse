@@ -97,4 +97,27 @@ describe('ConfidenceIndicator', () => {
     rerender(<ConfidenceIndicator score={25} />);
     expect(screen.getByText('Needs Work (25%)')).toBeInTheDocument();
   });
+  
+  test('handles edge cases for score values', () => {
+    const { rerender } = render(<ConfidenceIndicator score={100} />);
+    expect(screen.getByText('Excellent (100%)')).toBeInTheDocument();
+    
+    rerender(<ConfidenceIndicator score={0} />);
+    expect(screen.getByText('Needs Work (0%)')).toBeInTheDocument();
+    
+    // Should handle negative values by clamping to 0
+    rerender(<ConfidenceIndicator score={-10} />);
+    expect(screen.getByText('Needs Work (0%)')).toBeInTheDocument();
+    
+    // Should handle values > 100 by clamping to 100
+    rerender(<ConfidenceIndicator score={110} />);
+    expect(screen.getByText('Excellent (100%)')).toBeInTheDocument();
+  });
+
+  test('handles custom indicatorClassName prop', () => {
+    render(<ConfidenceIndicator score={75} indicatorClassName="custom-indicator" />);
+    
+    const progressFill = document.querySelector('.progress-bar-fill');
+    expect(progressFill).toHaveClass('custom-indicator');
+  });
 });

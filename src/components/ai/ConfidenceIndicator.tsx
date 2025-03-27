@@ -18,20 +18,18 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   const displayScore = score <= 1 ? Math.round(score * 100) : Math.round(score);
   
   // Support for older value prop for backward compatibility
-  const finalScore = value !== undefined ? (value <= 1 ? Math.round(value * 100) : Math.round(value)) : displayScore;
+  const finalScore = value !== undefined 
+    ? (value <= 1 ? Math.round(value * 100) : Math.round(value)) 
+    : displayScore;
+  
+  // Ensure score is within valid range (0-100)
+  const clampedScore = Math.min(Math.max(finalScore, 0), 100);
   
   // Determine color based on confidence score
   const getColor = (value: number) => {
     if (value >= 80) return 'bg-green-500';
     if (value >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
-  };
-  
-  // Determine label based on confidence score
-  const getLabel = (value: number) => {
-    if (value >= 80) return 'High';
-    if (value >= 60) return 'Medium';
-    return 'Low';
   };
   
   // Get title based on content type
@@ -68,14 +66,14 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
           {getTitle(contentType)}
         </span>
         <span className={cn('font-medium', sizeClasses[size])}>
-          {getScoreLabel(finalScore)} ({finalScore}%)
+          {getScoreLabel(clampedScore)} ({clampedScore}%)
         </span>
       </div>
       
       <div className={cn('bg-secondary w-full overflow-hidden rounded-full progress-bar', sizeClasses[size])}>
         <div 
-          className={cn('rounded-full progress-bar-fill', getColor(finalScore), indicatorClassName)}
-          style={{ width: `${Math.min(Math.max(finalScore, 0), 100)}%` }}
+          className={cn('rounded-full progress-bar-fill', getColor(clampedScore), indicatorClassName)}
+          style={{ width: `${clampedScore}%` }}
         />
       </div>
     </div>

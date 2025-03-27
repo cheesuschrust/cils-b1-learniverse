@@ -28,11 +28,5 @@ module.exports = {
   // Reset modules between test runs to prevent shared state
   resetModules: true,
   // Force full test runs to avoid stale cache issues
-  bail: 0,
-  // Mock for external modules that might cause issues
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/tests/mocks/fileMock.js'
-  }
+  bail: 0
 };
