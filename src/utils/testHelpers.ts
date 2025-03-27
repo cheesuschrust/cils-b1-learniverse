@@ -206,7 +206,9 @@ export const createMockEvent = (
 /**
  * Mock Component for testing
  */
-export const MockComponent: React.FC<{prop?: string}> = ({prop}) => <div data-testid="mock">{prop}</div>;
+export const MockComponent: React.FC<{prop?: string}> = ({prop}) => (
+  <div data-testid="mock">{prop}</div>
+);
 
 /**
  * Example regex pattern with proper termination
