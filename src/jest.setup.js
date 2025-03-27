@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 
-// Mock global objects
+// Configure global mocks and polyfills
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
@@ -25,7 +25,7 @@ Object.defineProperty(window, 'matchMedia', {
 global.scrollTo = jest.fn();
 
 // Mock localStorage
-const localStorageMock = (function() {
+const localStorageMock = (() => {
   let store = {};
   return {
     getItem: jest.fn(key => store[key] || null),
@@ -115,5 +115,46 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   thresholds: [],
 }));
 
-// Suppress console errors in tests
-jest.spyOn(console, 'error').mockImplementation(() => {});
+// Mock request animation frame
+global.requestAnimationFrame = callback => {
+  setTimeout(callback, 0);
+  return 0;
+};
+
+// Console handling during tests
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  // Ignore specific expected errors during tests
+  const errorMessages = args.join(' ');
+  const ignoredMessages = [
+    'Warning: ReactDOM.render is no longer supported',
+    'Warning: useLayoutEffect does nothing on the server',
+    'Warning: React.createFactory()',
+    'Warning: The current testing environment',
+  ];
+  
+  if (!ignoredMessages.some(msg => errorMessages.includes(msg))) {
+    originalConsoleError(...args);
+  }
+};
+
+// Add custom matchers
+expect.extend({
+  toBeWithinRange(received, floor, ceiling) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () => `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+});
+
+// Log test environment setup completed
+console.log('Jest testing environment setup completed');

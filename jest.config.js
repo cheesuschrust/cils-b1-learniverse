@@ -2,10 +2,11 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/src/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/src/tests/mocks/fileMock.js'
   },
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   transform: {
@@ -56,4 +57,27 @@ module.exports = {
       },
     },
   },
+  // Automatically clear mock calls and instances between tests
+  clearMocks: true,
+  // Restore mocks between tests, this preserves the mock implementation
+  restoreMocks: true,
+  // Reset modules between test runs to prevent shared state
+  resetModules: true,
+  // Force full test runs to avoid stale cache issues
+  bail: 0,
+  // Tell Jest to enable the --detectOpenHandles flag
+  detectOpenHandles: true,
+  // Specify how long until Jest times out watch operations
+  watchPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/',
+    '<rootDir>/coverage/',
+    '<rootDir>/test-results/'
+  ],
+  // Parallel test execution
+  maxWorkers: '50%',
+  // Improve test output
+  errorOnDeprecated: true,
+  // CI friendly output
+  ci: process.env.CI === 'true',
 };
