@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import ConfidenceIndicator from './ConfidenceIndicator';
+import '@testing-library/jest-dom';
 
 describe('ConfidenceIndicator', () => {
   test('renders with default props using score percentage value', () => {

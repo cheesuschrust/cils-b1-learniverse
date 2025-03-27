@@ -165,6 +165,6 @@ export function renderWithProps<T>(Component: React.ComponentType<T>, props: T):
 /**
  * Mock function with proper type annotations
  */
-export const mockFunction = (param: string): string => {
+export const mockFunction = <T extends string>(param: T): string => {
   return `mocked_${param}`;
 };
