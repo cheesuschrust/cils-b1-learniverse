@@ -30,8 +30,10 @@ export interface AIFeedback {
 }
 
 export interface ConfidenceIndicatorProps {
-  score: number;
+  score?: number;
+  value?: number; // For backward compatibility
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   indicatorClassName?: string;
+  contentType?: string;
 }
