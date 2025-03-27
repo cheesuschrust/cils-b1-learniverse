@@ -5,9 +5,17 @@ import {
   IAuthService, 
   LoginCredentials, 
   RegisterData, 
-  AuthResponse,
-  ServiceError
-} from "@/types/service";
+  AuthResponse 
+} from "@/services/interfaces/IAuthService";
+
+// Define ServiceError interface
+interface ServiceError extends Error {
+  name: string;
+  message: string;
+  code: string;
+  status: number;
+  details?: any;
+}
 
 export class AuthService implements IAuthService {
   login = async (credentials: LoginCredentials): Promise<AuthResponse> => {

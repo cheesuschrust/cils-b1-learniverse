@@ -1,4 +1,3 @@
-
 // This file fixes any interface compatibility issues between our own types
 // and third-party library types
 
@@ -47,13 +46,15 @@ export interface Flashcard {
   lastReviewed?: Date;
   nextReviewDate?: Date;
   reviewCount?: number;
-  mastered?: boolean;
+  mastered: boolean; // Changed to required based on errors
   level: number; // Changed to required based on errors
   nextReview?: Date; // Added nextReview property
   createdAt: Date; // Changed to required based on errors
   updatedAt: Date; // Changed to required based on errors
   explanation?: string; // Added explanation property
   dueDate?: Date; // Added for compatibility
+  audioUrl?: string;
+  imageUrl?: string;
 }
 
 // Define all the types that require compatibility fixes
@@ -135,7 +136,7 @@ export interface SupportTicketExtension {
   status?: 'open' | 'in-progress' | 'resolved' | 'closed' | 'pending';
 }
 
-// Fix LineChartProps
+// Define LineChartProps
 export interface LineChartProps {
   data: any[];
   index: string;
@@ -174,7 +175,22 @@ export interface AISettings {
 export interface AISettingsProps {
   initialSettings?: AISettings;
   onSettingsChange?: (settings: AISettings) => void;
-  onClose?: () => void;
+}
+
+// Update AIPreferences to match what's used in the code
+export interface AIPreferences {
+  enabled: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  cacheResponses: boolean;
+  voiceEnabled: boolean;
+  defaultLanguage: 'english' | 'italian' | 'both';
+  voiceRate: number;
+  voicePitch: number;
+  italianVoiceURI?: string;
+  englishVoiceURI?: string;
+  defaultModelSize: 'small' | 'medium' | 'large';
+  useWebGPU: boolean;
+  anonymousAnalytics: boolean;
 }
 
 // Define LevelBadgeProps
@@ -206,21 +222,20 @@ export interface ChatSession {
   context?: string | Record<string, any>;
 }
 
-// Add missing types for Toast
+// Define Toast interface with duration
 export interface Toast {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
   variant?: "default" | "destructive" | "success" | "warning";
-  duration?: number; // Added for compatibility
+  duration?: number; // Added for compatibility with hooks
 }
 
-// Add missing ProtectedRouteProps interface
+// Add missing ProtectedRouteProps
 export interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
-  requireAdmin?: boolean;
 }
 
 // Update interfaces for AuthContextType
@@ -246,12 +261,38 @@ export interface AuthContextType {
   updateSystemLog: (id: string, data: any) => Promise<void>;
 }
 
-export interface RegisterData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
+// Clearly define notification types
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  createdAt: Date | string;
+  timestamp?: Date | string;
+  read: boolean;
+  actions?: NotificationAction[];
+  url?: string;
+  metadata?: Record<string, any>;
+  userId?: string;
+  priority?: 'low' | 'normal' | 'high';
+  icon?: string;
+  link?: string;
+  expiresAt?: Date | string;
 }
 
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing';
+
+export interface NotificationAction {
+  id: string;
+  label: string;
+}
+
+// Add missing ProtectedRouteProps
+export interface ProtectedRouteProps {
+  children: React.ReactNode;
+  allowedRoles?: string[];
+}
+
+// Fix AIModel type to include all variations
 export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'mistral-small' | 'claude-instant' | 'small' | 'medium' | 'large';

@@ -1,4 +1,3 @@
-
 export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher';
 
 export type UserPreferences = {
@@ -22,6 +21,9 @@ export interface User {
   last_name?: string;
   displayName?: string;
   name?: string;
+  photoURL?: string;
+  profileImage?: string;
+  avatar?: string;
   role: UserRole;
   isVerified?: boolean;
   createdAt?: Date;
@@ -32,14 +34,11 @@ export interface User {
   last_login?: Date; // Snake case property for backward compatibility 
   lastActive?: Date;
   last_active?: Date; // Snake case property for backward compatibility
-  avatar?: string;
-  photoURL?: string;
-  profileImage?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  subscription?: 'free' | 'premium' | 'trial';
   phoneNumber?: string;
   address?: string;
   isAdmin?: boolean;
-  status?: 'active' | 'inactive' | 'suspended';
-  subscription?: 'free' | 'premium' | 'trial';
   preferences: UserPreferences;
   preferredLanguage?: 'english' | 'italian' | 'both';
   preferred_language?: 'english' | 'italian' | 'both';
