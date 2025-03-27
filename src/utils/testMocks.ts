@@ -16,13 +16,15 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   role: 'user' as UserRole,
   isVerified: true,
   createdAt: new Date(),
+  updatedAt: new Date(),
   lastLogin: new Date(),
   lastActive: new Date(),
   preferences: {
     theme: 'light',
     emailNotifications: true,
     language: 'en',
-    difficulty: 'intermediate'
+    difficulty: 'intermediate',
+    onboardingCompleted: true
   },
   subscription: 'free',
   status: 'active',
@@ -39,6 +41,13 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
     correctAnswers: 0,
     streak: 0
   },
+  displayName: 'Test User',
+  photoURL: '',
+  phoneNumber: '',
+  address: '',
+  avatar: '',
+  name: 'Test User',
+  isAdmin: false,
   ...overrides
 });
 
@@ -91,7 +100,14 @@ export const createMockAuthService = (): IAuthService => ({
   forgotPassword: jest.fn().mockResolvedValue(undefined),
   resetPassword: jest.fn().mockResolvedValue(undefined),
   verifyEmail: jest.fn().mockResolvedValue(undefined),
-  testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' })
+  testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' }),
+  updateProfile: jest.fn().mockResolvedValue({ user: createMockUser() }),
+  updatePassword: jest.fn().mockResolvedValue(undefined),
+  refreshUser: jest.fn().mockResolvedValue(createMockUser()),
+  signup: jest.fn().mockResolvedValue({ user: createMockUser() }),
+  incrementDailyQuestionCount: jest.fn().mockResolvedValue(true),
+  resendVerificationEmail: jest.fn().mockResolvedValue(true),
+  socialLogin: jest.fn().mockResolvedValue(true)
 });
 
 /**

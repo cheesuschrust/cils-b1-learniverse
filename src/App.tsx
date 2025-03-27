@@ -40,7 +40,7 @@ function App() {
   
   // Check if the user needs to see onboarding
   useEffect(() => {
-    if (user && user.completed_onboarding === false) {
+    if (user && user.preferences?.onboardingCompleted === false) {
       setShowOnboarding(true);
     }
   }, [user]);

@@ -75,7 +75,11 @@ export function renderWithProviders(
     return wrappedElement;
   };
 
-  return render(ui, { wrapper: Wrapper, ...renderOptions });
+  return {
+    ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    // Additional test utilities
+    queryClient,
+  };
 }
 
 // Re-export testing utilities for convenience

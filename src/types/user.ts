@@ -6,6 +6,8 @@ export type UserPreferences = {
   emailNotifications?: boolean;
   language?: 'en' | 'it';
   frequency?: 'daily' | 'weekly' | 'monthly';
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  onboardingCompleted?: boolean;
   [key: string]: any;
 };
 
@@ -19,10 +21,31 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
+  lastActive?: Date;
   avatar?: string;
   preferences?: UserPreferences;
-  subscriptionId?: string;
-  subscriptionStatus?: 'active' | 'inactive' | 'trial' | 'expired';
-  subscriptionExpiry?: Date;
-  verifiedEmail?: boolean;
+  subscription?: 'free' | 'premium' | 'trial';
+  status?: 'active' | 'inactive' | 'suspended';
+  isVerified?: boolean;
+  preferredLanguage?: 'english' | 'italian' | 'both';
+  displayName?: string;
+  photoURL?: string;
+  phoneNumber?: string;
+  address?: string;
+  name?: string;
+  isAdmin?: boolean;
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+    [key: string]: any;
+  };
+  dailyQuestionCounts?: {
+    flashcards: number;
+    multipleChoice: number;
+    listening: number;
+    writing: number;
+    speaking: number;
+    [key: string]: number;
+  };
 }
