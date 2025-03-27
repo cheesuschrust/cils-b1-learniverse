@@ -48,4 +48,12 @@ module.exports = {
       outputName: 'results.xml',
     }],
   ],
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
+      diagnostics: {
+        warnOnly: true,
+      },
+    },
+  },
 };

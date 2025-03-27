@@ -1,14 +1,14 @@
 
-import { IAuthService } from "./interfaces/IAuthService";
-import { IDocumentService } from "./interfaces/IDocumentService";
-import { AuthService } from "./AuthService";
-import DocumentService from "./DocumentService";
+import { IAuthService, LoginCredentials, RegisterData, AuthResponse } from '@/types/service';
+import { IDocumentService } from '@/types/service';
+import { AuthService } from './AuthService';
+import DocumentService from './DocumentService';
 
 // Service factory to enable dependency injection and easier mocking
 export class ServiceFactory {
   private static _instance: ServiceFactory;
-  private _authService: any;
-  private _documentService: any;
+  private _authService: IAuthService;
+  private _documentService: IDocumentService;
   
   private constructor() {
     this._authService = AuthService;
@@ -29,8 +29,8 @@ export class ServiceFactory {
   
   // For testing - allows injecting mock services
   public injectServices(services: {
-    authService?: any;
-    documentService?: any;
+    authService?: IAuthService;
+    documentService?: IDocumentService;
   }) {
     if (services.authService) {
       this._authService = services.authService;

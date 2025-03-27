@@ -1,94 +1,89 @@
 
+import React from 'react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a custom render method that includes providers
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  route?: string;
+  initialEntries?: string[];
+}
+
 /**
- * Utilities for testing components and functionality
+ * Custom render function that wraps the component with all required providers
  */
-import { render, RenderResult } from '@testing-library/react';
-import React, { FC, ReactElement } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '@/components/ui/theme-provider';
-import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
-import { GamificationProvider } from '@/contexts/GamificationContext';
-import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-
-// Test wrapper that includes all providers
-interface TestWrapperProps {
-  children: React.ReactNode;
-}
-
-export const TestWrapper: FC<TestWrapperProps> = ({ children }) => {
-  return (
-    <BrowserRouter>
-      <ThemeProvider defaultTheme="light">
-        <ErrorBoundary>
-          <AIUtilsProvider>
-            <GamificationProvider>
-              {children}
-            </GamificationProvider>
-          </AIUtilsProvider>
-        </ErrorBoundary>
-      </ThemeProvider>
-    </BrowserRouter>
-  );
-};
-
-// Custom render that wraps with all providers
 export function renderWithProviders(
-  ui: ReactElement,
-  options = {}
+  ui: React.ReactElement,
+  options: CustomRenderOptions = {}
 ): RenderResult {
-  return render(ui, { wrapper: TestWrapper, ...options });
+  const {
+    route = '/',
+    initialEntries = [route],
+    ...renderOptions
+  } = options;
+
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  function AllTheProviders({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ThemeProvider>
+            <MemoryRouter initialEntries={initialEntries}>
+              <Routes>
+                <Route path={route} element={children} />
+              </Routes>
+            </MemoryRouter>
+          </ThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return render(ui, { wrapper: AllTheProviders, ...renderOptions });
 }
 
-// Mock for browser APIs that might not be available in test environment
-export const setupBrowserMocks = () => {
-  // Mock local storage
-  const mockLocalStorage = (() => {
-    let store: Record<string, string> = {};
-    return {
-      getItem: (key: string) => store[key] || null,
-      setItem: (key: string, value: string) => { store[key] = value.toString(); },
-      removeItem: (key: string) => { delete store[key]; },
-      clear: () => { store = {}; }
-    };
-  })();
-  
-  Object.defineProperty(window, 'localStorage', {
-    value: mockLocalStorage
-  });
-  
-  // Mock speech synthesis
-  Object.defineProperty(window, 'speechSynthesis', {
-    value: {
-      speak: jest.fn(),
-      cancel: jest.fn(),
-      pause: jest.fn(),
-      resume: jest.fn(),
-      getVoices: jest.fn(() => []),
-      onvoiceschanged: null
-    }
-  });
-  
-  // Mock media devices
-  Object.defineProperty(window.navigator, 'mediaDevices', {
-    value: {
-      getUserMedia: jest.fn().mockResolvedValue({}),
-      enumerateDevices: jest.fn().mockResolvedValue([])
-    }
-  });
+/**
+ * Mock implementations for commonly used hooks and services
+ */
+export const mockServices = {
+  authService: {
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
+    verifyEmail: jest.fn(),
+    testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' }),
+  },
+  documentService: {
+    uploadDocument: jest.fn(),
+    parseDocumentContent: jest.fn(),
+    saveDocumentMetadata: jest.fn(),
+  }
 };
 
-// Helper to wait for component to update
-export const wait = (ms: number = 0): Promise<void> => 
-  new Promise(resolve => setTimeout(resolve, ms));
+/**
+ * Helper to create a mock event object
+ */
+export const createMockEvent = (
+  overrides: Partial<Event> = {}
+): Partial<Event> => ({
+  preventDefault: jest.fn(),
+  stopPropagation: jest.fn(),
+  ...overrides,
+});
 
-// Helper to mock API responses
-export const mockApiResponse = <T>(data: T, delay = 100): Promise<T> => 
-  new Promise(resolve => setTimeout(() => resolve(data), delay));
-
-export default {
-  renderWithProviders,
-  setupBrowserMocks,
-  wait,
-  mockApiResponse,
-  TestWrapper
-};
+/**
+ * Helper to wait for async operations
+ */
+export const waitForAsync = () => new Promise(resolve => setTimeout(resolve, 0));

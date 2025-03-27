@@ -1,159 +1,263 @@
 
-/**
- * Feature flag system to enable/disable features based on environment,
- * user preferences, or to disable problematic features when needed.
- */
-import { useCallback, useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
-// Flag type definitions for type safety
-export type FeatureFlag = keyof typeof DEFAULT_FLAGS;
+// Define types for feature flags
+export type FeatureFlag = 
+  | 'aiAssistant'
+  | 'darkMode'
+  | 'analytics'
+  | 'beta'
+  | 'errorReporting'
+  | 'pushNotifications'
+  | 'premiumFeatures'
+  | 'translationEngine'
+  | 'audioRecording'
+  | 'videoPlayback'
+  | 'socialSharing'
+  | 'infiniteScroll'
+  | 'advancedFilters'
+  | 'ttsEngine'
+  | 'serverSideRendering';
 
-// Default feature flags
-const DEFAULT_FLAGS = {
-  // Core features
-  darkMode: true,
-  notifications: true,
-  gamification: true,
-  
-  // AI features - set to false by default to ensure build stability
-  aiAssistant: false,
-  aiContentGeneration: false,
-  aiTranslation: false,
-  aiPronunciation: false,
-  aiPersonalization: false,
-  
-  // Learning features
-  spacedRepetition: true,
-  multipleChoice: true,
-  writingFeedback: true,
-  speakingPractice: true,
-  listeningPractice: true,
-  
-  // Advanced features
-  analyticsReports: false,
-  exportToCSV: true,
-  importFromCSV: true,
-  documentsUpload: false
-};
+// Define the feature flag configuration
+export interface FeatureFlagConfig {
+  name: FeatureFlag;
+  description: string;
+  defaultValue: boolean;
+  groupOverrides?: Record<string, boolean>;
+  userOverrides?: Record<string, boolean>;
+  dependencies?: FeatureFlag[];
+  rolloutPercentage?: number;
+  expiresAt?: Date;
+}
 
-// Type for feature flag values - extracted from DEFAULT_FLAGS
-export type FeatureFlags = {
-  [K in FeatureFlag]: boolean;
-};
-
-// Override flags based on environment
-const ENV_FLAGS: Partial<FeatureFlags> = process.env.NODE_ENV === 'production' 
-  ? {
-      // Disable unstable features in production
-      documentUpload: false,
-    }
-  : {};
-
-// Get feature flags from localStorage if available
-const getLocalFlags = (): Partial<FeatureFlags> => {
-  try {
-    const storedFlags = localStorage.getItem('featureFlags');
-    return storedFlags ? JSON.parse(storedFlags) : {};
-  } catch (error) {
-    console.error('Error reading feature flags from localStorage:', error);
-    return {};
+// Default configuration for all feature flags
+const defaultFeatureFlags: Record<FeatureFlag, FeatureFlagConfig> = {
+  aiAssistant: {
+    name: 'aiAssistant',
+    description: 'Enable AI-powered assistant features',
+    defaultValue: true,
+    rolloutPercentage: 100
+  },
+  darkMode: {
+    name: 'darkMode',
+    description: 'Enable dark mode theme option',
+    defaultValue: true
+  },
+  analytics: {
+    name: 'analytics',
+    description: 'Enable analytics tracking',
+    defaultValue: true
+  },
+  beta: {
+    name: 'beta',
+    description: 'Enable beta features',
+    defaultValue: false,
+    rolloutPercentage: 20
+  },
+  errorReporting: {
+    name: 'errorReporting',
+    description: 'Enable error reporting to backend',
+    defaultValue: true
+  },
+  pushNotifications: {
+    name: 'pushNotifications',
+    description: 'Enable push notifications',
+    defaultValue: false,
+    rolloutPercentage: 50
+  },
+  premiumFeatures: {
+    name: 'premiumFeatures',
+    description: 'Enable premium features for paid users',
+    defaultValue: false
+  },
+  translationEngine: {
+    name: 'translationEngine',
+    description: 'Enable translation engine',
+    defaultValue: true
+  },
+  audioRecording: {
+    name: 'audioRecording',
+    description: 'Enable audio recording features',
+    defaultValue: true
+  },
+  videoPlayback: {
+    name: 'videoPlayback',
+    description: 'Enable video playback features',
+    defaultValue: true
+  },
+  socialSharing: {
+    name: 'socialSharing',
+    description: 'Enable social sharing features',
+    defaultValue: true
+  },
+  infiniteScroll: {
+    name: 'infiniteScroll',
+    description: 'Enable infinite scrolling on lists',
+    defaultValue: true
+  },
+  advancedFilters: {
+    name: 'advancedFilters',
+    description: 'Enable advanced filtering options',
+    defaultValue: false,
+    rolloutPercentage: 30
+  },
+  ttsEngine: {
+    name: 'ttsEngine',
+    description: 'Enable text-to-speech engine',
+    defaultValue: true
+  },
+  serverSideRendering: {
+    name: 'serverSideRendering',
+    description: 'Enable server-side rendering',
+    defaultValue: false
   }
 };
 
-// Save feature flags to localStorage
-const saveLocalFlags = (flags: Partial<FeatureFlags>): void => {
+// Get feature flags from local storage or set defaults
+const getPersistedFeatureFlags = (): Record<FeatureFlag, boolean> => {
   try {
-    localStorage.setItem('featureFlags', JSON.stringify(flags));
-  } catch (error) {
-    console.error('Error saving feature flags to localStorage:', error);
+    const stored = localStorage.getItem('featureFlags');
+    const storedFlags = stored ? JSON.parse(stored) : {};
+    
+    // Start with default values
+    const flags = Object.entries(defaultFeatureFlags).reduce(
+      (acc, [key, config]) => ({
+        ...acc,
+        [key]: config.defaultValue
+      }),
+      {} as Record<FeatureFlag, boolean>
+    );
+    
+    // Override with stored values
+    return { ...flags, ...storedFlags };
+  } catch (e) {
+    // Fallback to defaults if there's an error
+    console.error('Error reading feature flags from localStorage', e);
+    return Object.entries(defaultFeatureFlags).reduce(
+      (acc, [key, config]) => ({
+        ...acc,
+        [key]: config.defaultValue
+      }),
+      {} as Record<FeatureFlag, boolean>
+    );
   }
 };
 
-// Get the current state of all feature flags
-export const getFeatureFlags = (): FeatureFlags => {
-  const localFlags = getLocalFlags();
+// Global feature flags state
+let featureFlags = getPersistedFeatureFlags();
+
+// User for storing changes to feature flags
+const saveFeatureFlags = () => {
+  try {
+    localStorage.setItem('featureFlags', JSON.stringify(featureFlags));
+  } catch (e) {
+    console.error('Error saving feature flags to localStorage', e);
+  }
+};
+
+// Subscribers for feature flag changes
+const subscribers = new Set<(flags: Record<FeatureFlag, boolean>) => void>();
+
+// Function to check if a feature is enabled
+export const isFeatureEnabled = (feature: FeatureFlag): boolean => {
+  return featureFlags[feature] ?? defaultFeatureFlags[feature]?.defaultValue ?? false;
+};
+
+// Function to enable a feature
+export const enableFeature = (feature: FeatureFlag): void => {
+  featureFlags = { ...featureFlags, [feature]: true };
+  saveFeatureFlags();
+  notifySubscribers();
+};
+
+// Function to disable a feature
+export const disableFeature = (feature: FeatureFlag): void => {
+  featureFlags = { ...featureFlags, [feature]: false };
+  saveFeatureFlags();
+  notifySubscribers();
+};
+
+// Function to toggle a feature
+export const toggleFeature = (feature: FeatureFlag): void => {
+  featureFlags = { ...featureFlags, [feature]: !featureFlags[feature] };
+  saveFeatureFlags();
+  notifySubscribers();
+};
+
+// Function to reset a feature to its default value
+export const resetFeature = (feature: FeatureFlag): void => {
+  featureFlags = { 
+    ...featureFlags, 
+    [feature]: defaultFeatureFlags[feature]?.defaultValue ?? false 
+  };
+  saveFeatureFlags();
+  notifySubscribers();
+};
+
+// Function to reset all features to their default values
+export const resetAllFeatures = (): void => {
+  featureFlags = Object.entries(defaultFeatureFlags).reduce(
+    (acc, [key, config]) => ({
+      ...acc,
+      [key]: config.defaultValue
+    }),
+    {} as Record<FeatureFlag, boolean>
+  );
+  saveFeatureFlags();
+  notifySubscribers();
+};
+
+// Function to get all feature flags
+export const getAllFeatureFlags = (): Record<FeatureFlag, boolean> => {
+  return { ...featureFlags };
+};
+
+// Function to get feature flag configurations
+export const getFeatureFlagConfigs = (): Record<FeatureFlag, FeatureFlagConfig> => {
+  return { ...defaultFeatureFlags };
+};
+
+// Private function to notify subscribers of changes
+const notifySubscribers = (): void => {
+  subscribers.forEach(callback => callback(getAllFeatureFlags()));
+};
+
+// Subscribe to feature flag changes
+export const subscribeToFeatureFlags = (
+  callback: (flags: Record<FeatureFlag, boolean>) => void
+): () => void => {
+  subscribers.add(callback);
+  // Initial call with current state
+  callback(getAllFeatureFlags());
   
-  // Combine all flags, with local overrides taking precedence
-  return {
-    ...DEFAULT_FLAGS,
-    ...ENV_FLAGS,
-    ...localFlags
-  } as FeatureFlags;
+  // Return unsubscribe function
+  return () => {
+    subscribers.delete(callback);
+  };
 };
 
-// Check if a feature is enabled
-export const isFeatureEnabled = (featureKey: FeatureFlag): boolean => {
-  const flags = getFeatureFlags();
-  return flags[featureKey] ?? DEFAULT_FLAGS[featureKey] ?? false;
-};
-
-// Enable a specific feature
-export const enableFeature = (featureKey: FeatureFlag): void => {
-  const localFlags = getLocalFlags();
-  localFlags[featureKey] = true;
-  saveLocalFlags(localFlags);
-};
-
-// Disable a specific feature
-export const disableFeature = (featureKey: FeatureFlag): void => {
-  const localFlags = getLocalFlags();
-  localFlags[featureKey] = false;
-  saveLocalFlags(localFlags);
-};
-
-// Reset feature flags to default
-export const resetFeatureFlags = (): void => {
-  saveLocalFlags({});
-};
-
-// Toggle a specific feature
-export const toggleFeature = (featureKey: FeatureFlag): boolean => {
-  const isEnabled = isFeatureEnabled(featureKey);
-  const localFlags = getLocalFlags();
-  localFlags[featureKey] = !isEnabled;
-  saveLocalFlags(localFlags);
-  return !isEnabled;
-};
-
-// React hook for feature flags
-export const useFeatureFlag = (featureKey: FeatureFlag): [boolean, () => void] => {
-  const [isEnabled, setIsEnabled] = useState(() => isFeatureEnabled(featureKey));
+// React hook for using feature flags
+export const useFeatureFlag = (
+  feature: FeatureFlag
+): [boolean, (enabled: boolean) => void] => {
+  const [enabled, setEnabled] = useState<boolean>(isFeatureEnabled(feature));
   
   useEffect(() => {
-    // Update state when feature flag changes externally
-    const checkFlag = () => {
-      const newValue = isFeatureEnabled(featureKey);
-      setIsEnabled(newValue);
-    };
+    const unsubscribe = subscribeToFeatureFlags(flags => {
+      setEnabled(flags[feature] ?? false);
+    });
     
-    // Check initially
-    checkFlag();
-    
-    // Listen for storage events to handle changes from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'featureFlags') {
-        checkFlag();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [featureKey]);
+    return unsubscribe;
+  }, [feature]);
   
-  const toggle = useCallback(() => {
-    const newValue = toggleFeature(featureKey);
-    setIsEnabled(newValue);
-  }, [featureKey]);
+  const setFeatureEnabled = (enabled: boolean) => {
+    if (enabled) {
+      enableFeature(feature);
+    } else {
+      disableFeature(feature);
+    }
+  };
   
-  return [isEnabled, toggle];
-};
-
-export default {
-  isFeatureEnabled,
-  enableFeature,
-  disableFeature,
-  resetFeatureFlags,
-  toggleFeature,
-  getFeatureFlags,
-  useFeatureFlag
+  return [enabled, setFeatureEnabled];
 };

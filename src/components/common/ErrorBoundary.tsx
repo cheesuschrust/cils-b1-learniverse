@@ -1,21 +1,26 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertOctagon } from 'lucide-react';
+import { errorMonitoringService } from '@/services/ErrorMonitoringService';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetOnPropsChange?: boolean;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
@@ -24,30 +29,39 @@ class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI
-    return {
-      hasError: true,
-      error,
-      errorInfo: null
-    };
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error to an error reporting service
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    this.setState({ errorInfo });
     
-    // Update state to include the error info
-    this.setState({
-      error,
-      errorInfo
+    // Call the optional onError callback
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+    
+    // Log the error to our monitoring service
+    errorMonitoringService.captureError(error, {
+      componentStack: errorInfo.componentStack,
+      context: 'ErrorBoundary'
     });
-    
-    // Here you could also send the error to a reporting service
-    // reportError(error, errorInfo);
+
+    console.error('Error caught by ErrorBoundary:', error, errorInfo);
   }
 
-  handleReset = (): void => {
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Reset the error state if props have changed and resetOnPropsChange is true
+    if (
+      this.state.hasError && 
+      this.props.resetOnPropsChange && 
+      prevProps !== this.props
+    ) {
+      this.resetErrorBoundary();
+    }
+  }
+
+  resetErrorBoundary = (): void => {
     this.setState({
       hasError: false,
       error: null,
@@ -55,52 +69,56 @@ class ErrorBoundary extends Component<Props, State> {
     });
   };
 
-  render(): ReactNode {
-    if (this.state.hasError) {
-      // If a custom fallback was provided, use it
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-      
-      // Otherwise, render the default error UI
-      return (
-        <div className="flex items-center justify-center min-h-[300px] p-4">
-          <Card className="w-full max-w-md border-red-200 dark:border-red-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                <AlertOctagon className="h-5 w-5" />
-                Something went wrong
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-                <p className="text-sm text-red-800 dark:text-red-300">
-                  {this.state.error?.message || 'An unexpected error occurred'}
-                </p>
-              </div>
-              
-              {this.state.errorInfo && (
-                <details className="text-xs mt-2">
-                  <summary className="cursor-pointer text-muted-foreground">
-                    Technical details
-                  </summary>
-                  <pre className="mt-2 max-h-[150px] overflow-auto rounded-md bg-slate-100 dark:bg-slate-800 p-2">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                </details>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button onClick={this.handleReset} className="w-full">
-                Try Again
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      );
-    }
+  renderDefaultFallback(): ReactNode {
+    const { error, errorInfo } = this.state;
+    
+    return (
+      <Card className="w-full max-w-md mx-auto my-8 shadow-lg">
+        <CardHeader className="bg-destructive/10">
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            Something went wrong
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>{error?.name || 'Error'}</AlertTitle>
+            <AlertDescription>
+              {error?.message || 'An unexpected error occurred'}
+            </AlertDescription>
+          </Alert>
+          
+          {process.env.NODE_ENV === 'development' && errorInfo && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Component Stack</h4>
+              <pre className="text-xs bg-muted p-4 rounded overflow-auto max-h-48">
+                {errorInfo.componentStack}
+              </pre>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button 
+            onClick={this.resetErrorBoundary}
+            className="flex items-center gap-2"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Try Again
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
-    return this.props.children;
+  render(): ReactNode {
+    const { hasError } = this.state;
+    const { children, fallback } = this.props;
+    
+    if (hasError) {
+      return fallback || this.renderDefaultFallback();
+    }
+    
+    return children;
   }
 }
 
