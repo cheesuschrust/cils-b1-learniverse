@@ -8,10 +8,18 @@ import { ConfidenceIndicatorProps } from '@/types/ai';
  */
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
+  value,
   size = 'md',
   className = '',
-  indicatorClassName = ''
+  indicatorClassName = '',
+  contentType
 }) => {
+  // Backward compatibility: if score is provided as a decimal, convert to percentage
+  const displayScore = score <= 1 ? Math.round(score * 100) : Math.round(score);
+  
+  // Support for older value prop for backward compatibility
+  const finalScore = value !== undefined ? (value <= 1 ? Math.round(value * 100) : Math.round(value)) : displayScore;
+  
   // Determine color based on confidence score
   const getColor = (value: number) => {
     if (value >= 80) return 'bg-green-500';
@@ -26,6 +34,26 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
     return 'Low';
   };
   
+  // Get title based on content type
+  const getTitle = (type?: string) => {
+    if (!type) return 'Confidence Score';
+    
+    switch (type) {
+      case 'writing': return 'Writing Quality';
+      case 'speaking': return 'Pronunciation';
+      case 'listening': return 'Comprehension';
+      default: return 'Confidence Score';
+    }
+  };
+  
+  // Get score label text
+  const getScoreLabel = (value: number) => {
+    if (value >= 80) return 'Excellent';
+    if (value >= 60) return 'Good';
+    if (value >= 40) return 'Fair';
+    return 'Needs Work';
+  };
+  
   // Size classes
   const sizeClasses = {
     sm: 'h-1.5 text-xs',
@@ -37,17 +65,17 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
     <div className={cn('space-y-1', className)}>
       <div className="flex justify-between items-center">
         <span className={cn('text-muted-foreground', sizeClasses[size])}>
-          Confidence: {getLabel(score)}
+          {getTitle(contentType)}
         </span>
         <span className={cn('font-medium', sizeClasses[size])}>
-          {Math.round(score)}%
+          {getScoreLabel(finalScore)} ({finalScore}%)
         </span>
       </div>
       
-      <div className={cn('bg-secondary w-full overflow-hidden rounded-full', sizeClasses[size])}>
+      <div className={cn('bg-secondary w-full overflow-hidden rounded-full progress-bar', sizeClasses[size])}>
         <div 
-          className={cn('rounded-full', getColor(score), indicatorClassName)}
-          style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
+          className={cn('rounded-full progress-bar-fill', getColor(finalScore), indicatorClassName)}
+          style={{ width: `${Math.min(Math.max(finalScore, 0), 100)}%` }}
         />
       </div>
     </div>

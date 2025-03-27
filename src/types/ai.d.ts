@@ -66,3 +66,12 @@ export interface UseAIReturn {
   loadModel?: (modelName: string) => Promise<boolean>;
   generateQuestions?: (content: string, count?: number, type?: string) => Promise<any[]>;
 }
+
+export interface ConfidenceIndicatorProps {
+  score: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  indicatorClassName?: string;
+  contentType?: string;
+  value?: number;
+}

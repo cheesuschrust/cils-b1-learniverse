@@ -1,7 +1,80 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { UseAIReturn } from '@/types/ai';
-import AIServiceStub from '@/services/AIServiceStub';
+
+/**
+ * Simplified AI service stub for testing and development
+ */
+const AIServiceStub = {
+  generateText: async (prompt: string, options?: any): Promise<string> => {
+    // Simulate AI response based on prompt
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    if (prompt.includes('error')) {
+      throw new Error('Simulated error in AI processing');
+    }
+    
+    return `AI response to: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`;
+  },
+  
+  classifyText: async (text: string): Promise<Array<{ label: string; score: number }>> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return [
+      { label: 'grammar', score: 0.8 },
+      { label: 'vocabulary', score: 0.7 },
+      { label: 'comprehension', score: 0.6 }
+    ];
+  },
+  
+  getConfidenceScore: (contentType: string): number => {
+    const scores: Record<string, number> = {
+      'flashcards': 82,
+      'multiple-choice': 78,
+      'writing': 69,
+      'speaking': 74,
+      'listening': 65
+    };
+    
+    return scores[contentType] || 70;
+  },
+  
+  generateFlashcards: async (topic: string, count: number = 5, difficulty: string = 'intermediate'): Promise<any[]> => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return Array.from({ length: count }, (_, i) => ({
+      id: `card-${i + 1}`,
+      front: `${topic} term ${i + 1}`,
+      back: `Definition ${i + 1} for ${topic}`,
+      difficulty
+    }));
+  },
+  
+  generateQuestions: async (content: string, count: number = 5, type: string = 'multiple-choice'): Promise<any[]> => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    return Array.from({ length: count }, (_, i) => ({
+      id: `question-${i + 1}`,
+      text: `Question ${i + 1} about ${content.substring(0, 20)}...`,
+      type,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correctAnswer: 'Option A'
+    }));
+  },
+  
+  abortRequest: (requestId: string): void => {
+    console.log(`Aborting request ${requestId}`);
+  },
+  
+  abortAllRequests: (): void => {
+    console.log('Aborting all requests');
+  },
+  
+  addTrainingExamples: (contentType: string, examples: any[]): number => {
+    console.log(`Added ${examples.length} training examples for ${contentType}`);
+    return examples.length;
+  }
+};
 
 /**
  * Simplified hook for AI capabilities

@@ -5,8 +5,6 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { ServiceFactory } from '@/services/ServiceFactory';
-import { MockAuthService, MockDocumentService } from './mocks/serviceMocks';
 
 /**
  * Options for customRender function
@@ -15,12 +13,10 @@ export interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
   initialEntries?: string[];
   withAuth?: boolean;
-  mockAuthService?: boolean;
   withTheme?: boolean;
   withRouter?: boolean;
   withQuery?: boolean;
   queryClient?: QueryClient;
-  initialState?: Record<string, any>;
 }
 
 /**
@@ -34,7 +30,6 @@ export function customRender(
     route = '/',
     initialEntries = [route],
     withAuth = true,
-    mockAuthService = true,
     withTheme = true,
     withRouter = true,
     withQuery = true,
@@ -45,18 +40,8 @@ export function customRender(
         },
       },
     }),
-    initialState = {},
     ...renderOptions
   } = options;
-
-  // Setup mock services if needed
-  if (mockAuthService) {
-    const factory = ServiceFactory.getInstance();
-    factory.injectServices({
-      authService: MockAuthService,
-      documentService: MockDocumentService,
-    });
-  }
 
   // Create wrapper with all providers
   function AllTheProviders({ children }: { children: React.ReactNode }) {
@@ -96,9 +81,6 @@ export function customRender(
     // Reset mocks helper
     resetMocks: () => {
       jest.clearAllMocks();
-      if (mockAuthService) {
-        ServiceFactory.resetInstance();
-      }
     }
   };
 }

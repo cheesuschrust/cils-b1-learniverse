@@ -1,3 +1,3 @@
 
-// Mock file for image and asset imports
+// Mock file imports
 module.exports = 'test-file-stub';
