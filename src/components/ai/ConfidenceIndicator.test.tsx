@@ -112,6 +112,21 @@ describe('ConfidenceIndicator', () => {
     // Should handle values > 100 by clamping to 100
     rerender(<ConfidenceIndicator score={110} />);
     expect(screen.getByText('Excellent (100%)')).toBeInTheDocument();
+    
+    // Should handle undefined/null values
+    rerender(<ConfidenceIndicator score={undefined as any} />);
+    expect(screen.getByText('Needs Work (0%)')).toBeInTheDocument();
+    
+    rerender(<ConfidenceIndicator score={null as any} />);
+    expect(screen.getByText('Needs Work (0%)')).toBeInTheDocument();
+    
+    // Should handle NaN values
+    rerender(<ConfidenceIndicator score={NaN} />);
+    expect(screen.getByText('Needs Work (0%)')).toBeInTheDocument();
+    
+    // Should handle string values that can be converted to numbers
+    rerender(<ConfidenceIndicator score={'75' as any} />);
+    expect(screen.getByText('Good (75%)')).toBeInTheDocument();
   });
 
   test('handles custom indicatorClassName prop', () => {
@@ -119,5 +134,14 @@ describe('ConfidenceIndicator', () => {
     
     const progressFill = document.querySelector('.progress-bar-fill');
     expect(progressFill).toHaveClass('custom-indicator');
+  });
+  
+  test('is accessible with proper ARIA attributes', () => {
+    render(<ConfidenceIndicator score={65} />);
+    
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar).toHaveAttribute('aria-valuenow', '65');
+    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
+    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
   });
 });

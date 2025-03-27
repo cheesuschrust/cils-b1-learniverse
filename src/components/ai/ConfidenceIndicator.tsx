@@ -2,6 +2,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ConfidenceIndicatorProps } from '@/types/ai';
+import { normalizeScore, getConfidenceLabel, getConfidenceColor, getContentTypeTitle } from './ConfidenceIndicator.helpers';
 
 /**
  * Visual indicator for AI confidence scores
@@ -14,43 +15,9 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   indicatorClassName = '',
   contentType
 }) => {
-  // Backward compatibility: if score is provided as a decimal, convert to percentage
-  const displayScore = score <= 1 ? Math.round(score * 100) : Math.round(score);
-  
+  // Use helpers to calculate and normalize the score
   // Support for older value prop for backward compatibility
-  const finalScore = value !== undefined 
-    ? (value <= 1 ? Math.round(value * 100) : Math.round(value)) 
-    : displayScore;
-  
-  // Ensure score is within valid range (0-100)
-  const clampedScore = Math.min(Math.max(finalScore, 0), 100);
-  
-  // Determine color based on confidence score
-  const getColor = (value: number) => {
-    if (value >= 80) return 'bg-green-500';
-    if (value >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-  
-  // Get title based on content type
-  const getTitle = (type?: string) => {
-    if (!type) return 'Confidence Score';
-    
-    switch (type) {
-      case 'writing': return 'Writing Quality';
-      case 'speaking': return 'Pronunciation';
-      case 'listening': return 'Comprehension';
-      default: return 'Confidence Score';
-    }
-  };
-  
-  // Get score label text
-  const getScoreLabel = (value: number) => {
-    if (value >= 80) return 'Excellent';
-    if (value >= 60) return 'Good';
-    if (value >= 40) return 'Fair';
-    return 'Needs Work';
-  };
+  const finalScore = normalizeScore(value !== undefined ? value : (score ?? 0));
   
   // Size classes
   const sizeClasses = {
@@ -63,17 +30,21 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
     <div className={cn('space-y-1', className)}>
       <div className="flex justify-between items-center">
         <span className={cn('text-muted-foreground', sizeClasses[size])}>
-          {getTitle(contentType)}
+          {getContentTypeTitle(contentType)}
         </span>
         <span className={cn('font-medium', sizeClasses[size])}>
-          {getScoreLabel(clampedScore)} ({clampedScore}%)
+          {getConfidenceLabel(finalScore)} ({finalScore}%)
         </span>
       </div>
       
       <div className={cn('bg-secondary w-full overflow-hidden rounded-full progress-bar', sizeClasses[size])}>
         <div 
-          className={cn('rounded-full progress-bar-fill', getColor(clampedScore), indicatorClassName)}
-          style={{ width: `${clampedScore}%` }}
+          className={cn('rounded-full progress-bar-fill', getConfidenceColor(finalScore), indicatorClassName)}
+          style={{ width: `${finalScore}%` }}
+          role="progressbar"
+          aria-valuenow={finalScore}
+          aria-valuemin={0}
+          aria-valuemax={100}
         />
       </div>
     </div>

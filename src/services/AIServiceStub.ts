@@ -25,8 +25,13 @@ class AIServiceStub implements AIServiceInterface {
     this.activeRequests.set(requestId, controller);
     
     try {
+      // Check if the request has been aborted
+      if (controller.signal.aborted) {
+        throw new Error('Request aborted');
+      }
+      
       // Simulate network delay
-      await this.simulateDelay(1000);
+      await this.simulateDelay(1000, controller.signal);
       
       // Check if we should simulate an error
       if (this.shouldSimulateErrors) {
@@ -63,8 +68,13 @@ class AIServiceStub implements AIServiceInterface {
     this.activeRequests.set(requestId, controller);
     
     try {
+      // Check if the request has been aborted
+      if (controller.signal.aborted) {
+        throw new Error('Request aborted');
+      }
+      
       // Simulate network delay
-      await this.simulateDelay(800);
+      await this.simulateDelay(800, controller.signal);
       
       // Check if we should simulate an error
       if (this.shouldSimulateErrors) {
@@ -72,7 +82,7 @@ class AIServiceStub implements AIServiceInterface {
       }
       
       // Simple classification based on text content
-      const classifications = [];
+      const classifications: Array<{ label: string; score: number }> = [];
       
       if (text.includes('?')) {
         classifications.push({ label: 'Question', score: 0.91 });
@@ -131,8 +141,13 @@ class AIServiceStub implements AIServiceInterface {
     this.activeRequests.set(requestId, controller);
     
     try {
+      // Check if the request has been aborted
+      if (controller.signal.aborted) {
+        throw new Error('Request aborted');
+      }
+      
       // Simulate network delay
-      await this.simulateDelay(1500);
+      await this.simulateDelay(1500, controller.signal);
       
       // Check if we should simulate an error
       if (this.shouldSimulateErrors) {
@@ -169,8 +184,13 @@ class AIServiceStub implements AIServiceInterface {
     this.activeRequests.set(requestId, controller);
     
     try {
+      // Check if the request has been aborted
+      if (controller.signal.aborted) {
+        throw new Error('Request aborted');
+      }
+      
       // Simulate network delay
-      await this.simulateDelay(1200);
+      await this.simulateDelay(1200, controller.signal);
       
       // Check if we should simulate an error
       if (this.shouldSimulateErrors) {
@@ -209,10 +229,21 @@ class AIServiceStub implements AIServiceInterface {
   }
   
   /**
-   * Helper method to simulate delay
+   * Helper method to simulate delay with abort support
    */
-  private async simulateDelay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private async simulateDelay(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        resolve();
+      }, ms);
+      
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          clearTimeout(timeout);
+          reject(new Error('Operation aborted'));
+        });
+      }
+    });
   }
   
   /**

@@ -9,6 +9,11 @@
  * @returns Normalized score as percentage (0-100)
  */
 export const normalizeScore = (score: number): number => {
+  // Handle invalid inputs (null, undefined, NaN)
+  if (score === null || score === undefined || isNaN(score)) {
+    return 0;
+  }
+  
   // If score is in decimal format (0-1), convert to percentage
   const percentageScore = score <= 1 ? Math.round(score * 100) : Math.round(score);
   

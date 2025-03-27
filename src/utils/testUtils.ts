@@ -33,7 +33,7 @@ export function renderWithProviders(
     },
   });
 
-  function AllTheProviders({ children }: { children: React.ReactNode }) {
+  function AllTheProviders({ children }: { children: React.ReactNode }): JSX.Element {
     return (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
@@ -86,7 +86,7 @@ export const createMockEvent = (
 /**
  * Helper to wait for async operations
  */
-export const waitForAsync = () => new Promise(resolve => setTimeout(resolve, 0));
+export const waitForAsync = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 /**
  * Find element by test ID and assert existence
