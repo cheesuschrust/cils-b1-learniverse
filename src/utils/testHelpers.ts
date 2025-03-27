@@ -1,95 +1,18 @@
 
-import React from 'react';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { User, UserRole } from '@/types/user';
+import { IAuthService, AuthResponse, IDocumentService } from '@/types/service';
 import { DocumentMeta, ParsedDocument } from '@/types/document';
+import { ChatMessage, ChatSession } from '@/types/chatbot';
 import { ServiceFactory } from '@/services/ServiceFactory';
-import { IAuthService } from '@/types/service';
-
-/**
- * Options for the custom render function
- */
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  route?: string;
-  initialEntries?: string[];
-  withAuth?: boolean;
-  withTheme?: boolean;
-  withQuery?: boolean;
-  withRouter?: boolean;
-}
-
-/**
- * Enhanced render function with all providers
- */
-export function renderWithProviders(
-  ui: React.ReactElement,
-  options: CustomRenderOptions = {}
-): RenderResult {
-  const {
-    route = '/',
-    initialEntries = [route],
-    withAuth = true,
-    withTheme = true,
-    withQuery = true,
-    withRouter = true,
-    ...renderOptions
-  } = options;
-
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
-
-  // Create a component wrapper with configurable providers
-  const Wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => {
-    let wrappedElement = <>{children}</>;
-
-    // Apply providers in the correct order
-    if (withAuth) {
-      wrappedElement = <AuthProvider>{wrappedElement}</AuthProvider>;
-    }
-
-    if (withTheme) {
-      wrappedElement = <ThemeProvider>{wrappedElement}</ThemeProvider>;
-    }
-
-    if (withQuery) {
-      wrappedElement = (
-        <QueryClientProvider client={queryClient}>{wrappedElement}</QueryClientProvider>
-      );
-    }
-
-    if (withRouter) {
-      wrappedElement = (
-        <MemoryRouter initialEntries={initialEntries}>
-          <Routes>
-            <Route path={route} element={wrappedElement} />
-          </Routes>
-        </MemoryRouter>
-      );
-    }
-
-    return wrappedElement;
-  };
-
-  return render(ui, { wrapper: Wrapper, ...renderOptions });
-}
 
 /**
  * Create a mock user for testing
  */
 export const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 'test-user-id',
-  email: 'test@example.com',
   firstName: 'Test',
   lastName: 'User',
+  email: 'test@example.com',
   username: 'testuser',
   role: 'user' as UserRole,
   isVerified: true,
@@ -160,40 +83,90 @@ export const createMockParsedDocument = (overrides: Partial<ParsedDocument> = {}
 });
 
 /**
- * Create mock auth service for testing
+ * Create a mock chat message for testing
  */
-export const createMockAuthService = (): IAuthService => ({
-  login: jest.fn().mockResolvedValue({ user: createMockUser() }),
-  register: jest.fn().mockResolvedValue({ user: createMockUser() }),
+export const createMockChatMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
+  id: 'test-message-id',
+  role: 'user',
+  content: 'Hello, this is a test message',
+  timestamp: new Date(),
+  ...overrides
+});
+
+/**
+ * Create a mock chat session for testing
+ */
+export const createMockChatSession = (overrides: Partial<ChatSession> = {}): ChatSession => ({
+  id: 'test-session-id',
+  userId: 'test-user-id',
+  title: 'Test Chat Session',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  messages: [
+    createMockChatMessage(),
+    createMockChatMessage({
+      id: 'test-message-id-2',
+      role: 'assistant',
+      content: 'Hello, how can I help you today?',
+      timestamp: new Date(Date.now() + 1000)
+    })
+  ],
+  ...overrides
+});
+
+/**
+ * Create a mock auth service for testing
+ */
+export const createMockAuthService = (overrides: Partial<IAuthService> = {}): IAuthService => ({
+  login: jest.fn().mockResolvedValue({ 
+    user: createMockUser() 
+  } as AuthResponse),
+  register: jest.fn().mockResolvedValue({ 
+    user: createMockUser() 
+  } as AuthResponse),
   logout: jest.fn().mockResolvedValue(undefined),
   forgotPassword: jest.fn().mockResolvedValue(undefined),
   resetPassword: jest.fn().mockResolvedValue(undefined),
   verifyEmail: jest.fn().mockResolvedValue(undefined),
-  testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' })
+  testConnection: jest.fn().mockResolvedValue({ 
+    success: true, 
+    message: 'Connection successful' 
+  }),
+  ...overrides
 });
 
 /**
- * Setup mock service factory for testing
+ * Create a mock document service for testing
  */
-export const setupMockServiceFactory = (): void => {
+export const createMockDocumentService = (overrides: Partial<IDocumentService> = {}): IDocumentService => ({
+  uploadDocument: jest.fn().mockResolvedValue({ 
+    path: '/documents/test.pdf', 
+    url: 'https://example.com/documents/test.pdf' 
+  }),
+  parseDocumentContent: jest.fn().mockResolvedValue(createMockParsedDocument()),
+  saveDocumentMetadata: jest.fn().mockResolvedValue('test-doc-id'),
+  ...overrides
+});
+
+/**
+ * Create a mock service factory for testing
+ */
+export const createMockServiceFactory = (): ServiceFactory => {
   const factory = ServiceFactory.getInstance();
   factory.injectServices({
     authService: createMockAuthService(),
-    documentService: {
-      uploadDocument: jest.fn().mockResolvedValue({ path: '/test.pdf', url: 'https://example.com/test.pdf' }),
-      parseDocumentContent: jest.fn().mockResolvedValue(createMockParsedDocument()),
-      saveDocumentMetadata: jest.fn().mockResolvedValue('document-id')
-    }
+    documentService: createMockDocumentService()
   });
+  return factory;
 };
 
 /**
- * Wait for any pending promises
+ * Wait for all pending promises to resolve
  */
-export const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+export const flushPromises = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
 
 /**
- * Mock event creation
+ * Create a mock event object
  */
 export const createMockEvent = (
   overrides: Partial<Event | React.SyntheticEvent> = {}
@@ -204,26 +177,42 @@ export const createMockEvent = (
 });
 
 /**
- * Regular expression patterns for validation
+ * Mock local storage for testing
  */
-export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+export const mockLocalStorage = () => {
+  const store: Record<string, string> = {};
+  
+  return {
+    getItem: jest.fn((key: string) => store[key] || null),
+    setItem: jest.fn((key: string, value: string) => {
+      store[key] = value.toString();
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      Object.keys(store).forEach(key => {
+        delete store[key];
+      });
+    })
+  };
+};
 
 /**
- * Mock Component for testing
+ * Mock the window.matchMedia function for testing
  */
-export const TestComponent: React.FC<{prop?: string}> = ({prop}) => (
-  <div data-testid="test-component">{prop || 'Default'}</div>
-);
-
-/**
- * Complex mock component with proper JSX structure
- */
-export const ComplexMock: React.FC = () => (
-  <div>
-    <span>Test</span>
-  </div>
-);
-
-// Re-export testing utilities for convenience
-export * from '@testing-library/react';
+export const mockMatchMedia = (matches: boolean) => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+};

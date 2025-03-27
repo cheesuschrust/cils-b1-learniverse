@@ -1,10 +1,14 @@
 
 import React from 'react';
-import { render, RenderOptions, RenderResult, screen, fireEvent } from '@testing-library/react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { User, UserRole } from '@/types/user';
+import { DocumentMeta, ParsedDocument } from '@/types/document';
+import { ServiceFactory } from '@/services/ServiceFactory';
+import { IAuthService } from '@/types/service';
 
 /**
  * Options for the custom render function
@@ -12,10 +16,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
   initialEntries?: string[];
+  withAuth?: boolean;
+  withTheme?: boolean;
+  withQuery?: boolean;
+  withRouter?: boolean;
 }
 
 /**
- * Custom render function that wraps the component with all required providers
+ * Enhanced render function with all providers
  */
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -24,6 +32,10 @@ export function renderWithProviders(
   const {
     route = '/',
     initialEntries = [route],
+    withAuth = true,
+    withTheme = true,
+    withQuery = true,
+    withRouter = true,
     ...renderOptions
   } = options;
 
@@ -35,136 +47,183 @@ export function renderWithProviders(
     },
   });
 
-  function AllTheProviders({ children }: { children: React.ReactNode }): JSX.Element {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ThemeProvider>
-            <MemoryRouter initialEntries={initialEntries}>
-              <Routes>
-                <Route path={route} element={children} />
-              </Routes>
-            </MemoryRouter>
-          </ThemeProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    );
-  }
+  // Create a component wrapper with configurable providers
+  const Wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => {
+    let wrappedElement = <>{children}</>;
 
-  return render(ui, { wrapper: AllTheProviders, ...renderOptions });
+    // Apply providers in the correct order
+    if (withAuth) {
+      wrappedElement = <AuthProvider>{wrappedElement}</AuthProvider>;
+    }
+
+    if (withTheme) {
+      wrappedElement = <ThemeProvider>{wrappedElement}</ThemeProvider>;
+    }
+
+    if (withQuery) {
+      wrappedElement = (
+        <QueryClientProvider client={queryClient}>{wrappedElement}</QueryClientProvider>
+      );
+    }
+
+    if (withRouter) {
+      wrappedElement = (
+        <MemoryRouter initialEntries={initialEntries}>
+          <Routes>
+            <Route path={route} element={wrappedElement} />
+          </Routes>
+        </MemoryRouter>
+      );
+    }
+
+    return wrappedElement;
+  };
+
+  return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
 
 /**
- * Render a component with ThemeProvider
+ * Create a mock user for testing
  */
-export function renderWithTheme<P>(Component: React.ComponentType<P>, props: P): RenderResult {
-  return render(
-    <ThemeProvider>
-      <Component {...props} />
-    </ThemeProvider>
-  );
-}
-
-/**
- * Safe render with error handling
- */
-export const safeRender = <P extends object>(
-  Component: React.ComponentType<P>, 
-  props: P
-): RenderResult => {
-  try {
-    return render(<Component {...props} />);
-  } catch (error) {
-    console.error('Render error:', error);
-    throw error; // Re-throw for test failure
-  }
-};
-
-/**
- * Mock implementations for commonly used hooks and services
- */
-export const mockServices = {
-  authService: {
-    login: jest.fn(),
-    register: jest.fn(),
-    logout: jest.fn(),
-    forgotPassword: jest.fn(),
-    resetPassword: jest.fn(),
-    verifyEmail: jest.fn(),
-    testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' }),
+export const createMockUser = (overrides: Partial<User> = {}): User => ({
+  id: 'test-user-id',
+  email: 'test@example.com',
+  firstName: 'Test',
+  lastName: 'User',
+  username: 'testuser',
+  role: 'user' as UserRole,
+  isVerified: true,
+  createdAt: new Date(),
+  lastLogin: new Date(),
+  lastActive: new Date(),
+  preferences: {
+    theme: 'light',
+    emailNotifications: true,
+    language: 'en',
+    difficulty: 'intermediate'
   },
-  documentService: {
-    uploadDocument: jest.fn(),
-    parseDocumentContent: jest.fn(),
-    saveDocumentMetadata: jest.fn(),
-  }
-};
-
-/**
- * Helper to create a mock event object
- */
-export const createMockEvent = (
-  overrides: Partial<Event> = {}
-): Partial<Event> => ({
-  preventDefault: jest.fn(),
-  stopPropagation: jest.fn(),
-  ...overrides,
+  subscription: 'free',
+  status: 'active',
+  preferredLanguage: 'english',
+  dailyQuestionCounts: {
+    flashcards: 0,
+    multipleChoice: 0,
+    listening: 0,
+    writing: 0,
+    speaking: 0
+  },
+  metrics: {
+    totalQuestions: 0,
+    correctAnswers: 0,
+    streak: 0
+  },
+  ...overrides
 });
 
 /**
- * Helper to wait for async operations
+ * Create a mock document for testing
  */
-export const waitForAsync = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+export const createMockDocument = (overrides: Partial<DocumentMeta> = {}): DocumentMeta => ({
+  id: 'test-doc-id',
+  title: 'Test Document',
+  type: 'pdf',
+  size: 1024,
+  uploadedBy: 'test-user-id',
+  contentType: 'flashcards',
+  language: 'english',
+  createdAt: new Date().toISOString(),
+  ...overrides
+});
 
 /**
- * Find element by test ID and assert existence
+ * Create a mock parsed document for testing
  */
-export const getByTestIdAndAssert = (testId: string): HTMLElement => {
-  const element = screen.getByTestId(testId);
-  expect(element).toBeInTheDocument();
-  return element;
+export const createMockParsedDocument = (overrides: Partial<ParsedDocument> = {}): ParsedDocument => ({
+  text: 'This is a test document content.',
+  metadata: {
+    title: 'Test Document',
+    author: 'Test Author',
+    creationDate: new Date().toISOString(),
+    pageCount: 1,
+    wordCount: 6,
+    keyTerms: ['test'],
+    language: 'english'
+  },
+  sections: [
+    {
+      title: 'Introduction',
+      content: 'This is the introduction of the test document.',
+      level: 1
+    }
+  ],
+  ...overrides
+});
+
+/**
+ * Create mock auth service for testing
+ */
+export const createMockAuthService = (): IAuthService => ({
+  login: jest.fn().mockResolvedValue({ user: createMockUser() }),
+  register: jest.fn().mockResolvedValue({ user: createMockUser() }),
+  logout: jest.fn().mockResolvedValue(undefined),
+  forgotPassword: jest.fn().mockResolvedValue(undefined),
+  resetPassword: jest.fn().mockResolvedValue(undefined),
+  verifyEmail: jest.fn().mockResolvedValue(undefined),
+  testConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connection successful' })
+});
+
+/**
+ * Setup mock service factory for testing
+ */
+export const setupMockServiceFactory = (): void => {
+  const factory = ServiceFactory.getInstance();
+  factory.injectServices({
+    authService: createMockAuthService(),
+    documentService: {
+      uploadDocument: jest.fn().mockResolvedValue({ path: '/test.pdf', url: 'https://example.com/test.pdf' }),
+      parseDocumentContent: jest.fn().mockResolvedValue(createMockParsedDocument()),
+      saveDocumentMetadata: jest.fn().mockResolvedValue('document-id')
+    }
+  });
 };
 
 /**
- * Click button by text or test ID
+ * Wait for any pending promises
  */
-export const clickButton = (textOrTestId: string): void => {
-  try {
-    // Try to find by text first
-    const button = screen.getByRole('button', { name: textOrTestId });
-    fireEvent.click(button);
-  } catch (e) {
-    // Fall back to test ID
-    const button = screen.getByTestId(textOrTestId);
-    fireEvent.click(button);
-  }
-};
+export const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 /**
- * Fill input by label or test ID
+ * Mock event creation
  */
-export const fillInput = (labelOrTestId: string, value: string): void => {
-  try {
-    // Try to find by label text first
-    const input = screen.getByLabelText(labelOrTestId);
-    fireEvent.change(input, { target: { value } });
-  } catch (e) {
-    // Fall back to test ID
-    const input = screen.getByTestId(labelOrTestId);
-    fireEvent.change(input, { target: { value } });
-  }
-};
+export const createMockEvent = (
+  overrides: Partial<Event | React.SyntheticEvent> = {}
+): Partial<Event | React.SyntheticEvent> => ({
+  preventDefault: jest.fn(),
+  stopPropagation: jest.fn(),
+  ...overrides
+});
 
 /**
- * Render a component with props for testing
+ * Regular expression patterns for validation
  */
-export function renderWithProps<T>(Component: React.ComponentType<T>, props: T): RenderResult {
-  return render(<Component {...props} />);
-}
+export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
 /**
- * Mock function with proper type annotations
+ * Mock Component for testing
  */
-export const mockFunction = <T extends string>(param: T): string => {
-  return `mocked_${param}`;
-};
+export const TestComponent: React.FC<{prop?: string}> = ({prop}) => (
+  <div data-testid="test-component">{prop || 'Default'}</div>
+);
+
+/**
+ * Complex mock component with proper JSX structure
+ */
+export const ComplexMock: React.FC = () => (
+  <div>
+    <span>Test</span>
+  </div>
+);
+
+// Re-export testing utilities for convenience
+export * from '@testing-library/react';
