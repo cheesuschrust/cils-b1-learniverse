@@ -16,7 +16,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   role: 'user' as UserRole,
   isVerified: true,
   createdAt: new Date(),
-  updatedAt: new Date(),
+  updatedAt: new Date(), // Add required updatedAt property
   lastLogin: new Date(),
   lastActive: new Date(),
   // Support both naming conventions

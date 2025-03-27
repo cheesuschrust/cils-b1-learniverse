@@ -29,6 +29,13 @@ export interface IAuthService {
   resetPassword(token: string, newPassword: string): Promise<void>;
   verifyEmail(token: string): Promise<void>;
   testConnection(): Promise<{ success: boolean, message: string }>;
+  updateProfile?: (userId: string, data: Partial<User>) => Promise<AuthResponse>;
+  updatePassword?: (userId: string, newPassword: string) => Promise<void>;
+  refreshUser?: () => Promise<User>;
+  signup?: (data: RegisterData) => Promise<AuthResponse>;
+  incrementDailyQuestionCount?: (questionType: string) => Promise<boolean>;
+  resendVerificationEmail?: (email: string) => Promise<boolean>;
+  socialLogin?: (provider: string) => Promise<boolean>;
 }
 
 // Document Service Types
@@ -60,6 +67,14 @@ export interface ApiClient {
   post<T, D = any>(url: string, data: D, options?: ApiRequestOptions): Promise<ApiResponse<T>>;
   put<T, D = any>(url: string, data: D, options?: ApiRequestOptions): Promise<ApiResponse<T>>;
   delete<T>(url: string, options?: ApiRequestOptions): Promise<ApiResponse<T>>;
+}
+
+// Add ApiResponse here to fix exports
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  status: number;
+  message?: string;
 }
 
 // Error Types for Services

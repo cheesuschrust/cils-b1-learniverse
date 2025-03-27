@@ -1,7 +1,7 @@
 
 export type LicenseType = 'university' | 'k12' | 'language-school' | 'corporate';
 export type LicenseStatus = 'active' | 'expired' | 'trial' | 'suspended' | 'pending';
-export type RenewalStatus = 'auto-renewal' | 'pending-renewal' | 'cancelled' | 'not-applicable';
+export type RenewalStatus = 'auto-renewal' | 'pending-renewal' | 'cancelled' | 'not-applicable' | 'pending' | 'in-progress' | 'renewed' | 'expired' | 'not-started' | 'manual' | 'auto' | 'canceled';
 
 export interface License {
   id: string;
@@ -23,6 +23,7 @@ export interface License {
     };
     domain: string;
   };
+  domain?: string; // For backward compatibility
   value: number;
   renewalStatus: RenewalStatus;
 }
