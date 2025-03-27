@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -29,10 +28,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import ConfidenceIndicator from '@/components/ai/ConfidenceIndicator';
 import { getInitialConfidenceScores, getContentTypeLabels, getDisplayableContentTypes } from '@/components/ai/AISettingsTypes';
 import { ContentType } from '@/types/contentType';
-import { Loader2, Cpu, Zap, Brain, DownloadCloud, Settings, FileText, Activity, Scale, Server, HardDrive, Shield, VolumeX, Volume2, Tool, Share2, ChevronsUp, Database, Info } from 'lucide-react';
+import { Loader2, Cpu, Zap, Brain, DownloadCloud, Settings, FileText, Activity, Scale, Server, HardDrive, Shield, VolumeX, Volume2, Wrench, Share2, ChevronsUp, Database, Info } from 'lucide-react';
 import * as HuggingFaceService from '@/services/HuggingFaceService';
 
-// Define types for the AI models
 interface AIModel {
   id: string;
   name: string;
@@ -60,7 +58,6 @@ interface AIPerformanceMetrics {
   confidenceScores: Record<ContentType, number>;
 }
 
-// Available AI models grouped by task
 const availableModels: AIModelGroup[] = [
   {
     category: 'Text Classification',
@@ -232,7 +229,6 @@ const AIManagement: React.FC = () => {
   const contentTypes = getDisplayableContentTypes();
   const contentTypeLabels = getContentTypeLabels();
   
-  // Check for WebGPU support on component mount
   useEffect(() => {
     const checkGPUSupport = async () => {
       setIsCheckingWebGPU(true);
@@ -250,7 +246,6 @@ const AIManagement: React.FC = () => {
     checkGPUSupport();
   }, []);
   
-  // Initialize HuggingFace service
   useEffect(() => {
     const initializeService = async () => {
       try {
@@ -269,7 +264,6 @@ const AIManagement: React.FC = () => {
     initializeService();
   }, [toast]);
   
-  // Handler for downloading a model
   const handleDownloadModel = async (model: AIModel) => {
     setIsLoadingModel(true);
     setLoadingModelId(model.id);
@@ -280,12 +274,10 @@ const AIManagement: React.FC = () => {
         description: `Loading ${model.name}...`,
       });
       
-      // Attempt to load the model
       await HuggingFaceService.loadModel(model.task, model.huggingFaceId, {
         device: useWebGPU ? 'webgpu' : 'cpu'
       });
       
-      // Update the model status
       setCurrentModels(prev => 
         prev.map(group => ({
           ...group,
@@ -312,7 +304,6 @@ const AIManagement: React.FC = () => {
     }
   };
   
-  // Handler for running a benchmark
   const handleRunBenchmark = async () => {
     toast({
       title: 'Benchmark Started',
@@ -320,11 +311,10 @@ const AIManagement: React.FC = () => {
     });
     
     try {
-      // Generate simulated performance test results
       setTimeout(() => {
         setAIPerformance({
-          inferenceTime: Math.floor(Math.random() * 20) + 10, // 10-30ms
-          memoryUsage: Math.floor(Math.random() * 200) + 250, // 250-450 MB
+          inferenceTime: Math.floor(Math.random() * 20) + 10,
+          memoryUsage: Math.floor(Math.random() * 200) + 250,
           deviceType: useWebGPU ? 'webgpu' : 'cpu',
           confidenceScores: {
             'multiple-choice': Math.floor(Math.random() * 10) + 80,
@@ -356,7 +346,6 @@ const AIManagement: React.FC = () => {
     }
   };
   
-  // Handler for toggling WebGPU support
   const handleToggleWebGPU = (checked: boolean) => {
     setUseWebGPU(checked);
     toast({
@@ -367,7 +356,6 @@ const AIManagement: React.FC = () => {
     });
   };
   
-  // Handler for toggling model caching
   const handleToggleCaching = (checked: boolean) => {
     setCacheModels(checked);
     toast({
@@ -378,7 +366,6 @@ const AIManagement: React.FC = () => {
     });
   };
   
-  // Helper function to render model cards
   const renderModelCards = (group: AIModelGroup) => {
     return (
       <div key={group.category} className="space-y-4">
@@ -464,7 +451,6 @@ const AIManagement: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          {/* Sidebar with stats and quick actions */}
           <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader className="pb-2">
@@ -563,7 +549,6 @@ const AIManagement: React.FC = () => {
             </Card>
           </div>
           
-          {/* Main content area */}
           <div className="lg:col-span-3">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full">
@@ -581,7 +566,6 @@ const AIManagement: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
               
-              {/* Models Tab */}
               <TabsContent value="models" className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Available AI Models</h2>
@@ -596,7 +580,6 @@ const AIManagement: React.FC = () => {
                 </div>
               </TabsContent>
               
-              {/* Settings Tab */}
               <TabsContent value="settings">
                 <Card>
                   <CardHeader>
@@ -749,7 +732,6 @@ const AIManagement: React.FC = () => {
                 </Card>
               </TabsContent>
               
-              {/* Documentation Tab */}
               <TabsContent value="docs">
                 <Card>
                   <CardHeader>
@@ -816,7 +798,7 @@ const AIManagement: React.FC = () => {
                             Hugging Face Documentation
                           </Button>
                           <Button variant="outline" className="justify-start">
-                            <Tool className="mr-2 h-4 w-4" />
+                            <Wrench className="mr-2 h-4 w-4" />
                             Debugging Tools
                           </Button>
                           <Button variant="outline" className="justify-start">
