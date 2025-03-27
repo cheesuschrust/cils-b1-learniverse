@@ -26,7 +26,7 @@ export interface User {
   isVerified?: boolean;
   createdAt: Date;
   created_at?: Date; // Snake case property for backward compatibility
-  updatedAt: Date;
+  updatedAt: Date; // Required property
   lastLogin?: Date;
   last_login?: Date; // Snake case property for backward compatibility 
   lastActive?: Date;

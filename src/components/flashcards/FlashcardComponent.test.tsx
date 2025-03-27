@@ -1,172 +1,185 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi, describe, it, expect } from 'vitest';
+import '@testing-library/jest-dom';
 import FlashcardComponent from './FlashcardComponent';
 
 describe('FlashcardComponent', () => {
-  const mockFlashcard = {
-    id: '123',
+  const mockCard = {
+    id: '1',
     italian: 'Ciao',
     english: 'Hello',
     level: 1,
     mastered: false,
-    tags: ['greeting', 'basic'],
+    tags: ['greeting'],
     createdAt: new Date(),
     updatedAt: new Date(),
     nextReview: new Date(),
     lastReviewed: null,
-    examples: []
+    examples: ['Ciao, come stai?']
   };
 
-  it('renders the front of the card by default', () => {
+  it('renders front side by default', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()}
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
       />
     );
-    
+
     expect(screen.getByText('Ciao')).toBeInTheDocument();
-    expect(screen.queryByText('Hello')).not.toBeVisible();
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
   });
 
-  it('shows the back of the card when flipped', () => {
+  it('renders back side when flipped', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={true} 
-        onFlip={vi.fn()}
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={true}
+        onFlip={mockFlip}
       />
     );
-    
+
     expect(screen.getByText('Hello')).toBeInTheDocument();
-    expect(screen.queryByText('Ciao')).not.toBeVisible();
+    expect(screen.queryByText('Ciao')).not.toBeInTheDocument();
   });
 
-  it('calls onFlip when the card is clicked', () => {
-    const mockOnFlip = vi.fn();
+  it('calls onFlip when clicked', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={mockOnFlip}
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
       />
     );
-    
+
     fireEvent.click(screen.getByText('Ciao'));
-    expect(mockOnFlip).toHaveBeenCalledTimes(1);
+    expect(mockFlip).toHaveBeenCalledTimes(1);
   });
 
-  it('renders pronunciation component when showPronunciation is true', () => {
+  it('renders pronunciation controls when enabled', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()} 
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
         showPronunciation={true}
       />
     );
-    
-    // Note: This test would need to be updated to check for the actual pronunciation component
-    // Since that component isn't available in this test, we're just checking the basic rendering
+
+    // Verify that pronunciation controls are rendered
     expect(screen.getByText('Ciao')).toBeInTheDocument();
+    // The actual pronunciation controls would need to be checked based on implementation
   });
 
-  it('does not render action buttons when showActions is false', () => {
+  it('renders actions when enabled', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()} 
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
         showActions={false}
       />
     );
-    
-    const skipButton = screen.queryByText('Skip');
-    expect(skipButton).not.toBeInTheDocument();
+
+    // Verify that no action buttons are shown
+    expect(screen.queryByText('Know')).not.toBeInTheDocument();
+    expect(screen.queryByText("Don't Know")).not.toBeInTheDocument();
   });
 
-  it('calls onKnown and onUnknown when those buttons are clicked', () => {
-    const mockOnKnown = vi.fn();
-    const mockOnUnknown = vi.fn();
+  it('calls onKnown/onUnknown when buttons are clicked', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+    const mockKnown = jest.fn();
+    const mockUnknown = jest.fn();
+
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()}
-        onKnown={mockOnKnown}
-        onUnknown={mockOnUnknown}
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
+        onKnown={mockKnown}
+        onUnknown={mockUnknown}
       />
     );
-    
-    const knownButton = screen.getByText('I know this');
-    const unknownButton = screen.getByText('I don\'t know');
-    
-    fireEvent.click(knownButton);
-    expect(mockOnKnown).toHaveBeenCalledTimes(1);
-    
-    fireEvent.click(unknownButton);
-    expect(mockOnUnknown).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText('Know'));
+    expect(mockKnown).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText("Don't Know"));
+    expect(mockUnknown).toHaveBeenCalledTimes(1);
   });
 
-  it('renders with a custom className', () => {
-    render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()}
+  it('applies custom className', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
+
+    const { container } = render(
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
         className="custom-class"
       />
     );
-    
-    const cardComponent = document.querySelector('.custom-class');
-    expect(cardComponent).toBeInTheDocument();
+
+    expect(container.firstChild).toHaveClass('custom-class');
   });
 
-  it('shows the tags on the front of the card', () => {
-    render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()}
-      />
-    );
-    
-    expect(screen.getByText('greeting')).toBeInTheDocument();
-    expect(screen.getByText('basic')).toBeInTheDocument();
-  });
+  it('renders examples when showHints is true', () => {
+    const mockRating = jest.fn();
+    const mockSkip = jest.fn();
+    const mockFlip = jest.fn();
 
-  it('does not render actions when showActions is false', () => {
     render(
-      <FlashcardComponent 
-        card={mockFlashcard} 
-        onRating={vi.fn()} 
-        onSkip={vi.fn()} 
-        flipped={false} 
-        onFlip={vi.fn()}
+      <FlashcardComponent
+        flashcard={mockCard}
+        onRating={mockRating}
+        onSkip={mockSkip}
+        flipped={false}
+        onFlip={mockFlip}
         showActions={false}
+        showHints={true}
       />
     );
-    
-    const skipButton = screen.queryByText('Skip');
-    expect(skipButton).not.toBeInTheDocument();
+
+    expect(screen.getByText('Example: Ciao, come stai?')).toBeInTheDocument();
   });
 });

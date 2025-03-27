@@ -2,18 +2,22 @@
 export type AdNetwork = 'internal' | 'google' | 'facebook' | 'other';
 
 export interface AdSettings {
-  enableAds: boolean;
+  enabled: boolean;
+  enableAds?: boolean; // For backward compatibility
   defaultNetwork: AdNetwork;
   frequencyCap: number;
   showToPremiumUsers: boolean;
   refreshInterval?: number;
   blockList: string[];
+  placement?: string[]; // For compatibility
+  frequency?: number;  // For compatibility
+  userGroupTargeting?: string[]; // For compatibility
 }
 
 export interface AdUnit {
   id: string;
   name: string;
-  type: 'banner' | 'interstitial' | 'native';
+  type: 'banner' | 'interstitial' | 'native' | 'sidebar'; // Including 'sidebar' for compatibility
   network: AdNetwork;
   placement: string;
   active: boolean;
@@ -21,4 +25,7 @@ export interface AdUnit {
   clicks: number;
   revenue: number;
   lastUpdated: Date;
+  content?: string; // For compatibility
+  targetUrl?: string; // For compatibility
+  impression?: number; // For compatibility
 }

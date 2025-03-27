@@ -12,6 +12,7 @@ export interface Notification {
   message: string;
   type?: NotificationType;
   createdAt: Date | string;
+  timestamp?: Date | string; // Added for compatibility
   read: boolean;
   actions?: NotificationAction[];
   url?: string;
@@ -31,10 +32,12 @@ export interface NotificationsContextType {
   notifications: Notification[];
   unreadCount: number;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => string;
-  dismissNotification: (id: string) => void;
+  removeNotification: (id: string) => void;
+  dismissNotification: (id: string) => void; // Added
   markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  dismissAll: () => void;
-  clearNotifications: () => void;
-  getFileProcessingNotifications: () => Notification[];
+  markAllAsRead: () => void;  // Added
+  clearAll: () => void;
+  dismissAll: () => void; // Alias for clearAll
+  dismissAllNotifications: () => void; // Alias for clearAll
+  getFileProcessingNotifications: () => Notification[]; // Added
 }

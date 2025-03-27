@@ -1,3 +1,4 @@
+
 // This file fixes any interface compatibility issues between our own types
 // and third-party library types
 
@@ -25,6 +26,7 @@ export interface ConfidenceIndicatorProps {
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  indicatorClassName?: string;
   contentType?: 'writing' | 'speaking' | 'listening' | 'multiple-choice' | 'flashcards';
 }
 
@@ -48,6 +50,7 @@ export interface Flashcard {
   createdAt?: Date; // Added createdAt property
   updatedAt?: Date; // Added updatedAt property
   explanation?: string; // Added explanation property
+  dueDate?: Date; // Added for compatibility
 }
 
 // Fix FlashcardSet interface
@@ -76,13 +79,14 @@ export interface FlashcardStats {
   masteredCount: number;
   learningCount: number;
   newCount: number;
-  total?: number; // Added total property
+  mastered?: number; // Added for compatibility
+  total?: number; // Added for compatibility
 }
 
 // Expanded FlashcardComponentProps interface to include all needed properties
 export interface FlashcardComponentProps {
   flashcard: Flashcard;
-  card?: Flashcard; // Legacy property
+  card?: Flashcard; // Legacy property for tests
   onFlip?: () => void;
   onNext?: () => void;
   onPrevious?: () => void;
@@ -102,12 +106,13 @@ export interface FlashcardComponentProps {
   className?: string; // Added for backward compatibility
 }
 
-// Expanded ImportFormat enum with additional properties
+// Expanded ImportFormat interface with additional properties
 export interface ImportFormat {
   type?: 'csv' | 'json' | 'anki' | 'quizlet' | 'manual' | 'excel';
   fieldMap?: Record<string, string>;
   hasHeader?: boolean;
   delimiter?: string;
+  format?: string; // Added for compatibility
   [key: string]: any;
 }
 
@@ -116,7 +121,7 @@ export interface SupportTicketExtension {
   assignedTo?: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
-  status?: 'open' | 'in-progress' | 'resolved' | 'closed';
+  status?: 'open' | 'in-progress' | 'resolved' | 'closed' | 'pending';
 }
 
 // Add missing NotificationsContextType interface
@@ -126,6 +131,7 @@ export interface NotificationsContextType {
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
   clearAll: () => void;
+  dismissAll?: () => void; // Alias for clearAll
   unreadCount: number;
   markAllAsRead?: () => void; // Added missing property
   dismissNotification?: (id: string) => void; // Added missing property
@@ -141,4 +147,67 @@ export function calculateReviewPerformance(
   // Simple algorithm: if correctness is high, increase interval more
   const baseMultiplier = 1 + correctness;
   return Math.round(previousInterval * baseMultiplier);
+}
+
+// Define UseAIReturn interface
+export interface UseAIReturn {
+  generateText: (prompt: string, options?: any) => Promise<string>;
+  getConfidenceScore: (text: string, contentType: string) => Promise<number>;
+  translateText?: (text: string, targetLang: 'english' | 'italian') => Promise<string>;
+  checkGrammar?: (text: string, lang: 'english' | 'italian') => Promise<{text: string, corrections: any[]}>;
+  isLoading?: boolean;
+  error: Error | null;
+  abort?: () => void;
+  generateFlashcards?: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
+  isProcessing?: boolean;
+  classifyText?: (text: string) => Promise<any>;
+  isModelLoaded?: boolean;
+  status?: string;
+  loadModel?: (modelName: string) => Promise<boolean>;
+  generateQuestions?: (content: string, count?: number, type?: string) => Promise<any[]>;
+}
+
+// Define AIServiceInterface and AIServiceOptions
+export interface AIServiceOptions {
+  maxLength?: number;
+  temperature?: number;
+  model?: string;
+  stream?: boolean;
+}
+
+export interface AIServiceInterface {
+  generateText(prompt: string, options?: AIServiceOptions): Promise<string>;
+  classifyText(text: string): Promise<Array<{ label: string; score: number }>>;
+  generateImage?(prompt: string, size?: string): Promise<string>;
+  getConfidenceScore(contentType: string): number;
+  addTrainingExamples(contentType: string, examples: any[]): number;
+  generateFlashcards(topic: string, count?: number, difficulty?: string): Promise<any[]>;
+  generateQuestions(content: string, count?: number, type?: string): Promise<any[]>;
+  abortRequest(requestId: string): void;
+  abortAllRequests(): void;
+}
+
+// Define AISettingsProps for compatibility
+export interface AISettingsProps {
+  initialSettings?: any;
+  onSettingsChange?: (settings: any) => void;
+  onClose?: () => void;
+}
+
+// Define LevelBadgeProps
+export interface LevelBadgeProps {
+  level?: number;
+  size?: string;
+  showInfo?: boolean;
+}
+
+// Define LineChartProps
+export interface LineChartProps {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors: string[];
+  valueFormatter: (value: number) => string;
+  yAxisWidth?: number;
+  className?: string;
 }
