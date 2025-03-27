@@ -97,6 +97,24 @@ Object.defineProperty(window, 'speechSynthesis', {
   value: mockSpeechSynthesis,
 });
 
+// Add ResizeObserver mock
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Add IntersectionObserver mock
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+  takeRecords: jest.fn(),
+  root: null,
+  rootMargin: '',
+  thresholds: [],
+}));
+
 // Suppress console errors in tests
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -139,3 +157,6 @@ expect.extend({
     };
   },
 });
+
+// Enable more verbose logging for test environment
+console.debug('Jest test environment setup completed');
