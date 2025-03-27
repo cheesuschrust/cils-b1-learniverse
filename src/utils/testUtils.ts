@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { render, RenderOptions } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -28,7 +28,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 export function renderWithProviders(
   ui: React.ReactElement,
   options: CustomRenderOptions = {}
-): RenderResult {
+): ReturnType<typeof render> {
   const {
     route = '/',
     initialEntries = [route],
@@ -207,7 +207,7 @@ export const createMockEvent = (
  * Regular expression patterns for validation
  */
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+export const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
 
 /**
  * Mock Component for testing
