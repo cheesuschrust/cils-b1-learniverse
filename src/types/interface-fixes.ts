@@ -28,11 +28,13 @@ export interface ConfidenceIndicatorProps {
   contentType?: 'writing' | 'speaking' | 'listening' | 'multiple-choice' | 'flashcards';
 }
 
-// Add missing Flashcard interface
+// Fix Flashcard interface to support both old and new properties
 export interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  front?: string; // New property
+  back?: string; // New property
+  italian?: string; // Old property
+  english?: string; // Old property
   examples?: string[];
   notes?: string;
   tags?: string[];
@@ -41,9 +43,14 @@ export interface Flashcard {
   nextReviewDate?: Date;
   reviewCount?: number;
   mastered?: boolean;
+  level?: number; // Added level property
+  nextReview?: Date; // Added nextReview property
+  createdAt?: Date; // Added createdAt property
+  updatedAt?: Date; // Added updatedAt property
+  explanation?: string; // Added explanation property
 }
 
-// Add missing FlashcardSet interface
+// Fix FlashcardSet interface
 export interface FlashcardSet {
   id: string;
   name: string;
@@ -61,7 +68,7 @@ export interface FlashcardSet {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
-// Add missing FlashcardStats interface
+// Fix FlashcardStats interface
 export interface FlashcardStats {
   totalReviews: number;
   correctReviews: number;
@@ -69,35 +76,45 @@ export interface FlashcardStats {
   masteredCount: number;
   learningCount: number;
   newCount: number;
+  total?: number; // Added total property
 }
 
-// Add missing FlashcardComponentProps interface
+// Expanded FlashcardComponentProps interface to include all needed properties
 export interface FlashcardComponentProps {
   flashcard: Flashcard;
+  card?: Flashcard; // Legacy property
   onFlip?: () => void;
   onNext?: () => void;
   onPrevious?: () => void;
   onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
+  onRating?: (rating: number) => void; // Added for backward compatibility
+  onSkip?: () => void; // Added for backward compatibility
+  onKnown?: () => void; // Added for backward compatibility
+  onUnknown?: () => void; // Added for backward compatibility
   showControls?: boolean;
   showHints?: boolean;
+  showPronunciation?: boolean; // Added for backward compatibility
+  showActions?: boolean; // Added for backward compatibility
   autoFlip?: boolean;
   frontLabel?: string;
   backLabel?: string;
+  flipped?: boolean; // Added for backward compatibility
+  className?: string; // Added for backward compatibility
 }
 
-// Add missing ImportFormat enum
-export enum ImportFormat {
-  CSV = 'csv',
-  JSON = 'json',
-  ANKI = 'anki',
-  QUIZLET = 'quizlet',
-  MANUAL = 'manual'
+// Expanded ImportFormat enum with additional properties
+export interface ImportFormat {
+  type?: 'csv' | 'json' | 'anki' | 'quizlet' | 'manual' | 'excel';
+  fieldMap?: Record<string, string>;
+  hasHeader?: boolean;
+  delimiter?: string;
+  [key: string]: any;
 }
 
 // Add missing SupportTicketExtension interface
 export interface SupportTicketExtension {
   assignedTo?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
   status?: 'open' | 'in-progress' | 'resolved' | 'closed';
 }
@@ -110,4 +127,18 @@ export interface NotificationsContextType {
   markAsRead: (id: string) => void;
   clearAll: () => void;
   unreadCount: number;
+  markAllAsRead?: () => void; // Added missing property
+  dismissNotification?: (id: string) => void; // Added missing property
+  dismissAllNotifications?: () => void; // Added missing property
+  getFileProcessingNotifications?: () => any[]; // Added missing property
+}
+
+// Add helper utilities for calculating review performance
+export function calculateReviewPerformance(
+  correctness: number,
+  previousInterval: number = 1
+): number {
+  // Simple algorithm: if correctness is high, increase interval more
+  const baseMultiplier = 1 + correctness;
+  return Math.round(previousInterval * baseMultiplier);
 }

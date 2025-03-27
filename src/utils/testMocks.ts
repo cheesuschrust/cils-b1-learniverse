@@ -19,6 +19,12 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   updatedAt: new Date(),
   lastLogin: new Date(),
   lastActive: new Date(),
+  // Support both naming conventions
+  first_name: 'Test',
+  last_name: 'User',
+  last_login: new Date(),
+  last_active: new Date(),
+  created_at: new Date(),
   preferences: {
     theme: 'light',
     emailNotifications: true,
@@ -29,6 +35,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   subscription: 'free',
   status: 'active',
   preferredLanguage: 'english',
+  preferred_language: 'english',
   dailyQuestionCounts: {
     flashcards: 0,
     multipleChoice: 0,
@@ -43,6 +50,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   },
   displayName: 'Test User',
   photoURL: '',
+  profileImage: '',
   phoneNumber: '',
   address: '',
   avatar: '',

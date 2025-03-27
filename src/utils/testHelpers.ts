@@ -84,3 +84,6 @@ export const waitForCondition = async (
   
   return false;
 };
+
+// Export the renderWithProviders function for tests
+export { renderWithProviders } from '@/utils/testRender';
