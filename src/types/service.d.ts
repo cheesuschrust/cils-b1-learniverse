@@ -1,7 +1,7 @@
 
 import { User } from './user';
 import { DocumentMeta, ParsedDocument } from './document';
-import { Result, ApiResponse } from './index';
+import { Result } from './index';
 
 // Auth Service Types
 export interface LoginCredentials {

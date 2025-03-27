@@ -1,7 +1,6 @@
 
-import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
-import { Notification } from '@/types/notification';
-import { NotificationsContextType } from '@/types/notification';
+import React, { createContext, useContext, useState } from 'react';
+import { Notification, NotificationsContextType } from '@/types/notification';
 
 // Initial state
 const initialState: { notifications: Notification[] } = {
@@ -11,6 +10,7 @@ const initialState: { notifications: Notification[] } = {
 // Create the context
 const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
+  unreadCount: 0,
   addNotification: () => '',
   removeNotification: () => {},
   dismissNotification: () => {}, // Added
@@ -19,7 +19,6 @@ const NotificationsContext = createContext<NotificationsContextType>({
   clearAll: () => {},
   dismissAll: () => {}, // Alias for clearAll
   dismissAllNotifications: () => {}, // Alias for clearAll
-  unreadCount: 0,
   getFileProcessingNotifications: () => [] // Added
 });
 

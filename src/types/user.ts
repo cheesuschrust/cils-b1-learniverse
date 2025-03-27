@@ -36,15 +36,9 @@ export interface User {
   profileImage?: string;
   phoneNumber?: string;
   address?: string;
-  metrics?: {
-    totalQuestions: number;
-    correctAnswers: number;
-    streak: number;
-    [key: string]: any;
-  };
+  isAdmin?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
   subscription?: 'free' | 'premium' | 'trial';
-  isAdmin?: boolean;
   preferences?: UserPreferences;
   preferred_language?: 'english' | 'italian' | 'both';
   preferredLanguage?: 'english' | 'italian' | 'both';
@@ -55,6 +49,12 @@ export interface User {
     writing: number;
     speaking: number;
     [key: string]: number;
+  };
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+    [key: string]: any;
   };
 }
 
