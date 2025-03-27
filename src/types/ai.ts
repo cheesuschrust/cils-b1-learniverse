@@ -35,3 +35,23 @@ export interface AIServiceInterface {
   abortRequest(requestId: string): void;
   abortAllRequests(): void;
 }
+
+// Add ConfidenceIndicatorProps type
+export interface ConfidenceIndicatorProps {
+  score: number;
+  value?: number;
+  showLabel?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  indicatorClassName?: string;
+  contentType?: 'writing' | 'speaking' | 'listening' | 'multiple-choice' | 'flashcards';
+}
+
+// Add UseAIReturn interface
+export interface UseAIReturn {
+  isLoading: boolean;
+  error: Error | null;
+  result: string | null;
+  generateText: (prompt: string) => Promise<string>;
+  abort: () => void;
+}

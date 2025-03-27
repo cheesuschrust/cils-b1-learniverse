@@ -1,5 +1,5 @@
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing' | 'system';
 
 export interface NotificationAction {
   id: string;

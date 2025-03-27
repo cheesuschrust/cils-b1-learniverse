@@ -1,4 +1,5 @@
-export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher';
+
+export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
 
 export type UserPreferences = {
   theme?: 'light' | 'dark' | 'system';

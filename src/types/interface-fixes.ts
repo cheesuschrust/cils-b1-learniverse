@@ -1,3 +1,4 @@
+
 // This file fixes any interface compatibility issues between our own types
 // and third-party library types
 
@@ -41,7 +42,7 @@ export interface Flashcard {
   english: string; // Required per error message
   examples?: string[];
   notes?: string;
-  tags?: string[];
+  tags?: string[]; // Changed to optional based on errors
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   lastReviewed?: Date;
   nextReviewDate?: Date;
@@ -175,6 +176,7 @@ export interface AISettings {
 export interface AISettingsProps {
   initialSettings?: AISettings;
   onSettingsChange?: (settings: AISettings) => void;
+  onClose?: () => void; // Added for compatibility
 }
 
 // Update AIPreferences to match what's used in the code
@@ -236,6 +238,7 @@ export interface Toast {
 export interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
+  requireAdmin?: boolean; // Added for compatibility
 }
 
 // Update interfaces for AuthContextType
@@ -259,6 +262,9 @@ export interface AuthContextType {
   updateEmailSettings: (settings: any) => Promise<void>;
   getSystemLogs: () => Promise<any[]>;
   updateSystemLog: (id: string, data: any) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  isAuthenticated?: boolean;
+  isLoading?: boolean;
 }
 
 // Clearly define notification types
@@ -280,19 +286,125 @@ export interface Notification {
   expiresAt?: Date | string;
 }
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing' | 'system';
 
 export interface NotificationAction {
   id: string;
   label: string;
 }
 
-// Add missing ProtectedRouteProps
-export interface ProtectedRouteProps {
-  children: React.ReactNode;
-  allowedRoles?: string[];
+export interface NotificationItemProps {
+  notification: Notification;
+  onDismiss: (id: string) => void;
+  onRead: (id: string) => void;
+  onAction?: (id: string, actionId: string) => void;
 }
 
 // Fix AIModel type to include all variations
 export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'mistral-small' | 'claude-instant' | 'small' | 'medium' | 'large';
+
+// Add Question interface
+export interface Question {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  points: number;
+  type?: 'multiple-choice' | 'true-false' | 'fill-in-blank';
+  imageUrl?: string;
+  audioUrl?: string;
+}
+
+// Add QuestionSet interface
+export interface QuestionSet {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  questions: Question[];
+  published: boolean;
+  author: string;
+  instructions?: string;
+}
+
+// MultipleChoiceQuestion interface for backward compatibility
+export interface MultipleChoiceQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctOption: string;
+  explanation?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category?: string;
+  tags?: string[];
+}
+
+// Define AI-related type (for useAISimplified.ts)
+export interface UseAIReturn {
+  isLoading: boolean;
+  error: Error | null;
+  result: string | null;
+  generateText: (prompt: string) => Promise<string>;
+  abort: () => void;
+}
+
+// Define License type that's used in multiple places
+export interface License {
+  id: string;
+  name: string;
+  type: "university" | "k12" | "language-school" | "corporate";
+  plan: string;
+  seats: number;
+  usedSeats: number;
+  startDate: string;
+  endDate: string;
+  status: "active" | "suspended" | "pending" | "expired";
+  contactName: string;
+  contactEmail: string;
+  customization: {
+    logo: string;
+    colors: {
+      primary: string;
+      secondary: string;
+    };
+    domain: string;
+  };
+  value: number;
+  renewalStatus: string;
+}
+
+// Define AdUnit and related types
+export interface AdSettings {
+  enabled: boolean;
+  defaultNetwork: string;
+  frequencyCap: number;
+  showToPremiumUsers: boolean;
+  blockList: string[];
+}
+
+export interface AdUnit {
+  id: string;
+  name: string;
+  type: "banner" | "sidebar" | "interstitial" | "native";
+  network: string;
+  placement: string;
+  active: boolean;
+  impressions: number;
+  clicks: number;
+  revenue: number;
+  lastUpdated: Date;
+  content: string;
+  targetUrl: string;
+  impression: number;
+}

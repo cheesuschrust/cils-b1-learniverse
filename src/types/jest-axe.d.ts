@@ -1,20 +1,10 @@
 
-declare module "jest-axe" {
-  import { AxeResults } from "axe-core";
+declare module 'jest-axe' {
+  import { AxeResults } from 'axe-core';
 
-  interface JestAxeConfigureOptions {
-    rules?: {
-      [key: string]: {
-        enabled: boolean;
-        [key: string]: any;
-      };
-    };
-    [key: string]: any;
-  }
-
-  export interface AxeOptions {
+  export interface RunOptions {
     runOnly?: {
-      type: "tag" | "rule";
+      type: 'tag' | 'rule';
       values: string[];
     };
     rules?: {
@@ -22,47 +12,34 @@ declare module "jest-axe" {
         enabled: boolean;
       };
     };
+    reporter?: 'v1' | 'v2' | 'no-passes';
+    resultTypes?: Array<'passes' | 'violations' | 'incomplete' | 'inapplicable'>;
+    selectors?: boolean;
+    ancestry?: boolean;
+    xpath?: boolean;
+    absolutePaths?: boolean;
     iframes?: boolean;
     elementRef?: boolean;
-    selectors?: boolean;
-    resultTypes?: ("violations" | "incomplete" | "inapplicable" | "passes")[];
-    [key: string]: any;
+    frameWaitTime?: number;
+    preload?: boolean;
+    pingWaitTime?: number;
   }
 
-  export interface JestAxe {
-    (html: Element | string, options?: AxeOptions): Promise<AxeResults>;
-    configure(options: JestAxeConfigureOptions): JestAxe;
+  export interface AxeMatchers<R = unknown> {
+    toHaveNoViolations(): R;
   }
+
+  declare global {
+    namespace jest {
+      interface Matchers<R> extends AxeMatchers<R> {}
+    }
+  }
+
+  type JestAxe = {
+    (html: Element | string, options?: RunOptions): Promise<AxeResults>;
+    configureAxe(options?: RunOptions): JestAxe;
+  };
 
   const axe: JestAxe;
   export default axe;
-
-  export interface ToAxeResults {
-    pass: boolean;
-    message: () => string;
-  }
-
-  export function toHaveNoViolations(results: AxeResults): ToAxeResults;
-  
-  export interface Result {
-    id: string;
-    impact: string;
-    tags: string[];
-    description: string;
-    help: string;
-    helpUrl: string;
-    nodes: {
-      target: string[];
-      html: string;
-      [key: string]: any;
-    }[];
-  }
-}
-
-declare global {
-  namespace jest {
-    interface Matchers<R, T> {
-      toHaveNoViolations(): R;
-    }
-  }
 }
