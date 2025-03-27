@@ -153,18 +153,6 @@ export const abortAllRequests = (): void => {
   console.log("AI Service - Aborting all requests");
 };
 
-// Export all functions individually
-export {
-  generateText,
-  classifyText,
-  getConfidenceScore,
-  addTrainingExamples,
-  generateFlashcards,
-  generateQuestions,
-  abortRequest,
-  abortAllRequests
-};
-
 // Create an AIService object to implement AIServiceInterface
 const AIService: AIServiceInterface = {
   generateText,

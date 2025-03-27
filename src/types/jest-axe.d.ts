@@ -1,53 +1,67 @@
 
-declare module 'jest-axe' {
-  import { AxeResults } from 'axe-core';
+declare module "jest-axe" {
+  import { AxeResults } from "axe-core";
 
-  export interface JestAxeConfigureOptions {
-    globalOptions?: Record<string, any>;
-    rules?: Record<string, { enabled: boolean }>;
-    checks?: Record<string, { enabled: boolean }>;
-  }
-
-  export interface ToAXEMatchers<R = any> {
-    toHaveNoViolations(): R;
-  }
-
-  export interface AxeRuleObject {
-    id: string;
-    enabled: boolean;
-  }
-
-  export interface JestAxeOptions {
-    runOnly?: {
-      type: 'tag' | 'rule';
-      values: string[];
-    } | string[] | string;
-    rules?: AxeRuleObject[];
-    context?: {
-      include?: string[][] | string[];
-      exclude?: string[][] | string[];
+  interface JestAxeConfigureOptions {
+    rules?: {
+      [key: string]: {
+        enabled: boolean;
+        [key: string]: any;
+      };
     };
-    elementRef?: boolean;
-    iframes?: boolean;
-    selectors?: boolean;
-    resultTypes?: string[];
-    xpath?: boolean;
+    [key: string]: any;
   }
 
-  export function configureAxe(options: JestAxeConfigureOptions): void;
-  export function axe(html: Element | string, options?: JestAxeOptions): Promise<AxeResults>;
-  export function toHaveNoViolations(): {
-    compare(received: AxeResults): { pass: boolean; message: () => string };
-  };
+  export interface AxeOptions {
+    runOnly?: {
+      type: "tag" | "rule";
+      values: string[];
+    };
+    rules?: {
+      [key: string]: {
+        enabled: boolean;
+      };
+    };
+    iframes?: boolean;
+    elementRef?: boolean;
+    selectors?: boolean;
+    resultTypes?: ("violations" | "incomplete" | "inapplicable" | "passes")[];
+    [key: string]: any;
+  }
+
+  export interface JestAxe {
+    (html: Element | string, options?: AxeOptions): Promise<AxeResults>;
+    configure(options: JestAxeConfigureOptions): JestAxe;
+  }
+
+  const axe: JestAxe;
+  export default axe;
+
+  export interface ToAxeResults {
+    pass: boolean;
+    message: () => string;
+  }
+
+  export function toHaveNoViolations(results: AxeResults): ToAxeResults;
   
-  export function getViolations(results: AxeResults): Array<any>;
-  
-  export interface JestMatchers<R> extends ToAXEMatchers<R> {}
+  export interface Result {
+    id: string;
+    impact: string;
+    tags: string[];
+    description: string;
+    help: string;
+    helpUrl: string;
+    nodes: {
+      target: string[];
+      html: string;
+      [key: string]: any;
+    }[];
+  }
 }
 
 declare global {
   namespace jest {
-    interface Matchers<R> {
+    interface Matchers<R, T> {
       toHaveNoViolations(): R;
     }
   }

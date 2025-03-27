@@ -1,5 +1,5 @@
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing';
 
 export interface NotificationAction {
   id: string;
@@ -29,4 +29,18 @@ export interface NotificationItemProps {
   onDismiss: (id: string) => void;
   onRead: (id: string) => void;
   onAction?: (id: string, actionId: string) => void;
+}
+
+export interface NotificationsContextType {
+  notifications: Notification[];
+  addNotification: (notification: Notification) => string;
+  removeNotification: (id: string) => void;
+  markAsRead: (id: string) => void;
+  clearAll: () => void;
+  dismissAll: () => void; // Alias for clearAll
+  unreadCount: number;
+  markAllAsRead: () => void;
+  dismissNotification: (id: string) => void; // Alias for removeNotification
+  dismissAllNotifications: () => void; // Alias for clearAll
+  getFileProcessingNotifications: () => Notification[];
 }

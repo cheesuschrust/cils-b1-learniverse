@@ -4,7 +4,9 @@
 
 import { ProgressProps as RadixProgressProps } from '@radix-ui/react-progress';
 import { User } from './user';
-import { Notification } from './notification';
+
+// Export for Jest test utilities
+export type ValueType = string | number;
 
 // Extend the RadixProgressProps to include our custom properties
 export interface ProgressProps extends RadixProgressProps {
@@ -54,6 +56,8 @@ export interface Flashcard {
   dueDate?: Date; // Added for compatibility
 }
 
+// Define all the types that require compatibility fixes
+
 // Fix FlashcardSet interface
 export interface FlashcardSet {
   id: string;
@@ -76,15 +80,18 @@ export interface FlashcardSet {
 export interface FlashcardStats {
   totalReviews: number;
   correctReviews: number;
-  averageResponseTime: number;
-  masteredCount: number;
-  learningCount: number;
-  newCount: number;
+  averageResponseTime?: number;
+  masteredCount?: number;
+  learningCount?: number;
+  newCount?: number;
   mastered?: number; // Added for compatibility
   total?: number; // Added for compatibility
   learning?: number; // Added for compatibility
   toReview?: number; // Added for compatibility with useFlashcards
   avgMasteryTime?: number; // Added based on error in useFlashcards
+  averageScore?: number;
+  streak?: number;
+  lastReviewDate?: Date;
 }
 
 // Expanded FlashcardComponentProps interface to include all needed properties
@@ -128,44 +135,7 @@ export interface SupportTicketExtension {
   status?: 'open' | 'in-progress' | 'resolved' | 'closed' | 'pending';
 }
 
-// Add missing NotificationsContextType interface
-export interface NotificationsContextType {
-  notifications: Notification[];
-  addNotification: (notification: Notification) => string;
-  removeNotification: (id: string) => void;
-  markAsRead: (id: string) => void;
-  clearAll: () => void;
-  dismissAll: () => void; // Alias for clearAll
-  unreadCount: number;
-  markAllAsRead: () => void; // Added missing property
-  dismissNotification: (id: string) => void; // Added missing property (alias for removeNotification)
-  dismissAllNotifications: () => void; // Added missing property (alias for clearAll)
-  getFileProcessingNotifications: () => Notification[]; // Added missing property
-}
-
-// Add missing NotificationItemProps
-export interface NotificationItemProps {
-  notification: Notification;
-  onDismiss: (id: string) => void;
-  onRead: (id: string) => void;
-  onAction?: (id: string, actionId: string) => void;
-}
-
-// Add missing AISettingsProps interface
-export interface AISettingsProps {
-  initialSettings?: any;
-  onSettingsChange?: (settings: any) => void;
-  onClose?: () => void;
-}
-
-// Add missing LevelBadgeProps
-export interface LevelBadgeProps {
-  level?: number;
-  size?: string;
-  showInfo?: boolean;
-}
-
-// Define LineChartProps
+// Fix LineChartProps
 export interface LineChartProps {
   data: any[];
   index: string;
@@ -186,45 +156,57 @@ export function calculateReviewPerformance(
   return Math.round(previousInterval * baseMultiplier);
 }
 
-// Define UseAIReturn interface
-export interface UseAIReturn {
-  generateText: (prompt: string, options?: any) => Promise<string>;
-  getConfidenceScore: (text: string, contentType: string) => Promise<number>;
-  translateText?: (text: string, targetLang: 'english' | 'italian') => Promise<string>;
-  checkGrammar?: (text: string, lang: 'english' | 'italian') => Promise<{text: string, corrections: any[]}>;
-  isLoading?: boolean;
-  error: Error | null;
-  abort?: () => void;
-  generateFlashcards?: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
-  isProcessing?: boolean;
-  classifyText?: (text: string) => Promise<any>;
-  isModelLoaded?: boolean;
-  status?: string;
-  loadModel?: (modelName: string) => Promise<boolean>;
-  generateQuestions?: (content: string, count?: number, type?: string) => Promise<any[]>;
+// Define AISettings interface
+export interface AISettings {
+  enabled: boolean;
+  useOfflineModel: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  voiceEnabled: boolean;
+  speakingRate: number;
+  aiEnabled?: boolean;
+  confidenceThreshold?: number;
+  anonymousAnalytics?: boolean;
+  defaultLanguage?: 'english' | 'italian' | 'both';
+  [key: string]: any;
 }
 
-// Define AIServiceInterface and AIServiceOptions
-export interface AIServiceOptions {
-  maxLength?: number;
-  temperature?: number;
-  model?: string;
-  stream?: boolean;
+// Define AISettingsProps
+export interface AISettingsProps {
+  initialSettings?: AISettings;
+  onSettingsChange?: (settings: AISettings) => void;
+  onClose?: () => void;
 }
 
-export interface AIServiceInterface {
-  generateText(prompt: string, options?: AIServiceOptions): Promise<string>;
-  classifyText(text: string): Promise<Array<{ label: string; score: number }>>;
-  generateImage?(prompt: string, size?: string): Promise<string>;
-  getConfidenceScore(contentType: string): number;
-  addTrainingExamples(contentType: string, examples: any[]): number;
-  generateFlashcards(topic: string, count?: number, difficulty?: string): Promise<any[]>;
-  generateQuestions(content: string, count?: number, type?: string): Promise<any[]>;
-  abortRequest(requestId: string): void;
-  abortAllRequests(): void;
+// Define LevelBadgeProps
+export interface LevelBadgeProps {
+  level?: number;
+  showInfo?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-// Toast interface to include duration property
+// Define AISetupWizardProps
+export interface AISetupWizardProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onComplete: () => void;
+}
+
+// Define ChatSession
+export interface ChatSession {
+  id: string;
+  userId?: string;
+  title?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  messages: any[];
+  startedAt?: Date;
+  lastActivityAt?: Date;
+  resolved?: boolean;
+  escalatedToHuman?: boolean;
+  context?: string | Record<string, any>;
+}
+
+// Add missing types for Toast
 export interface Toast {
   id: string;
   title?: React.ReactNode;
@@ -239,13 +221,6 @@ export interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
   requireAdmin?: boolean;
-}
-
-// Define AISetupWizardProps
-export interface AISetupWizardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onComplete: () => void;
 }
 
 // Update interfaces for AuthContextType
@@ -271,54 +246,11 @@ export interface AuthContextType {
   updateSystemLog: (id: string, data: any) => Promise<void>;
 }
 
-// Export for Jest test utilities
-export type ValueType = string | number;
-
-export interface ChatSession {
-  id: string;
-  userId?: string;
-  title?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-  messages: any[];
-  startedAt?: Date;
-  lastActivityAt?: Date;
-  resolved?: boolean;
-  escalatedToHuman?: boolean;
-  context?: string | Record<string, any>;
-}
-
 export interface RegisterData {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-}
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type?: string;
-  createdAt: Date | string;
-  timestamp?: Date | string;
-  read: boolean;
-  actions?: { id: string; label: string }[];
-  url?: string;
-  metadata?: Record<string, any>;
-  userId?: string;
-  priority?: 'low' | 'normal' | 'high';
-  icon?: string;
-  link?: string;
-  expiresAt?: Date | string;
-}
-
-export interface ContentType {
-  id: string;
-  name: string;
-  description: string;
-  features: string[];
-  enabled: boolean;
 }
 
 export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';

@@ -115,4 +115,5 @@ export interface MultipleChoiceQuestion {
   language: 'english' | 'italian';
   type?: string; // Added for compatibility with code that checks this
   nextReviewDate?: Date; // Added for compatibility
+  tags?: string[]; // Added for compatibility
 }

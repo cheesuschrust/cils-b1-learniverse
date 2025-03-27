@@ -72,9 +72,8 @@ export class AuthService implements IAuthService {
     });
   };
   
-  updateProfile = async (data: Partial<User>): Promise<AuthResponse> => {
+  updateProfile = async (userId: string, data: Partial<User>): Promise<AuthResponse> => {
     try {
-      const userId = data.id; // Assume id is in the data
       return await API.handleRequest<AuthResponse>(`/users/${userId}`, "PUT", data);
     } catch (error) {
       console.error("Update profile error:", error);
@@ -145,20 +144,61 @@ export class AuthService implements IAuthService {
 }
 
 // Export static methods for backward compatibility
-export const login = AuthService.prototype.login;
-export const register = AuthService.prototype.register;
-export const logout = AuthService.prototype.logout;
-export const forgotPassword = AuthService.prototype.forgotPassword;
-export const resetPassword = AuthService.prototype.resetPassword;
-export const verifyEmail = AuthService.prototype.verifyEmail;
-export const testConnection = AuthService.prototype.testConnection;
-export const updateProfile = AuthService.prototype.updateProfile;
-export const updatePassword = AuthService.prototype.updatePassword;
-export const refreshUser = AuthService.prototype.refreshUser;
-export const signup = AuthService.prototype.signup;
-export const incrementDailyQuestionCount = AuthService.prototype.incrementDailyQuestionCount;
-export const resendVerificationEmail = AuthService.prototype.resendVerificationEmail;
-export const socialLogin = AuthService.prototype.socialLogin;
+export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  return new AuthService().login(credentials);
+};
+
+export const register = async (data: RegisterData): Promise<AuthResponse> => {
+  return new AuthService().register(data);
+};
+
+export const logout = async (): Promise<void> => {
+  return new AuthService().logout();
+};
+
+export const forgotPassword = async (email: string): Promise<void> => {
+  return new AuthService().forgotPassword(email);
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+  return new AuthService().resetPassword(token, newPassword);
+};
+
+export const verifyEmail = async (token: string): Promise<void> => {
+  return new AuthService().verifyEmail(token);
+};
+
+export const testConnection = async (): Promise<{ success: boolean, message: string }> => {
+  return new AuthService().testConnection();
+};
+
+export const updateProfile = async (userId: string, data: Partial<User>): Promise<AuthResponse> => {
+  return new AuthService().updateProfile(userId, data);
+};
+
+export const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+  return new AuthService().updatePassword(currentPassword, newPassword);
+};
+
+export const refreshUser = async (): Promise<User> => {
+  return new AuthService().refreshUser();
+};
+
+export const signup = async (data: RegisterData): Promise<AuthResponse> => {
+  return new AuthService().signup(data);
+};
+
+export const incrementDailyQuestionCount = async (questionType: string): Promise<boolean> => {
+  return new AuthService().incrementDailyQuestionCount(questionType);
+};
+
+export const resendVerificationEmail = async (email: string): Promise<boolean> => {
+  return new AuthService().resendVerificationEmail(email);
+};
+
+export const socialLogin = async (provider: string): Promise<boolean> => {
+  return new AuthService().socialLogin(provider);
+};
 
 // Create a default export
 const authService: IAuthService = new AuthService();

@@ -1,5 +1,5 @@
 
-import { User } from "@/contexts/shared-types";
+import { User } from "@/types/user";
 
 export interface LoginCredentials {
   email: string;
@@ -15,6 +15,7 @@ export interface RegisterData {
 
 export interface AuthResponse {
   user: User;
+  token?: string;
 }
 
 export interface IAuthService {
@@ -25,4 +26,11 @@ export interface IAuthService {
   resetPassword(token: string, newPassword: string): Promise<void>;
   verifyEmail(token: string): Promise<void>;
   testConnection(): Promise<{ success: boolean, message: string }>;
+  updateProfile(userId: string, data: Partial<User>): Promise<AuthResponse>;
+  updatePassword(currentPassword: string, newPassword: string): Promise<void>;
+  refreshUser(): Promise<User>;
+  signup(data: RegisterData): Promise<AuthResponse>;
+  incrementDailyQuestionCount(questionType: string): Promise<boolean>;
+  resendVerificationEmail(email: string): Promise<boolean>;
+  socialLogin(provider: string): Promise<boolean>;
 }
