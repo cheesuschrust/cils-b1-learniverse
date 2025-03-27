@@ -204,16 +204,17 @@ export const createMockEvent = (
 });
 
 /**
- * Mock Component for testing
+ * Regular expression patterns for validation
  */
-export const MockComponent: React.FC<{prop?: string}> = ({prop}) => (
-  <div data-testid="mock">{prop}</div>
-);
+export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
 /**
- * Example regex pattern with proper termination
+ * Mock Component for testing
  */
-export const mockRegex = /pattern/;
+export const TestComponent: React.FC<{prop?: string}> = ({prop}) => (
+  <div data-testid="test-component">{prop || 'Default'}</div>
+);
 
 /**
  * Complex mock component with proper JSX structure

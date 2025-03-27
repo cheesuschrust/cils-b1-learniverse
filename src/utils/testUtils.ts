@@ -55,6 +55,32 @@ export function renderWithProviders(
 }
 
 /**
+ * Render a component with ThemeProvider
+ */
+export function renderWithTheme<P>(Component: React.ComponentType<P>, props: P): RenderResult {
+  return render(
+    <ThemeProvider>
+      <Component {...props} />
+    </ThemeProvider>
+  );
+}
+
+/**
+ * Safe render with error handling
+ */
+export const safeRender = <P extends object>(
+  Component: React.ComponentType<P>, 
+  props: P
+): RenderResult => {
+  try {
+    return render(<Component {...props} />);
+  } catch (error) {
+    console.error('Render error:', error);
+    throw error; // Re-throw for test failure
+  }
+};
+
+/**
  * Mock implementations for commonly used hooks and services
  */
 export const mockServices = {
