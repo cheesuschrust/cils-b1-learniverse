@@ -1,5 +1,5 @@
 
-export type NotificationType = 'default' | 'info' | 'success' | 'warning' | 'error' | 'file-processing' | 'system' | 'achievement';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review';
 
 export interface NotificationAction {
   id: string;
@@ -10,9 +10,9 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type?: NotificationType;
+  type: NotificationType;
   createdAt: Date | string;
-  timestamp?: Date | string; // Added for compatibility
+  timestamp?: Date | string;
   read: boolean;
   actions?: NotificationAction[];
   url?: string;
@@ -24,20 +24,9 @@ export interface Notification {
   expiresAt?: Date | string;
 }
 
-export interface NotificationsState {
-  notifications: Notification[];
-}
-
-export interface NotificationsContextType {
-  notifications: Notification[];
-  unreadCount: number;
-  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => string;
-  removeNotification: (id: string) => void;
-  dismissNotification: (id: string) => void; // Added
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;  // Added
-  clearAll: () => void;
-  dismissAll: () => void; // Alias for clearAll
-  dismissAllNotifications: () => void; // Alias for clearAll
-  getFileProcessingNotifications: () => Notification[]; // Added
+export interface NotificationItemProps {
+  notification: Notification;
+  onDismiss: (id: string) => void;
+  onRead: (id: string) => void;
+  onAction?: (id: string, actionId: string) => void;
 }

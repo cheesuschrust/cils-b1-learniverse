@@ -3,6 +3,8 @@
 // and third-party library types
 
 import { ProgressProps as RadixProgressProps } from '@radix-ui/react-progress';
+import { User } from './user';
+import { Notification } from './notification';
 
 // Extend the RadixProgressProps to include our custom properties
 export interface ProgressProps extends RadixProgressProps {
@@ -20,7 +22,7 @@ export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 
 // ConfidenceIndicator component props
 export interface ConfidenceIndicatorProps {
-  score?: number;
+  score: number; // Required property based on errors
   value?: number;
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
@@ -44,10 +46,10 @@ export interface Flashcard {
   nextReviewDate?: Date;
   reviewCount?: number;
   mastered?: boolean;
-  level?: number; // Added level property
+  level: number; // Changed to required based on errors
   nextReview?: Date; // Added nextReview property
-  createdAt?: Date; // Added createdAt property
-  updatedAt?: Date; // Added updatedAt property
+  createdAt: Date; // Changed to required based on errors
+  updatedAt: Date; // Changed to required based on errors
   explanation?: string; // Added explanation property
   dueDate?: Date; // Added for compatibility
 }
@@ -82,6 +84,7 @@ export interface FlashcardStats {
   total?: number; // Added for compatibility
   learning?: number; // Added for compatibility
   toReview?: number; // Added for compatibility with useFlashcards
+  avgMasteryTime?: number; // Added based on error in useFlashcards
 }
 
 // Expanded FlashcardComponentProps interface to include all needed properties
@@ -127,17 +130,17 @@ export interface SupportTicketExtension {
 
 // Add missing NotificationsContextType interface
 export interface NotificationsContextType {
-  notifications: any[];
-  addNotification: (notification: any) => string;
+  notifications: Notification[];
+  addNotification: (notification: Notification) => string;
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
   clearAll: () => void;
-  dismissAll?: () => void; // Alias for clearAll
+  dismissAll: () => void; // Alias for clearAll
   unreadCount: number;
-  markAllAsRead?: () => void; // Added missing property
-  dismissNotification?: (id: string) => void; // Added missing property
-  dismissAllNotifications?: () => void; // Added missing property
-  getFileProcessingNotifications?: () => any[]; // Added missing property
+  markAllAsRead: () => void; // Added missing property
+  dismissNotification: (id: string) => void; // Added missing property (alias for removeNotification)
+  dismissAllNotifications: () => void; // Added missing property (alias for clearAll)
+  getFileProcessingNotifications: () => Notification[]; // Added missing property
 }
 
 // Add missing NotificationItemProps
@@ -234,6 +237,7 @@ export interface Toast {
 // Add missing ProtectedRouteProps interface
 export interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: string[];
   requireAdmin?: boolean;
 }
 
@@ -251,20 +255,20 @@ export interface AuthContextType {
   error: Error | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup?: (data: any) => Promise<void>;
-  resetPassword?: (token: string, newPassword: string) => Promise<void>;
-  forgotPassword?: (email: string) => Promise<void>;
-  verifyEmail?: (token: string) => Promise<void>;
-  resendVerificationEmail?: (email: string) => Promise<boolean>;
-  updateProfile?: (userId: string, data: any) => Promise<any>;
-  updatePassword?: (userId: string, newPassword: string) => Promise<void>;
-  socialLogin?: (provider: string) => Promise<boolean>;
-  addSystemLog?: (action: string, details: string, level?: string) => void;
-  incrementDailyQuestionCount?: (questionType: string) => Promise<boolean>;
-  getEmailSettings?: () => Promise<any>;
-  updateEmailSettings?: (settings: any) => Promise<void>;
-  getSystemLogs?: () => Promise<any[]>;
-  updateSystemLog?: (id: string, data: any) => Promise<void>;
+  signup: (data: any) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<boolean>;
+  updateProfile: (data: any) => Promise<any>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  socialLogin: (provider: string) => Promise<boolean>;
+  addSystemLog: (action: string, details: string, level?: string) => void;
+  incrementDailyQuestionCount: (questionType: string) => Promise<boolean>;
+  getEmailSettings: () => Promise<any>;
+  updateEmailSettings: (settings: any) => Promise<void>;
+  getSystemLogs: () => Promise<any[]>;
+  updateSystemLog: (id: string, data: any) => Promise<void>;
 }
 
 // Export for Jest test utilities

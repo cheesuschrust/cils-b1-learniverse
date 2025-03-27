@@ -27,6 +27,6 @@ export interface AdUnit {
   revenue: number;
   lastUpdated: Date;
   content: string; // Required for compatibility
-  targetUrl?: string; // For compatibility
+  targetUrl: string; // Required property based on error
   impression?: number; // For compatibility
 }

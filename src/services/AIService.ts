@@ -1,4 +1,5 @@
-import { AIServiceOptions } from "@/types/ai";
+
+import { AIServiceOptions, AIServiceInterface } from "@/types/ai";
 
 /**
  * Generate text using an AI model
@@ -91,6 +92,8 @@ export const generateFlashcards = async (
       english: `English definition ${i + 1} for ${topic}`,
       level: 1,
       mastered: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       explanation: `Example explanation for ${topic} term ${i + 1}`
     });
   }
@@ -121,7 +124,14 @@ export const generateQuestions = async (
       options: ["Option A", "Option B", "Option C", "Option D"],
       correctAnswer: "Option A",
       explanation: "Sample explanation for the correct answer",
-      type: type
+      type: type,
+      difficulty: "intermediate",
+      category: "general",
+      tags: ["sample", "generated"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      language: "english",
+      points: 10
     });
   }
   
@@ -143,8 +153,8 @@ export const abortAllRequests = (): void => {
   console.log("AI Service - Aborting all requests");
 };
 
-// Export all functions as a default object
-export default {
+// Export all functions individually
+export {
   generateText,
   classifyText,
   getConfidenceScore,
@@ -154,3 +164,18 @@ export default {
   abortRequest,
   abortAllRequests
 };
+
+// Create an AIService object to implement AIServiceInterface
+const AIService: AIServiceInterface = {
+  generateText,
+  classifyText,
+  getConfidenceScore,
+  addTrainingExamples,
+  generateFlashcards,
+  generateQuestions,
+  abortRequest,
+  abortAllRequests
+};
+
+// Export as default for compatibility
+export default AIService;

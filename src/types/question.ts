@@ -113,4 +113,6 @@ export interface MultipleChoiceQuestion {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
   category: string;
   language: 'english' | 'italian';
+  type?: string; // Added for compatibility with code that checks this
+  nextReviewDate?: Date; // Added for compatibility
 }

@@ -26,6 +26,7 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   last_login: new Date(),
   last_active: new Date(),
   created_at: new Date(),
+  updated_at: new Date(),
   preferences: {
     theme: 'light',
     emailNotifications: true,
@@ -107,6 +108,7 @@ export const createMockChatMessage = (overrides: Partial<any> = {}): any => ({
   id: 'test-message-id',
   content: 'Hello, this is a test message',
   text: 'Hello, this is a test message', // For compatibility
+  role: 'user', // Added for compatibility with types requiring 'role'
   isUser: true, // For compatibility
   timestamp: new Date(),
   ...overrides
@@ -119,21 +121,23 @@ export const createMockChatMessage = (overrides: Partial<any> = {}): any => ({
 export const createMockChatSession = (overrides: Partial<any> = {}): any => ({
   id: 'test-session-id',
   userId: 'test-user-id',
-  title: 'Test Chat Session', // For compatibility
-  createdAt: new Date(), // For compatibility
-  updatedAt: new Date(), // For compatibility
-  startedAt: new Date(), // For compatibility
-  lastActivityAt: new Date(), // For compatibility
-  resolved: false, // For compatibility
-  escalatedToHuman: false, // For compatibility
+  title: 'Test Chat Session', 
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  startedAt: new Date(),
+  lastActivityAt: new Date(),
+  resolved: false,
+  escalatedToHuman: false,
   messages: [
     createMockChatMessage({
       id: 'test-message-id-1',
-      isUser: true // For compatibility
+      isUser: true,
+      role: 'user'
     }),
     createMockChatMessage({
       id: 'test-message-id-2',
-      isUser: false, // For compatibility
+      isUser: false,
+      role: 'assistant',
       content: 'Hello, how can I help you today?',
       text: 'Hello, how can I help you today?',
       timestamp: new Date(Date.now() + 1000)

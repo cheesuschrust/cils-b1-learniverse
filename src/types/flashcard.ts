@@ -3,11 +3,11 @@ export interface Flashcard {
   id: string;
   italian: string;
   english: string;
-  level: number;
+  level: number; // Required property based on errors
   mastered: boolean;
   tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date; // Required property based on errors
+  updatedAt: Date; // Required property based on errors
   nextReview: Date;
   lastReviewed: Date | null;
   explanation?: string;
@@ -54,6 +54,7 @@ export interface FlashcardStats {
   streak: number;
   lastReviewDate?: Date;
   toReview?: number; // Added for compatibility
+  avgMasteryTime?: number; // Added for compatibility with useFlashcards
 }
 
 export interface ImportFormat {

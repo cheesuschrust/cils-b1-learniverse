@@ -24,7 +24,7 @@ export interface User {
   name?: string;
   role: UserRole;
   isVerified?: boolean;
-  createdAt: Date;
+  createdAt?: Date;
   created_at?: Date; // Snake case property for backward compatibility
   updatedAt: Date; // Required property
   updated_at?: Date; // Snake case property for backward compatibility
@@ -41,8 +41,8 @@ export interface User {
   status?: 'active' | 'inactive' | 'suspended';
   subscription?: 'free' | 'premium' | 'trial';
   preferences: UserPreferences;
-  preferred_language?: 'english' | 'italian' | 'both';
   preferredLanguage?: 'english' | 'italian' | 'both';
+  preferred_language?: 'english' | 'italian' | 'both';
   dailyQuestionCounts?: {
     flashcards: number;
     multipleChoice: number;

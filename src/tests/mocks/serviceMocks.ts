@@ -1,4 +1,3 @@
-
 import { AuthService } from '@/services/AuthService';
 import DocumentService from '@/services/DocumentService';
 import { User } from '@/types/user';
@@ -17,12 +16,19 @@ export const MockAuthService: IAuthService = {
         email: credentials.email,
         firstName: 'Test',
         lastName: 'User',
+        first_name: 'Test',
+        last_name: 'User',
         username: 'testuser',
         role: 'user',
         isVerified: true,
         createdAt: new Date(),
+        created_at: new Date(),
+        updatedAt: new Date(),
+        updated_at: new Date(),
         lastLogin: new Date(),
+        last_login: new Date(),
         lastActive: new Date(),
+        last_active: new Date(),
         preferences: {
           theme: 'light',
           emailNotifications: true,
@@ -32,6 +38,13 @@ export const MockAuthService: IAuthService = {
         subscription: 'free',
         status: 'active',
         preferredLanguage: 'english',
+        preferred_language: 'english',
+        displayName: 'Test User',
+        photoURL: '',
+        profileImage: '',
+        avatar: '',
+        phoneNumber: '',
+        address: '',
         dailyQuestionCounts: {
           flashcards: 0,
           multipleChoice: 0,
@@ -56,12 +69,19 @@ export const MockAuthService: IAuthService = {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        first_name: data.firstName,
+        last_name: data.lastName,
         username: data.email.split('@')[0],
         role: 'user',
         isVerified: false,
         createdAt: new Date(),
+        created_at: new Date(),
+        updatedAt: new Date(),
+        updated_at: new Date(),
         lastLogin: new Date(),
+        last_login: new Date(),
         lastActive: new Date(),
+        last_active: new Date(),
         preferences: {
           theme: 'light',
           emailNotifications: true,
@@ -71,6 +91,13 @@ export const MockAuthService: IAuthService = {
         subscription: 'free',
         status: 'active',
         preferredLanguage: 'english',
+        preferred_language: 'english',
+        displayName: `${data.firstName} ${data.lastName}`,
+        photoURL: '',
+        profileImage: '',
+        avatar: '',
+        phoneNumber: '',
+        address: '',
         dailyQuestionCounts: {
           flashcards: 0,
           multipleChoice: 0,
@@ -88,6 +115,10 @@ export const MockAuthService: IAuthService = {
     };
   }),
   
+  signup: jest.fn().mockImplementation(async (data: RegisterData): Promise<AuthResponse> => {
+    return MockAuthService.register(data);
+  }),
+  
   logout: jest.fn().mockResolvedValue(undefined),
   
   forgotPassword: jest.fn().mockResolvedValue(undefined),
@@ -99,7 +130,38 @@ export const MockAuthService: IAuthService = {
   testConnection: jest.fn().mockResolvedValue({ 
     success: true, 
     message: 'Auth service connection test successful' 
-  })
+  }),
+
+  updateProfile: jest.fn().mockImplementation(async (data: any): Promise<AuthResponse> => {
+    return {
+      user: {
+        ...MockAuthService.login.mock.results[0]?.value?.user,
+        ...data,
+      },
+      token: 'mock-jwt-token'
+    };
+  }),
+
+  updatePassword: jest.fn().mockResolvedValue(undefined),
+  
+  refreshUser: jest.fn().mockImplementation(async (): Promise<User> => {
+    return MockAuthService.login.mock.results[0]?.value?.user || {
+      id: 'mock-user-id',
+      email: 'mock@example.com',
+      firstName: 'Mock',
+      lastName: 'User',
+      role: 'user',
+      updatedAt: new Date(),
+      preferences: { theme: 'light' },
+      metrics: { totalQuestions: 0, correctAnswers: 0, streak: 0 }
+    };
+  }),
+
+  incrementDailyQuestionCount: jest.fn().mockResolvedValue(true),
+  
+  resendVerificationEmail: jest.fn().mockResolvedValue(true),
+  
+  socialLogin: jest.fn().mockResolvedValue(true)
 };
 
 /**
