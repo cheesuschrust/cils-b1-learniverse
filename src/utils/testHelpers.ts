@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { render, RenderOptions, RenderResult, screen, fireEvent } from '@testing-library/react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { User, UserRole } from '@/types/user';
 import { DocumentMeta, ParsedDocument } from '@/types/document';
 import { ServiceFactory } from '@/services/ServiceFactory';
-import { IAuthService, AuthResponse } from '@/types/service';
+import { IAuthService } from '@/types/service';
 
 /**
  * Create a custom render method that includes all providers
@@ -202,54 +202,6 @@ export const createMockEvent = (
   stopPropagation: jest.fn(),
   ...overrides,
 });
-
-/**
- * Find element by test ID and assert existence
- */
-export const getByTestIdAndAssert = (testId: string): HTMLElement => {
-  const element = screen.getByTestId(testId);
-  expect(element).toBeInTheDocument();
-  return element;
-};
-
-/**
- * Wait for element to appear and assert existence
- */
-export const waitForElementAndAssert = async (testId: string): Promise<HTMLElement> => {
-  const element = await screen.findByTestId(testId);
-  expect(element).toBeInTheDocument();
-  return element;
-};
-
-/**
- * Click button by text or test ID
- */
-export const clickButton = (textOrTestId: string): void => {
-  try {
-    // Try to find by text first
-    const button = screen.getByRole('button', { name: textOrTestId });
-    fireEvent.click(button);
-  } catch (e) {
-    // Fall back to test ID
-    const button = screen.getByTestId(textOrTestId);
-    fireEvent.click(button);
-  }
-};
-
-/**
- * Fill input by label or test ID
- */
-export const fillInput = (labelOrTestId: string, value: string): void => {
-  try {
-    // Try to find by label text first
-    const input = screen.getByLabelText(labelOrTestId);
-    fireEvent.change(input, { target: { value } });
-  } catch (e) {
-    // Fall back to test ID
-    const input = screen.getByTestId(labelOrTestId);
-    fireEvent.change(input, { target: { value } });
-  }
-};
 
 // Re-export testing utilities for convenience
 export * from '@testing-library/react';
