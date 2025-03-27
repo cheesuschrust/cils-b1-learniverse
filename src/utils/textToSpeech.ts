@@ -1,6 +1,14 @@
 
 // Text-to-speech utility functions
 
+// Define VoicePreference type
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
+
 // Check if speech synthesis is supported in the browser
 export const isSpeechSupported = (): boolean => {
   return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -15,15 +23,51 @@ export const getVoices = (): SpeechSynthesisVoice[] => {
   return window.speechSynthesis.getVoices();
 };
 
+// Get default voice preferences by selecting appropriate voices for English and Italian
+export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => {
+  // Wait for voices to load if needed
+  if (window.speechSynthesis.getVoices().length === 0) {
+    await new Promise<void>((resolve) => {
+      const voicesChanged = () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', voicesChanged);
+        resolve();
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', voicesChanged);
+      
+      // Add a timeout in case the event never fires
+      setTimeout(() => {
+        window.speechSynthesis.removeEventListener('voiceschanged', voicesChanged);
+        resolve();
+      }, 1000);
+    });
+  }
+  
+  const voices = getVoices();
+  
+  // Find default English voice
+  const englishVoice = voices.find(
+    voice => voice.lang.startsWith('en') || voice.name.toLowerCase().includes('english')
+  );
+  
+  // Find default Italian voice
+  const italianVoice = voices.find(
+    voice => voice.lang.startsWith('it') || voice.name.toLowerCase().includes('italian')
+  );
+  
+  return {
+    englishVoiceURI: englishVoice?.voiceURI || '',
+    italianVoiceURI: italianVoice?.voiceURI || '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  };
+};
+
 // Speak text with the specified options
 export const speak = (
   text: string, 
+  language?: string,
+  voicePreference?: VoicePreference,
   options: {
-    lang?: string,
-    voiceName?: string,
-    pitch?: number,
-    rate?: number,
-    volume?: number,
     onStart?: () => void,
     onEnd?: () => void,
     onError?: (error: any) => void
@@ -38,21 +82,35 @@ export const speak = (
       const utterance = new SpeechSynthesisUtterance(text);
       
       // Set language
-      if (options.lang) {
-        utterance.lang = options.lang;
+      if (language) {
+        utterance.lang = language;
       }
       
-      // Set other options
-      if (options.pitch !== undefined) utterance.pitch = options.pitch;
-      if (options.rate !== undefined) utterance.rate = options.rate;
-      if (options.volume !== undefined) utterance.volume = options.volume;
-      
-      // Set voice if specified
-      if (options.voiceName) {
+      // Set voice options if preference is provided
+      if (voicePreference) {
+        // Set pitch and rate from preferences
+        if (voicePreference.voicePitch !== undefined) {
+          utterance.pitch = voicePreference.voicePitch;
+        }
+        
+        if (voicePreference.voiceRate !== undefined) {
+          utterance.rate = voicePreference.voiceRate;
+        }
+        
+        // Set appropriate voice based on language
         const voices = getVoices();
-        const voice = voices.find(v => v.name === options.voiceName);
-        if (voice) {
-          utterance.voice = voice;
+        const isItalian = language === 'it' || language?.startsWith('it-');
+        
+        if (isItalian && voicePreference.italianVoiceURI) {
+          const italianVoice = voices.find(v => v.voiceURI === voicePreference.italianVoiceURI);
+          if (italianVoice) {
+            utterance.voice = italianVoice;
+          }
+        } else if (voicePreference.englishVoiceURI) {
+          const englishVoice = voices.find(v => v.voiceURI === voicePreference.englishVoiceURI);
+          if (englishVoice) {
+            utterance.voice = englishVoice;
+          }
         }
       }
       
@@ -86,9 +144,11 @@ export const stopSpeaking = (): void => {
   }
 };
 
+// Public API
 export default {
   isSpeechSupported,
   getVoices,
+  getDefaultVoicePreferences,
   speak,
   stopSpeaking
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +6,9 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Volume2, Save } from 'lucide-react';
-import { getAvailableVoices, speak } from '@/utils/textToSpeech';
+import { getAvailableVoices, speak, VoicePreference } from '@/utils/textToSpeech';
 
-// Mock API service for admin settings
 const saveDefaultVoiceSettings = async (settings: any) => {
-  // In a real app, this would make an API call to save site defaults
   console.log('Saving default voice settings:', settings);
   return new Promise(resolve => setTimeout(resolve, 1000));
 };
@@ -29,7 +26,6 @@ const SiteVoiceSettings = () => {
     defaultVoicePitch: 1.0
   });
   
-  // Load available voices when component mounts
   useEffect(() => {
     const loadVoices = async () => {
       try {
@@ -46,7 +42,6 @@ const SiteVoiceSettings = () => {
         setEnglishVoices(enVoices);
         setItalianVoices(itVoices);
         
-        // Set default voices if available
         if (enVoices.length > 0 && !defaultSettings.defaultEnglishVoiceURI) {
           setDefaultSettings(prev => ({...prev, defaultEnglishVoiceURI: enVoices[0].voiceURI}));
         }

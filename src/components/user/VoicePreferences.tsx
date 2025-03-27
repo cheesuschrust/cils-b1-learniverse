@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Volume2, Mic, Play } from 'lucide-react';
-import { getAvailableVoices, speak } from '@/utils/textToSpeech'; 
+import { getAvailableVoices, speak, VoicePreference } from '@/utils/textToSpeech'; 
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useToast } from '@/hooks/use-toast';
 
