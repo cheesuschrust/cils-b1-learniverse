@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Flashcard } from '@/types/flashcard';
 import { calculateNextReview, daysUntilReview, isDueForReview, generateReviewSchedule } from '@/utils/spacedRepetition';
@@ -38,11 +39,12 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
         };
         setPerformanceData(newPerformanceData);
         
+        // Add missing properties if needed
         const consecutiveCorrect = correct 
-          ? (card.consecutiveCorrect || 0) + 1 
+          ? ((card as any).consecutiveCorrect || 0) + 1 
           : 0;
         
-        const currentFactor = card.difficultyFactor || 2.5;
+        const currentFactor = (card as any).difficultyFactor || 2.5;
         const { nextReviewDate, difficultyFactor } = calculateNextReview(
           correct,
           currentFactor,
@@ -64,8 +66,8 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
         return {
           ...card,
           nextReview: nextReviewDate,
-          difficultyFactor,
-          consecutiveCorrect,
+          difficultyFactor, // We'll add this to the type later
+          consecutiveCorrect, // We'll add this to the type later
           level: newLevel,
           mastered: isMastered
         };

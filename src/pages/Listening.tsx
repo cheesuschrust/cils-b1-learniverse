@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +10,96 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Helmet } from 'react-helmet-async';
 import ConfidenceIndicator from '@/components/ai/ConfidenceIndicator';
-import { Mic, Pause, Play, Volume2, VolumeX, Clock, SkipBack, SkipForward, AlertTriangle, Brain, BookOpen, Award, Check, X } from 'lucide-react';
+import { 
+  Mic, Pause, Play, Volume2, VolumeX, Clock, SkipBack, SkipForward, 
+  AlertTriangle, Brain, BookOpen, Award, Check, X, Headphones as LucideHeadphones,
+  ChevronLeft, ChevronRight, RefreshCcw, ListMusic, Loader2, XCircle, CheckCircle2
+} from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
+
+// Mock data for listening exercises
+const listeningExercises = [
+  {
+    id: "listening-1",
+    title: "Basic Introduction",
+    audioUrl: "/audio/basic-intro.mp3",
+    transcript: "Ciao! Mi chiamo Marco e vengo da Roma. Ho venticinque anni e studio l'informatica all'università. Piacere di conoscerti!",
+    translation: "Hi! My name is Marco and I come from Rome. I am twenty-five years old and I study computer science at university. Nice to meet you!",
+    difficulty: "beginner" as const,
+    questions: [
+      {
+        id: "q1-l1",
+        question: "Come si chiama la persona?",
+        options: ["Marco", "Mario", "Matteo", "Michele"],
+        correctAnswer: "Marco"
+      },
+      {
+        id: "q2-l1",
+        question: "Da dove viene?",
+        options: ["Milano", "Napoli", "Roma", "Firenze"],
+        correctAnswer: "Roma"
+      },
+      {
+        id: "q3-l1",
+        question: "Quanti anni ha?",
+        options: ["20", "25", "30", "35"],
+        correctAnswer: "25"
+      }
+    ],
+    type: "comprehension" as const,
+    language: "italian" as const,
+    duration: 12 // in seconds
+  },
+  {
+    id: "listening-2",
+    title: "At the Restaurant",
+    audioUrl: "/audio/restaurant.mp3",
+    transcript: "Buongiorno, vorrei prenotare un tavolo per due persone per stasera alle otto, è possibile? Preferirei un tavolo vicino alla finestra, se disponibile. Grazie mille!",
+    difficulty: "beginner" as const,
+    questions: [
+      {
+        id: "q1-l2",
+        question: "Per quante persone è la prenotazione?",
+        options: ["Una", "Due", "Tre", "Quattro"],
+        correctAnswer: "Due"
+      },
+      {
+        id: "q2-l2",
+        question: "A che ora vuole prenotare?",
+        options: ["Alle 7", "Alle 8", "Alle 9", "A mezzogiorno"],
+        correctAnswer: "Alle 8"
+      },
+      {
+        id: "q3-l2",
+        question: "Dove preferisce sedersi?",
+        options: ["Vicino alla finestra", "Vicino alla porta", "All'interno", "All'esterno"],
+        correctAnswer: "Vicino alla finestra"
+      }
+    ],
+    type: "comprehension" as const,
+    language: "italian" as const,
+    duration: 15
+  },
+  {
+    id: "dictation-1",
+    title: "Simple Dictation",
+    audioUrl: "/audio/simple-dictation.mp3",
+    transcript: "Oggi è una bella giornata. Il cielo è azzurro e il sole splende. Voglio andare al parco con i miei amici.",
+    difficulty: "beginner" as const,
+    questions: [],
+    type: "dictation" as const,
+    language: "italian" as const,
+    duration: 10
+  }
+];
 
 interface ListeningExercise {
   id: string;
@@ -341,8 +427,7 @@ const ListeningPage: React.FC = () => {
     try {
       const translated = await translateText(
         currentExercise.transcript, 
-        'it', 
-        'en'
+        'it'
       );
       
       setTranslatedText(translated);

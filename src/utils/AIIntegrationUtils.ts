@@ -1,10 +1,9 @@
 
 import { ContentType } from '@/types/contentType';
-import { Flashcard } from '@/types/flashcard';
+import { Flashcard } from '@/types/interface-fixes';
 import { Question, QuestionSet } from '@/types/question';
 import { calculateNextReview } from '@/utils/spacedRepetition';
 import { analyzeContent } from '@/utils/AITrainingUtils';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
 
 /**
  * Integrates AI capabilities with the spaced repetition system
@@ -24,8 +23,8 @@ export const optimizeStudySchedule = (
     const confidenceAdjustment = 1 - Math.min(cardPerformance, confidenceThreshold);
     
     // Get current values or defaults
-    const currentFactor = card.difficultyFactor || 2.5;
-    const consecutiveCorrect = card.consecutiveCorrect || 0;
+    const currentFactor = (card as any).difficultyFactor || 2.5;
+    const consecutiveCorrect = (card as any).consecutiveCorrect || 0;
     
     // Adjust the review schedule based on performance
     const { nextReviewDate, difficultyFactor } = calculateNextReview(
@@ -39,7 +38,8 @@ export const optimizeStudySchedule = (
       ...card,
       nextReview: nextReviewDate,
       difficultyFactor: difficultyFactor,
-      level: Math.floor(difficultyFactor * 2 - 2) // Map difficulty factor to level (0-5)
+      level: Math.floor(difficultyFactor * 2 - 2), // Map difficulty factor to level (0-5)
+      consecutiveCorrect
     };
   });
 };

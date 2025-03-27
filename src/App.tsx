@@ -40,7 +40,7 @@ function App() {
   
   // Check if the user needs to see onboarding
   useEffect(() => {
-    if (user && user.hasCompletedOnboarding === false) {
+    if (user && user.completed_onboarding === false) {
       setShowOnboarding(true);
     }
   }, [user]);
@@ -103,83 +103,79 @@ function App() {
 
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute>
-                  <ErrorBoundary />
+                  <DashboardLayout />
                 </ProtectedRoute>}>
-                  <Route element={<DashboardLayout />}>
-                    <Route path="/" element={
-                      <ErrorBoundary>
-                        <Dashboard />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/profile" element={
-                      <ErrorBoundary>
-                        <UserProfile />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/flashcards" element={
-                      <ErrorBoundary>
-                        <FlashcardsPage />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/multiple-choice" element={
-                      <ErrorBoundary>
-                        <MultipleChoicePage />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/writing" element={
-                      <ErrorBoundary>
-                        <WritingPage />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/speaking" element={
-                      <ErrorBoundary>
-                        <SpeakingPage />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/listening" element={
-                      <ErrorBoundary>
-                        <ListeningPage />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/analytics" element={
-                      <ErrorBoundary>
-                        <Analytics />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/achievements" element={
-                      <ErrorBoundary>
-                        <Achievements />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/settings" element={
-                      <ErrorBoundary>
-                        <Settings />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/ai-assistant" element={
-                      <ErrorBoundary>
-                        <AIAssistant />
-                      </ErrorBoundary>
-                    } />
-                  </Route>
+                  <Route path="/" element={
+                    <ErrorBoundary>
+                      <Dashboard />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/profile" element={
+                    <ErrorBoundary>
+                      <UserProfile />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/flashcards" element={
+                    <ErrorBoundary>
+                      <FlashcardsPage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/multiple-choice" element={
+                    <ErrorBoundary>
+                      <MultipleChoicePage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/writing" element={
+                    <ErrorBoundary>
+                      <WritingPage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/speaking" element={
+                    <ErrorBoundary>
+                      <SpeakingPage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/listening" element={
+                    <ErrorBoundary>
+                      <ListeningPage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/analytics" element={
+                    <ErrorBoundary>
+                      <Analytics />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/achievements" element={
+                    <ErrorBoundary>
+                      <Achievements />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/settings" element={
+                    <ErrorBoundary>
+                      <Settings />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/ai-assistant" element={
+                    <ErrorBoundary>
+                      <AIAssistant />
+                    </ErrorBoundary>
+                  } />
                 </Route>
 
                 {/* Admin routes */}
                 <Route element={<ProtectedRoute allowedRoles={["admin"]}>
-                  <ErrorBoundary />
+                  <AdminLayout />
                 </ProtectedRoute>}>
-                  <Route element={<AdminLayout />}>
-                    <Route path="/admin/users" element={
-                      <ErrorBoundary>
-                        <UserManagement />
-                      </ErrorBoundary>
-                    } />
-                    <Route path="/admin/ai" element={
-                      <ErrorBoundary>
-                        <AIManagement />
-                      </ErrorBoundary>
-                    } />
-                  </Route>
+                  <Route path="/admin/users" element={
+                    <ErrorBoundary>
+                      <UserManagement />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/admin/ai" element={
+                    <ErrorBoundary>
+                      <AIManagement />
+                    </ErrorBoundary>
+                  } />
                 </Route>
 
                 {/* NotFound route */}
