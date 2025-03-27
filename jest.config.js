@@ -11,6 +11,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
+      isolatedModules: true,
     }],
   },
   collectCoverage: true,
@@ -31,17 +32,15 @@ module.exports = {
       statements: 70,
     },
   },
-  coverageReporters: ['json', 'lcov', 'text', 'clover', 'html'],
+  coverageReporters: ['text', 'lcov', 'html'],
+  verbose: true,
+  testTimeout: 10000,
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   watchPlugins: [
     'jest-watch-typeahead/filename',
     'jest-watch-typeahead/testname'
   ],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
-  },
   reporters: [
     'default',
     ['jest-junit', {

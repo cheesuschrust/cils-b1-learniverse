@@ -1,24 +1,14 @@
 
 import { API } from "./api";
 import { User } from "@/contexts/shared-types";
+import { 
+  IAuthService, 
+  LoginCredentials, 
+  RegisterData, 
+  AuthResponse 
+} from "./interfaces/IAuthService";
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}
-
-export interface AuthResponse {
-  user: User;
-}
-
-export class AuthService {
+export class AuthService implements IAuthService {
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     return API.handleRequest<AuthResponse>("/auth/login", "POST", credentials);
   }

@@ -3,6 +3,10 @@
  * Feature flag system to enable/disable features based on environment,
  * user preferences, or to disable problematic features when needed.
  */
+import { useCallback, useEffect, useState } from 'react';
+
+// Flag type definitions for type safety
+export type FeatureFlag = keyof typeof DEFAULT_FLAGS;
 
 // Default feature flags
 const DEFAULT_FLAGS = {
@@ -32,8 +36,13 @@ const DEFAULT_FLAGS = {
   documentsUpload: false
 };
 
+// Type for feature flag values - extracted from DEFAULT_FLAGS
+export type FeatureFlags = {
+  [K in FeatureFlag]: boolean;
+};
+
 // Override flags based on environment
-const ENV_FLAGS = process.env.NODE_ENV === 'production' 
+const ENV_FLAGS: Partial<FeatureFlags> = process.env.NODE_ENV === 'production' 
   ? {
       // Disable unstable features in production
       documentUpload: false,
@@ -41,7 +50,7 @@ const ENV_FLAGS = process.env.NODE_ENV === 'production'
   : {};
 
 // Get feature flags from localStorage if available
-const getLocalFlags = (): Record<string, boolean> => {
+const getLocalFlags = (): Partial<FeatureFlags> => {
   try {
     const storedFlags = localStorage.getItem('featureFlags');
     return storedFlags ? JSON.parse(storedFlags) : {};
@@ -52,7 +61,7 @@ const getLocalFlags = (): Record<string, boolean> => {
 };
 
 // Save feature flags to localStorage
-const saveLocalFlags = (flags: Record<string, boolean>): void => {
+const saveLocalFlags = (flags: Partial<FeatureFlags>): void => {
   try {
     localStorage.setItem('featureFlags', JSON.stringify(flags));
   } catch (error) {
@@ -61,7 +70,7 @@ const saveLocalFlags = (flags: Record<string, boolean>): void => {
 };
 
 // Get the current state of all feature flags
-export const getFeatureFlags = (): Record<string, boolean> => {
+export const getFeatureFlags = (): FeatureFlags => {
   const localFlags = getLocalFlags();
   
   // Combine all flags, with local overrides taking precedence
@@ -69,24 +78,24 @@ export const getFeatureFlags = (): Record<string, boolean> => {
     ...DEFAULT_FLAGS,
     ...ENV_FLAGS,
     ...localFlags
-  };
+  } as FeatureFlags;
 };
 
 // Check if a feature is enabled
-export const isFeatureEnabled = (featureKey: keyof typeof DEFAULT_FLAGS): boolean => {
+export const isFeatureEnabled = (featureKey: FeatureFlag): boolean => {
   const flags = getFeatureFlags();
   return flags[featureKey] ?? DEFAULT_FLAGS[featureKey] ?? false;
 };
 
 // Enable a specific feature
-export const enableFeature = (featureKey: string): void => {
+export const enableFeature = (featureKey: FeatureFlag): void => {
   const localFlags = getLocalFlags();
   localFlags[featureKey] = true;
   saveLocalFlags(localFlags);
 };
 
 // Disable a specific feature
-export const disableFeature = (featureKey: string): void => {
+export const disableFeature = (featureKey: FeatureFlag): void => {
   const localFlags = getLocalFlags();
   localFlags[featureKey] = false;
   saveLocalFlags(localFlags);
@@ -98,12 +107,45 @@ export const resetFeatureFlags = (): void => {
 };
 
 // Toggle a specific feature
-export const toggleFeature = (featureKey: string): boolean => {
-  const isEnabled = isFeatureEnabled(featureKey as keyof typeof DEFAULT_FLAGS);
+export const toggleFeature = (featureKey: FeatureFlag): boolean => {
+  const isEnabled = isFeatureEnabled(featureKey);
   const localFlags = getLocalFlags();
   localFlags[featureKey] = !isEnabled;
   saveLocalFlags(localFlags);
   return !isEnabled;
+};
+
+// React hook for feature flags
+export const useFeatureFlag = (featureKey: FeatureFlag): [boolean, () => void] => {
+  const [isEnabled, setIsEnabled] = useState(() => isFeatureEnabled(featureKey));
+  
+  useEffect(() => {
+    // Update state when feature flag changes externally
+    const checkFlag = () => {
+      const newValue = isFeatureEnabled(featureKey);
+      setIsEnabled(newValue);
+    };
+    
+    // Check initially
+    checkFlag();
+    
+    // Listen for storage events to handle changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'featureFlags') {
+        checkFlag();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [featureKey]);
+  
+  const toggle = useCallback(() => {
+    const newValue = toggleFeature(featureKey);
+    setIsEnabled(newValue);
+  }, [featureKey]);
+  
+  return [isEnabled, toggle];
 };
 
 export default {
@@ -112,5 +154,6 @@ export default {
   disableFeature,
   resetFeatureFlags,
   toggleFeature,
-  getFeatureFlags
+  getFeatureFlags,
+  useFeatureFlag
 };

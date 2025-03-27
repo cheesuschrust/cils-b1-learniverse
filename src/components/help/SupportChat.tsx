@@ -2,10 +2,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
-import { isFeatureEnabled } from '@/utils/featureFlags';
+import { isFeatureEnabled, useFeatureFlag } from '@/utils/featureFlags';
 
 const SupportChat: React.FC = () => {
-  const aiAssistantEnabled = isFeatureEnabled('aiAssistant');
+  const [aiAssistantEnabled] = useFeatureFlag('aiAssistant');
   
   if (!aiAssistantEnabled) {
     return (
