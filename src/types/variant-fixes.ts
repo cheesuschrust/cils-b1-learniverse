@@ -29,5 +29,5 @@ export type ContentType =
 // Adding confidence indicator types
 export interface ConfidenceIndicatorProps {
   contentType?: ContentType;
-  score?: number; // Add a default score value for speaking and listening
+  score: number; // Add a default score value for speaking and listening
 }

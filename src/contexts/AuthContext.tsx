@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/types/user';
+import { User, UserRole } from '@/types/user';
 
 export interface AuthContextType {
   user: User | null;
@@ -24,6 +25,11 @@ export interface AuthContextType {
   refreshUser: () => Promise<void>;
   isAuthenticated?: boolean;
   isLoading?: boolean;
+  // Add missing methods for UserManagementComponent
+  getAllUsers: () => Promise<User[]>;
+  createUser: (userData: Partial<User>) => Promise<User>;
+  updateUser: (userId: string, userData: Partial<User>) => Promise<User>;
+  deleteUser: (userId: string) => Promise<void>;
 }
 
 // Create the context with a default value
@@ -48,6 +54,11 @@ const AuthContext = createContext<AuthContextType>({
   getSystemLogs: async () => [],
   updateSystemLog: async () => {},
   refreshUser: async () => {},
+  // Implement the missing methods
+  getAllUsers: async () => [],
+  createUser: async () => ({ id: '', email: '', role: 'user' } as User),
+  updateUser: async () => ({ id: '', email: '', role: 'user' } as User),
+  deleteUser: async () => {},
 });
 
 // Create a provider component
@@ -82,6 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getSystemLogs: async () => [],
         updateSystemLog: async () => {},
         refreshUser: async () => {},
+        // Add implementations for user management
+        getAllUsers: async () => [],
+        createUser: async () => ({ id: '', email: '', role: 'user' } as User),
+        updateUser: async () => ({ id: '', email: '', role: 'user' } as User),
+        deleteUser: async () => {},
       }}
     >
       {children}

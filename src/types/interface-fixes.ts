@@ -1,10 +1,9 @@
 
-
 // Extend LevelBadgeProps
 export interface LevelBadgeProps {
   level?: number;
   showInfo?: boolean;
-  size?: 'sm' | 'md' | 'lg' | string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 // Add the FlashcardComponentProps
@@ -127,4 +126,54 @@ export interface FlashcardStats {
   averageScore?: number;
   streak?: number;
   lastReviewDate?: Date;
+}
+
+// Add analytics types
+export interface ReviewSchedule {
+  dueToday: number;
+  dueThisWeek: number;
+  dueNextWeek: number;
+  dueByDate: Record<string, number>;
+}
+
+export interface ReviewPerformance {
+  totalReviews: number;
+  correctReviews: number;
+  efficiency: number;
+  streakDays: number;
+  reviewsByCategory: Record<string, any>;
+}
+
+export interface ProgressOverTimeProps {
+  data: any[];
+}
+
+export interface ActivityHeatmapProps {
+  data: any[];
+}
+
+export interface SessionAnalysisProps {
+  data: any[];
+}
+
+export interface GoalTrackerProps {
+  goals: any[];
+}
+
+export interface StudyRecommendationsProps {
+  recommendations: any[];
+}
+
+export interface AnalyticsReportProps {
+  onClose: () => void;
+  reportData: {
+    activityData: any[];
+    categoryData: any[];
+    knowledgeGaps: any[];
+    sessionStats: any;
+    goals: any[];
+    streak: any;
+    recommendations: any[];
+    dateRange: string;
+  };
 }

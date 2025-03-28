@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -167,12 +166,11 @@ const UserManagementComponent: React.FC = () => {
     try {
       setLoading(true);
       if (isCreateMode) {
-        // Create user
         const newUser = {
           id: selectedUser.id,
           email: selectedUser.email,
-          firstName: selectedUser.first_name, // Change to firstName
-          lastName: selectedUser.last_name,   // Change to lastName
+          firstName: selectedUser.first_name,
+          lastName: selectedUser.last_name,
           role: selectedUser.role || 'user',
           isVerified: selectedUser.isVerified,
           createdAt: new Date(selectedUser.created_at),
@@ -182,7 +180,6 @@ const UserManagementComponent: React.FC = () => {
           status: selectedUser.status,
           subscription: selectedUser.subscription,
           preferredLanguage: selectedUser.preferred_language,
-          // Add additional required fields
           first_name: selectedUser.first_name,
           last_name: selectedUser.last_name,
           preferred_language: selectedUser.preferred_language,
@@ -193,7 +190,6 @@ const UserManagementComponent: React.FC = () => {
           description: "User created successfully.",
         });
       } else {
-        // Update user
         await updateUser(selectedUser.id, selectedUser);
         toast({
           title: "Success",
@@ -201,7 +197,6 @@ const UserManagementComponent: React.FC = () => {
         });
       }
 
-      // Refresh user list
       const data = await getAllUsers();
       const normalizedUsers = data.map(user => ({
         id: user.id,
@@ -259,7 +254,6 @@ const UserManagementComponent: React.FC = () => {
         description: "User deleted successfully.",
       });
 
-      // Refresh user list
       const data = await getAllUsers();
       const normalizedUsers = data.map(user => ({
         id: user.id,
@@ -319,7 +313,6 @@ const UserManagementComponent: React.FC = () => {
           description: "User role updated successfully.",
         });
 
-        // Refresh user list
         const data = await getAllUsers();
         const normalizedUsers = data.map(user => ({
           id: user.id,
@@ -368,7 +361,7 @@ const UserManagementComponent: React.FC = () => {
     }
   };
 
-  const handleChangeStatus = async (userId: string, newStatus: string) => {
+  const handleChangeStatus = async (userId: string, newStatus: 'active' | 'inactive' | 'suspended') => {
     try {
       setLoading(true);
       const updatedUser = users.find(user => user.id === userId);
@@ -380,7 +373,6 @@ const UserManagementComponent: React.FC = () => {
           description: "User status updated successfully.",
         });
 
-        // Refresh user list
         const data = await getAllUsers();
         const normalizedUsers = data.map(user => ({
           id: user.id,
@@ -432,7 +424,7 @@ const UserManagementComponent: React.FC = () => {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'active':
-        return 'outline'; // Changed from 'success'
+        return 'outline';
       case 'suspended':
         return 'destructive';
       default:
@@ -560,9 +552,9 @@ const UserManagementComponent: React.FC = () => {
               </div>
               <Pagination>
                 <PaginationContent>
-                  <PaginationPrevious href="#" onClick={() => setPage(page - 1)} disabled={page === 1} />
+                  <PaginationPrevious onClick={() => setPage(page - 1)} disabled={page === 1} />
                   {page > 2 && (
-                    <PaginationItem href="#" onClick={() => setPage(1)}>
+                    <PaginationItem onClick={() => setPage(1)}>
                       1
                     </PaginationItem>
                   )}
@@ -575,9 +567,8 @@ const UserManagementComponent: React.FC = () => {
                         pageNumber <= pageCount && (
                           <PaginationItem
                             key={pageNumber}
-                            href="#"
                             onClick={() => setPage(pageNumber)}
-                            active={pageNumber === page}
+                            className={pageNumber === page ? "active" : ""}
                           >
                             {pageNumber}
                           </PaginationItem>
@@ -586,18 +577,17 @@ const UserManagementComponent: React.FC = () => {
                     })}
                   {page < pageCount - 2 && <PaginationEllipsis />}
                   {page < pageCount - 1 && (
-                    <PaginationItem href="#" onClick={() => setPage(pageCount)}>
+                    <PaginationItem onClick={() => setPage(pageCount)}>
                       {pageCount}
                     </PaginationItem>
                   )}
-                  <PaginationNext href="#" onClick={() => setPage(page + 1)} disabled={page === pageCount} />
+                  <PaginationNext onClick={() => setPage(page + 1)} disabled={page === pageCount} />
                 </PaginationContent>
               </Pagination>
             </div>
           </CardContent>
         </Card>
 
-        {/* User Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -651,7 +641,7 @@ const UserManagementComponent: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select value={selectedUser.status} onValueChange={(status: string) => setSelectedUser({ ...selectedUser, status })}>
+                  <Select value={selectedUser.status} onValueChange={(status: 'active' | 'inactive' | 'suspended') => setSelectedUser({ ...selectedUser, status })}>
                     <SelectTrigger>
                       <SelectValue placeholder={selectedUser.status} />
                     </SelectTrigger>

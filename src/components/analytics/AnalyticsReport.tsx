@@ -13,23 +13,9 @@ import ProgressOverTime from './ProgressOverTime';
 import CategoryPerformance from './CategoryPerformance';
 import KnowledgeGaps from './KnowledgeGaps';
 import { useAuth } from '@/contexts/AuthContext';
-import { DateRangeOption } from '@/hooks/useAnalytics';
 import html2pdf from 'html2pdf.js';
 import { useToast } from '@/components/ui/use-toast';
-
-interface AnalyticsReportProps {
-  onClose: () => void;
-  reportData: {
-    activityData: any[];
-    categoryData: any[];
-    knowledgeGaps: any[];
-    sessionStats: any;
-    goals: any[];
-    streak: any;
-    recommendations: any[];
-    dateRange: DateRangeOption;
-  };
-}
+import { AnalyticsReportProps } from '@/types/interface-fixes';
 
 const AnalyticsReport: React.FC<AnalyticsReportProps> = ({ 
   onClose,
@@ -39,7 +25,7 @@ const AnalyticsReport: React.FC<AnalyticsReportProps> = ({
   const { toast } = useToast();
   const reportRef = React.useRef<HTMLDivElement>(null);
   
-  const getDateRangeLabel = (range: DateRangeOption): string => {
+  const getDateRangeLabel = (range: string): string => {
     switch (range) {
       case '7d':
         return 'Last 7 Days';
@@ -107,7 +93,6 @@ const AnalyticsReport: React.FC<AnalyticsReportProps> = ({
   };
   
   const handleExportCSV = () => {
-    // Convert activity data to CSV
     const headers = ['Date', 'Total Questions', 'Correct Answers', 'Score', 'Time Spent'];
     const rows = reportData.activityData.map(day => [
       day.date,
@@ -117,13 +102,11 @@ const AnalyticsReport: React.FC<AnalyticsReportProps> = ({
       day.timeSpent
     ]);
     
-    // Create CSV content
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    // Create and download the file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
