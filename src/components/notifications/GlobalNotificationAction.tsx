@@ -6,7 +6,7 @@ interface GlobalNotificationActionProps {
   label: string;
   onClick: (id: string) => void;
   id: string;
-  variant?: 'default' | 'outline' | 'ghost' | 'link' | 'secondary';
+  variant?: 'default' | 'outline' | 'ghost' | 'link' | 'secondary' | 'success' | 'warning';
   className?: string;
   icon?: React.ReactNode;
 }

@@ -1,4 +1,3 @@
-
 // Flashcard related types
 
 export interface Flashcard {

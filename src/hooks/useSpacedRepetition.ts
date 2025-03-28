@@ -65,6 +65,8 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
         
         return {
           ...card,
+          front: card.front || card.italian || '',
+          back: card.back || card.english || '',
           nextReview: nextReviewDate,
           difficultyFactor, // We'll add this to the type later
           consecutiveCorrect, // We'll add this to the type later
