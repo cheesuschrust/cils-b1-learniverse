@@ -24,42 +24,57 @@ export default async function handler(
     }
 
     case 'POST': {
-      const adData = req.body as Partial<AdUnit>;
-      const newAdUnit = db.createAdUnit(adData);
-      return res.status(201).json(newAdUnit);
+      try {
+        const adData = req.body as Partial<AdUnit>;
+        const newAdUnit = db.createAdUnit(adData);
+        return res.status(201).json(newAdUnit);
+      } catch (error) {
+        console.error("Error creating ad:", error);
+        return res.status(500).json({ error: 'Failed to create ad unit' });
+      }
     }
 
     case 'PUT': {
       const { id } = req.query;
-      const adData = req.body as Partial<AdUnit>;
       
-      if (!id) {
-        return res.status(400).json({ error: 'ID is required for update' });
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Valid ID is required for update' });
       }
       
-      const updatedAd = db.updateAdUnit(id as string, adData);
-      
-      if (!updatedAd) {
-        return res.status(404).json({ error: 'Ad unit not found' });
+      try {
+        const adData = req.body as Partial<AdUnit>;
+        const updatedAd = db.updateAdUnit(id, adData);
+        
+        if (!updatedAd) {
+          return res.status(404).json({ error: 'Ad unit not found' });
+        }
+        
+        return res.status(200).json(updatedAd);
+      } catch (error) {
+        console.error("Error updating ad:", error);
+        return res.status(500).json({ error: 'Failed to update ad unit' });
       }
-      
-      return res.status(200).json(updatedAd);
     }
 
     case 'DELETE': {
       const { id } = req.query;
       
-      if (!id) {
-        return res.status(400).json({ error: 'ID is required for deletion' });
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Valid ID is required for deletion' });
       }
       
-      const success = db.deleteAdUnit(id as string);
-      
-      if (!success) {
-        return res.status(404).json({ error: 'Ad unit not found' });
+      try {
+        const success = db.deleteAdUnit(id);
+        
+        if (!success) {
+          return res.status(404).json({ error: 'Ad unit not found' });
+        }
+        
+        return res.status(200).json({ success: true, message: 'Ad unit deleted successfully' });
+      } catch (error) {
+        console.error("Error deleting ad:", error);
+        return res.status(500).json({ error: 'Failed to delete ad unit' });
       }
-      
-      return res.status(200).json({ success: true, message: 'Ad unit deleted successfully' });
     }
 
     default:
