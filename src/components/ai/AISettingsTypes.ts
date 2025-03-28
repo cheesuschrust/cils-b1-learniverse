@@ -55,6 +55,22 @@ export const getInitialConfidenceScores = (): Record<ContentType, number> => {
   };
 };
 
+// Get user-friendly labels for content types
+export const getContentTypeLabels = (): Record<ContentType, string> => {
+  return {
+    'multiple-choice': 'Multiple Choice',
+    'flashcards': 'Flashcards',
+    'writing': 'Writing',
+    'speaking': 'Speaking',
+    'listening': 'Listening'
+  };
+};
+
+// Get content types that should be displayed in the UI
+export const getDisplayableContentTypes = (): ContentType[] => {
+  return ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
+};
+
 // Default AI settings
 export const defaultAISettings: AISettings = {
   model: 'gpt-4o-mini',
