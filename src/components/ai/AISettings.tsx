@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,10 +8,11 @@ import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowCounterclockwise as ArrowCounterClockwise, Info } from 'lucide-react'; // Fixed import
+import { RotateCcw, Info } from 'lucide-react'; // Changed ArrowCounterClockwise to RotateCcw
 import { AISettingsProps } from '@/types/AISettingsProps';
 import { AIModel, AISettings as AISettingsType } from '@/types/ai'; // Use AISettingsType to avoid name conflict
 import { adaptModelToSize } from '@/utils/modelAdapter';
+import { Input } from '@/components/ui/input'; // Added missing Input import
 
 const defaultSettings: AISettingsType = {
   enabled: true,
@@ -362,7 +364,7 @@ const AISettings: React.FC<AISettingsProps> = ({ initialSettings, onSettingsChan
           onClick={handleResetSettings}
           disabled={isLoading}
         >
-          <ArrowCounterClockwise className="mr-2 h-4 w-4" />
+          <RotateCcw className="mr-2 h-4 w-4" />
           Reset
         </Button>
         <Button onClick={handleSaveSettings} disabled={isLoading}>
