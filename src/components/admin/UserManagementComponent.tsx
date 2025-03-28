@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@/types/core';
+import { User, normalizeUser } from '@/types/core';
 import { UserRole } from '@/types/user';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
@@ -33,7 +33,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { normalizeUser } from '@/types/core';
 
 const UserManagementComponent: React.FC = () => {
   const { getAllUsers, createUser, updateUser, deleteUser } = useAuth();

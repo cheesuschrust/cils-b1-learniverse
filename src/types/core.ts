@@ -28,16 +28,41 @@ export interface VoicePreference {
   voicePitch: number;
 }
 
+// Base interfaces for type safety  
+export interface AIOptions {  
+  temperature?: number;  
+  maxTokens?: number;  
+  model?: string;  
+}  
+
+export interface Flashcard {  
+  id?: string;
+  front: string;  
+  back: string;  
+  nextReview: Date | null;  
+  level: number;
+  tags?: string[];
+  mastered?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  
+  // Legacy compatibility
+  italian?: string;
+  english?: string;
+  dueDate?: Date;
+  lastReviewed?: Date;
+}  
+
 // User interface with all required fields
-export interface User {
+export interface User {  
   id: string;
   uid?: string;
-  email: string;
-  photoURL?: string;
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-  createdAt?: Date;
+  email: string;  
+  photoURL?: string;  
+  displayName?: string;  
+  firstName?: string;  
+  lastName?: string;  
+  createdAt?: Date;  
   updatedAt: Date;
   role: string;
   
@@ -92,32 +117,6 @@ export interface LegacyUser {
   preferred_language?: 'english' | 'italian' | 'both';
 }
 
-// AI options interface
-export interface AIOptions {
-  temperature?: number;
-  maxTokens?: number;
-  model?: string;
-}
-
-// Flashcard interface with required fields
-export interface Flashcard {
-  id?: string;
-  front: string;
-  back: string;
-  level?: number;
-  tags?: string[];
-  nextReview?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
-  mastered?: boolean;
-  
-  // Legacy compatibility
-  italian?: string;
-  english?: string;
-  dueDate?: Date;
-  lastReviewed?: Date;
-}
-
 // Type normalization functions
 
 /**
@@ -132,7 +131,7 @@ export function normalizeFlashcard(card: any): Flashcard {
     back: card.back || card.english || '',
     level: card.level || 0,
     tags: card.tags || [],
-    nextReview: card.nextReview || card.dueDate || new Date(),
+    nextReview: card.nextReview || card.dueDate || null,
     createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
     updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
     mastered: card.mastered || false,
