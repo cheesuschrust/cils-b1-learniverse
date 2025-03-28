@@ -49,8 +49,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
-import { User } from '@/contexts/shared-types';
+import { User } from '@/types/user';
 import { Loader2, Search, UserPlus, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { normalizeUser } from '@/types/type-compatibility';
 
 // Validation schema for user form
 const userFormSchema = z.object({
@@ -132,11 +133,11 @@ const UserManagementComponent: React.FC = () => {
       const lowercaseQuery = searchQuery.toLowerCase();
       const filtered = users.filter(user => 
         user.email.toLowerCase().includes(lowercaseQuery) ||
-        (user.first_name && user.first_name.toLowerCase().includes(lowercaseQuery)) ||
-        (user.last_name && user.last_name.toLowerCase().includes(lowercaseQuery)) ||
+        (user.firstName && user.firstName.toLowerCase().includes(lowercaseQuery)) ||
+        (user.lastName && user.lastName.toLowerCase().includes(lowercaseQuery)) ||
         user.role.toLowerCase().includes(lowercaseQuery) ||
-        user.subscription.toLowerCase().includes(lowercaseQuery) ||
-        user.status.toLowerCase().includes(lowercaseQuery)
+        (user.subscription && user.subscription.toLowerCase().includes(lowercaseQuery)) ||
+        (user.status && user.status.toLowerCase().includes(lowercaseQuery))
       );
       setFilteredUsers(filtered);
     }
@@ -155,8 +156,8 @@ const UserManagementComponent: React.FC = () => {
         throw error;
       }
       
-      // Transform data to match User type
-      const formattedUsers = data.map(user => ({
+      // Transform data to match User type using our normalizeUser utility
+      const formattedUsers = data.map(user => normalizeUser({
         id: user.id,
         email: user.email,
         first_name: user.first_name || '',
@@ -387,8 +388,8 @@ const UserManagementComponent: React.FC = () => {
     setSelectedUser(user);
     editForm.reset({
       email: user.email,
-      first_name: user.first_name || '',
-      last_name: user.last_name || '',
+      first_name: user.firstName || '',
+      last_name: user.lastName || '',
       role: user.role as 'user' | 'admin',
       subscription: user.subscription as 'free' | 'premium',
       status: user.status as 'active' | 'inactive' | 'suspended',
@@ -456,8 +457,8 @@ const UserManagementComponent: React.FC = () => {
                   {filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        {user.first_name || user.last_name ? 
-                          `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
+                        {user.firstName || user.lastName ? 
+                          `${user.firstName || ''} ${user.lastName || ''}`.trim() : 
                           'N/A'}
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
@@ -858,8 +859,8 @@ const UserManagementComponent: React.FC = () => {
               <div className="bg-secondary/30 p-4 rounded-md">
                 <p><strong>Email:</strong> {selectedUser.email}</p>
                 <p>
-                  <strong>Name:</strong> {selectedUser.first_name || selectedUser.last_name ? 
-                    `${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`.trim() : 
+                  <strong>Name:</strong> {selectedUser.firstName || selectedUser.lastName ? 
+                    `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() : 
                     'N/A'
                   }
                 </p>

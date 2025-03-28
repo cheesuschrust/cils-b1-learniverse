@@ -76,13 +76,14 @@ export interface ProgressProps {
 // Add Flashcard interface
 export interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  // Support both naming conventions
+  front?: string;
+  back?: string;
+  italian?: string;
+  english?: string;
   level: number;
   tags: string[];
   mastered?: boolean;
-  italian?: string;
-  english?: string;
   explanation?: string;
   examples?: string[];
   nextReview?: Date;

@@ -1,35 +1,74 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { errorMonitoring, ErrorSeverity, ErrorCategory, ErrorMetadata } from '@/utils/errorMonitoring';
-import { errorReporting } from '@/utils/errorReporting';
-import { useToast } from '@/components/ui/use-toast';
+import { ErrorMonitoringService } from '@/services/ErrorMonitoringService';
 
+// Define error severities
+export enum ErrorSeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+// Define error categories
+export enum ErrorCategory {
+  UI = 'UI',
+  API = 'API',
+  DATA = 'DATA',
+  NETWORK = 'NETWORK',
+  AUTHENTICATION = 'AUTHENTICATION',
+  PERMISSIONS = 'PERMISSIONS',
+  VALIDATION = 'VALIDATION',
+  PERFORMANCE = 'PERFORMANCE',
+  STORAGE = 'STORAGE',
+  UNKNOWN = 'UNKNOWN',
+  FEATURE_FLAG = 'FEATURE_FLAG',
+  AI_SERVICE = 'AI_SERVICE',
+}
+
+// Props for the EnhancedErrorBoundary component
 interface EnhancedErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  resetOnPropsChange?: boolean;
-  componentName?: string;
-  showNotification?: boolean;
-  notificationTitle?: string;
-  logErrorToConsole?: boolean;
+  errorMonitoringService?: ErrorMonitoringService;
+  category?: ErrorCategory;
+  severity?: ErrorSeverity;
+  showDetails?: boolean;
+  showReset?: boolean;
+  resetLabel?: string;
+  boundary?: string;
+  additionalInfo?: Record<string, any>;
+  reportErrors?: boolean;
 }
 
+// State for the EnhancedErrorBoundary component
 interface EnhancedErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  timestamp: Date | null;
+  retry: number;
 }
 
+/**
+ * EnhancedErrorBoundary component that captures React errors,
+ * displays a fallback UI, and optionally reports errors to a monitoring service.
+ */
 class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, EnhancedErrorBoundaryState> {
+  private errorMonitoringService: ErrorMonitoringService | null = null;
+
   static defaultProps = {
-    resetOnPropsChange: true,
-    showNotification: true,
-    logErrorToConsole: true,
-    notificationTitle: "An error occurred"
+    showDetails: false,
+    showReset: true,
+    resetLabel: 'Retry',
+    category: ErrorCategory.UNKNOWN,
+    severity: ErrorSeverity.MEDIUM,
+    boundary: 'Component',
+    reportErrors: true,
   };
 
   constructor(props: EnhancedErrorBoundaryProps) {
@@ -37,174 +76,101 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      timestamp: null,
+      retry: 0,
     };
+
+    // Initialize error monitoring service if provided
+    if (props.errorMonitoringService) {
+      this.errorMonitoringService = props.errorMonitoringService;
+    } else {
+      this.errorMonitoringService = new ErrorMonitoringService();
+    }
   }
 
   static getDerivedStateFromError(error: Error): Partial<EnhancedErrorBoundaryState> {
-    return { hasError: true, error };
+    return { hasError: true, error, timestamp: new Date() };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Update state with error information
     this.setState({ errorInfo });
-    
-    // Prepare metadata
-    const metadata: ErrorMetadata = {
-      componentStack: errorInfo.componentStack,
-      componentName: this.props.componentName || 'Unknown',
-      url: window.location.href,
-      path: window.location.pathname
-    };
 
-    // Report to all error monitoring services
-    this.reportToErrorMonitors(error, metadata);
-    
-    // Call the optional onError callback
+    // Call onError callback if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // Log to console if enabled
-    if (this.props.logErrorToConsole) {
-      console.group('React Error Boundary Caught Error:');
-      console.error(error);
-      console.error('Component Stack:', errorInfo.componentStack);
-      console.groupEnd();
+    // Report error to monitoring service if enabled
+    if (this.props.reportErrors && this.errorMonitoringService) {
+      const { category, severity, boundary, additionalInfo } = this.props;
+
+      this.errorMonitoringService.reportError({
+        error,
+        errorInfo,
+        category: category || ErrorCategory.UNKNOWN,
+        severity: severity || ErrorSeverity.MEDIUM,
+        boundary,
+        additionalInfo: {
+          ...additionalInfo,
+          retryCount: this.state.retry,
+          component: boundary,
+        },
+      });
     }
-    
-    // Show notification if enabled
-    if (this.props.showNotification) {
-      // We can't use the hook directly in a class component
-      // In a real implementation, you would use a context or a ref to access toast
-      const toastObj = {
-        title: this.props.notificationTitle,
-        description: `${error.name}: ${error.message}`,
-        variant: "destructive",
-        duration: 5000
-      };
-      
-      // This is just for logging since we can't directly use the hook here
-      console.log('Error notification:', toastObj);
-    }
+
+    // Log error to console
+    console.error('Error caught by EnhancedErrorBoundary:', error, errorInfo);
   }
 
-  componentDidUpdate(prevProps: EnhancedErrorBoundaryProps): void {
-    // Reset the error state if props have changed and resetOnPropsChange is true
-    if (
-      this.state.hasError && 
-      this.props.resetOnPropsChange && 
-      prevProps !== this.props
-    ) {
-      this.resetErrorBoundary();
-    }
-  }
-
-  resetErrorBoundary = (): void => {
-    this.setState({
+  handleReset = (): void => {
+    this.setState(prevState => ({
       hasError: false,
       error: null,
-      errorInfo: null
-    });
+      errorInfo: null,
+      timestamp: null,
+      retry: prevState.retry + 1,
+    }));
   };
 
-  // Report to all error monitoring systems
-  private reportToErrorMonitors(error: Error, metadata: ErrorMetadata): void {
-    try {
-      // Report to errorMonitoring service
-      errorMonitoring.captureError(
-        error,
-        ErrorSeverity.ERROR,
-        ErrorCategory.UI,
-        metadata
-      );
-      
-      // Report to errorReporting service
-      errorReporting.captureError(
-        error,
-        ErrorSeverity.HIGH,
-        ErrorCategory.UNKNOWN,
-        metadata
-      );
-      
-      // Log additional browser information for context
-      const browserInfo = {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        screenWidth: window.screen.width,
-        screenHeight: window.screen.height,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        timestamp: new Date().toISOString(),
-        url: window.location.href,
-        referrer: document.referrer
-      };
-      
-      console.debug('Error Context Info:', browserInfo);
-      
-      // Track error frequency (we could implement rate limiting here)
-      const errorKey = `error_${error.name}_${window.location.pathname}`;
-      const errorCount = localStorage.getItem(errorKey) ? Number(localStorage.getItem(errorKey)) : 0;
-      localStorage.setItem(errorKey, String(errorCount + 1));
-      
-      // If this error happens frequently, we might want to take a different action
-      if (errorCount > 5) {
-        console.warn(`Frequent error detected: ${error.name} in ${window.location.pathname}`);
-      }
-    } catch (reportingError) {
-      // If error reporting itself fails, log to console
-      console.error('Error reporting failed:', reportingError);
-    }
-  }
-
-  renderDefaultFallback(): ReactNode {
-    const { error, errorInfo } = this.state;
-    
-    return (
-      <Card className="w-full max-w-md mx-auto my-8 shadow-lg">
-        <CardHeader className="bg-destructive/10">
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            Something went wrong
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>{error?.name || 'Error'}</AlertTitle>
-            <AlertDescription>
-              {error?.message || 'An unexpected error occurred'}
-            </AlertDescription>
-          </Alert>
-          
-          {process.env.NODE_ENV === 'development' && errorInfo && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Component Stack</h4>
-              <pre className="text-xs bg-muted p-4 rounded overflow-auto max-h-48">
-                {errorInfo.componentStack}
-              </pre>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button 
-            onClick={this.resetErrorBoundary}
-            className="flex items-center gap-2"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Try Again
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
-
   render(): ReactNode {
-    const { hasError } = this.state;
-    const { children, fallback } = this.props;
-    
-    if (hasError) {
-      return fallback || this.renderDefaultFallback();
+    const { children, fallback, showDetails, showReset, resetLabel } = this.props;
+    const { hasError, error, timestamp } = this.state;
+
+    if (hasError && error) {
+      if (fallback) {
+        return fallback;
+      }
+
+      // Default fallback UI
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>
+            <p>An error occurred in this component.</p>
+            
+            {showDetails && (
+              <div className="mt-2 text-sm bg-destructive/10 p-2 rounded overflow-auto max-h-40">
+                <p><strong>Error:</strong> {error.message}</p>
+                {timestamp && (
+                  <p><strong>Time:</strong> {timestamp.toLocaleString()}</p>
+                )}
+              </div>
+            )}
+            
+            {showReset && (
+              <Button onClick={this.handleReset} size="sm" className="mt-2">
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                {resetLabel}
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      );
     }
-    
+
     return children;
   }
 }
