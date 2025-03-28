@@ -117,8 +117,8 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
       // Report to errorReporting service
       errorReporting.captureError(
         error,
-        ErrorSeverity.HIGH,
-        ErrorCategory.UI,
+        ErrorSeverity.CRITICAL, // Changed from HIGH to CRITICAL which exists in ErrorSeverity
+        ErrorCategory.UNKNOWN, // Changed from UI to UNKNOWN which exists in both ErrorCategory types
         metadata
       );
     } catch (reportingError) {

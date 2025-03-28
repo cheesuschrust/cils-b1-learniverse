@@ -14,8 +14,8 @@ export const useToast = () => {
 // Re-export Toast type for convenience
 export type { Toast, ToastActionElement };
 
-// Re-export toast function for direct use
-export { toast } from '../components/ui/use-toast';
+// Re-export toast function directly from the component
+export { useToast as toast } from '../components/ui/use-toast';
 
 // Add utility function to create error toasts with automatic error reporting
 export const errorToast = (title: string, description: string, error?: Error) => {

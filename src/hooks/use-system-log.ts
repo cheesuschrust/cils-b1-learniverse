@@ -2,6 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useCallback } from 'react';
 import { errorMonitoring, ErrorSeverity, ErrorCategory } from '@/utils/errorMonitoring';
+import { toast } from '@/hooks/use-toast';
 
 // This hook provides a simple way to log system events
 export function useSystemLog() {
@@ -21,6 +22,14 @@ export function useSystemLog() {
     (action: string, details: string) => {
       console.warn(`[WARNING] ${action}: ${details}`);
       addSystemLog(action, details, 'warning');
+      
+      // Show warning toast
+      toast({
+        title: action,
+        description: details,
+        variant: "default",
+        duration: 4000
+      });
     },
     [addSystemLog]
   );
@@ -30,6 +39,14 @@ export function useSystemLog() {
     (action: string, details: string, error?: Error) => {
       console.error(`[ERROR] ${action}: ${details}`, error);
       addSystemLog(action, details, 'error');
+      
+      // Show error toast
+      toast({
+        title: action,
+        description: details,
+        variant: "destructive",
+        duration: 5000
+      });
       
       if (error) {
         errorMonitoring.captureError(
@@ -57,6 +74,14 @@ export function useSystemLog() {
     (action: string, details: string, error?: Error) => {
       console.warn(`[SECURITY] ${action}: ${details}`, error);
       addSystemLog(action, details, 'security');
+      
+      // Show security toast
+      toast({
+        title: `Security Alert: ${action}`,
+        description: details,
+        variant: "destructive",
+        duration: 6000
+      });
       
       if (error) {
         errorMonitoring.captureError(

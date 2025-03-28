@@ -157,3 +157,14 @@ export const resumeSpeaking = (): void => {
     window.speechSynthesis.resume();
   }
 };
+
+// Add utility to export all available voices
+export const getAllVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  return await getAvailableVoices();
+};
+
+// Add utility to export voice by URI
+export const getVoiceByURI = async (voiceURI: string): Promise<SpeechSynthesisVoice | undefined> => {
+  const voices = await getAvailableVoices();
+  return voices.find(v => v.voiceURI === voiceURI);
+};
