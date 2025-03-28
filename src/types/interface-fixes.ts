@@ -73,7 +73,7 @@ export interface ProgressProps {
   indicatorClassName?: string;
 }
 
-// Add Flashcard interface
+// Add Flashcard interface - updated to handle both naming conventions
 export interface Flashcard {
   id: string;
   // Support both naming conventions

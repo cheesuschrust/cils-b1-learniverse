@@ -18,23 +18,23 @@ export type NotificationType =
 
 // Map from notification type to button variant
 export type NotificationVariantMapping = {
-  [key in NotificationType]?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
+  [key in NotificationType]?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'success' | 'warning';
 };
 
 export const notificationToVariantMap: NotificationVariantMapping = {
-  success: 'default',
+  success: 'success',
   error: 'destructive',
-  warning: 'secondary',
+  warning: 'warning',
   info: 'outline',
   system: 'secondary',
-  achievement: 'default',
+  achievement: 'success',
   default: 'secondary'
 };
 
 export interface NotificationAction {
   label: string;
   action: () => void;
-  variant?: 'default' | 'link' | 'outline' | 'secondary' | 'ghost';
+  variant?: 'default' | 'link' | 'outline' | 'secondary' | 'ghost' | 'success' | 'warning';
   icon?: React.ReactNode;
   id?: string;
 }

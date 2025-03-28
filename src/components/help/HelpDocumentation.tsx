@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
@@ -7,9 +8,26 @@ import {
   Search,
   HelpCircle,
   ExternalLink,
-  Slash
+  Slash,
+  X,
+  Brain,
+  BookOpen,
+  Mic,
+  PenTool,
+  Award,
+  Volume,
+  Info
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface HelpDocumentationProps {
   defaultTopic?: string;
