@@ -29,4 +29,19 @@ export interface AdUnit {
   content: string; // Required for compatibility
   targetUrl: string; // Required property based on error
   impression?: number; // For compatibility
+  owner?: string;
+  title?: string;
+  description?: string;
+  startDate?: Date;
+  endDate?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  adFormat?: string;
+  dimensions?: string;
+  placements?: string[];
+  targeting?: string[];
+  price?: number;
+  currency?: string;
+  company?: string;
+  status?: string;
 }

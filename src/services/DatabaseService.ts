@@ -2,11 +2,11 @@
 import { MockDatabase, User, EmailSettings, LogEntry } from "@/contexts/shared-types";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { License } from "@/types/license";
+import { License, LicenseStatus, RenewalStatus } from "@/types/License";
 import { ChatSession, ChatbotTrainingExample } from "@/types/chatbot";
 import { Notification } from "@/types/notification";
 import { Flashcard, FlashcardSet } from "@/types/flashcard";
-import { AdSettings, AdUnit } from "@/types/ad";
+import { AdSettings, AdUnit, AdNetwork } from "@/types/ad";
 
 // Create password hash map to store user passwords securely
 export const passwordHash = new Map<string, string>();
@@ -56,7 +56,7 @@ class DatabaseService {
       flashcards: [],
       flashcardSets: [],
       adSettings: {
-        enableAds: true,
+        enabled: true,
         defaultNetwork: 'internal',
         frequencyCap: 5,
         showToPremiumUsers: false,
@@ -171,7 +171,11 @@ class DatabaseService {
           domain: "italian.unimilan.edu"
         },
         value: 25000,
-        renewalStatus: "pending"
+        renewalStatus: "pending",
+        company: "University of Milan",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        validity: 365
       },
       {
         id: uuidv4(),
@@ -190,10 +194,15 @@ class DatabaseService {
           colors: {
             primary: "#004d99",
             secondary: "#ffcc00"
-          }
+          },
+          domain: "lincoln.edu"
         },
         value: 7500,
-        renewalStatus: "not-started"
+        renewalStatus: "auto-renewal",
+        company: "Lincoln High School",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        validity: 365
       }
     ];
 
@@ -201,28 +210,28 @@ class DatabaseService {
     const flashcards: Flashcard[] = [
       {
         id: uuidv4(),
+        front: "Buongiorno",
+        back: "Good morning",
         italian: "Buongiorno",
         english: "Good morning",
-        explanation: "Formal greeting used in the morning until lunch time.",
-        examples: ["Buongiorno, come stai?", "Buongiorno, sono Maria."],
         level: 1,
         mastered: true,
-        lastReviewed: new Date('2023-08-10'),
         nextReview: new Date('2023-09-10'),
+        lastReviewed: new Date('2023-08-10'),
         tags: ["greeting", "basic", "formal"],
         createdAt: new Date('2023-01-15'),
         updatedAt: new Date('2023-08-10')
       },
       {
         id: uuidv4(),
+        front: "Arrivederci",
+        back: "Goodbye",
         italian: "Arrivederci",
         english: "Goodbye",
-        explanation: "Formal way to say goodbye.",
-        examples: ["Arrivederci, a domani!", "Arrivederci, è stato un piacere."],
         level: 1,
         mastered: false,
-        lastReviewed: new Date('2023-08-09'),
         nextReview: new Date('2023-08-12'),
+        lastReviewed: new Date('2023-08-09'),
         tags: ["greeting", "basic", "formal"],
         createdAt: new Date('2023-01-15'),
         updatedAt: new Date('2023-08-09')
@@ -236,13 +245,16 @@ class DatabaseService {
         name: "Basic Greetings",
         description: "Essential Italian greetings for beginners",
         tags: ["beginner", "greetings", "essential"],
-        cards: [flashcards[0].id, flashcards[1].id],
+        cards: flashcards.map(card => card.id),
         createdAt: new Date('2023-01-15'),
         updatedAt: new Date('2023-08-10'),
         totalCards: 2,
         masteredCards: 1,
         category: "vocabulary",
-        difficulty: "beginner"
+        difficulty: "beginner",
+        creator: regularUser.id,
+        isPublic: true,
+        isFavorite: false
       }
     ];
 
@@ -258,7 +270,18 @@ class DatabaseService {
         impressions: 12450,
         clicks: 348,
         revenue: 87.32,
-        lastUpdated: new Date('2023-08-01')
+        content: "<div>Premium Banner</div>",
+        targetUrl: "/subscription",
+        lastUpdated: new Date('2023-08-01'),
+        title: "Premium Banner",
+        description: "Banner promoting premium features",
+        startDate: new Date('2023-01-01'),
+        endDate: new Date('2023-12-31'),
+        createdAt: new Date('2023-01-01'),
+        updatedAt: new Date('2023-08-01'),
+        adFormat: "horizontal",
+        dimensions: "728x90",
+        status: "active"
       },
       {
         id: uuidv4(),
@@ -270,7 +293,18 @@ class DatabaseService {
         impressions: 8920,
         clicks: 156,
         revenue: 52.18,
-        lastUpdated: new Date('2023-08-05')
+        content: "<div>Sidebar Ad</div>",
+        targetUrl: "/plans",
+        lastUpdated: new Date('2023-08-05'),
+        title: "Sidebar Promotion",
+        description: "Sidebar promotion for lesson materials",
+        startDate: new Date('2023-01-01'),
+        endDate: new Date('2023-12-31'),
+        createdAt: new Date('2023-01-01'),
+        updatedAt: new Date('2023-08-05'),
+        adFormat: "vertical",
+        dimensions: "300x600",
+        status: "active"
       }
     ];
 
@@ -564,7 +598,7 @@ class DatabaseService {
   
   public createLicense(licenseData: Partial<License>): License {
     const newLicense: License = {
-      id: uuidv4(),
+      id: licenseData.id || uuidv4(),
       name: licenseData.name || '',
       type: licenseData.type || 'university',
       plan: licenseData.plan || '',
@@ -572,12 +606,25 @@ class DatabaseService {
       usedSeats: licenseData.usedSeats || 0,
       startDate: licenseData.startDate || new Date().toISOString(),
       endDate: licenseData.endDate || new Date().toISOString(),
-      status: licenseData.status || '',
+      status: licenseData.status || 'active',
       contactName: licenseData.contactName || '',
       contactEmail: licenseData.contactEmail || '',
-      customization: licenseData.customization || {},
+      customization: licenseData.customization || {
+        logo: '',
+        colors: {
+          primary: '',
+          secondary: ''
+        },
+        domain: ''
+      },
       value: licenseData.value || 0,
-      renewalStatus: licenseData.renewalStatus || ''
+      renewalStatus: licenseData.renewalStatus || 'auto-renewal',
+      userId: licenseData.userId || '',
+      company: licenseData.company || '',
+      createdAt: licenseData.createdAt || new Date(),
+      updatedAt: licenseData.updatedAt || new Date(),
+      validity: licenseData.validity || 365,
+      features: licenseData.features || []
     };
     
     this.database.licenses.push(newLicense);
@@ -602,7 +649,8 @@ class DatabaseService {
     
     const updatedLicense = {
       ...this.database.licenses[licenseIndex],
-      ...licenseData
+      ...licenseData,
+      updatedAt: new Date()
     };
     
     this.database.licenses[licenseIndex] = updatedLicense;
@@ -820,7 +868,7 @@ class DatabaseService {
   
   public createAdUnit(unitData: Partial<AdUnit>): AdUnit {
     const newUnit: AdUnit = {
-      id: uuidv4(),
+      id: unitData.id || uuidv4(),
       name: unitData.name || '',
       type: unitData.type || 'banner',
       network: unitData.network || 'internal',
@@ -829,7 +877,25 @@ class DatabaseService {
       impressions: unitData.impressions || 0,
       clicks: unitData.clicks || 0,
       revenue: unitData.revenue || 0,
-      lastUpdated: new Date()
+      content: unitData.content || '',
+      targetUrl: unitData.targetUrl || '',
+      lastUpdated: new Date(),
+      title: unitData.title || '',
+      description: unitData.description || '',
+      startDate: unitData.startDate || new Date(),
+      endDate: unitData.endDate || new Date(),
+      createdAt: unitData.createdAt || new Date(),
+      updatedAt: unitData.updatedAt || new Date(),
+      adFormat: unitData.adFormat || '',
+      dimensions: unitData.dimensions || '',
+      placements: unitData.placements || [],
+      targeting: unitData.targeting || [],
+      price: unitData.price || 0,
+      currency: unitData.currency || 'USD',
+      company: unitData.company || '',
+      status: unitData.status || 'active',
+      owner: unitData.owner || '',
+      impression: unitData.impressions || 0
     };
     
     this.database.adUnits.push(newUnit);
@@ -852,10 +918,11 @@ class DatabaseService {
       return undefined;
     }
     
-    const updatedUnit = {
+    const updatedUnit: AdUnit = {
       ...this.database.adUnits[unitIndex],
       ...unitData,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
+      updatedAt: new Date()
     };
     
     this.database.adUnits[unitIndex] = updatedUnit;
