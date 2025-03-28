@@ -69,6 +69,7 @@ export default async function handler(
 
         const licenseData: Partial<License> = {
           ...createData,
+          // Convert string dates to Date objects for the service
           startDate: new Date(createData.startDate),
           endDate: new Date(createData.endDate),
         };

@@ -9,12 +9,13 @@ type ToastActionElement = React.ReactElement<{
   onClick: () => void;
 }>;
 
-type ToastProps = {
+export type Toast = {
   id: string;
   title?: string;
   description?: React.ReactNode;
   action?: ToastActionElement;
-  variant?: "default" | "destructive";
+  variant?: "default" | "destructive" | "success" | "warning";
+  duration?: number;
   onOpenChange?: (open: boolean) => void;
 };
 
@@ -37,11 +38,11 @@ type ActionType = typeof actionTypes;
 type Action =
   | {
       type: ActionType["ADD_TOAST"];
-      toast: ToastProps;
+      toast: Toast;
     }
   | {
       type: ActionType["UPDATE_TOAST"];
-      toast: Partial<ToastProps>;
+      toast: Partial<Toast>;
     }
   | {
       type: ActionType["DISMISS_TOAST"];
@@ -53,7 +54,7 @@ type Action =
     };
 
 interface State {
-  toasts: ToastProps[];
+  toasts: Toast[];
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
@@ -143,12 +144,13 @@ function dispatch(action: Action) {
   });
 }
 
-type Toast = Omit<ToastProps, "id">;
+type ToastProps = Omit<Toast, "id">;
 
-function toast({ ...props }: Toast) {
+// This function will automatically generate an ID for the toast
+function toast(props: ToastProps) {
   const id = genId();
 
-  const update = (props: Toast) =>
+  const update = (props: ToastProps) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },

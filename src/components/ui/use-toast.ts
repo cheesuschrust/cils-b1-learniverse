@@ -7,8 +7,9 @@ export interface Toast {
   title?: string;
   description?: ReactNode;
   action?: ReactNode;
-  variant?: 'default' | 'destructive';
-  duration?: number; // Adding the missing duration property
+  variant?: 'default' | 'destructive' | 'success' | 'warning' | 'outline' | 'secondary';
+  duration?: number;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export interface ToastActionElement {
@@ -17,12 +18,11 @@ export interface ToastActionElement {
 }
 
 // This is just a stub file to fix the type errors
-// The actual implementation would be in use-toast.tsx
+// The actual implementation would be in hooks/use-toast.ts
 export const useToast = () => {
   return {
-    toast: (props: Toast) => {},
+    toast: (props: Omit<Toast, "id">) => {},
     dismiss: (toastId: string) => {},
     toasts: [] as Toast[]
   };
 };
-
