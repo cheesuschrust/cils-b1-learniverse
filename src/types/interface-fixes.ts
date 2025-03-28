@@ -10,19 +10,35 @@ export interface LevelBadgeProps {
 export interface FlashcardComponentProps {
   flashcard: {
     id: string;
-    front: string;
-    back: string;
+    front?: string;
+    back?: string;
     level?: number;
     tags?: string[];
     mastered?: boolean;
     italian?: string;
     english?: string;
   };
+  card?: any; // Legacy support
   onFlip?: () => void;
+  onRating?: (rating: number) => void;
   onRate?: (rating: number) => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
+  onKnown?: () => void; // Legacy support
+  onUnknown?: () => void; // Legacy support
+  onSkip?: () => void;
   showAnswer?: boolean;
   showRating?: boolean;
+  showControls?: boolean;
+  showHints?: boolean;
+  showPronunciation?: boolean;
+  showActions?: boolean;
   className?: string;
+  flipped?: boolean;
+  autoFlip?: boolean;
+  frontLabel?: string;
+  backLabel?: string;
 }
 
 // Add ImportFormat type

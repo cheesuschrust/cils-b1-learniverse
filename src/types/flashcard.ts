@@ -3,35 +3,50 @@
 
 export interface Flashcard {
   id: string;
+  // Core properties that should always be present
   front: string;
   back: string;
   level: number;
+  
+  // Review-related properties
   nextReview: Date;
-  tags: string[]; // Required in one implementation but optional in another
-  createdAt: Date;
-  updatedAt: Date;
-  status?: 'new' | 'learning' | 'reviewing' | 'mastered';
-  mastered?: boolean;
   lastReviewed?: Date;
-  notes?: string;
-  setId?: string;
-  mediaUrl?: string;
-  mediaType?: 'image' | 'audio';
-  frontLanguage?: 'english' | 'italian';
-  backLanguage?: 'english' | 'italian';
+  dueDate?: Date;
+  
+  // Categorization
+  tags: string[]; 
   category?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  
+  // Status tracking
+  status?: 'new' | 'learning' | 'reviewing' | 'mastered';
+  mastered?: boolean;
   streak?: number;
-  userId?: string;
   correctReviews?: number;
   totalReviews?: number;
-  revisionHistory?: RevisionRecord[];
-  // Compatibility with interface-fixes.ts
-  italian?: string;
-  english?: string;
-  examples?: string[];
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+  setId?: string;
+  userId?: string;
+  
+  // Content enrichment
+  notes?: string;
   explanation?: string;
-  dueDate?: Date;
+  examples?: string[];
+  mediaUrl?: string;
+  mediaType?: 'image' | 'audio';
+  
+  // Language specific
+  frontLanguage?: 'english' | 'italian';
+  backLanguage?: 'english' | 'italian';
+  
+  // Legacy compatibility
+  italian?: string;  // Maps to front if frontLanguage is 'italian'
+  english?: string;  // Maps to back if backLanguage is 'english'
+  
+  revisionHistory?: RevisionRecord[];
 }
 
 export interface FlashcardStats {
@@ -66,6 +81,10 @@ export interface FlashcardSet {
   masteredCards: number;
   category: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+  
+  // Language specification
+  language?: 'english' | 'italian';
+  authorId?: string;
 }
 
 export interface RevisionRecord {
@@ -86,6 +105,13 @@ export interface FlashcardReviewSession {
   cardsReviewed: number;
   correctAnswers: number;
   sessionType: 'new' | 'review' | 'mixed';
+  
+  // Additional properties for compatibility with FlashcardStudySession
+  setId?: string;
+  cardsStudied?: Flashcard[];
+  cardsCorrect?: Flashcard[];
+  cardsIncorrect?: Flashcard[];
+  createdAt?: Date;
 }
 
 export type FlashcardReviewRating = 0 | 1 | 2 | 3 | 4 | 5;
@@ -98,3 +124,56 @@ export interface CardReview {
   newLevel: number;
   sessionId?: string;
 }
+
+// Helper functions for data conversion
+export const convertToFlashcard = (data: any): Flashcard => {
+  const flashcard: Flashcard = {
+    id: data.id,
+    front: data.front || data.italian || '',
+    back: data.back || data.english || '',
+    level: data.level || 0,
+    nextReview: data.nextReview || data.dueDate || new Date(),
+    tags: data.tags || [],
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+  };
+
+  // Copy all other properties that exist in the source
+  Object.entries(data).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'front' && key !== 'back' && key !== 'level' && 
+        key !== 'nextReview' && key !== 'tags' && key !== 'createdAt' && key !== 'updatedAt') {
+      (flashcard as any)[key] = value;
+    }
+  });
+
+  // Ensure italian/english mapping
+  if (data.italian && !flashcard.italian) flashcard.italian = data.italian;
+  if (data.english && !flashcard.english) flashcard.english = data.english;
+  
+  return flashcard;
+};
+
+// Function to normalize flashcard data across the application
+export const normalizeFlashcard = (card: any): Flashcard => {
+  if (!card) return null as any;
+  
+  const flashcard: Flashcard = {
+    id: card.id,
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    level: card.level || 0,
+    tags: card.tags || [],
+    nextReview: card.nextReview || card.dueDate || new Date(),
+    createdAt: new Date(card.createdAt || Date.now()),
+    updatedAt: new Date(card.updatedAt || Date.now()),
+    mastered: card.mastered || false
+  };
+
+  // Handle legacy or alternative property names
+  if (card.italian && !flashcard.italian) flashcard.italian = card.italian;
+  if (card.english && !flashcard.english) flashcard.english = card.english;
+  if (card.dueDate && !flashcard.dueDate) flashcard.dueDate = card.dueDate;
+  if (card.lastReviewed) flashcard.lastReviewed = new Date(card.lastReviewed);
+  
+  return flashcard;
+};

@@ -1,4 +1,3 @@
-// Simple placeholder for the getAvailableVoices function
 
 /**
  * Returns a list of available speech synthesis voices on the current device
@@ -41,4 +40,5 @@ export function speak(text: string, voiceName?: string): Promise<void> {
   });
 }
 
+// Export getAvailableVoices as default for backward compatibility
 export default getAvailableVoices;

@@ -34,7 +34,7 @@ export interface PieChartProps {
   className?: string;
 }
 
-// LineChart component definition with yAxisWidth
+// LineChart component definition with yAxisWidth as optional
 export function LineChart({
   data,
   index,

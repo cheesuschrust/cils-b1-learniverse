@@ -1,5 +1,6 @@
 
 // Notification types for the application
+import React from 'react';
 
 export type NotificationType = 
   | 'info' 
@@ -30,6 +31,7 @@ export interface Notification {
   type: NotificationType;
   read?: boolean;
   createdAt?: Date;
+  timestamp?: Date;
   actions?: NotificationAction[];
   link?: string;
   autoClose?: boolean | number;
@@ -38,7 +40,6 @@ export interface Notification {
   data?: Record<string, any>;
   expiresAt?: Date;
   metadata?: Record<string, any>;
-  timestamp?: Date;
   url?: string;
 }
 
