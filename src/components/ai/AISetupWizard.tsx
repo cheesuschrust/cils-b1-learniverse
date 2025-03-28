@@ -1,406 +1,258 @@
 
 import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { AIModel, AIPreferences, AISetupWizardProps } from '@/types/ai';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { AIModel, AIPreference } from '@/types/ai';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Check, Cpu, HelpCircle, Shield, Volume2 } from 'lucide-react';
+import { adaptModelToSize, adaptSizeToModel } from '@/utils/modelAdapter';
 
-// Model info
-const modelSizes = [
-  { 
-    id: 'small', 
-    name: 'Small', 
-    description: 'Fast with low memory usage', 
-    size: '~50MB',
-    pros: ['Fast to load', 'Works on most devices', 'Low memory usage'],
-    cons: ['Lower accuracy', 'Limited capabilities']
-  },
-  { 
-    id: 'medium', 
-    name: 'Medium', 
-    description: 'Balanced performance', 
-    size: '~100MB',
-    pros: ['Good accuracy', 'Balanced performance', 'Moderate memory usage'],
-    cons: ['Slower loading on older devices']
-  },
-  { 
-    id: 'large', 
-    name: 'Large', 
-    description: 'Most accurate but resource intensive', 
-    size: '~200MB',
-    pros: ['Highest accuracy', 'Best performance', 'Advanced capabilities'],
-    cons: ['High memory usage', 'Slower to load', 'May not work on older devices']
-  }
-];
-
-// Form schema
-const formSchema = z.object({
-  modelSize: z.enum(['small', 'medium', 'large'] as const),
-  useWebGPU: z.boolean().default(false),
-  voiceEnabled: z.boolean().default(true),
-  voiceRate: z.number().min(0.5).max(2).default(1),
-  voicePitch: z.number().min(0.5).max(2).default(1),
-  cacheResponses: z.boolean().default(true),
-  anonymousAnalytics: z.boolean().default(true)
-});
-
-interface AISetupWizardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onComplete: (preferences: AIPreference) => void;
-  defaultValues?: Partial<AIPreference>;
-}
-
-export const AISetupWizard: React.FC<AISetupWizardProps> = ({
+const AISetupWizard: React.FC<AISetupWizardProps> = ({
   open,
   onOpenChange,
-  onComplete,
-  defaultValues
+  onComplete
 }) => {
-  const [step, setStep] = useState(1);
-  const totalSteps = 4;
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      modelSize: (defaultValues?.modelSize || 'medium') as AIModel,
-      useWebGPU: defaultValues?.useWebGPU || false,
-      voiceEnabled: defaultValues?.voiceEnabled || true,
-      voiceRate: defaultValues?.voiceRate || 1,
-      voicePitch: defaultValues?.voicePitch || 1,
-      cacheResponses: defaultValues?.cacheResponses || true,
-      anonymousAnalytics: defaultValues?.anonymousAnalytics || true
-    }
+  const [activeTab, setActiveTab] = useState("model");
+  const [preferences, setPreferences] = useState<AIPreferences>({
+    model: 'medium',
+    contentSafety: true,
+    debugMode: false,
+    voicePreference: 'native',
+    autoPlayAudio: true,
   });
-  
-  const handleNextStep = () => {
-    if (step < totalSteps) {
-      setStep(step + 1);
-    } else {
-      const values = form.getValues();
-      onComplete({
-        enabled: true,
-        modelSize: values.modelSize,
-        useWebGPU: values.useWebGPU,
-        voiceEnabled: values.voiceEnabled,
-        voiceRate: values.voiceRate,
-        voicePitch: values.voicePitch,
-        cacheResponses: values.cacheResponses,
-        anonymousAnalytics: values.anonymousAnalytics
-      });
-      onOpenChange(false);
+
+  const handleComplete = () => {
+    onComplete();
+    onOpenChange(false);
+  };
+
+  const handleNext = () => {
+    switch (activeTab) {
+      case "model":
+        setActiveTab("voice");
+        break;
+      case "voice":
+        setActiveTab("safety");
+        break;
+      case "safety":
+        handleComplete();
+        break;
     }
   };
-  
-  const handlePreviousStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
+
+  const handleBack = () => {
+    switch (activeTab) {
+      case "voice":
+        setActiveTab("model");
+        break;
+      case "safety":
+        setActiveTab("voice");
+        break;
     }
   };
-  
-  const renderStepContent = () => {
-    switch (step) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold">Welcome to AI Setup</h3>
-              <p className="text-muted-foreground">Let's configure the AI engine for optimal performance</p>
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="modelSize"
-              render={({ field }) => (
-                <FormItem className="space-y-4">
-                  <FormLabel>Choose AI Model Size</FormLabel>
-                  <FormDescription>
-                    Select based on your device capabilities and performance needs
-                  </FormDescription>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {modelSizes.map((model) => (
-                      <Card 
-                        key={model.id} 
-                        className={`cursor-pointer transition ${field.value === model.id ? 'border-primary bg-primary/5' : ''}`}
-                        onClick={() => form.setValue('modelSize', model.id as AIModel)}
-                      >
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">{model.name}</CardTitle>
-                          <CardDescription>{model.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-2 text-sm">
-                          <p>Size: {model.size}</p>
-                        </CardContent>
-                        <CardFooter className="flex justify-end pt-0">
-                          <RadioGroup value={field.value} className="hidden">
-                            <RadioGroupItem value={model.id} id={model.id} />
-                          </RadioGroup>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-      
-      case 2:
-        return (
-          <div className="space-y-4">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold">Performance Settings</h3>
-              <p className="text-muted-foreground">Optimize how the AI runs on your device</p>
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="useWebGPU"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Use GPU Acceleration</FormLabel>
-                    <FormDescription>
-                      Improve performance on supported devices
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="cacheResponses"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Cache Responses</FormLabel>
-                    <FormDescription>
-                      Store responses for faster repeated interactions
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-      
-      case 3:
-        return (
-          <div className="space-y-4">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold">Voice Settings</h3>
-              <p className="text-muted-foreground">Configure text-to-speech capabilities</p>
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="voiceEnabled"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Enable Voice</FormLabel>
-                    <FormDescription>
-                      Allow the AI to speak responses
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            {form.watch('voiceEnabled') && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="voiceRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Voice Speed</FormLabel>
-                      <FormControl>
-                        <div className="space-y-1">
-                          <Slider
-                            min={0.5}
-                            max={2}
-                            step={0.1}
-                            value={[field.value]}
-                            onValueChange={(values) => field.onChange(values[0])}
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Slow</span>
-                            <span>{field.value}x</span>
-                            <span>Fast</span>
-                          </div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="voicePitch"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Voice Pitch</FormLabel>
-                      <FormControl>
-                        <div className="space-y-1">
-                          <Slider
-                            min={0.5}
-                            max={2}
-                            step={0.1}
-                            value={[field.value]}
-                            onValueChange={(values) => field.onChange(values[0])}
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Low</span>
-                            <span>{field.value}x</span>
-                            <span>High</span>
-                          </div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-          </div>
-        );
-      
-      case 4:
-        return (
-          <div className="space-y-4">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold">Finish Setup</h3>
-              <p className="text-muted-foreground">Review your settings before continuing</p>
-            </div>
-            
-            <div className="rounded-lg border p-4 space-y-4">
-              <h4 className="font-medium">Selected Configuration</h4>
-              
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Model Size:</div>
-                <div>{modelSizes.find(m => m.id === form.watch('modelSize'))?.name}</div>
-                
-                <div className="text-muted-foreground">GPU Acceleration:</div>
-                <div>{form.watch('useWebGPU') ? 'Enabled' : 'Disabled'}</div>
-                
-                <div className="text-muted-foreground">Voice:</div>
-                <div>{form.watch('voiceEnabled') ? 'Enabled' : 'Disabled'}</div>
-                
-                {form.watch('voiceEnabled') && (
-                  <>
-                    <div className="text-muted-foreground">Voice Speed:</div>
-                    <div>{form.watch('voiceRate')}x</div>
-                    
-                    <div className="text-muted-foreground">Voice Pitch:</div>
-                    <div>{form.watch('voicePitch')}x</div>
-                  </>
-                )}
-                
-                <div className="text-muted-foreground">Cache Responses:</div>
-                <div>{form.watch('cacheResponses') ? 'Enabled' : 'Disabled'}</div>
-              </div>
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="anonymousAnalytics"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Help Improve the App</FormLabel>
-                    <FormDescription>
-                      Send anonymous usage data to help us enhance the AI
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-      
-      default:
-        return null;
-    }
+
+  const updatePreference = <K extends keyof AIPreferences>(
+    key: K,
+    value: AIPreferences[K]
+  ) => {
+    setPreferences((prev) => ({ ...prev, [key]: value }));
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>AI Setup Wizard</DialogTitle>
+          <DialogTitle>AI Assistant Setup</DialogTitle>
           <DialogDescription>
-            Configure the AI features to enhance your learning experience
+            Configure how you want the AI assistant to work for you.
           </DialogDescription>
         </DialogHeader>
-        
-        <Progress value={(step / totalSteps) * 100} className="h-2" />
-        
-        <Form {...form}>
-          <form className="space-y-6">
-            {renderStepContent()}
-          </form>
-        </Form>
-        
-        <DialogFooter>
-          <div className="flex w-full justify-between">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handlePreviousStep}
-              disabled={step === 1}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="model" data-active={activeTab === "model"}>
+              <Cpu className="h-4 w-4 mr-2" />
+              Model
+            </TabsTrigger>
+            <TabsTrigger value="voice" data-active={activeTab === "voice"}>
+              <Volume2 className="h-4 w-4 mr-2" />
+              Voice
+            </TabsTrigger>
+            <TabsTrigger value="safety" data-active={activeTab === "safety"}>
+              <Shield className="h-4 w-4 mr-2" />
+              Safety
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="model" className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Choose AI Model Size</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select a model size based on your needs. Larger models are more
+                  capable but may be slower.
+                </p>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <Button
+                    variant={preferences.model === "small" ? "default" : "outline"}
+                    onClick={() => updatePreference("model", "small")}
+                    className="flex flex-col h-auto py-4"
+                  >
+                    <span className="font-medium">Small</span>
+                    <span className="text-xs mt-1">Fast, Basic</span>
+                  </Button>
+                  <Button
+                    variant={preferences.model === "medium" ? "default" : "outline"}
+                    onClick={() => updatePreference("model", "medium")}
+                    className="flex flex-col h-auto py-4"
+                  >
+                    <span className="font-medium">Medium</span>
+                    <span className="text-xs mt-1">Balanced</span>
+                  </Button>
+                  <Button
+                    variant={preferences.model === "large" ? "default" : "outline"}
+                    onClick={() => updatePreference("model", "large")}
+                    className="flex flex-col h-auto py-4"
+                  >
+                    <span className="font-medium">Large</span>
+                    <span className="text-xs mt-1">Powerful</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="voice" className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Voice Settings</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure how the AI assistant sounds when speaking.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="autoPlayAudio">Auto-play audio</Label>
+                    <Switch
+                      id="autoPlayAudio"
+                      checked={preferences.autoPlayAudio}
+                      onCheckedChange={(checked) =>
+                        updatePreference("autoPlayAudio", checked)
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block">Voice Preference</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button
+                        variant={
+                          preferences.voicePreference === "native"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => updatePreference("voicePreference", "native")}
+                        className="h-auto py-3"
+                      >
+                        Native Speaker
+                      </Button>
+                      <Button
+                        variant={
+                          preferences.voicePreference === "clear"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => updatePreference("voicePreference", "clear")}
+                        className="h-auto py-3"
+                      >
+                        Clear Accent
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="safety" className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Safety & Privacy</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure safety and privacy settings for the AI assistant.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="contentSafety" className="mb-1 block">
+                        Content Safety Filter
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Filter harmful or inappropriate content
+                      </p>
+                    </div>
+                    <Switch
+                      id="contentSafety"
+                      checked={preferences.contentSafety}
+                      onCheckedChange={(checked) =>
+                        updatePreference("contentSafety", checked)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="debugMode" className="mb-1 block">
+                        Debug Mode
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Show technical details about AI responses
+                      </p>
+                    </div>
+                    <Switch
+                      id="debugMode"
+                      checked={preferences.debugMode}
+                      onCheckedChange={(checked) =>
+                        updatePreference("debugMode", checked)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="mt-2">
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={activeTab === "model"}
             >
-              Previous
+              Back
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleNextStep}
-            >
-              {step === totalSteps ? 'Complete Setup' : 'Continue'}
+            <Button onClick={handleNext}>
+              {activeTab === "safety" ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Complete Setup
+                </>
+              ) : (
+                "Next"
+              )}
             </Button>
           </div>
         </DialogFooter>

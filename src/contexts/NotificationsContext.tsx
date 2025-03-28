@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Notification, NotificationType } from '@/types/notification';
+import type { Notification, NotificationType } from '@/types/notification';
 
-// Use 'export type' to avoid isolatedModules error
+// Use 'export type' for isolatedModules
 export type { Notification }; // Re-export for component imports
 
 // Define the context interface

@@ -8,7 +8,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  TooltipProps
+  TooltipProps,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import { ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
@@ -19,6 +22,15 @@ export interface LineChartProps {
   colors: string[];
   valueFormatter: (value: number) => string;
   yAxisWidth?: number;
+  className?: string;
+}
+
+export interface PieChartProps {
+  data: any[];
+  index: string;
+  category: string;
+  colors: string[];
+  valueFormatter: (value: number) => string;
   className?: string;
 }
 
@@ -106,7 +118,48 @@ export function LineChart({
   );
 }
 
-// Add BarChart and PieChart components since they're also referenced in errors
+// PieChart component
+export function PieChart({
+  data,
+  index,
+  category,
+  colors,
+  valueFormatter,
+  className,
+}: PieChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={350} className={className}>
+      <RechartsPieChart
+        margin={{
+          top: 16,
+          right: 16,
+          bottom: 16,
+          left: 16,
+        }}
+      >
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          nameKey={index}
+          dataKey={category}
+          outerRadius={80}
+          fill="#8884d8"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+          ))}
+        </Pie>
+        <Tooltip
+          formatter={(value: number) => [valueFormatter(value), index]}
+        />
+      </RechartsPieChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Add BarChart and other needed chart components
 export interface BarChartProps {
   data: any[];
   index: string;
@@ -116,48 +169,16 @@ export interface BarChartProps {
   className?: string;
 }
 
-export function BarChart({
-  data,
-  index,
-  categories,
-  colors,
-  valueFormatter,
-  className,
-}: BarChartProps) {
+export function BarChart(props: BarChartProps) {
   // Placeholder implementation
   return (
-    <div className={className}>
+    <div className={props.className}>
       <div>BarChart implementation needed</div>
     </div>
   );
 }
 
-export interface PieChartProps {
-  data: any[];
-  index: string;
-  category: string;
-  valueFormatter: (value: number) => string;
-  colors: string[];
-  className?: string;
-}
-
-export function PieChart({
-  data,
-  index,
-  category,
-  valueFormatter,
-  colors,
-  className,
-}: PieChartProps) {
-  // Placeholder implementation
-  return (
-    <div className={className}>
-      <div>PieChart implementation needed</div>
-    </div>
-  );
-}
-
 export function AreaChart(props: BarChartProps) {
-  // Placeholder implementation - reusing BarChartProps since they're similar
+  // Reuse BarChartProps since they're similar
   return <BarChart {...props} />;
 }

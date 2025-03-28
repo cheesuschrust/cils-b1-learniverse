@@ -26,6 +26,12 @@ export interface Flashcard {
   correctReviews?: number;
   totalReviews?: number;
   revisionHistory?: RevisionRecord[];
+  // Compatibility with interface-fixes.ts
+  italian?: string;
+  english?: string;
+  examples?: string[];
+  explanation?: string;
+  dueDate?: Date;
 }
 
 export interface FlashcardStats {
@@ -36,6 +42,13 @@ export interface FlashcardStats {
   avgMasteryTime: number;
   totalReviews: number;
   correctReviews: number;
+  averageResponseTime?: number;
+  masteredCount?: number;
+  learningCount?: number;
+  newCount?: number;
+  averageScore?: number;
+  streak?: number;
+  lastReviewDate?: Date;
 }
 
 export interface FlashcardSet {

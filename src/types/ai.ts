@@ -33,6 +33,22 @@ export type AIFeature =
   | 'correction'
   | 'simplified';
 
+export interface AIServiceOptions {
+  apiKey?: string;
+  model?: AIModel;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface AIServiceInterface {
+  generateText: (prompt: string) => Promise<string>;
+  generateCompletions: (prompts: string[]) => Promise<string[]>;
+  generateQuestions: (content: string, count?: number) => Promise<any[]>;
+  generateFlashcards: (content: string, count?: number) => Promise<any[]>;
+  translateText: (text: string, targetLanguage: string) => Promise<string>;
+  abort: () => void;
+}
+
 export interface AISettings {
   enabled: boolean;
   model: AIModel;
@@ -62,6 +78,8 @@ export interface ConfidenceIndicatorProps {
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  value?: number;
+  indicatorClassName?: string;
 }
 
 export interface AIPreferences {
@@ -70,6 +88,17 @@ export interface AIPreferences {
   debugMode: boolean;
   voicePreference: string;
   autoPlayAudio: boolean;
+  enabled?: boolean;
+  cacheResponses?: boolean;
+  voiceEnabled?: boolean;
+  defaultLanguage?: 'english' | 'italian' | 'both';
+  voiceRate?: number;
+  voicePitch?: number;
+  italianVoiceURI?: string;
+  englishVoiceURI?: string;
+  defaultModelSize?: 'small' | 'medium' | 'large';
+  useWebGPU?: boolean;
+  anonymousAnalytics?: boolean;
 }
 
 export interface UseAIReturn {
@@ -86,4 +115,10 @@ export interface UseAIReturn {
   generateFlashcards: (content: string, count?: number, difficulty?: string) => Promise<any[]>;
   classifyText: (text: string) => Promise<any[]>;
   getConfidenceScore: (contentType: string) => number;
+}
+
+export interface AISetupWizardProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onComplete: () => void;
 }

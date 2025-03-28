@@ -17,7 +17,7 @@ export interface User {
   id: string;
   email: string;
   
-  // Name properties with both formats
+  // Name properties with both formats for full compatibility
   username?: string;
   firstName?: string; 
   lastName?: string;
@@ -60,7 +60,7 @@ export interface User {
   // Language preferences with multiple formats
   preferredLanguage?: 'english' | 'italian' | 'both';
   preferred_language?: 'english' | 'italian' | 'both';
-  language?: 'english' | 'italian' | 'both'; // For backward compatibility
+  language?: 'english' | 'italian' | 'both' | 'en' | 'it'; // For backward compatibility
   
   // User metrics
   metrics?: {
@@ -98,7 +98,11 @@ export function getUserDisplayName(user: User): string | undefined {
 }
 
 export function getUserPreferredLanguage(user: User): string | undefined {
-  return user.preferredLanguage || user.preferred_language || user.language;
+  if (user.preferredLanguage) return user.preferredLanguage;
+  if (user.preferred_language) return user.preferred_language;
+  if (user.language === 'en') return 'english';
+  if (user.language === 'it') return 'italian';
+  return user.language;
 }
 
 export function getUserCreatedDate(user: User): Date | undefined {

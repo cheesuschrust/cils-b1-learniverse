@@ -12,13 +12,15 @@ export type NotificationType =
   | 'achievement'
   | 'progress'
   | 'reminder'
-  | 'update';
+  | 'update'
+  | 'default';
 
 export interface NotificationAction {
   label: string;
   action: () => void;
   variant?: 'default' | 'link' | 'outline' | 'secondary' | 'ghost';
   icon?: React.ReactNode;
+  id?: string;
 }
 
 export interface Notification {
@@ -34,6 +36,10 @@ export interface Notification {
   icon?: React.ReactNode;
   priority?: 'low' | 'normal' | 'high';
   data?: Record<string, any>;
+  expiresAt?: Date;
+  metadata?: Record<string, any>;
+  timestamp?: Date;
+  url?: string;
 }
 
 export interface NotificationItemProps {
@@ -41,4 +47,5 @@ export interface NotificationItemProps {
   onDismiss: (id: string) => void;
   onRead: (id: string) => void;
   className?: string;
+  showControls?: boolean;
 }
