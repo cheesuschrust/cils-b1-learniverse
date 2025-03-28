@@ -16,6 +16,8 @@ export type UserPreferences = {
 export interface User {
   id: string;
   email: string;
+  
+  // Name properties with both formats
   username?: string;
   firstName?: string; 
   lastName?: string;
@@ -23,11 +25,18 @@ export interface User {
   last_name?: string;
   displayName?: string;
   name?: string;
+  
+  // Profile image properties
   photoURL?: string;
   profileImage?: string;
   avatar?: string;
+  
+  // User type & permissions
   role: UserRole;
   isVerified?: boolean;
+  isAdmin?: boolean;
+  
+  // Date properties with both formats
   createdAt?: Date;
   created_at?: Date; // Snake case property for backward compatibility
   updatedAt: Date; // Required property
@@ -36,21 +45,32 @@ export interface User {
   last_login?: Date; // Snake case property for backward compatibility 
   lastActive?: Date;
   last_active?: Date; // Snake case property for backward compatibility
+  
+  // Status and subscription
   status?: 'active' | 'inactive' | 'suspended';
   subscription?: 'free' | 'premium' | 'trial';
+  
+  // Contact info
   phoneNumber?: string;
   address?: string;
-  isAdmin?: boolean;
+  
+  // User preferences
   preferences?: UserPreferences;
+  
+  // Language preferences with multiple formats
   preferredLanguage?: 'english' | 'italian' | 'both';
   preferred_language?: 'english' | 'italian' | 'both';
   language?: 'english' | 'italian' | 'both'; // For backward compatibility
+  
+  // User metrics
   metrics?: {
     totalQuestions: number;
     correctAnswers: number;
     streak: number;
     [key: string]: any;
   };
+  
+  // Daily activity tracking
   dailyQuestionCounts?: {
     flashcards: number;
     multipleChoice: number;

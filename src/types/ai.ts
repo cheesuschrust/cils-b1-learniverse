@@ -1,86 +1,89 @@
 
-export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
-export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'mistral-small' | 'claude-instant' | 'small' | 'medium' | 'large';
+// Define AI-related types for the application
 
-export interface AIPreferences {
+export type AIModel = 
+  | 'gpt-4o' 
+  | 'gpt-4o-mini'
+  | 'gpt-4'
+  | 'gpt-3.5-turbo'
+  | 'claude-instant'
+  | 'claude-2'
+  | 'mistral-small'
+  | 'mistral-medium'
+  | 'mistral-large';
+
+export type AIModelSize = 'small' | 'medium' | 'large';
+
+export type AIStatus = 
+  | 'idle' 
+  | 'loading' 
+  | 'ready'
+  | 'processing'
+  | 'error'
+  | 'success';
+
+export type AIFeature = 
+  | 'flashcards'
+  | 'questions'
+  | 'listening'
+  | 'speaking'
+  | 'writing'
+  | 'translation'
+  | 'explanation'
+  | 'correction'
+  | 'simplified';
+
+export interface AISettings {
   enabled: boolean;
-  modelSize: 'small' | 'medium' | 'large';
-  cacheResponses: boolean;
-  voiceEnabled: boolean;
-  defaultLanguage: 'english' | 'italian' | 'both';
-  voiceRate: number;
-  voicePitch: number;
-  italianVoiceURI?: string;
-  englishVoiceURI?: string;
-  defaultModelSize: 'small' | 'medium' | 'large';
-  useWebGPU: boolean;
-  anonymousAnalytics: boolean;
+  model: AIModel;
+  temperature: number;
+  maxTokens: number;
+  features: Record<AIFeature, boolean>;
+  apiKey?: string;
+  provider?: 'openai' | 'anthropic' | 'mistral' | 'local';
+  streaming?: boolean;
+  contentSafety?: boolean;
+  debugMode?: boolean;
+  defaultLanguage?: 'english' | 'italian' | 'auto';
 }
 
-export interface AIServiceOptions {
-  maxLength?: number;
-  temperature?: number;
-  model?: string;
-  stream?: boolean;
+export interface AIFeedbackSettings {
+  automaticFeedback: boolean;
+  detailedExplanations: boolean;
+  highlightErrors: boolean;
+  suggestAlternatives: boolean;
+  proficiencyLevel: 'beginner' | 'intermediate' | 'advanced';
+  feedbackLanguage: 'english' | 'italian' | 'same-as-content';
 }
 
-export interface AIServiceInterface {
-  generateText(prompt: string, options?: AIServiceOptions): Promise<string>;
-  classifyText(text: string): Promise<Array<{ label: string; score: number }>>;
-  generateImage?(prompt: string, size?: string): Promise<string>;
-  getConfidenceScore(contentType: string): number;
-  addTrainingExamples(contentType: string, examples: any[]): number;
-  generateFlashcards(topic: string, count?: number, difficulty?: string): Promise<any[]>;
-  generateQuestions(content: string, count?: number, type?: string): Promise<any[]>;
-  abortRequest(requestId: string): void;
-  abortAllRequests(): void;
-}
-
-// Add ConfidenceIndicatorProps type
 export interface ConfidenceIndicatorProps {
   score: number;
-  value?: number;
+  contentType: 'flashcards' | 'listening' | 'writing' | 'speaking' | 'multiple-choice';
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  indicatorClassName?: string;
-  contentType?: 'writing' | 'speaking' | 'listening' | 'multiple-choice' | 'flashcards';
 }
 
-// Add UseAIReturn interface
+export interface AIPreferences {
+  model: AIModelSize;
+  contentSafety: boolean;
+  debugMode: boolean;
+  voicePreference: string;
+  autoPlayAudio: boolean;
+}
+
 export interface UseAIReturn {
   isLoading: boolean;
   error: Error | null;
   result: string | null;
   generateText: (prompt: string) => Promise<string>;
   abort: () => void;
-  status?: AIStatus;
-  isModelLoaded?: boolean;
-  loadModel?: () => Promise<void>;
-  generateQuestions?: (content: string, contentType: string, count: number, difficulty: string) => Promise<any[]>;
-  isProcessing?: boolean;
-  generateFlashcards?: (content: string, count: number, difficulty: string) => Promise<any[]>;
-  classifyText?: (text: string) => Promise<any[]>;
-  getConfidenceScore?: (contentType: string) => number;
-}
-
-// Add AISettings interface
-export interface AISettings {
-  enabled: boolean;
-  useOfflineModel: boolean;
-  modelSize: 'small' | 'medium' | 'large';
-  voiceEnabled: boolean;
-  speakingRate: number;
-  aiEnabled?: boolean;
-  confidenceThreshold?: number;
-  anonymousAnalytics?: boolean;
-  defaultLanguage?: 'english' | 'italian' | 'both';
-  [key: string]: any;
-}
-
-// Add AISettingsProps
-export interface AISettingsProps {
-  initialSettings?: AISettings;
-  onSettingsChange?: (settings: AISettings) => void;
-  onClose?: () => void;
+  status: AIStatus;
+  isModelLoaded: boolean;
+  loadModel: () => Promise<void>;
+  generateQuestions: (content: string, contentType: string, count: number, difficulty: string) => Promise<any[]>;
+  isProcessing: boolean;
+  generateFlashcards: (content: string, count?: number, difficulty?: string) => Promise<any[]>;
+  classifyText: (text: string) => Promise<any[]>;
+  getConfidenceScore: (contentType: string) => number;
 }

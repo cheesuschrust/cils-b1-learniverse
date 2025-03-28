@@ -1,23 +1,41 @@
 
+// Flashcard related types
+
 export interface Flashcard {
   id: string;
-  italian: string;
-  english: string;
-  level: number; // Required property based on errors
-  mastered: boolean;
-  tags: string[];
-  createdAt: Date; // Required property based on errors
-  updatedAt: Date; // Required property based on errors
+  front: string;
+  back: string;
+  level: number;
   nextReview: Date;
-  lastReviewed: Date | null;
-  explanation?: string;
-  audioUrl?: string;
-  imageUrl?: string;
-  examples?: string[];
+  tags: string[]; // Required in one implementation but optional in another
+  createdAt: Date;
+  updatedAt: Date;
+  status?: 'new' | 'learning' | 'reviewing' | 'mastered';
+  mastered?: boolean;
+  lastReviewed?: Date;
   notes?: string;
-  dueDate?: Date;
-  front?: string; // Added for compatibility with new version
-  back?: string; // Added for compatibility with new version
+  setId?: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'audio';
+  frontLanguage?: 'english' | 'italian';
+  backLanguage?: 'english' | 'italian';
+  category?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  streak?: number;
+  userId?: string;
+  correctReviews?: number;
+  totalReviews?: number;
+  revisionHistory?: RevisionRecord[];
+}
+
+export interface FlashcardStats {
+  total: number;
+  mastered: number;
+  learning: number;
+  toReview: number;
+  avgMasteryTime: number;
+  totalReviews: number;
+  correctReviews: number;
 }
 
 export interface FlashcardSet {
@@ -27,95 +45,43 @@ export interface FlashcardSet {
   cards: Flashcard[];
   tags: string[];
   creator: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
+  isPublic: boolean;
+  isFavorite: boolean;
   createdAt: Date;
   updatedAt: Date;
   totalCards: number;
   masteredCards: number;
-  isPublic: boolean;
-  isFavorite: boolean;
-  dueDate?: Date;
+  category: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
-export interface FlashcardReviewStats {
-  totalReviews: number;
-  correctReviews: number;
-  masteredCards: number;
-  lastReviewDate: Date | null;
-  averageLevel: number;
-  streakDays: number;
+export interface RevisionRecord {
+  date: Date;
+  rating: number; // 0-5 scale or similar
+  timeTaken: number; // milliseconds
+  level: number; // SRS level after this review
+  nextReview: Date;
 }
 
-export interface FlashcardStats {
-  totalReviews: number;
-  correctReviews: number;
-  averageScore: number;
-  streak: number;
-  lastReviewDate?: Date;
-  toReview?: number; // Added for compatibility
-  avgMasteryTime?: number; // Added for compatibility with useFlashcards
+export interface FlashcardReviewSession {
+  id: string;
+  userId: string;
+  cards: Flashcard[];
+  startTime: Date;
+  endTime?: Date;
+  completed: boolean;
+  cardsReviewed: number;
+  correctAnswers: number;
+  sessionType: 'new' | 'review' | 'mixed';
 }
 
-export interface ImportFormat {
-  format: 'csv' | 'json' | 'anki' | 'custom';
-  hasHeaders?: boolean;
-  delimiter?: string;
-  enclosure?: string;
-  mapping?: {
-    italian: string | number;
-    english: string | number;
-    tags?: string | number;
-    level?: string | number;
-    mastered?: string | number;
-    [key: string]: string | number | undefined;
-  };
-}
+export type FlashcardReviewRating = 0 | 1 | 2 | 3 | 4 | 5;
 
-export interface ImportOptions {
-  format: ImportFormat;
-  separator?: string;
-  hasHeader?: boolean;
-  italianColumn?: number;
-  englishColumn?: number;
-  targetSet?: string;
-  createNewSet?: boolean;
-  newSetName?: string;
-  newSetDescription?: string;
-  mergeDuplicates?: boolean;
-  skipFirstRow?: boolean;
-  setName?: string;
-}
-
-export interface ImportResult {
-  success: boolean;
-  imported: number;
-  importedCards: number;
-  skipped: number;
-  failed: number;
-  errors: string[];
-  newSetId?: string;
-}
-
-// FlashcardComponent props interface
-export interface FlashcardComponentProps {
-  flashcard: Flashcard;
-  onFlip?: () => void;
-  onNext?: () => void;
-  onPrevious?: () => void;
-  onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
-  onRating?: (rating: number) => void;
-  onSkip?: () => void;
-  onKnown?: () => void;
-  onUnknown?: () => void;
-  showControls?: boolean;
-  showHints?: boolean;
-  showPronunciation?: boolean;
-  showActions?: boolean;
-  autoFlip?: boolean;
-  frontLabel?: string;
-  backLabel?: string;
-  flipped?: boolean;
-  className?: string;
-  card?: Flashcard; // Legacy property for tests
+export interface CardReview {
+  cardId: string;
+  rating: FlashcardReviewRating;
+  timeTaken: number; // milliseconds
+  date: Date;
+  newLevel: number;
+  sessionId?: string;
 }

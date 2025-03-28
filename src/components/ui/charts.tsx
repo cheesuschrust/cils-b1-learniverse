@@ -1,5 +1,28 @@
 
-// Replace the LineChart component definition to include yAxisWidth
+import React from 'react';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  TooltipProps
+} from 'recharts';
+import { ValueType } from 'recharts/types/component/DefaultTooltipContent';
+
+export interface LineChartProps {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors: string[];
+  valueFormatter: (value: number) => string;
+  yAxisWidth?: number;
+  className?: string;
+}
+
+// LineChart component definition with yAxisWidth
 export function LineChart({
   data,
   index,
@@ -8,15 +31,7 @@ export function LineChart({
   valueFormatter,
   yAxisWidth = 56,
   className,
-}: {
-  data: any[];
-  index: string;
-  categories: string[];
-  colors: string[];
-  valueFormatter: (value: number) => string;
-  yAxisWidth?: number;
-  className?: string;
-}) {
+}: LineChartProps) {
   return (
     <ResponsiveContainer width="100%" height={350} className={className}>
       <RechartsLineChart
@@ -89,4 +104,60 @@ export function LineChart({
       </RechartsLineChart>
     </ResponsiveContainer>
   );
+}
+
+// Add BarChart and PieChart components since they're also referenced in errors
+export interface BarChartProps {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors: string[];
+  valueFormatter: (value: number) => string;
+  className?: string;
+}
+
+export function BarChart({
+  data,
+  index,
+  categories,
+  colors,
+  valueFormatter,
+  className,
+}: BarChartProps) {
+  // Placeholder implementation
+  return (
+    <div className={className}>
+      <div>BarChart implementation needed</div>
+    </div>
+  );
+}
+
+export interface PieChartProps {
+  data: any[];
+  index: string;
+  category: string;
+  valueFormatter: (value: number) => string;
+  colors: string[];
+  className?: string;
+}
+
+export function PieChart({
+  data,
+  index,
+  category,
+  valueFormatter,
+  colors,
+  className,
+}: PieChartProps) {
+  // Placeholder implementation
+  return (
+    <div className={className}>
+      <div>PieChart implementation needed</div>
+    </div>
+  );
+}
+
+export function AreaChart(props: BarChartProps) {
+  // Placeholder implementation - reusing BarChartProps since they're similar
+  return <BarChart {...props} />;
 }

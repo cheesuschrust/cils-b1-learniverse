@@ -1,46 +1,44 @@
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'review' | 'default' | 'file-processing' | 'system';
+// Notification types for the application
+
+export type NotificationType = 
+  | 'info' 
+  | 'success' 
+  | 'error' 
+  | 'warning'
+  | 'system'
+  | 'user'
+  | 'file-processing'
+  | 'achievement'
+  | 'progress'
+  | 'reminder'
+  | 'update';
 
 export interface NotificationAction {
-  id: string;
   label: string;
+  action: () => void;
+  variant?: 'default' | 'link' | 'outline' | 'secondary' | 'ghost';
+  icon?: React.ReactNode;
 }
 
 export interface Notification {
-  id: string;
+  id?: string;
   title: string;
   message: string;
   type: NotificationType;
-  createdAt: Date | string;
-  timestamp?: Date | string;
-  read: boolean;
+  read?: boolean;
+  createdAt?: Date;
   actions?: NotificationAction[];
-  url?: string;
-  metadata?: Record<string, any>;
-  userId?: string;
-  priority?: 'low' | 'normal' | 'high';
-  icon?: string;
   link?: string;
-  expiresAt?: Date | string;
+  autoClose?: boolean | number;
+  icon?: React.ReactNode;
+  priority?: 'low' | 'normal' | 'high';
+  data?: Record<string, any>;
 }
 
 export interface NotificationItemProps {
   notification: Notification;
   onDismiss: (id: string) => void;
   onRead: (id: string) => void;
-  onAction?: (id: string, actionId: string) => void;
-}
-
-export interface NotificationsContextType {
-  notifications: Notification[];
-  addNotification: (notification: Notification) => string;
-  removeNotification: (id: string) => void;
-  markAsRead: (id: string) => void;
-  clearAll: () => void;
-  dismissAll: () => void; // Alias for clearAll
-  unreadCount: number;
-  markAllAsRead: () => void;
-  dismissNotification: (id: string) => void; // Alias for removeNotification
-  dismissAllNotifications: () => void; // Alias for clearAll
-  getFileProcessingNotifications: () => Notification[];
+  className?: string;
 }
