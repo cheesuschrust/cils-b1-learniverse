@@ -10,7 +10,7 @@ import {
   LicenseInvoice 
 } from './License';
 
-export { 
+export type { 
   License, 
   LicenseType, 
   LicenseStatus, 

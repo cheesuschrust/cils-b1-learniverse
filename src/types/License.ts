@@ -1,6 +1,6 @@
 
 export type LicenseType = 'university' | 'k12' | 'language-school' | 'corporate';
-export type LicenseStatus = 'active' | 'expired' | 'trial' | 'suspended' | 'pending';
+export type LicenseStatus = 'active' | 'expired' | 'trial' | 'suspended' | 'pending' | 'not-applicable' | 'not-started';
 export type RenewalStatus = 
   | 'auto-renewal' 
   | 'pending-renewal' 
@@ -13,7 +13,8 @@ export type RenewalStatus =
   | 'not-started' 
   | 'manual' 
   | 'auto' 
-  | 'canceled';
+  | 'canceled'
+  | 'not-renewing';
 
 export interface License {
   id: string;

@@ -74,6 +74,7 @@
     "lucide-react": "^0.462.0",
     "msw": "^2.7.3",
     "natural": "^6.10.5",
+    "next": "^15.2.4",
     "next-themes": "^0.3.0",
     "papaparse": "^5.5.2",
     "react": "^18.3.1",

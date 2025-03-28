@@ -1,4 +1,3 @@
-
 import { MockDatabase, User, EmailSettings, LogEntry } from "@/contexts/shared-types";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
@@ -57,7 +56,7 @@ class DatabaseService {
       flashcardSets: [],
       adSettings: {
         enabled: true,
-        defaultNetwork: 'internal',
+        defaultNetwork: 'internal' as AdNetwork,
         frequencyCap: 5,
         showToPremiumUsers: false,
         refreshInterval: 60,
@@ -645,6 +644,11 @@ class DatabaseService {
     
     if (licenseIndex === -1) {
       return undefined;
+    }
+    
+    // Ensure customization.domain exists if customization is being updated
+    if (licenseData.customization && !licenseData.customization.domain) {
+      licenseData.customization.domain = this.database.licenses[licenseIndex].customization.domain || '';
     }
     
     const updatedLicense = {
