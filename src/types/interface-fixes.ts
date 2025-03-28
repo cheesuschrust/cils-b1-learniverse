@@ -83,6 +83,8 @@ export interface Flashcard {
   mastered?: boolean;
   italian?: string;
   english?: string;
+  explanation?: string;
+  examples?: string[];
   nextReview?: Date;
   lastReviewed?: Date;
   createdAt?: Date;

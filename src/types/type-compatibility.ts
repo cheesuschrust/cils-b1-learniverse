@@ -74,9 +74,9 @@ export const normalizeLanguage = (language: LanguageOption): 'english' | 'italia
 // AI Model utilities
 export const normalizeAIModel = (model: AIModel | string): 'small' | 'medium' | 'large' => {
   // Map external model names to our internal size classifications
-  if (['gpt-4o-mini', 'mistral-small', 'small'].includes(model)) return 'small';
-  if (['gpt-4o', 'claude-instant', 'medium'].includes(model)) return 'medium';
-  if (['gpt-4', 'claude-2', 'large'].includes(model)) return 'large';
+  if (['gpt-4o-mini', 'mistral-small', 'small'].includes(model as string)) return 'small';
+  if (['gpt-4o', 'claude-instant', 'medium'].includes(model as string)) return 'medium';
+  if (['gpt-4', 'claude-2', 'large'].includes(model as string)) return 'large';
   return 'medium'; // Default
 };
 
@@ -149,8 +149,16 @@ export const normalizeLicense = (license: any): License => {
   };
 };
 
+// Function to normalize user record arrays that use snake_case
+export const normalizeUserRecords = (users: any[]): User[] => {
+  if (!users || !Array.isArray(users)) return [];
+  
+  return users.map(user => normalizeUser(user));
+};
+
 export default {
   normalizeUser,
+  normalizeUserRecords,
   normalizeDifficulty,
   normalizeLanguage,
   normalizeAIModel,
