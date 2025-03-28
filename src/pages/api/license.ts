@@ -96,7 +96,15 @@ export default async function handler(
           ...updateData,
           startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
           endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
-          status: updateData.status as LicenseStatus | undefined
+          status: updateData.status as LicenseStatus | undefined,
+          customization: updateData.customization ? {
+            logo: updateData.customization.logo || '',
+            colors: {
+              primary: updateData.customization.colors?.primary || '',
+              secondary: updateData.customization.colors?.secondary || ''
+            },
+            domain: updateData.customization.domain || ''
+          } : undefined
         };
         
         const updatedLicense = db.updateLicense(id, licenseData);

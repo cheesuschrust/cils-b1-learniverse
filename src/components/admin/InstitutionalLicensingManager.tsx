@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { License, LicenseType } from '@/types/license';
+import { License, LicenseType } from '@/types/License';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Building, 
   School, 
@@ -80,8 +79,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       plan: "Enterprise",
       seats: 500,
       usedSeats: 423,
-      startDate: "2023-01-15",
-      endDate: "2024-01-14",
+      startDate: new Date("2023-01-15"),
+      endDate: new Date("2024-01-14"),
       status: "active",
       contactName: "Dr. Emily Chen",
       contactEmail: "echen@stanford.edu",
@@ -103,8 +102,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       plan: "Standard",
       seats: 120,
       usedSeats: 98,
-      startDate: "2023-03-10",
-      endDate: "2024-03-09",
+      startDate: new Date("2023-03-10"),
+      endDate: new Date("2024-03-09"),
       status: "active",
       contactName: "Michael Johnson",
       contactEmail: "mjohnson@berkeleyhigh.edu",
@@ -126,8 +125,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       plan: "Professional",
       seats: 50,
       usedSeats: 42,
-      startDate: "2023-02-01",
-      endDate: "2024-01-31",
+      startDate: new Date("2023-02-01"),
+      endDate: new Date("2024-01-31"),
       status: "active",
       contactName: "Sofia Rossi",
       contactEmail: "srossi@rosettainstitute.com",
@@ -149,8 +148,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       plan: "Enterprise",
       seats: 200,
       usedSeats: 187,
-      startDate: "2022-11-15",
-      endDate: "2023-11-14",
+      startDate: new Date("2022-11-15"),
+      endDate: new Date("2023-11-14"),
       status: "expired",
       contactName: "Robert Williams",
       contactEmail: "rwilliams@globaltechsolutions.com",
@@ -172,8 +171,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       plan: "Professional",
       seats: 80,
       usedSeats: 65,
-      startDate: "2023-04-01",
-      endDate: "2024-03-31",
+      startDate: new Date("2023-04-01"),
+      endDate: new Date("2024-03-31"),
       status: "active",
       contactName: "Marco Bianchi",
       contactEmail: "mbianchi@milanschool.it",
@@ -251,10 +250,12 @@ const InstitutionalLicensingManager: React.FC = () => {
     const newLicense: License = {
       id: Date.now().toString(),
       ...formData,
-      status: 'active',
+      status: 'active' as const,
       usedSeats: 0,
       value: calculateLicenseValue(formData.plan, formData.seats),
-      renewalStatus: 'pending'
+      renewalStatus: 'pending' as const,
+      startDate: new Date(formData.startDate),
+      endDate: new Date(formData.endDate)
     };
     
     setLicenses(prev => [...prev, newLicense]);
@@ -264,7 +265,6 @@ const InstitutionalLicensingManager: React.FC = () => {
     toast({
       title: "License Added",
       description: `${newLicense.name} has been added successfully.`,
-      variant: "default",
     });
   };
 
@@ -277,7 +277,9 @@ const InstitutionalLicensingManager: React.FC = () => {
         ? { 
             ...license, 
             ...formData,
-            value: calculateLicenseValue(formData.plan, formData.seats)
+            value: calculateLicenseValue(formData.plan, formData.seats),
+            startDate: new Date(formData.startDate),
+            endDate: new Date(formData.endDate)
           } 
         : license
     );
@@ -290,7 +292,6 @@ const InstitutionalLicensingManager: React.FC = () => {
     toast({
       title: "License Updated",
       description: `${formData.name} has been updated successfully.`,
-      variant: "default",
     });
   };
 
@@ -318,8 +319,8 @@ const InstitutionalLicensingManager: React.FC = () => {
       type: license.type,
       plan: license.plan,
       seats: license.seats,
-      startDate: license.startDate,
-      endDate: license.endDate,
+      startDate: license.startDate.toISOString().split('T')[0],
+      endDate: license.endDate.toISOString().split('T')[0],
       contactName: license.contactName,
       contactEmail: license.contactEmail,
       customization: {
