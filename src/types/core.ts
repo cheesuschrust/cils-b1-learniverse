@@ -21,6 +21,13 @@ export interface SpeechState {
   currentVoice?: string;
 }
 
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
+
 // User interface with all required fields
 export interface User {
   id: string;
@@ -109,14 +116,6 @@ export interface Flashcard {
   english?: string;
   dueDate?: Date;
   lastReviewed?: Date;
-}
-
-// Voice preference for speech synthesis
-export interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
 }
 
 // Type normalization functions

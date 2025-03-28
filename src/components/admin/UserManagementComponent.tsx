@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, UserRole } from '@/types/user';
+import { User } from '@/types/core';
+import { UserRole } from '@/types/user';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
   DropdownMenu,
