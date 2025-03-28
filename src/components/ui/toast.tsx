@@ -1,4 +1,6 @@
 
+// This will be a simplified modification to fix the duplicate exports
+
 import * as React from "react";
 import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -31,9 +33,12 @@ const toastVariants = cva(
         default: "border bg-background text-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
-        outline: "border border-input bg-background shadow-sm",
-        secondary: "bg-secondary text-secondary-foreground",
-        success: "border-green-500 bg-green-500 text-white",
+        success: 
+          "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400",
+        warning:
+          "border-yellow-500 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400", 
+        outline: "border",
+        secondary: "border bg-secondary text-secondary-foreground",
       },
     },
     defaultVariants: {
@@ -42,10 +47,10 @@ const toastVariants = cva(
   }
 );
 
-export type ToastVariant = NonNullable<VariantProps<typeof toastVariants>["variant"]>;
-
-interface ToastProps extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>, 
-  VariantProps<typeof toastVariants> {
+// Define interface for Toast props
+export interface ToastProps
+  extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>,
+    VariantProps<typeof toastVariants> {
   duration?: number;
 }
 
@@ -120,7 +125,7 @@ const ToastDescription = React.forwardRef<
 ));
 ToastDescription.displayName = ToastPrimitives.Description.displayName;
 
-export type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;
+export type ToastActionElement = React.ReactElement<typeof ToastAction>;
 
 export {
   type ToastProps,
@@ -132,12 +137,3 @@ export {
   ToastClose,
   ToastAction,
 };
-
-export interface IToast {
-  id: string;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: React.ReactNode;
-  variant?: ToastVariant;
-  duration?: number;
-}

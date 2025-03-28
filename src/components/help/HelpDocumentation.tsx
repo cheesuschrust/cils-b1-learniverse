@@ -1,12 +1,15 @@
-
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { HelpCircle, X, BookOpen, Mic, PenTool, Brain, Zap, Award, Flash } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { 
+  Book, 
+  ChevronDown, 
+  ChevronRight, 
+  Search,
+  HelpCircle,
+  ExternalLink,
+  Slash
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface HelpDocumentationProps {
   defaultTopic?: string;
@@ -21,7 +24,6 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ defaultTopic = 'a
   
   return (
     <>
-      {/* Help button */}
       <Button
         variant="ghost"
         size="icon"
@@ -31,7 +33,6 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ defaultTopic = 'a
         <HelpCircle className="h-6 w-6" />
       </Button>
       
-      {/* Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -41,7 +42,6 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ defaultTopic = 'a
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
             onClick={toggleHelp}
           >
-            {/* Help panel */}
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}

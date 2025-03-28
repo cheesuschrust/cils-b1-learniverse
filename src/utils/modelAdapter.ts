@@ -28,3 +28,13 @@ export const adaptSizeToModel = (size: 'small' | 'medium' | 'large'): AIModel =>
       return 'gpt-4o';
   }
 };
+
+/**
+ * Flexible adapter for handling both AIModel and size strings
+ */
+export const adaptFlexibleModelFormat = (modelOrSize: AIModel | 'small' | 'medium' | 'large'): AIModel => {
+  if (['small', 'medium', 'large'].includes(modelOrSize as string)) {
+    return adaptSizeToModel(modelOrSize as 'small' | 'medium' | 'large');
+  }
+  return modelOrSize as AIModel;
+};

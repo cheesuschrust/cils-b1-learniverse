@@ -21,7 +21,7 @@ export interface LineChartProps {
   categories: string[];
   colors: string[];
   valueFormatter: (value: number) => string;
-  yAxisWidth?: number;
+  yAxisWidth?: number; // Made this optional
   className?: string;
 }
 
@@ -152,7 +152,7 @@ export function PieChart({
           ))}
         </Pie>
         <Tooltip
-          formatter={(value: number) => [valueFormatter(value), index]}
+          formatter={(value: any) => [valueFormatter(Number(value)), index]}
         />
       </RechartsPieChart>
     </ResponsiveContainer>

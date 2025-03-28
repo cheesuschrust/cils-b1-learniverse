@@ -1,62 +1,74 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
 import { ConfidenceIndicatorProps } from '@/types/ai';
-import { normalizeScore, getConfidenceLabel, getConfidenceColor, getContentTypeTitle } from './ConfidenceIndicator.helpers';
+import { cn } from '@/lib/utils';
 
-/**
- * Visual indicator for AI confidence scores
- * 
- * This component displays a confidence score for AI operations with visual feedback.
- * It can handle both percentage (0-100) and decimal (0-1) score formats.
- * 
- * @param props.score - The confidence score (0-100 or 0-1)
- * @param props.value - Alternative score property for backward compatibility
- * @param props.size - Size variant for the indicator (sm, md, lg)
- * @param props.className - Additional class names for the container
- * @param props.indicatorClassName - Additional class names for the progress bar
- * @param props.contentType - Type of content being evaluated (e.g., 'writing', 'speaking')
- */
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
-  value,
+  contentType = 'multiple-choice', // Default content type
+  showLabel = false,
   size = 'md',
-  className = '',
-  indicatorClassName = '',
-  contentType
+  className,
+  value, // Allow for backward compatibility
+  indicatorClassName,
 }) => {
-  // Use helpers to calculate and normalize the score
-  // Support for older value prop for backward compatibility
-  const finalScore = normalizeScore(value !== undefined ? value : (score ?? 0));
+  // Use value prop if score is not provided (for backward compatibility)
+  const confidenceScore = score ?? value ?? 0;
   
-  // Size classes
-  const sizeClasses = {
-    sm: 'h-1.5 text-xs',
-    md: 'h-2 text-sm',
-    lg: 'h-3 text-base'
+  // Determine confidence level based on score
+  const getConfidenceLevel = () => {
+    if (confidenceScore >= 80) return 'high';
+    if (confidenceScore >= 50) return 'medium';
+    return 'low';
+  };
+  
+  const level = getConfidenceLevel();
+  
+  // Get color based on confidence level
+  const getColor = () => {
+    switch (level) {
+      case 'high':
+        return 'bg-green-500';
+      case 'medium':
+        return 'bg-amber-500';
+      case 'low':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+  
+  // Determine size classes
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'sm':
+        return 'h-1.5 w-16';
+      case 'lg':
+        return 'h-3 w-32';
+      case 'md':
+      default:
+        return 'h-2 w-24';
+    }
   };
   
   return (
-    <div className={cn('space-y-1', className)}>
-      <div className="flex justify-between items-center">
-        <span className={cn('text-muted-foreground', sizeClasses[size])}>
-          {getContentTypeTitle(contentType)}
-        </span>
-        <span className={cn('font-medium', sizeClasses[size])}>
-          {getConfidenceLabel(finalScore)} ({finalScore}%)
-        </span>
-      </div>
-      
-      <div className={cn('bg-secondary w-full overflow-hidden rounded-full progress-bar', sizeClasses[size])}>
+    <div className={cn("flex flex-col gap-1", className)}>
+      <div className="bg-gray-200 rounded overflow-hidden w-full">
         <div 
-          className={cn('rounded-full progress-bar-fill', getConfidenceColor(finalScore), indicatorClassName)}
-          style={{ width: `${finalScore}%` }}
-          role="progressbar"
-          aria-valuenow={finalScore}
-          aria-valuemin={0}
-          aria-valuemax={100}
+          className={cn(
+            "h-full transition-all duration-500 rounded",
+            getColor(),
+            getSizeClasses(),
+            indicatorClassName
+          )}
+          style={{ width: `${Math.min(Math.max(confidenceScore, 0), 100)}%` }}
         />
       </div>
+      {showLabel && (
+        <div className="text-xs text-muted-foreground">
+          Confidence: {confidenceScore.toFixed(0)}%
+        </div>
+      )}
     </div>
   );
 };

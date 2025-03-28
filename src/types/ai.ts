@@ -47,6 +47,7 @@ export interface AIServiceInterface {
   generateFlashcards: (content: string, count?: number) => Promise<any[]>;
   translateText: (text: string, targetLanguage: string) => Promise<string>;
   abort: () => void;
+  classifyText?: (text: string) => Promise<any[]>;
 }
 
 export interface AISettings {
@@ -74,7 +75,7 @@ export interface AIFeedbackSettings {
 
 export interface ConfidenceIndicatorProps {
   score: number;
-  contentType: 'flashcards' | 'listening' | 'writing' | 'speaking' | 'multiple-choice';
+  contentType?: 'flashcards' | 'listening' | 'writing' | 'speaking' | 'multiple-choice';
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -99,6 +100,7 @@ export interface AIPreferences {
   defaultModelSize?: 'small' | 'medium' | 'large';
   useWebGPU?: boolean;
   anonymousAnalytics?: boolean;
+  modelSize?: string;
 }
 
 export interface UseAIReturn {
