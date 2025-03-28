@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { License, LicenseType } from '@/types/license';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import {
   Clock, 
   Ban
 } from 'lucide-react';
+import LicenseTable from './LicenseTable';
 
 const InstitutionalLicensingManager: React.FC = () => {
   const { toast } = useToast();
@@ -899,4 +901,30 @@ const InstitutionalLicensingManager: React.FC = () => {
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
                 <div>
-                  <h4 className="font
+                  <h4 className="font-medium text-amber-800">Warning: Active Users</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This license has {selectedLicense.usedSeats} active users. Deleting it will remove their access to the platform.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => {
+              setIsDeleteDialogOpen(false);
+              setSelectedLicense(null);
+            }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteLicense}>
+              Delete License
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default InstitutionalLicensingManager;
