@@ -64,7 +64,7 @@ export interface User {
   lastName?: string;  
   createdAt?: Date;  
   updatedAt: Date;
-  role: string;
+  role: UserRole;
   
   // Legacy compatibility fields
   first_name?: string;
@@ -117,6 +117,9 @@ export interface LegacyUser {
   preferred_language?: 'english' | 'italian' | 'both';
 }
 
+// Import UserRole from the user types
+import { UserRole } from '@/types/user';
+
 // Type normalization functions
 
 /**
@@ -129,7 +132,7 @@ export function normalizeFlashcard(card: any): Flashcard {
     id: card.id || '',
     front: card.front || card.italian || '',
     back: card.back || card.english || '',
-    level: card.level || 0,
+    level: typeof card.level === 'number' ? card.level : 0,
     tags: card.tags || [],
     nextReview: card.nextReview || card.dueDate || null,
     createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),

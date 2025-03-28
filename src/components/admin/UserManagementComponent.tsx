@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const UserManagementComponent: React.FC = () => {
@@ -80,7 +81,7 @@ const UserManagementComponent: React.FC = () => {
         (user.firstName || '').toLowerCase().includes(lowercaseTerm) ||
         (user.lastName || '').toLowerCase().includes(lowercaseTerm) ||
         user.email.toLowerCase().includes(lowercaseTerm) ||
-        user.role.toLowerCase().includes(lowercaseTerm)
+        (user.role as string).toLowerCase().includes(lowercaseTerm)
       );
       setFilteredUsers(filtered);
     }
@@ -94,7 +95,7 @@ const UserManagementComponent: React.FC = () => {
       lastName: '',
       displayName: '',
       photoURL: '',
-      role: 'user',
+      role: 'user' as UserRole,
       isVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -132,7 +133,7 @@ const UserManagementComponent: React.FC = () => {
           email: selectedUser.email,
           firstName: selectedUser.firstName,
           lastName: selectedUser.lastName,
-          role: selectedUser.role || 'user',
+          role: selectedUser.role as UserRole,
           isVerified: selectedUser.isVerified,
           createdAt: new Date(selectedUser.createdAt || new Date()),
           updatedAt: new Date(),
@@ -148,7 +149,10 @@ const UserManagementComponent: React.FC = () => {
           description: "User created successfully.",
         });
       } else {
-        await updateUser(selectedUser.id, selectedUser);
+        await updateUser(selectedUser.id, {
+          ...selectedUser,
+          role: selectedUser.role as UserRole
+        });
         toast({
           title: "Success",
           description: "User updated successfully.",
@@ -203,7 +207,10 @@ const UserManagementComponent: React.FC = () => {
       const updatedUser = users.find(user => user.id === userId);
       if (updatedUser) {
         updatedUser.role = newRole;
-        await updateUser(userId, updatedUser);
+        await updateUser(userId, {
+          ...updatedUser,
+          role: updatedUser.role as UserRole
+        });
         toast({
           title: "Success",
           description: "User role updated successfully.",
@@ -232,7 +239,10 @@ const UserManagementComponent: React.FC = () => {
       const updatedUser = users.find(user => user.id === userId);
       if (updatedUser) {
         updatedUser.status = newStatus;
-        await updateUser(userId, updatedUser);
+        await updateUser(userId, {
+          ...updatedUser,
+          role: updatedUser.role as UserRole
+        });
         toast({
           title: "Success",
           description: "User status updated successfully.",
@@ -338,7 +348,10 @@ const UserManagementComponent: React.FC = () => {
                         <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
-                          <Select value={user.role} onValueChange={(newRole: UserRole) => handleChangeRole(user.id, newRole)}>
+                          <Select 
+                            value={user.role as string} 
+                            onValueChange={(newRole: UserRole) => handleChangeRole(user.id, newRole)}
+                          >
                             <SelectTrigger className="w-[180px]">
                               <SelectValue placeholder={user.role} />
                             </SelectTrigger>
@@ -386,12 +399,15 @@ const UserManagementComponent: React.FC = () => {
               </div>
               <Pagination>
                 <PaginationContent>
-                  <PaginationPrevious onClick={() => setPage(page - 1)} disabled={page === 1} />
+                  <PaginationPrevious
+                    onClick={() => page > 1 && setPage(page - 1)}
+                    className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
                   {page > 2 && (
                     <PaginationItem>
-                      <button onClick={() => setPage(1)}>
+                      <PaginationLink onClick={() => setPage(1)}>
                         1
-                      </button>
+                      </PaginationLink>
                     </PaginationItem>
                   )}
                   {page > 3 && <PaginationEllipsis />}
@@ -405,9 +421,12 @@ const UserManagementComponent: React.FC = () => {
                             key={pageNumber}
                             className={pageNumber === page ? "active" : ""}
                           >
-                            <button onClick={() => setPage(pageNumber)}>
+                            <PaginationLink 
+                              onClick={() => setPage(pageNumber)}
+                              isActive={pageNumber === page}
+                            >
                               {pageNumber}
-                            </button>
+                            </PaginationLink>
                           </PaginationItem>
                         )
                       );
@@ -415,12 +434,15 @@ const UserManagementComponent: React.FC = () => {
                   {page < pageCount - 2 && <PaginationEllipsis />}
                   {page < pageCount - 1 && (
                     <PaginationItem>
-                      <button onClick={() => setPage(pageCount)}>
+                      <PaginationLink onClick={() => setPage(pageCount)}>
                         {pageCount}
-                      </button>
+                      </PaginationLink>
                     </PaginationItem>
                   )}
-                  <PaginationNext onClick={() => setPage(page + 1)} disabled={page === pageCount} />
+                  <PaginationNext
+                    onClick={() => page < pageCount && setPage(page + 1)}
+                    className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                  />
                 </PaginationContent>
               </Pagination>
             </div>
@@ -465,7 +487,10 @@ const UserManagementComponent: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="role">Role</Label>
-                  <Select value={selectedUser.role} onValueChange={(role: UserRole) => setSelectedUser({ ...selectedUser, role })}>
+                  <Select 
+                    value={selectedUser.role as string} 
+                    onValueChange={(role: UserRole) => setSelectedUser({ ...selectedUser, role })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={selectedUser.role} />
                     </SelectTrigger>
@@ -480,7 +505,10 @@ const UserManagementComponent: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select value={selectedUser.status} onValueChange={(status: 'active' | 'inactive' | 'suspended') => setSelectedUser({ ...selectedUser, status })}>
+                  <Select 
+                    value={selectedUser.status} 
+                    onValueChange={(status: 'active' | 'inactive' | 'suspended') => setSelectedUser({ ...selectedUser, status })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={selectedUser.status} />
                     </SelectTrigger>
