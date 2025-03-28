@@ -1,4 +1,3 @@
-
 import { Flashcard } from './flashcard';
 
 export interface FlashcardComponentProps {
@@ -83,6 +82,7 @@ export interface ProgressProps {
   showValue?: boolean;
   label?: string;
   className?: string;
+  indicator?: string; // CSS class for the indicator
 }
 
 export interface AnalyticsReportProps {

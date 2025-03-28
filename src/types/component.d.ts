@@ -1,4 +1,3 @@
-
 import { ReactNode, ComponentType } from 'react';
 import { BaseComponentProps } from './index';
 
@@ -45,11 +44,12 @@ export interface ButtonProps extends
   WithLoadingProps,
   WithIconProps 
 {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'success' | 'warning';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   type?: 'button' | 'submit' | 'reset';
   asChild?: boolean;
+  disabled?: boolean;
 }
 
 // Form related props

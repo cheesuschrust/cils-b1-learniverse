@@ -17,7 +17,7 @@ export interface User {
   id: string;
   email: string;
   
-  // Name properties with both formats for full compatibility
+  // Name properties with consistent naming
   username?: string;
   firstName?: string; 
   lastName?: string;

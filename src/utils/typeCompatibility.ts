@@ -2,8 +2,7 @@
 import { User } from '@/types/user';
 
 /**
- * Normalizes user object properties between camelCase and snake_case
- * to ensure compatibility across the codebase
+ * Normalizes user object properties to ensure compatibility across the codebase
  */
 export function normalizeUser(user: any): User {
   if (!user) return null as any;
@@ -36,7 +35,7 @@ export function normalizeUser(user: any): User {
 }
 
 /**
- * Normalizes user records, ensuring both camelCase and snake_case properties are available
+ * Normalizes user records, ensuring consistent property naming
  */
 export function normalizeUserRecords(users: any[]): User[] {
   if (!users || !Array.isArray(users)) return [];

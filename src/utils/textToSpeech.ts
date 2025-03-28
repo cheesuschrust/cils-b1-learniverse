@@ -1,4 +1,3 @@
-
 export interface VoicePreference {
   englishVoiceURI: string;
   italianVoiceURI: string;
@@ -13,7 +12,8 @@ export interface TextToSpeechOptions {
   voiceURI?: string;
 }
 
-export type SpeechState = 'idle' | 'speaking' | 'paused' | 'error';
+export type TextToSpeechState = 'idle' | 'speaking' | 'paused' | 'error';
+export type SpeechState = TextToSpeechState;
 
 /**
  * Checks if speech synthesis is supported in the browser
@@ -173,3 +173,5 @@ export const getVoiceByURI = async (voiceURI: string): Promise<SpeechSynthesisVo
   const voices = await getAvailableVoices();
   return voices.find(v => v.voiceURI === voiceURI);
 };
+
+export default textToSpeech;

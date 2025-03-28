@@ -1,4 +1,3 @@
-
 // This file provides type compatibility between different type naming conventions
 // across the codebase, reducing the need for type assertions
 
@@ -89,27 +88,20 @@ export const normalizeUser = (user: any): User => {
     email: user.email,
     firstName: user.firstName || user.first_name,
     lastName: user.lastName || user.last_name,
-    first_name: user.firstName || user.first_name,
-    last_name: user.lastName || user.last_name,
     displayName: user.displayName || user.display_name,
     photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
     role: user.role || 'user',
     isVerified: user.isVerified || user.is_verified || false,
     createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-    created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
     updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-    updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
     lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-    last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
     lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
     status: user.status || 'active',
     subscription: user.subscription || 'free',
     phoneNumber: user.phoneNumber || user.phone_number,
     address: user.address,
     preferences: user.preferences || {},
     preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-    preferred_language: user.preferredLanguage || user.preferred_language || 'english',
     language: user.language || user.preferredLanguage || user.preferred_language || 'english',
     metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
     dailyQuestionCounts: user.dailyQuestionCounts || { 
