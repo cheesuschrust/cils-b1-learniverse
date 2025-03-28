@@ -3,7 +3,7 @@ import React from 'react';
 import { PieChart } from '@/components/ui/charts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Users, Activity, DollarSign, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
+import { FileText, Users, Activity, DollarSign } from 'lucide-react';
 
 const EnhancedAnalyticsDashboard: React.FC = () => {
   const userData = [

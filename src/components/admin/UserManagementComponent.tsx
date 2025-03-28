@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { User, UserRole } from '@/types/user';
 import { ExtendedButtonVariant } from '@/types/variant-fixes';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
@@ -61,9 +62,9 @@ const UserManagementComponent: React.FC = () => {
           first_name: user.firstName || user.first_name,
           last_name: user.lastName || user.last_name,
           displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          photoURL: user.photoURL || user.profileImage || user.avatar,
           role: user.role || 'user',
-          isVerified: user.isVerified || user.is_verified || false,
+          isVerified: user.isVerified || false,
           createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
           created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
           updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
@@ -74,7 +75,7 @@ const UserManagementComponent: React.FC = () => {
           last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
           status: user.status || 'active',
           subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber || user.phone_number,
+          phoneNumber: user.phoneNumber,
           address: user.address,
           preferences: user.preferences || {},
           preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
@@ -554,8 +555,10 @@ const UserManagementComponent: React.FC = () => {
                 <PaginationContent>
                   <PaginationPrevious onClick={() => setPage(page - 1)} disabled={page === 1} />
                   {page > 2 && (
-                    <PaginationItem onClick={() => setPage(1)}>
-                      1
+                    <PaginationItem>
+                      <button onClick={() => setPage(1)}>
+                        1
+                      </button>
                     </PaginationItem>
                   )}
                   {page > 3 && <PaginationEllipsis />}
@@ -567,18 +570,21 @@ const UserManagementComponent: React.FC = () => {
                         pageNumber <= pageCount && (
                           <PaginationItem
                             key={pageNumber}
-                            onClick={() => setPage(pageNumber)}
                             className={pageNumber === page ? "active" : ""}
                           >
-                            {pageNumber}
+                            <button onClick={() => setPage(pageNumber)}>
+                              {pageNumber}
+                            </button>
                           </PaginationItem>
                         )
                       );
                     })}
                   {page < pageCount - 2 && <PaginationEllipsis />}
                   {page < pageCount - 1 && (
-                    <PaginationItem onClick={() => setPage(pageCount)}>
-                      {pageCount}
+                    <PaginationItem>
+                      <button onClick={() => setPage(pageCount)}>
+                        {pageCount}
+                      </button>
                     </PaginationItem>
                   )}
                   <PaginationNext onClick={() => setPage(page + 1)} disabled={page === pageCount} />
