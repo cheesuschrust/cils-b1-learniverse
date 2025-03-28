@@ -33,4 +33,9 @@ export interface IAuthService {
   incrementDailyQuestionCount(questionType: string): Promise<boolean>;
   resendVerificationEmail(email: string): Promise<boolean>;
   socialLogin(provider: string): Promise<boolean>;
+  getEmailSettings(): Promise<any>;
+  updateEmailSettings(settings: any): Promise<void>;
+  getSystemLogs(): Promise<any[]>;
+  updateSystemLog(id: string, data: any): Promise<void>;
+  addSystemLog(action: string, details: string, level?: string): void;
 }

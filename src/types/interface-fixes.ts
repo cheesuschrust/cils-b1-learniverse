@@ -348,6 +348,10 @@ export interface MultipleChoiceQuestion {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   category?: string;
   tags?: string[];
+  text?: string; // Added for compatibility
+  createdAt?: Date; // Added for compatibility
+  updatedAt?: Date; // Added for compatibility 
+  points?: number; // Added for compatibility
 }
 
 // Define AI-related type (for useAISimplified.ts)
@@ -357,6 +361,14 @@ export interface UseAIReturn {
   result: string | null;
   generateText: (prompt: string) => Promise<string>;
   abort: () => void;
+  status?: AIStatus;
+  isModelLoaded?: boolean;
+  loadModel?: () => Promise<void>;
+  generateQuestions?: (content: string, contentType: string, count: number, difficulty: string) => Promise<any[]>;
+  isProcessing?: boolean;
+  generateFlashcards?: (content: string, count: number, difficulty: string) => Promise<any[]>;
+  classifyText?: (text: string) => Promise<any[]>;
+  getConfidenceScore?: (contentType: string) => number;
 }
 
 // Define License type that's used in multiple places
@@ -369,7 +381,7 @@ export interface License {
   usedSeats: number;
   startDate: string;
   endDate: string;
-  status: "active" | "suspended" | "pending" | "expired";
+  status: "active" | "suspended" | "pending" | "expired" | "trial";
   contactName: string;
   contactEmail: string;
   customization: {
@@ -382,6 +394,7 @@ export interface License {
   };
   value: number;
   renewalStatus: string;
+  domain?: string; // Added for compatibility
 }
 
 // Define AdUnit and related types

@@ -1,4 +1,5 @@
 
+// Define user role types
 export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
 
 export type UserPreferences = {
@@ -40,7 +41,7 @@ export interface User {
   phoneNumber?: string;
   address?: string;
   isAdmin?: boolean;
-  preferences: UserPreferences;
+  preferences?: UserPreferences;
   preferredLanguage?: 'english' | 'italian' | 'both';
   preferred_language?: 'english' | 'italian' | 'both';
   dailyQuestionCounts?: {
@@ -51,7 +52,7 @@ export interface User {
     speaking: number;
     [key: string]: number;
   };
-  metrics: {
+  metrics?: {
     totalQuestions: number;
     correctAnswers: number;
     streak: number;

@@ -54,4 +54,33 @@ export interface UseAIReturn {
   result: string | null;
   generateText: (prompt: string) => Promise<string>;
   abort: () => void;
+  status?: AIStatus;
+  isModelLoaded?: boolean;
+  loadModel?: () => Promise<void>;
+  generateQuestions?: (content: string, contentType: string, count: number, difficulty: string) => Promise<any[]>;
+  isProcessing?: boolean;
+  generateFlashcards?: (content: string, count: number, difficulty: string) => Promise<any[]>;
+  classifyText?: (text: string) => Promise<any[]>;
+  getConfidenceScore?: (contentType: string) => number;
+}
+
+// Add AISettings interface
+export interface AISettings {
+  enabled: boolean;
+  useOfflineModel: boolean;
+  modelSize: 'small' | 'medium' | 'large';
+  voiceEnabled: boolean;
+  speakingRate: number;
+  aiEnabled?: boolean;
+  confidenceThreshold?: number;
+  anonymousAnalytics?: boolean;
+  defaultLanguage?: 'english' | 'italian' | 'both';
+  [key: string]: any;
+}
+
+// Add AISettingsProps
+export interface AISettingsProps {
+  initialSettings?: AISettings;
+  onSettingsChange?: (settings: AISettings) => void;
+  onClose?: () => void;
 }

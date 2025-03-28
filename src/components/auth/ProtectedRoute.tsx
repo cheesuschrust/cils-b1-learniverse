@@ -4,32 +4,37 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   allowedRoles?: string[];
+  requireAdmin?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  allowedRoles 
+  allowedRoles = [],
+  requireAdmin = false
 }) => {
-  const { user, isLoading } = useAuth();
-  
-  // Show loading state while checking auth
-  if (isLoading) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    // You can render a loading spinner here
     return <div>Loading...</div>;
   }
-  
-  // If user is not logged in, redirect to login
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
-  // If roles are specified, check if user has the required role
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+
+  // Check if the user has the required role
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
-  
-  // Render children or outlet (for nested routes)
+
+  // Check for admin requirement
+  if (requireAdmin && user.role !== 'admin') {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
   return children ? <>{children}</> : <Outlet />;
 };
 
