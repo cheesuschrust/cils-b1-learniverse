@@ -7,63 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Volume2, Save } from 'lucide-react';
-
-// Define VoicePreference interface if it's not already defined
-interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
-}
-
-// Mock function for getting available voices
-const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  return new Promise((resolve) => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      resolve(voices);
-    } else {
-      // Wait for voices to be loaded
-      window.speechSynthesis.onvoiceschanged = () => {
-        resolve(window.speechSynthesis.getVoices());
-      };
-    }
-  });
-};
-
-// Mock function for speaking text
-const speak = async (text: string, language: 'en' | 'it', preferences: VoicePreference): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language
-      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
-      
-      // Set voice based on language
-      const voices = window.speechSynthesis.getVoices();
-      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
-      const voice = voices.find(v => v.voiceURI === voiceURI);
-      
-      if (voice) {
-        utterance.voice = voice;
-      }
-      
-      // Set rate and pitch
-      utterance.rate = preferences.voiceRate;
-      utterance.pitch = preferences.voicePitch;
-      
-      // Set event handlers
-      utterance.onend = () => resolve();
-      utterance.onerror = (error) => reject(error);
-      
-      // Speak the text
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
+import { VoicePreference, speak } from '@/utils/textToSpeech';
 
 const saveDefaultVoiceSettings = async (settings: any) => {
   console.log('Saving default voice settings:', settings);
@@ -77,16 +21,16 @@ const SiteVoiceSettings = () => {
   const [italianVoices, setItalianVoices] = useState<SpeechSynthesisVoice[]>([]);
   
   const [defaultSettings, setDefaultSettings] = useState<VoicePreference>({
-    defaultEnglishVoiceURI: '',
-    defaultItalianVoiceURI: '',
-    defaultVoiceRate: 1.0,
-    defaultVoicePitch: 1.0
-  } as unknown as VoicePreference);
+    englishVoiceURI: '',
+    italianVoiceURI: '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  });
   
   useEffect(() => {
     const loadVoices = async () => {
       try {
-        const voices = await getAvailableVoices();
+        const voices = window.speechSynthesis.getVoices();
         
         const enVoices = voices.filter(voice => 
           voice.lang.startsWith('en') || voice.name.toLowerCase().includes('english')
@@ -99,12 +43,12 @@ const SiteVoiceSettings = () => {
         setEnglishVoices(enVoices);
         setItalianVoices(itVoices);
         
-        if (enVoices.length > 0 && !defaultSettings.defaultEnglishVoiceURI) {
-          setDefaultSettings(prev => ({...prev, defaultEnglishVoiceURI: enVoices[0].voiceURI}));
+        if (enVoices.length > 0 && !defaultSettings.englishVoiceURI) {
+          setDefaultSettings(prev => ({...prev, englishVoiceURI: enVoices[0].voiceURI}));
         }
         
-        if (itVoices.length > 0 && !defaultSettings.defaultItalianVoiceURI) {
-          setDefaultSettings(prev => ({...prev, defaultItalianVoiceURI: itVoices[0].voiceURI}));
+        if (itVoices.length > 0 && !defaultSettings.italianVoiceURI) {
+          setDefaultSettings(prev => ({...prev, italianVoiceURI: itVoices[0].voiceURI}));
         }
       } catch (error) {
         console.error("Error loading voices:", error);
@@ -124,10 +68,10 @@ const SiteVoiceSettings = () => {
         sampleText, 
         language,
         {
-          englishVoiceURI: defaultSettings.defaultEnglishVoiceURI,
-          italianVoiceURI: defaultSettings.defaultItalianVoiceURI,
-          voiceRate: defaultSettings.defaultVoiceRate,
-          voicePitch: defaultSettings.defaultVoicePitch
+          englishVoiceURI: defaultSettings.englishVoiceURI,
+          italianVoiceURI: defaultSettings.italianVoiceURI,
+          voiceRate: defaultSettings.voiceRate,
+          voicePitch: defaultSettings.voicePitch
         }
       );
     } catch (error) {
@@ -186,8 +130,8 @@ const SiteVoiceSettings = () => {
           </div>
           
           <Select
-            value={defaultSettings.defaultEnglishVoiceURI}
-            onValueChange={(value) => setDefaultSettings(prev => ({...prev, defaultEnglishVoiceURI: value}))}
+            value={defaultSettings.englishVoiceURI}
+            onValueChange={(value) => setDefaultSettings(prev => ({...prev, englishVoiceURI: value}))}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select default English voice" />
@@ -222,8 +166,8 @@ const SiteVoiceSettings = () => {
           </div>
           
           <Select
-            value={defaultSettings.defaultItalianVoiceURI}
-            onValueChange={(value) => setDefaultSettings(prev => ({...prev, defaultItalianVoiceURI: value}))}
+            value={defaultSettings.italianVoiceURI}
+            onValueChange={(value) => setDefaultSettings(prev => ({...prev, italianVoiceURI: value}))}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select default Italian voice" />
@@ -248,15 +192,15 @@ const SiteVoiceSettings = () => {
           <div>
             <div className="flex items-center justify-between">
               <Label htmlFor="default-voice-rate" className="text-base">Default Voice Rate</Label>
-              <span className="text-sm font-medium">{defaultSettings.defaultVoiceRate.toFixed(1)}x</span>
+              <span className="text-sm font-medium">{defaultSettings.voiceRate.toFixed(1)}x</span>
             </div>
             <Slider 
               id="default-voice-rate"
-              defaultValue={[defaultSettings.defaultVoiceRate]} 
+              defaultValue={[defaultSettings.voiceRate]} 
               max={2} 
               min={0.5} 
               step={0.1} 
-              onValueChange={(value) => setDefaultSettings(prev => ({...prev, defaultVoiceRate: value[0]}))}
+              onValueChange={(value) => setDefaultSettings(prev => ({...prev, voiceRate: value[0]}))}
               className="mt-2"
             />
           </div>
@@ -264,15 +208,15 @@ const SiteVoiceSettings = () => {
           <div>
             <div className="flex items-center justify-between">
               <Label htmlFor="default-voice-pitch" className="text-base">Default Voice Pitch</Label>
-              <span className="text-sm font-medium">{defaultSettings.defaultVoicePitch.toFixed(1)}</span>
+              <span className="text-sm font-medium">{defaultSettings.voicePitch.toFixed(1)}</span>
             </div>
             <Slider 
               id="default-voice-pitch"
-              defaultValue={[defaultSettings.defaultVoicePitch]} 
+              defaultValue={[defaultSettings.voicePitch]} 
               max={2} 
               min={0.5} 
               step={0.1} 
-              onValueChange={(value) => setDefaultSettings(prev => ({...prev, defaultVoicePitch: value[0]}))}
+              onValueChange={(value) => setDefaultSettings(prev => ({...prev, voicePitch: value[0]}))}
               className="mt-2"
             />
           </div>

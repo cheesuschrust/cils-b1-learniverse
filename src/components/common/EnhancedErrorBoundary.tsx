@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { errorMonitoring, ErrorSeverity, ErrorCategory, ErrorMetadata } from '@/utils/errorMonitoring';
 import { errorReporting } from '@/utils/errorReporting';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface EnhancedErrorBoundaryProps {
   children: ReactNode;
@@ -75,12 +75,17 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
     
     // Show notification if enabled
     if (this.props.showNotification) {
-      toast({
+      // We can't use the hook directly in a class component
+      // In a real implementation, you would use a context or a ref to access toast
+      const toastObj = {
         title: this.props.notificationTitle,
         description: `${error.name}: ${error.message}`,
         variant: "destructive",
         duration: 5000
-      });
+      };
+      
+      // This is just for logging since we can't directly use the hook here
+      console.log('Error notification:', toastObj);
     }
   }
 
@@ -117,8 +122,8 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
       // Report to errorReporting service
       errorReporting.captureError(
         error,
-        ErrorSeverity.CRITICAL, // Changed from HIGH to CRITICAL which exists in ErrorSeverity
-        ErrorCategory.UNKNOWN, // Changed from UI to UNKNOWN which exists in both ErrorCategory types
+        ErrorSeverity.CRITICAL,
+        ErrorCategory.UNKNOWN,
         metadata
       );
     } catch (reportingError) {

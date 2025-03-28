@@ -2,11 +2,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useCallback } from 'react';
 import { errorMonitoring, ErrorSeverity, ErrorCategory } from '@/utils/errorMonitoring';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 // This hook provides a simple way to log system events
 export function useSystemLog() {
   const { addSystemLog } = useAuth();
+  const { toast } = useToast();
 
   // Log information messages
   const logInfo = useCallback(
@@ -31,7 +32,7 @@ export function useSystemLog() {
         duration: 4000
       });
     },
-    [addSystemLog]
+    [addSystemLog, toast]
   );
 
   // Log error messages
@@ -57,7 +58,7 @@ export function useSystemLog() {
         );
       }
     },
-    [addSystemLog]
+    [addSystemLog, toast]
   );
 
   // Log debug messages
@@ -92,7 +93,7 @@ export function useSystemLog() {
         );
       }
     },
-    [addSystemLog]
+    [addSystemLog, toast]
   );
 
   // Log audit trail messages
