@@ -16,6 +16,7 @@ export type UserPreferences = {
 export interface User {
   id: string;
   email: string;
+  uid?: string;
   
   // Name properties with consistent naming
   username?: string;

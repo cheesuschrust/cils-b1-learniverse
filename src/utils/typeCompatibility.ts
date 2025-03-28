@@ -8,7 +8,7 @@ export function normalizeUser(user: any): User {
   if (!user) return null as any;
   
   return {
-    id: user.id,
+    id: user.id || user.uid,
     email: user.email,
     firstName: user.firstName || user.first_name,
     lastName: user.lastName || user.last_name,
@@ -30,7 +30,8 @@ export function normalizeUser(user: any): User {
     metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-    }
+    },
+    uid: user.uid
   };
 }
 

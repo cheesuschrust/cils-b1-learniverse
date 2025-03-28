@@ -85,6 +85,9 @@ export interface FlashcardSet {
   // Language specification
   language?: 'english' | 'italian';
   authorId?: string;
+  
+  // Add any additional fields needed for compatibility
+  title?: string;
 }
 
 export interface RevisionRecord {

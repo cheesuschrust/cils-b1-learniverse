@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,13 +13,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { User, UserRole } from '@/types/user';
-import { ExtendedButtonVariant } from '@/types/variant-fixes';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -54,32 +53,25 @@ const UserManagementComponent: React.FC = () => {
       try {
         const data = await getAllUsers();
         const normalizedUsers = data.map(user => ({
-          id: user.id,
+          id: user.id || user.uid,
           email: user.email,
           firstName: user.firstName || user.first_name,
           lastName: user.lastName || user.last_name,
-          first_name: user.firstName || user.first_name,
-          last_name: user.lastName || user.last_name,
           displayName: user.displayName || user.name,
           photoURL: user.photoURL || user.profileImage || user.avatar,
           role: user.role || 'user',
           isVerified: user.isVerified || false,
-          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
           status: user.status || 'active',
           subscription: user.subscription || 'free',
           phoneNumber: user.phoneNumber,
           address: user.address,
           preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
-          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          preferredLanguage: user.preferredLanguage || 'english',
+          language: user.language || user.preferredLanguage || 'english',
           metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
           dailyQuestionCounts: user.dailyQuestionCounts || { 
             flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
@@ -109,8 +101,8 @@ const UserManagementComponent: React.FC = () => {
     } else {
       const lowercaseTerm = term.toLowerCase();
       const filtered = users.filter(user => 
-        (user.firstName || user.first_name || '').toLowerCase().includes(lowercaseTerm) ||
-        (user.lastName || user.last_name || '').toLowerCase().includes(lowercaseTerm) ||
+        (user.firstName || '').toLowerCase().includes(lowercaseTerm) ||
+        (user.lastName || '').toLowerCase().includes(lowercaseTerm) ||
         user.email.toLowerCase().includes(lowercaseTerm) ||
         user.role.toLowerCase().includes(lowercaseTerm)
       );
@@ -124,33 +116,26 @@ const UserManagementComponent: React.FC = () => {
       email: '',
       firstName: '',
       lastName: '',
-      first_name: '',
-      last_name: '',
       displayName: '',
       photoURL: '',
       role: 'user',
       isVerified: false,
       createdAt: new Date(),
-      created_at: new Date(),
       updatedAt: new Date(),
-      updated_at: new Date(),
       lastLogin: undefined,
-      last_login: undefined,
       lastActive: undefined,
-      last_active: undefined,
       status: 'active',
       subscription: 'free',
       phoneNumber: '',
       address: '',
       preferences: {},
       preferredLanguage: 'english',
-      preferred_language: 'english',
       language: 'english',
       metrics: { totalQuestions: 0, correctAnswers: 0, streak: 0 },
       dailyQuestionCounts: { 
         flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
       }
-    });
+    } as User);
     setIsCreateMode(createMode);
     setIsModalOpen(true);
   };
@@ -169,20 +154,17 @@ const UserManagementComponent: React.FC = () => {
         const newUser = {
           id: selectedUser.id,
           email: selectedUser.email,
-          firstName: selectedUser.first_name,
-          lastName: selectedUser.last_name,
+          firstName: selectedUser.firstName,
+          lastName: selectedUser.lastName,
           role: selectedUser.role || 'user',
           isVerified: selectedUser.isVerified,
-          createdAt: new Date(selectedUser.created_at),
+          createdAt: new Date(selectedUser.createdAt || new Date()),
           updatedAt: new Date(),
-          lastLogin: new Date(selectedUser.last_login),
-          lastActive: new Date(selectedUser.last_active),
+          lastLogin: selectedUser.lastLogin ? new Date(selectedUser.lastLogin) : undefined,
+          lastActive: selectedUser.lastActive ? new Date(selectedUser.lastActive) : undefined,
           status: selectedUser.status,
           subscription: selectedUser.subscription,
-          preferredLanguage: selectedUser.preferred_language,
-          first_name: selectedUser.first_name,
-          last_name: selectedUser.last_name,
-          preferred_language: selectedUser.preferred_language,
+          preferredLanguage: selectedUser.preferredLanguage,
         };
         await createUser(newUser);
         toast({
@@ -199,32 +181,25 @@ const UserManagementComponent: React.FC = () => {
 
       const data = await getAllUsers();
       const normalizedUsers = data.map(user => ({
-        id: user.id,
+        id: user.id || user.uid,
         email: user.email,
         firstName: user.firstName || user.first_name,
         lastName: user.lastName || user.last_name,
-        first_name: user.firstName || user.first_name,
-        last_name: user.lastName || user.last_name,
         displayName: user.displayName || user.name,
-        photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+        photoURL: user.photoURL || user.profileImage || user.avatar,
         role: user.role || 'user',
-        isVerified: user.isVerified || user.is_verified || false,
-        createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-        created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-        updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-        updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-        lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-        last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-        lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-        last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        isVerified: user.isVerified || false,
+        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+        lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
         status: user.status || 'active',
         subscription: user.subscription || 'free',
-        phoneNumber: user.phoneNumber || user.phone_number,
+        phoneNumber: user.phoneNumber,
         address: user.address,
         preferences: user.preferences || {},
-        preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-        preferred_language: user.preferredLanguage || user.preferred_language || 'english',
-        language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+        preferredLanguage: user.preferredLanguage || 'english',
+        language: user.language || user.preferredLanguage || 'english',
         metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
         dailyQuestionCounts: user.dailyQuestionCounts || { 
           flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
@@ -256,32 +231,25 @@ const UserManagementComponent: React.FC = () => {
 
       const data = await getAllUsers();
       const normalizedUsers = data.map(user => ({
-        id: user.id,
+        id: user.id || user.uid,
         email: user.email,
         firstName: user.firstName || user.first_name,
         lastName: user.lastName || user.last_name,
-        first_name: user.firstName || user.first_name,
-        last_name: user.lastName || user.last_name,
         displayName: user.displayName || user.name,
-        photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+        photoURL: user.photoURL || user.profileImage || user.avatar,
         role: user.role || 'user',
-        isVerified: user.isVerified || user.is_verified || false,
-        createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-        created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-        updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-        updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-        lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-        last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-        lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-        last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        isVerified: user.isVerified || false,
+        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+        lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
         status: user.status || 'active',
         subscription: user.subscription || 'free',
-        phoneNumber: user.phoneNumber || user.phone_number,
+        phoneNumber: user.phoneNumber,
         address: user.address,
         preferences: user.preferences || {},
-        preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-        preferred_language: user.preferredLanguage || user.preferred_language || 'english',
-        language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+        preferredLanguage: user.preferredLanguage || 'english',
+        language: user.language || user.preferredLanguage || 'english',
         metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
         dailyQuestionCounts: user.dailyQuestionCounts || { 
           flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
@@ -315,32 +283,25 @@ const UserManagementComponent: React.FC = () => {
 
         const data = await getAllUsers();
         const normalizedUsers = data.map(user => ({
-          id: user.id,
+          id: user.id || user.uid,
           email: user.email,
           firstName: user.firstName || user.first_name,
           lastName: user.lastName || user.last_name,
-          first_name: user.firstName || user.first_name,
-          last_name: user.lastName || user.last_name,
           displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          photoURL: user.photoURL || user.profileImage || user.avatar,
           role: user.role || 'user',
-          isVerified: user.isVerified || user.is_verified || false,
-          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          isVerified: user.isVerified || false,
+          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
           status: user.status || 'active',
           subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber || user.phone_number,
+          phoneNumber: user.phoneNumber,
           address: user.address,
           preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
-          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          preferredLanguage: user.preferredLanguage || 'english',
+          language: user.language || user.preferredLanguage || 'english',
           metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
           dailyQuestionCounts: user.dailyQuestionCounts || { 
             flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
@@ -375,32 +336,25 @@ const UserManagementComponent: React.FC = () => {
 
         const data = await getAllUsers();
         const normalizedUsers = data.map(user => ({
-          id: user.id,
+          id: user.id || user.uid,
           email: user.email,
           firstName: user.firstName || user.first_name,
           lastName: user.lastName || user.last_name,
-          first_name: user.firstName || user.first_name,
-          last_name: user.lastName || user.last_name,
           displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          photoURL: user.photoURL || user.profileImage || user.avatar,
           role: user.role || 'user',
-          isVerified: user.isVerified || user.is_verified || false,
-          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          isVerified: user.isVerified || false,
+          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
           status: user.status || 'active',
           subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber || user.phone_number,
+          phoneNumber: user.phoneNumber,
           address: user.address,
           preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
-          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          preferredLanguage: user.preferredLanguage || 'english',
+          language: user.language || user.preferredLanguage || 'english',
           metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
           dailyQuestionCounts: user.dailyQuestionCounts || { 
             flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
@@ -498,10 +452,10 @@ const UserManagementComponent: React.FC = () => {
                         <TableCell>
                           <Avatar>
                             <AvatarImage src={user.photoURL} />
-                            <AvatarFallback>{user.firstName?.[0] || user.first_name?.[0] || 'U'}{user.lastName?.[0] || user.last_name?.[0] || 'U'}</AvatarFallback>
+                            <AvatarFallback>{user.firstName?.[0] || 'U'}{user.lastName?.[0] || 'U'}</AvatarFallback>
                           </Avatar>
                         </TableCell>
-                        <TableCell className="font-medium">{user.firstName || user.first_name} {user.lastName || user.last_name}</TableCell>
+                        <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Select value={user.role} onValueChange={(newRole: UserRole) => handleChangeRole(user.id, newRole)}>
@@ -608,16 +562,16 @@ const UserManagementComponent: React.FC = () => {
                     <Label htmlFor="firstName">First Name</Label>
                     <Input 
                       id="firstName"
-                      value={selectedUser?.firstName || selectedUser?.first_name || ''}
-                      onChange={(e) => setSelectedUser({...selectedUser, firstName: e.target.value, first_name: e.target.value})}
+                      value={selectedUser?.firstName || ''}
+                      onChange={(e) => setSelectedUser({...selectedUser, firstName: e.target.value})}
                     />
                   </div>
                   <div>
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input 
                       id="lastName"
-                      value={selectedUser?.lastName || selectedUser?.last_name || ''}
-                      onChange={(e) => setSelectedUser({...selectedUser, lastName: e.target.value, last_name: e.target.value})}
+                      value={selectedUser?.lastName || ''}
+                      onChange={(e) => setSelectedUser({...selectedUser, lastName: e.target.value})}
                     />
                   </div>
                 </div>

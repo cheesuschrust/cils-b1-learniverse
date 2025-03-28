@@ -1,3 +1,4 @@
+
 import { Flashcard } from './flashcard';
 
 export interface FlashcardComponentProps {
@@ -92,6 +93,8 @@ export interface AnalyticsReportProps {
   includeActivity?: boolean;
   includeProgress?: boolean;
   includeStats?: boolean;
+  onClose?: () => void;
+  reportData?: any;
 }
 
 export interface ReviewSchedule {
@@ -100,6 +103,9 @@ export interface ReviewSchedule {
   nextWeek: number;
   later: number;
   dueByDate: Record<string, number>;
+  dueToday?: number;
+  dueThisWeek?: number;
+  dueNextWeek?: number;
 }
 
 export interface ReviewPerformance {
@@ -109,4 +115,9 @@ export interface ReviewPerformance {
   consistency: number;
   improvement: number;
   totalReviewed: number;
+  efficiency?: number;
+  totalReviews?: number;
+  streakDays?: number;
+  correctReviews?: number;
+  reviewsByCategory?: Record<string, number>;
 }

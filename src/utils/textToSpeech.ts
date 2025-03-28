@@ -1,3 +1,4 @@
+
 export interface VoicePreference {
   englishVoiceURI: string;
   italianVoiceURI: string;
@@ -10,10 +11,14 @@ export interface TextToSpeechOptions {
   rate?: number;
   pitch?: number;
   voiceURI?: string;
+  voice?: string;
 }
 
 export type TextToSpeechState = 'idle' | 'speaking' | 'paused' | 'error';
-export type SpeechState = TextToSpeechState;
+export type SpeechState = {
+  speaking: boolean;
+  voices: SpeechSynthesisVoice[];
+};
 
 /**
  * Checks if speech synthesis is supported in the browser
@@ -48,6 +53,13 @@ export const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
     }
   });
 };
+
+/**
+ * Get available voices from the browser
+ */
+export function getVoices(): SpeechSynthesisVoice[] {
+  return window.speechSynthesis.getVoices();
+}
 
 /**
  * Text to speech function
