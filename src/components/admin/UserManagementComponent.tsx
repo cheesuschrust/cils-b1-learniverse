@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { normalizeUser } from '@/types/core';
 
 const UserManagementComponent: React.FC = () => {
   const { getAllUsers, createUser, updateUser, deleteUser } = useAuth();
@@ -52,31 +53,7 @@ const UserManagementComponent: React.FC = () => {
       setLoading(true);
       try {
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => ({
-          id: user.id || user.uid,
-          email: user.email,
-          firstName: user.firstName || user.first_name,
-          lastName: user.lastName || user.last_name,
-          displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.profileImage || user.avatar,
-          role: user.role || 'user',
-          isVerified: user.isVerified || false,
-          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
-          status: user.status || 'active',
-          subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber,
-          address: user.address,
-          preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || 'english',
-          language: user.language || user.preferredLanguage || 'english',
-          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-          dailyQuestionCounts: user.dailyQuestionCounts || { 
-            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-          }
-        }));
+        const normalizedUsers = data.map(user => normalizeUser(user));
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       } catch (error) {
@@ -180,31 +157,7 @@ const UserManagementComponent: React.FC = () => {
       }
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => ({
-        id: user.id || user.uid,
-        email: user.email,
-        firstName: user.firstName || user.first_name,
-        lastName: user.lastName || user.last_name,
-        displayName: user.displayName || user.name,
-        photoURL: user.photoURL || user.profileImage || user.avatar,
-        role: user.role || 'user',
-        isVerified: user.isVerified || false,
-        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-        lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
-        status: user.status || 'active',
-        subscription: user.subscription || 'free',
-        phoneNumber: user.phoneNumber,
-        address: user.address,
-        preferences: user.preferences || {},
-        preferredLanguage: user.preferredLanguage || 'english',
-        language: user.language || user.preferredLanguage || 'english',
-        metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-        dailyQuestionCounts: user.dailyQuestionCounts || { 
-          flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-        }
-      }));
+      const normalizedUsers = data.map(user => normalizeUser(user));
       setUsers(normalizedUsers);
       setFilteredUsers(normalizedUsers);
       handleCloseModal();
@@ -230,31 +183,7 @@ const UserManagementComponent: React.FC = () => {
       });
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => ({
-        id: user.id || user.uid,
-        email: user.email,
-        firstName: user.firstName || user.first_name,
-        lastName: user.lastName || user.last_name,
-        displayName: user.displayName || user.name,
-        photoURL: user.photoURL || user.profileImage || user.avatar,
-        role: user.role || 'user',
-        isVerified: user.isVerified || false,
-        createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-        updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-        lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
-        status: user.status || 'active',
-        subscription: user.subscription || 'free',
-        phoneNumber: user.phoneNumber,
-        address: user.address,
-        preferences: user.preferences || {},
-        preferredLanguage: user.preferredLanguage || 'english',
-        language: user.language || user.preferredLanguage || 'english',
-        metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-        dailyQuestionCounts: user.dailyQuestionCounts || { 
-          flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-        }
-      }));
+      const normalizedUsers = data.map(user => normalizeUser(user));
       setUsers(normalizedUsers);
       setFilteredUsers(normalizedUsers);
     } catch (error) {
@@ -282,31 +211,7 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => ({
-          id: user.id || user.uid,
-          email: user.email,
-          firstName: user.firstName || user.first_name,
-          lastName: user.lastName || user.last_name,
-          displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.profileImage || user.avatar,
-          role: user.role || 'user',
-          isVerified: user.isVerified || false,
-          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
-          status: user.status || 'active',
-          subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber,
-          address: user.address,
-          preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || 'english',
-          language: user.language || user.preferredLanguage || 'english',
-          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-          dailyQuestionCounts: user.dailyQuestionCounts || { 
-            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-          }
-        }));
+        const normalizedUsers = data.map(user => normalizeUser(user));
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       }
@@ -335,31 +240,7 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => ({
-          id: user.id || user.uid,
-          email: user.email,
-          firstName: user.firstName || user.first_name,
-          lastName: user.lastName || user.last_name,
-          displayName: user.displayName || user.name,
-          photoURL: user.photoURL || user.profileImage || user.avatar,
-          role: user.role || 'user',
-          isVerified: user.isVerified || false,
-          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-          updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
-          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-          lastActive: user.lastActive ? new Date(user.lastActive) : undefined,
-          status: user.status || 'active',
-          subscription: user.subscription || 'free',
-          phoneNumber: user.phoneNumber,
-          address: user.address,
-          preferences: user.preferences || {},
-          preferredLanguage: user.preferredLanguage || 'english',
-          language: user.language || user.preferredLanguage || 'english',
-          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-          dailyQuestionCounts: user.dailyQuestionCounts || { 
-            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-          }
-        }));
+        const normalizedUsers = data.map(user => normalizeUser(user));
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       }
@@ -625,7 +506,7 @@ const UserManagementComponent: React.FC = () => {
               <Button type="button" variant="secondary" onClick={handleCloseModal}>
                 Cancel
               </Button>
-              <Button type="submit" onClick={handleSaveUser} disabled={loading}>
+              <Button type="submit" onClick={handleSaveUser}>
                 {loading ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>

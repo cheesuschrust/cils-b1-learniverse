@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { AIStatus, UseAIReturn } from '@/types/ai';
 import { useToast } from '@/components/ui/use-toast';
@@ -160,8 +161,9 @@ export default function useAISimplified(): UseAIReturn {
   };
 }
 
-// Re-export these from core.ts for backward compatibility
-export { normalizeFlashcard, convertLegacyUser, AIOptions };
+// Re-export types from core.ts
+export type { AIOptions };
+export { normalizeFlashcard, convertLegacyUser };
 
 // Re-export from useAISimplified for backward compatibility
 export { useAISimplified };

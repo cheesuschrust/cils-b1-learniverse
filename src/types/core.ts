@@ -70,6 +70,21 @@ export interface User {
   isAdmin?: boolean;
 }
 
+// Legacy User interface for backward compatibility
+export interface LegacyUser {
+  uid?: string;
+  photo_url?: string;
+  display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  is_verified?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
+  last_login?: Date;
+  last_active?: Date;
+  preferred_language?: 'english' | 'italian' | 'both';
+}
+
 // AI options interface
 export interface AIOptions {
   temperature?: number;
