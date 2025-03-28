@@ -1,5 +1,5 @@
 
-// Import and re-export from License.ts for case-insensitive file systems
+// Import and re-export from License.ts to ensure consistency
 import { 
   License, 
   LicenseType, 

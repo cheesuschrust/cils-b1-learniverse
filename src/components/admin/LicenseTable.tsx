@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { License, LicenseType, LicenseStatus } from '@/types/license';
+import { License, LicenseType, LicenseStatus } from '@/types/License';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

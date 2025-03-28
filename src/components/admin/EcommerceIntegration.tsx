@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +12,7 @@ import { Icons } from '@/components/ui/icons';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShoppingCart, Store, CreditCard, Package, RefreshCw, Check, X, Settings, Globe, BarChart } from 'lucide-react';
+import { ShoppingCart, Store, CreditCard, Package, RefreshCw, Check, X, Settings, Globe, BarChart, UserIcon, VideoIcon } from 'lucide-react';
 
 const integrationSchema = z.object({
   apiKey: z.string().min(1, "API Key is required"),
@@ -646,7 +645,7 @@ const EcommerceIntegration: React.FC = () => {
                     <CardTitle className="text-sm font-medium">
                       Customers
                     </CardTitle>
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <UserIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">573</div>
@@ -792,7 +791,7 @@ const EcommerceIntegration: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Promotional Video</Label>
                   <div className="border border-dashed rounded-md p-4 flex flex-col items-center justify-center text-center">
-                    <Video className="h-8 w-8 text-muted-foreground mb-2" />
+                    <VideoIcon className="h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-xs text-muted-foreground">
                       YouTube or direct video URL
                     </p>
