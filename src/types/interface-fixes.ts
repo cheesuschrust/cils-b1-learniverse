@@ -1,4 +1,5 @@
 
+
 // Extend LevelBadgeProps
 export interface LevelBadgeProps {
   level?: number;
@@ -77,8 +78,8 @@ export interface ProgressProps {
 export interface Flashcard {
   id: string;
   // Support both naming conventions
-  front?: string;
-  back?: string;
+  front: string;
+  back: string;
   italian?: string;
   english?: string;
   level: number;

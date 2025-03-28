@@ -1,20 +1,19 @@
-
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CategoryPerformance } from '@/components/analytics/CategoryPerformance';
-import { KnowledgeGaps } from '@/components/analytics/KnowledgeGaps';
-import { ProgressOverTime } from '@/components/analytics/ProgressOverTime';
-import { SessionAnalysis } from '@/components/analytics/SessionAnalysis';
-import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
-import { StudyRecommendations } from '@/components/analytics/StudyRecommendations';
-import { GoalTracker } from '@/components/analytics/GoalTracker';
-import { AnalyticsReport } from '@/components/analytics/AnalyticsReport';
-import ReviewProgress from '@/components/analytics/ReviewProgress';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CategoryPerformance from '@/components/analytics/CategoryPerformance';
+import KnowledgeGaps from '@/components/analytics/KnowledgeGaps';
+import ProgressOverTime from '@/components/analytics/ProgressOverTime';
+import SessionAnalysis from '@/components/analytics/SessionAnalysis';
+import ActivityHeatmap from '@/components/analytics/ActivityHeatmap';
+import StudyRecommendations from '@/components/analytics/StudyRecommendations';
+import GoalTracker from '@/components/analytics/GoalTracker';
+import AnalyticsReport from '@/components/analytics/AnalyticsReport';
 import { useAuth } from '@/contexts/AuthContext';
-import questionService from '@/services/questionService';
-import { ReviewPerformance, ReviewSchedule } from '@/types/question';
+import { useAnalytics, DateRangeOption } from '@/hooks/useAnalytics';
+import { Calendar, ChevronDown, DownloadCloud, BarChart2, LineChart, PieChart, Target, Award, Eye } from 'lucide-react';
 
 const Analytics = () => {
   const { user } = useAuth();
@@ -55,7 +54,6 @@ const Analytics = () => {
     }
   }, [user]);
   
-  // Mock data for demonstration
   const categoryData = [
     {
       category: "Vocabulary",
@@ -64,7 +62,7 @@ const Analytics = () => {
       masteryPercentage: 82,
       attempts: 150,
       averageScore: 78,
-      reviewEfficiency: 90 // Added review data
+      reviewEfficiency: 90
     },
     {
       category: "Grammar",
@@ -101,7 +99,7 @@ const Analytics = () => {
       count: 28,
       difficulty: ["intermediate", "advanced"],
       percentage: 65,
-      reviewsDue: 8  // Added review data
+      reviewsDue: 8
     },
     {
       tag: "Prepositions",

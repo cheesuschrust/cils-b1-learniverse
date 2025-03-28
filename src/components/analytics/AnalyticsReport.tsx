@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
   Download, 
-  FilePdf, 
+  FileText, 
   FileSpreadsheet, 
   Printer,
   Share2
@@ -162,7 +161,7 @@ const AnalyticsReport: React.FC<AnalyticsReportProps> = ({
             Print
           </Button>
           <Button onClick={handleDownloadPDF}>
-            <FilePdf className="mr-2 h-4 w-4" />
+            <FileText className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
         </div>

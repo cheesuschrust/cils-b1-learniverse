@@ -1,900 +1,688 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { supabase } from '@/lib/supabase';
-import { User } from '@/types/user';
-import { Loader2, Search, UserPlus, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { normalizeUser } from '@/types/type-compatibility';
-
-// Validation schema for user form
-const userFormSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  first_name: z.string().min(2, { message: 'First name must be at least 2 characters' }),
-  last_name: z.string().min(2, { message: 'Last name must be at least 2 characters' }),
-  role: z.enum(['user', 'admin'], { 
-    required_error: 'Please select a role',
-  }),
-  subscription: z.enum(['free', 'premium'], {
-    required_error: 'Please select a subscription',
-  }),
-  status: z.enum(['active', 'inactive', 'suspended'], {
-    required_error: 'Please select a status',
-  }),
-  password: z
-    .string()
-    .min(8, { message: 'Password must be at least 8 characters' })
-    .optional(),
-});
-
-type UserFormValues = z.infer<typeof userFormSchema>;
+import { User, UserRole } from '@/types/user';
+import { ExtendedButtonVariant } from '@/types/variant-fixes';
+import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const UserManagementComponent: React.FC = () => {
+  const { getAllUsers, createUser, updateUser, deleteUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState<boolean>(false);
-  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState<boolean>(false);
-  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Initialize form
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      email: '',
-      first_name: '',
-      last_name: '',
-      role: 'user',
-      subscription: 'free',
-      status: 'active',
-      password: '',
-    }
-  });
-
-  // Edit form with different validation (password optional)
-  const editForm = useForm<UserFormValues>({
-    resolver: zodResolver(
-      userFormSchema.omit({ password: true }).merge(
-        z.object({
-          password: z.string().min(8, { message: 'Password must be at least 8 characters' }).optional(),
-        })
-      )
-    ),
-    defaultValues: {
-      email: '',
-      first_name: '',
-      last_name: '',
-      role: 'user',
-      subscription: 'free',
-      status: 'active',
-    }
-  });
-
-  // Load users on component mount
   useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const data = await getAllUsers();
+        const normalizedUsers = data.map(user => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName || user.first_name,
+          lastName: user.lastName || user.last_name,
+          first_name: user.firstName || user.first_name,
+          last_name: user.lastName || user.last_name,
+          displayName: user.displayName || user.name,
+          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          role: user.role || 'user',
+          isVerified: user.isVerified || user.is_verified || false,
+          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          status: user.status || 'active',
+          subscription: user.subscription || 'free',
+          phoneNumber: user.phoneNumber || user.phone_number,
+          address: user.address,
+          preferences: user.preferences || {},
+          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
+          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
+          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+          dailyQuestionCounts: user.dailyQuestionCounts || { 
+            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+          }
+        }));
+        setUsers(normalizedUsers);
+        setFilteredUsers(normalizedUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch users. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchUsers();
-  }, []);
+  }, [getAllUsers, toast]);
 
-  // Filter users when search query changes
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    if (term.trim() === '') {
       setFilteredUsers(users);
     } else {
-      const lowercaseQuery = searchQuery.toLowerCase();
+      const lowercaseTerm = term.toLowerCase();
       const filtered = users.filter(user => 
-        user.email.toLowerCase().includes(lowercaseQuery) ||
-        (user.firstName && user.firstName.toLowerCase().includes(lowercaseQuery)) ||
-        (user.lastName && user.lastName.toLowerCase().includes(lowercaseQuery)) ||
-        user.role.toLowerCase().includes(lowercaseQuery) ||
-        (user.subscription && user.subscription.toLowerCase().includes(lowercaseQuery)) ||
-        (user.status && user.status.toLowerCase().includes(lowercaseQuery))
+        (user.firstName || user.first_name || '').toLowerCase().includes(lowercaseTerm) ||
+        (user.lastName || user.last_name || '').toLowerCase().includes(lowercaseTerm) ||
+        user.email.toLowerCase().includes(lowercaseTerm) ||
+        user.role.toLowerCase().includes(lowercaseTerm)
       );
       setFilteredUsers(filtered);
     }
-  }, [searchQuery, users]);
+  };
 
-  // Fetch users from database
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        throw error;
+  const handleOpenModal = (user: User | null, createMode: boolean) => {
+    setSelectedUser(user ? { ...user } : {
+      id: '',
+      email: '',
+      firstName: '',
+      lastName: '',
+      first_name: '',
+      last_name: '',
+      displayName: '',
+      photoURL: '',
+      role: 'user',
+      isVerified: false,
+      createdAt: new Date(),
+      created_at: new Date(),
+      updatedAt: new Date(),
+      updated_at: new Date(),
+      lastLogin: undefined,
+      last_login: undefined,
+      lastActive: undefined,
+      last_active: undefined,
+      status: 'active',
+      subscription: 'free',
+      phoneNumber: '',
+      address: '',
+      preferences: {},
+      preferredLanguage: 'english',
+      preferred_language: 'english',
+      language: 'english',
+      metrics: { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+      dailyQuestionCounts: { 
+        flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
       }
-      
-      // Transform data to match User type using our normalizeUser utility
-      const formattedUsers = data.map(user => normalizeUser({
+    });
+    setIsCreateMode(createMode);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      if (isCreateMode) {
+        // Create user
+        const newUser = {
+          id: selectedUser.id,
+          email: selectedUser.email,
+          firstName: selectedUser.first_name, // Change to firstName
+          lastName: selectedUser.last_name,   // Change to lastName
+          role: selectedUser.role || 'user',
+          isVerified: selectedUser.isVerified,
+          createdAt: new Date(selectedUser.created_at),
+          updatedAt: new Date(),
+          lastLogin: new Date(selectedUser.last_login),
+          lastActive: new Date(selectedUser.last_active),
+          status: selectedUser.status,
+          subscription: selectedUser.subscription,
+          preferredLanguage: selectedUser.preferred_language,
+          // Add additional required fields
+          first_name: selectedUser.first_name,
+          last_name: selectedUser.last_name,
+          preferred_language: selectedUser.preferred_language,
+        };
+        await createUser(newUser);
+        toast({
+          title: "Success",
+          description: "User created successfully.",
+        });
+      } else {
+        // Update user
+        await updateUser(selectedUser.id, selectedUser);
+        toast({
+          title: "Success",
+          description: "User updated successfully.",
+        });
+      }
+
+      // Refresh user list
+      const data = await getAllUsers();
+      const normalizedUsers = data.map(user => ({
         id: user.id,
         email: user.email,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        role: user.role as 'user' | 'admin',
-        isVerified: user.is_verified,
-        created_at: new Date(user.created_at),
-        last_login: user.last_login ? new Date(user.last_login) : new Date(),
-        last_active: user.last_active ? new Date(user.last_active) : new Date(),
-        status: user.status as 'active' | 'inactive' | 'suspended',
-        subscription: user.subscription as 'free' | 'premium',
-        preferred_language: user.preferred_language as 'english' | 'italian' | 'both',
+        firstName: user.firstName || user.first_name,
+        lastName: user.lastName || user.last_name,
+        first_name: user.firstName || user.first_name,
+        last_name: user.lastName || user.last_name,
+        displayName: user.displayName || user.name,
+        photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+        role: user.role || 'user',
+        isVerified: user.isVerified || user.is_verified || false,
+        createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+        created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+        updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+        updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+        lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+        last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+        lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        status: user.status || 'active',
+        subscription: user.subscription || 'free',
+        phoneNumber: user.phoneNumber || user.phone_number,
+        address: user.address,
+        preferences: user.preferences || {},
+        preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
+        preferred_language: user.preferredLanguage || user.preferred_language || 'english',
+        language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+        metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+        dailyQuestionCounts: user.dailyQuestionCounts || { 
+          flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+        }
       }));
-      
-      setUsers(formattedUsers);
-      setFilteredUsers(formattedUsers);
-    } catch (error: any) {
-      console.error('Error fetching users:', error);
+      setUsers(normalizedUsers);
+      setFilteredUsers(normalizedUsers);
+      handleCloseModal();
+    } catch (error) {
+      console.error("Failed to save user:", error);
       toast({
-        title: 'Error fetching users',
-        description: error.message || 'An error occurred while fetching users.',
-        variant: 'destructive',
+        title: "Error",
+        description: `Failed to ${isCreateMode ? 'create' : 'update'} user. Please try again.`,
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Handle add user form submission
-  const onAddUserSubmit = async (values: UserFormValues) => {
-    setIsSubmitting(true);
+  const handleDeleteUser = async (userId: string) => {
     try {
-      // First check if email exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', values.email)
-        .maybeSingle();
-      
-      if (checkError) {
-        throw checkError;
-      }
-      
-      if (existingUser) {
+      setLoading(true);
+      await deleteUser(userId);
+      toast({
+        title: "Success",
+        description: "User deleted successfully.",
+      });
+
+      // Refresh user list
+      const data = await getAllUsers();
+      const normalizedUsers = data.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName || user.first_name,
+        lastName: user.lastName || user.last_name,
+        first_name: user.firstName || user.first_name,
+        last_name: user.lastName || user.last_name,
+        displayName: user.displayName || user.name,
+        photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+        role: user.role || 'user',
+        isVerified: user.isVerified || user.is_verified || false,
+        createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+        created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+        updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+        updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+        lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+        last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+        lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+        status: user.status || 'active',
+        subscription: user.subscription || 'free',
+        phoneNumber: user.phoneNumber || user.phone_number,
+        address: user.address,
+        preferences: user.preferences || {},
+        preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
+        preferred_language: user.preferredLanguage || user.preferred_language || 'english',
+        language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+        metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+        dailyQuestionCounts: user.dailyQuestionCounts || { 
+          flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+        }
+      }));
+      setUsers(normalizedUsers);
+      setFilteredUsers(normalizedUsers);
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeRole = async (userId: string, newRole: UserRole) => {
+    try {
+      setLoading(true);
+      const updatedUser = users.find(user => user.id === userId);
+      if (updatedUser) {
+        updatedUser.role = newRole;
+        await updateUser(userId, updatedUser);
         toast({
-          title: 'Email already exists',
-          description: 'A user with this email address already exists.',
-          variant: 'destructive',
+          title: "Success",
+          description: "User role updated successfully.",
         });
-        return;
+
+        // Refresh user list
+        const data = await getAllUsers();
+        const normalizedUsers = data.map(user => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName || user.first_name,
+          lastName: user.lastName || user.last_name,
+          first_name: user.firstName || user.first_name,
+          last_name: user.lastName || user.last_name,
+          displayName: user.displayName || user.name,
+          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          role: user.role || 'user',
+          isVerified: user.isVerified || user.is_verified || false,
+          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          status: user.status || 'active',
+          subscription: user.subscription || 'free',
+          phoneNumber: user.phoneNumber || user.phone_number,
+          address: user.address,
+          preferences: user.preferences || {},
+          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
+          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
+          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+          dailyQuestionCounts: user.dailyQuestionCounts || { 
+            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+          }
+        }));
+        setUsers(normalizedUsers);
+        setFilteredUsers(normalizedUsers);
       }
-      
-      // Create auth user if password provided
-      let userId = crypto.randomUUID();
-      
-      if (values.password) {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: values.email,
-          password: values.password,
-        });
-        
-        if (authError) {
-          throw authError;
-        }
-        
-        if (authData.user) {
-          userId = authData.user.id;
-        }
-      }
-      
-      // Create user in the database
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: values.email,
-          first_name: values.first_name,
-          last_name: values.last_name,
-          role: values.role,
-          subscription: values.subscription,
-          status: values.status,
-          is_verified: false,
-          created_at: new Date().toISOString(),
-          preferred_language: 'english',
-        })
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Create user metrics
-      await supabase
-        .from('user_metrics')
-        .insert({
-          user_id: userId,
-          total_questions: 0,
-          correct_answers: 0,
-          streak: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      
+    } catch (error) {
+      console.error("Failed to update user role:", error);
       toast({
-        title: 'User created',
-        description: `Successfully created user ${values.email}`,
-      });
-      
-      setIsAddUserDialogOpen(false);
-      form.reset();
-      fetchUsers(); // Refresh the user list
-    } catch (error: any) {
-      console.error('Error adding user:', error);
-      toast({
-        title: 'Error adding user',
-        description: error.message || 'An error occurred while adding the user.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update user role. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Handle edit user form submission
-  const onEditUserSubmit = async (values: UserFormValues) => {
-    if (!selectedUser) return;
-    
-    setIsSubmitting(true);
+  const handleChangeStatus = async (userId: string, newStatus: string) => {
     try {
-      const updates: any = {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        role: values.role,
-        subscription: values.subscription,
-        status: values.status,
-      };
-      
-      // Update user in the database
-      const { error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', selectedUser.id);
-      
-      if (error) {
-        throw error;
+      setLoading(true);
+      const updatedUser = users.find(user => user.id === userId);
+      if (updatedUser) {
+        updatedUser.status = newStatus;
+        await updateUser(userId, updatedUser);
+        toast({
+          title: "Success",
+          description: "User status updated successfully.",
+        });
+
+        // Refresh user list
+        const data = await getAllUsers();
+        const normalizedUsers = data.map(user => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName || user.first_name,
+          lastName: user.lastName || user.last_name,
+          first_name: user.firstName || user.first_name,
+          last_name: user.lastName || user.last_name,
+          displayName: user.displayName || user.name,
+          photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+          role: user.role || 'user',
+          isVerified: user.isVerified || user.is_verified || false,
+          createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
+          lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          last_active: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+          status: user.status || 'active',
+          subscription: user.subscription || 'free',
+          phoneNumber: user.phoneNumber || user.phone_number,
+          address: user.address,
+          preferences: user.preferences || {},
+          preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
+          preferred_language: user.preferredLanguage || user.preferred_language || 'english',
+          language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+          metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
+          dailyQuestionCounts: user.dailyQuestionCounts || { 
+            flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+          }
+        }));
+        setUsers(normalizedUsers);
+        setFilteredUsers(normalizedUsers);
       }
-      
-      // Update password if provided
-      if (values.password) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          selectedUser.id,
-          { password: values.password }
-        );
-        
-        if (passwordError) {
-          throw passwordError;
-        }
-      }
-      
+    } catch (error) {
+      console.error("Failed to update user status:", error);
       toast({
-        title: 'User updated',
-        description: `Successfully updated user ${values.email}`,
-      });
-      
-      setIsEditUserDialogOpen(false);
-      editForm.reset();
-      fetchUsers(); // Refresh the user list
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      toast({
-        title: 'Error updating user',
-        description: error.message || 'An error occurred while updating the user.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update user status. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Handle delete user
-  const onDeleteUser = async () => {
-    if (!selectedUser) return;
-    
-    setIsSubmitting(true);
-    try {
-      // Delete user from the auth system
-      const { error: authError } = await supabase.auth.admin.deleteUser(
-        selectedUser.id
-      );
-      
-      if (authError) {
-        console.error('Error deleting auth user:', authError);
-        // Continue with database deletion even if auth deletion fails
-      }
-      
-      // Delete user from the database
-      const { error: dbError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', selectedUser.id);
-      
-      if (dbError) {
-        throw dbError;
-      }
-      
-      toast({
-        title: 'User deleted',
-        description: `Successfully deleted user ${selectedUser.email}`,
-      });
-      
-      setIsDeleteUserDialogOpen(false);
-      setSelectedUser(null);
-      fetchUsers(); // Refresh the user list
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      toast({
-        title: 'Error deleting user',
-        description: error.message || 'An error occurred while deleting the user.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'outline'; // Changed from 'success'
+      case 'suspended':
+        return 'destructive';
+      default:
+        return 'secondary';
     }
   };
 
-  // Open edit user dialog and populate form
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    editForm.reset({
-      email: user.email,
-      first_name: user.firstName || '',
-      last_name: user.lastName || '',
-      role: user.role as 'user' | 'admin',
-      subscription: user.subscription as 'free' | 'premium',
-      status: user.status as 'active' | 'inactive' | 'suspended',
-      password: '',
-    });
-    setIsEditUserDialogOpen(true);
-  };
-
-  // Open delete user dialog
-  const handleDeleteUser = (user: User) => {
-    setSelectedUser(user);
-    setIsDeleteUserDialogOpen(true);
-  };
+  const paginatedUsers = filteredUsers.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const pageCount = Math.ceil(filteredUsers.length / itemsPerPage);
 
   return (
-    <div className="space-y-6">
-      {/* Top controls */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
+    <ProtectedRoute requireAdmin={true}>
+      <div className="container mx-auto py-10 px-4 sm:px-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage user accounts and roles
+          </p>
         </div>
-        <Button onClick={() => setIsAddUserDialogOpen(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
-      </div>
-      
-      {/* Users table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-          <CardDescription>
-            Manage the users of your application
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>User List</CardTitle>
+            <CardDescription>
+              View and manage user accounts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex justify-between items-center">
+              <Input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <Button onClick={() => handleOpenModal(null, true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add User
+              </Button>
             </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? 'No users match your search criteria' : 'No users found'}
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Subscription</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        {user.firstName || user.lastName ? 
-                          `${user.firstName || ''} ${user.lastName || ''}`.trim() : 
-                          'N/A'}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
-                          {user.role === 'admin' ? 'Admin' : 'User'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.subscription === 'premium' ? 'default' : 'outline'}>
-                          {user.subscription === 'premium' ? 'Premium' : 'Free'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            user.status === 'active' ? 'success' :
-                            user.status === 'inactive' ? 'secondary' : 'destructive'
-                          }
-                        >
-                          {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteUser(user)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
+
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableCaption>A list of all registered users.</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Avatar</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <Avatar>
+                            <AvatarImage src={user.photoURL} />
+                            <AvatarFallback>{user.firstName?.[0] || user.first_name?.[0] || 'U'}{user.lastName?.[0] || user.last_name?.[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell className="font-medium">{user.firstName || user.first_name} {user.lastName || user.last_name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Select value={user.role} onValueChange={(newRole: UserRole) => handleChangeRole(user.id, newRole)}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder={user.role} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="moderator">Moderator</SelectItem>
+                              <SelectItem value="teacher">Teacher</SelectItem>
+                              <SelectItem value="editor">Editor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleOpenModal(user, false)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteUser(user.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                {filteredUsers.length} of {users.length} user(s)
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationPrevious href="#" onClick={() => setPage(page - 1)} disabled={page === 1} />
+                  {page > 2 && (
+                    <PaginationItem href="#" onClick={() => setPage(1)}>
+                      1
+                    </PaginationItem>
+                  )}
+                  {page > 3 && <PaginationEllipsis />}
+                  {Array.from({ length: Math.min(5, pageCount) })
+                    .map((_, i) => {
+                      const pageNumber = Math.max(1, Math.min(pageCount, page - 2 + i));
+                      return (
+                        pageNumber > 0 &&
+                        pageNumber <= pageCount && (
+                          <PaginationItem
+                            key={pageNumber}
+                            href="#"
+                            onClick={() => setPage(pageNumber)}
+                            active={pageNumber === page}
+                          >
+                            {pageNumber}
+                          </PaginationItem>
+                        )
+                      );
+                    })}
+                  {page < pageCount - 2 && <PaginationEllipsis />}
+                  {page < pageCount - 1 && (
+                    <PaginationItem href="#" onClick={() => setPage(pageCount)}>
+                      {pageCount}
+                    </PaginationItem>
+                  )}
+                  <PaginationNext href="#" onClick={() => setPage(page + 1)} disabled={page === pageCount} />
+                </PaginationContent>
+              </Pagination>
             </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Add User Dialog */}
-      <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New User</DialogTitle>
-            <DialogDescription>
-              Create a new user account
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onAddUserSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="email@example.com" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="John" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Doe" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          </CardContent>
+        </Card>
+
+        {/* User Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{isCreateMode ? "Create User" : "Edit User"}</DialogTitle>
+              <DialogDescription>
+                {isCreateMode ? "Create a new user account." : "Update user details."}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input 
+                      id="firstName"
+                      value={selectedUser?.firstName || selectedUser?.first_name || ''}
+                      onChange={(e) => setSelectedUser({...selectedUser, firstName: e.target.value, first_name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input 
+                      id="lastName"
+                      value={selectedUser?.lastName || selectedUser?.last_name || ''}
+                      onChange={(e) => setSelectedUser({...selectedUser, lastName: e.target.value, last_name: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    value={selectedUser.email}
+                    onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={selectedUser.role} onValueChange={(role: UserRole) => setSelectedUser({ ...selectedUser, role })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedUser.role} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="moderator">Moderator</SelectItem>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="editor">Editor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={selectedUser.status} onValueChange={(status: string) => setSelectedUser({ ...selectedUser, status })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedUser.status} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isVerified"
+                    checked={selectedUser.isVerified}
+                    onCheckedChange={(checked) => setSelectedUser({ ...selectedUser, isVerified: checked })}
+                  />
+                  <Label htmlFor="isVerified">Verified</Label>
+                </div>
               </div>
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter password"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Must be at least 8 characters
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="subscription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subscription</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subscription" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="free">Free</SelectItem>
-                          <SelectItem value="premium">Premium</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create User'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit User Dialog */}
-      <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Modify user details
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditUserSubmit)} className="space-y-4">
-              <FormField
-                control={editForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="John" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Doe" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={editForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Leave blank to keep current password"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Must be at least 8 characters
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="subscription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subscription</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subscription" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="free">Free</SelectItem>
-                          <SelectItem value="premium">Premium</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete User Dialog */}
-      <Dialog open={isDeleteUserDialogOpen} onOpenChange={setIsDeleteUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this user? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-4">
-              <div className="bg-secondary/30 p-4 rounded-md">
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p>
-                  <strong>Name:</strong> {selectedUser.firstName || selectedUser.lastName ? 
-                    `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() : 
-                    'N/A'
-                  }
-                </p>
-                <p>
-                  <strong>Role:</strong> {selectedUser.role.charAt(0).toUpperCase() + selectedUser.role.slice(1)}
-                </p>
-              </div>
-              <DialogFooter className="flex flex-row gap-2 justify-end">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsDeleteUserDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={onDeleteUser}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete User'
-                  )}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={handleCloseModal}>
+                Cancel
+              </Button>
+              <Button type="submit" onClick={handleSaveUser} disabled={loading}>
+                {loading ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ProtectedRoute>
   );
 };
 
