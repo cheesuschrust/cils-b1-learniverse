@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -328,8 +327,8 @@ const UserManagementComponent: React.FC = () => {
           isVerified: user.isVerified || user.is_verified || false,
           createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
           created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updatedAt) : new Date(),
-          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updatedAt) : new Date(),
+          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
           lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
           last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
           lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
@@ -388,8 +387,8 @@ const UserManagementComponent: React.FC = () => {
           isVerified: user.isVerified || user.is_verified || false,
           createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
           created_at: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updatedAt) : new Date(),
-          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updatedAt) : new Date(),
+          updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+          updated_at: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
           lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
           last_login: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
           lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
@@ -519,7 +518,7 @@ const UserManagementComponent: React.FC = () => {
                           </Select>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
+                          <Badge variant={getStatusVariant(user.status) as "default" | "destructive" | "outline" | "secondary"}>{user.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>

@@ -1,179 +1,59 @@
 
-// Extend LevelBadgeProps
-export interface LevelBadgeProps {
-  level?: number;
-  showInfo?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-}
+import { Flashcard } from './flashcard';
 
-// Add the FlashcardComponentProps
 export interface FlashcardComponentProps {
-  flashcard: {
-    id: string;
-    front?: string;
-    back?: string;
-    level?: number;
-    tags?: string[];
-    mastered?: boolean;
-    italian?: string;
-    english?: string;
-  };
-  card?: any; // Legacy support
+  flashcard?: Flashcard;
+  card?: Flashcard; // Legacy support
   onFlip?: () => void;
-  onRating?: (rating: number) => void;
-  onRate?: (rating: number) => void;
   onNext?: () => void;
   onPrevious?: () => void;
   onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
-  onKnown?: () => void; // Legacy support
-  onUnknown?: () => void; // Legacy support
-  onSkip?: () => void;
-  showAnswer?: boolean;
-  showRating?: boolean;
+  onRating?: (rating: number) => void; // Legacy support
+  onSkip?: () => void; // Legacy support
+  flipped?: boolean; // Legacy support
   showControls?: boolean;
   showHints?: boolean;
-  showPronunciation?: boolean;
-  showActions?: boolean;
-  className?: string;
-  flipped?: boolean;
+  showPronunciation?: boolean; // Legacy support
+  showActions?: boolean; // Legacy support
+  onKnown?: () => void; // Legacy support
+  onUnknown?: () => void; // Legacy support
+  className?: string; // Legacy support
   autoFlip?: boolean;
   frontLabel?: string;
   backLabel?: string;
 }
 
-// Update ImportFormat type to be an interface with extended properties
-export interface ImportFormat {
-  type?: 'csv' | 'anki' | 'quizlet' | 'excel' | 'json' | 'txt';
-  fieldMap?: Record<string, string>;
-  hasHeader?: boolean;
-  delimiter?: string;
-}
-
-// Add SupportTicketExtension interface
-export interface SupportTicketExtension {
-  assignedTo?: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  department?: string;
-  notes?: string[];
-  attachments?: string[];
-  history?: {
-    timestamp: Date;
-    action: string;
-    user: string;
-    details?: string;
-  }[];
-}
-
-// Update ProgressProps interface to include indicatorClassName
-export interface ProgressProps {
-  value: number;
-  max?: number;
-  className?: string;
-  indicator?: string;
-  indicatorClassName?: string;
-}
-
-// Add Flashcard interface - updated to handle both naming conventions
-export interface Flashcard {
-  id: string;
-  // Support both naming conventions
-  front: string;
-  back: string;
-  italian?: string;
-  english?: string;
+export interface LevelBadgeProps {
   level: number;
-  tags: string[];
-  mastered?: boolean;
-  explanation?: string;
-  examples?: string[];
-  nextReview?: Date;
-  lastReviewed?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  showInfo?: boolean;
 }
 
-// Add FlashcardSet interface
-export interface FlashcardSet {
+export interface HoverContentProps {
+  content: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  align?: 'start' | 'center' | 'end';
+}
+
+export interface MultipleChoiceQuestion {
   id: string;
-  name: string;
+  question: string;
+  options: string[];
+  correctOption: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
+  explanation?: string;
+}
+
+export interface MultipleChoiceSet {
+  id: string;
+  title: string;
   description: string;
-  cards: Flashcard[];
+  questions: MultipleChoiceQuestion[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
   tags: string[];
-  creator: string;
-  isPublic: boolean;
-  isFavorite: boolean;
   createdAt: Date;
   updatedAt: Date;
-  totalCards: number;
-  masteredCards: number;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-}
-
-// Add FlashcardStats interface
-export interface FlashcardStats {
-  total: number;
-  mastered: number;
-  learning: number;
-  toReview: number;
-  avgMasteryTime?: number;
-  totalReviews?: number;
-  correctReviews?: number;
-  averageResponseTime?: number;
-  masteredCount?: number;
-  learningCount?: number;
-  newCount?: number;
-  averageScore?: number;
-  streak?: number;
-  lastReviewDate?: Date;
-}
-
-// Add analytics types
-export interface ReviewSchedule {
-  dueToday: number;
-  dueThisWeek: number;
-  dueNextWeek: number;
-  dueByDate: Record<string, number>;
-}
-
-export interface ReviewPerformance {
-  totalReviews: number;
-  correctReviews: number;
-  efficiency: number;
-  streakDays: number;
-  reviewsByCategory: Record<string, any>;
-}
-
-export interface ProgressOverTimeProps {
-  data: any[];
-}
-
-export interface ActivityHeatmapProps {
-  data: any[];
-}
-
-export interface SessionAnalysisProps {
-  data: any[];
-}
-
-export interface GoalTrackerProps {
-  goals: any[];
-}
-
-export interface StudyRecommendationsProps {
-  recommendations: any[];
-}
-
-export interface AnalyticsReportProps {
-  onClose: () => void;
-  reportData: {
-    activityData: any[];
-    categoryData: any[];
-    knowledgeGaps: any[];
-    sessionStats: any;
-    goals: any[];
-    streak: any;
-    recommendations: any[];
-    dateRange: string;
-  };
 }
