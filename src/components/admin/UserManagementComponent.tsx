@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -142,6 +141,7 @@ const UserManagementComponent: React.FC = () => {
           status: selectedUser.status,
           subscription: selectedUser.subscription,
           preferredLanguage: selectedUser.preferredLanguage,
+          language: selectedUser.preferredLanguage
         };
         await createUser(newUser);
         toast({
@@ -151,7 +151,8 @@ const UserManagementComponent: React.FC = () => {
       } else {
         await updateUser(selectedUser.id, {
           ...selectedUser,
-          role: selectedUser.role as UserRole
+          role: selectedUser.role as UserRole,
+          language: selectedUser.preferredLanguage
         });
         toast({
           title: "Success",
@@ -209,7 +210,8 @@ const UserManagementComponent: React.FC = () => {
         updatedUser.role = newRole;
         await updateUser(userId, {
           ...updatedUser,
-          role: updatedUser.role as UserRole
+          role: updatedUser.role as UserRole,
+          language: updatedUser.preferredLanguage
         });
         toast({
           title: "Success",
@@ -241,7 +243,8 @@ const UserManagementComponent: React.FC = () => {
         updatedUser.status = newStatus;
         await updateUser(userId, {
           ...updatedUser,
-          role: updatedUser.role as UserRole
+          role: updatedUser.role as UserRole,
+          language: updatedUser.preferredLanguage
         });
         toast({
           title: "Success",
