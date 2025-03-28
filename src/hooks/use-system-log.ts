@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useCallback } from 'react';
 import { errorMonitoring, ErrorSeverity, ErrorCategory } from '@/utils/errorMonitoring';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 // This hook provides a simple way to log system events
 export function useSystemLog() {
@@ -107,11 +107,28 @@ export function useSystemLog() {
 
   // Log email-related actions
   const logEmailAction = useCallback(
-    (action: string, details: string) => {
+    (action: string, details: string, error?: Error) => {
       console.info(`[EMAIL] ${action}: ${details}`);
       addSystemLog(action, details, 'email');
+      
+      if (error) {
+        console.error(`[EMAIL ERROR] ${action}: ${details}`, error);
+        toast({
+          title: `Email Error: ${action}`,
+          description: details,
+          variant: "destructive",
+          duration: 5000
+        });
+        
+        errorMonitoring.captureError(
+          error,
+          ErrorSeverity.ERROR,
+          ErrorCategory.UNKNOWN,
+          { action, details, context: 'email' }
+        );
+      }
     },
-    [addSystemLog]
+    [addSystemLog, toast]
   );
   
   // Log user actions
@@ -122,6 +139,72 @@ export function useSystemLog() {
     },
     [addSystemLog]
   );
+  
+  // Log performance issues
+  const logPerformance = useCallback(
+    (action: string, details: string, duration: number, threshold: number = 1000) => {
+      const isSlowOperation = duration > threshold;
+      const level = isSlowOperation ? 'warning' : 'info';
+      
+      console[level](`[PERFORMANCE] ${action}: ${details} (${duration}ms)`);
+      addSystemLog(action, `${details} (${duration}ms)`, level);
+      
+      if (isSlowOperation) {
+        toast({
+          title: `Slow Operation: ${action}`,
+          description: `${details} took ${duration}ms`,
+          variant: "warning",
+          duration: 4000
+        });
+        
+        errorMonitoring.captureError(
+          new Error(`Slow operation: ${action}`),
+          ErrorSeverity.WARNING,
+          ErrorCategory.PERFORMANCE,
+          { action, details, duration, threshold }
+        );
+      }
+    },
+    [addSystemLog, toast]
+  );
+  
+  // Log API calls
+  const logApiCall = useCallback(
+    (endpoint: string, method: string, status: number, duration: number, error?: Error) => {
+      const isError = status >= 400 || error;
+      const level = isError ? 'error' : (status >= 300 ? 'warning' : 'info');
+      const details = `${method} ${endpoint} - Status: ${status} (${duration}ms)`;
+      
+      console[level](`[API] ${details}`, error);
+      addSystemLog(`API ${method}`, details, level);
+      
+      if (isError) {
+        toast({
+          title: `API Error: ${method} ${endpoint}`,
+          description: error?.message || `Status: ${status}`,
+          variant: "destructive",
+          duration: 5000
+        });
+        
+        if (error) {
+          errorMonitoring.captureError(
+            error,
+            ErrorSeverity.ERROR,
+            ErrorCategory.API,
+            { endpoint, method, status, duration }
+          );
+        } else {
+          errorMonitoring.captureError(
+            new Error(`API error: ${method} ${endpoint} - Status: ${status}`),
+            ErrorSeverity.ERROR,
+            ErrorCategory.API,
+            { endpoint, method, status, duration }
+          );
+        }
+      }
+    },
+    [addSystemLog, toast]
+  );
 
   return {
     logInfo,
@@ -131,6 +214,8 @@ export function useSystemLog() {
     logSecurity,
     logAudit,
     logEmailAction,
-    logUserAction
+    logUserAction,
+    logPerformance,
+    logApiCall
   };
 }

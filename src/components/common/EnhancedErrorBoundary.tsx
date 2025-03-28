@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { errorMonitoring, ErrorSeverity, ErrorCategory, ErrorMetadata } from '@/utils/errorMonitoring';
 import { errorReporting } from '@/utils/errorReporting';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 interface EnhancedErrorBoundaryProps {
   children: ReactNode;
@@ -122,10 +122,35 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
       // Report to errorReporting service
       errorReporting.captureError(
         error,
-        ErrorSeverity.CRITICAL,
+        ErrorSeverity.HIGH,
         ErrorCategory.UNKNOWN,
         metadata
       );
+      
+      // Log additional browser information for context
+      const browserInfo = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        referrer: document.referrer
+      };
+      
+      console.debug('Error Context Info:', browserInfo);
+      
+      // Track error frequency (we could implement rate limiting here)
+      const errorKey = `error_${error.name}_${window.location.pathname}`;
+      const errorCount = localStorage.getItem(errorKey) ? Number(localStorage.getItem(errorKey)) : 0;
+      localStorage.setItem(errorKey, String(errorCount + 1));
+      
+      // If this error happens frequently, we might want to take a different action
+      if (errorCount > 5) {
+        console.warn(`Frequent error detected: ${error.name} in ${window.location.pathname}`);
+      }
     } catch (reportingError) {
       // If error reporting itself fails, log to console
       console.error('Error reporting failed:', reportingError);
