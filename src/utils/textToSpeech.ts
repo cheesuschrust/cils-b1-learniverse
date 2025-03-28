@@ -7,19 +7,72 @@ export interface VoicePreference {
 }
 
 /**
+ * Checks if speech synthesis is supported in the browser
+ */
+export const isSpeechSupported = (): boolean => {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+};
+
+/**
  * Gets available voices from the browser's speech synthesis API
  */
 export const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
   return new Promise((resolve) => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      resolve(voices);
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        resolve(window.speechSynthesis.getVoices());
-      };
+    try {
+      if (!isSpeechSupported()) {
+        console.error('Speech synthesis not supported in this browser');
+        resolve([]);
+        return;
+      }
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        resolve(voices);
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          resolve(window.speechSynthesis.getVoices());
+        };
+      }
+    } catch (error) {
+      console.error('Error getting available voices:', error);
+      resolve([]);
     }
   });
+};
+
+/**
+ * Get a list of English voices
+ */
+export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAvailableVoices();
+  return voices.filter(voice => 
+    voice.lang.startsWith('en') || voice.name.toLowerCase().includes('english')
+  );
+};
+
+/**
+ * Get a list of Italian voices
+ */
+export const getItalianVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAvailableVoices();
+  return voices.filter(voice => 
+    voice.lang.startsWith('it') || voice.name.toLowerCase().includes('italian')
+  );
+};
+
+/**
+ * Get default voice preferences based on available voices
+ */
+export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => {
+  const englishVoices = await getEnglishVoices();
+  const italianVoices = await getItalianVoices();
+  
+  return {
+    englishVoiceURI: englishVoices.length > 0 ? englishVoices[0].voiceURI : '',
+    italianVoiceURI: italianVoices.length > 0 ? italianVoices[0].voiceURI : '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  };
 };
 
 /**
@@ -35,6 +88,13 @@ export const speak = async (
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
+      if (!isSpeechSupported()) {
+        const error = new Error('Speech synthesis not supported in this browser');
+        console.error(error);
+        reject(error);
+        return;
+      }
+
       const utterance = new SpeechSynthesisUtterance(text);
       
       // Set language
@@ -47,6 +107,8 @@ export const speak = async (
       
       if (voice) {
         utterance.voice = voice;
+      } else {
+        console.warn(`Voice with URI "${voiceURI}" not found. Using default voice.`);
       }
       
       // Set rate and pitch
@@ -55,11 +117,15 @@ export const speak = async (
       
       // Set event handlers
       utterance.onend = () => resolve();
-      utterance.onerror = (error) => reject(error);
+      utterance.onerror = (error) => {
+        console.error('Speech synthesis error:', error);
+        reject(error);
+      };
       
       // Speak the text
       window.speechSynthesis.speak(utterance);
     } catch (error) {
+      console.error('Error in speak function:', error);
       reject(error);
     }
   });
@@ -69,19 +135,25 @@ export const speak = async (
  * Stops all speech synthesis
  */
 export const stopSpeaking = (): void => {
-  window.speechSynthesis.cancel();
+  if (isSpeechSupported()) {
+    window.speechSynthesis.cancel();
+  }
 };
 
 /**
  * Pauses speech synthesis
  */
 export const pauseSpeaking = (): void => {
-  window.speechSynthesis.pause();
+  if (isSpeechSupported()) {
+    window.speechSynthesis.pause();
+  }
 };
 
 /**
  * Resumes speech synthesis
  */
 export const resumeSpeaking = (): void => {
-  window.speechSynthesis.resume();
+  if (isSpeechSupported()) {
+    window.speechSynthesis.resume();
+  }
 };
