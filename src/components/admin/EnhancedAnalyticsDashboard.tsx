@@ -1,5 +1,4 @@
 
-// This is a stub file to fix the errors, with proper props for PieChart
 import React from 'react';
 import { PieChart } from '@/components/ui/charts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

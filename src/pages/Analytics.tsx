@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,11 +12,10 @@ import StudyRecommendations from '@/components/analytics/StudyRecommendations';
 import GoalTracker from '@/components/analytics/GoalTracker';
 import AnalyticsReport from '@/components/analytics/AnalyticsReport';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, ChevronDown, DownloadCloud, BarChart2, LineChart, PieChart, Target, Award, Eye } from 'lucide-react';
+import { Calendar, ChevronDown, DownloadCloud, BarChart2, LineChart, PieChart, Target, Award, Eye, FileText } from 'lucide-react';
 import { ReviewSchedule, ReviewPerformance } from '@/types/interface-fixes';
 import { Helmet } from 'react-helmet-async';
 
-// Let's create a questionService stub for the example
 const questionService = {
   getReviewStats: async (userId: string) => ({
     schedule: {
@@ -36,7 +34,6 @@ const questionService = {
   })
 };
 
-// Component for Review Progress
 const ReviewProgress = ({ 
   reviewPerformance, 
   reviewSchedule 
@@ -207,7 +204,8 @@ const Analytics = () => {
         averageQuestionsPerSession: 35,
         completionRate: 92,
         timePerQuestion: 28,
-        optimalTimeOfDay: 'Evening'
+        optimalTimeOfDay: 'Evening',
+        averageScorePercentage: 80
       },
       goals: [
         { id: '1', title: 'Learn 100 new vocabulary words', progress: 75, target: 100 },
