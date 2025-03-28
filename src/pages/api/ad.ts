@@ -3,6 +3,39 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import DatabaseService from '@/services/DatabaseService';
 import { AdUnit } from '@/types/ad';
 
+// Define request types specific to this API endpoint
+interface CreateAdRequest {
+  owner: string;
+  title: string;
+  description: string;
+  startDate: string; // Accept strings, convert to Date later
+  endDate: string;
+  adFormat: string;
+  dimensions: string;
+  placements: string[];
+  targeting: string[];
+  price: number;
+  currency: string;
+  company: string;
+  status: string;
+}
+
+interface UpdateAdRequest {
+  owner?: string;
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  adFormat?: string;
+  dimensions?: string;
+  placements?: string[];
+  targeting?: string[];
+  price?: number;
+  currency?: string;
+  company?: string;
+  status?: string;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -25,7 +58,17 @@ export default async function handler(
 
     case 'POST': {
       try {
-        const adData = req.body as Partial<AdUnit>;
+        const createData: CreateAdRequest = req.body;
+        if (!createData.owner || !createData.title) {
+          return res.status(400).json({ message: "Missing required fields (owner, title)" });
+        }
+
+        const adData: Partial<AdUnit> = {
+          ...createData,
+          startDate: new Date(createData.startDate),
+          endDate: new Date(createData.endDate),
+        };
+
         const newAdUnit = db.createAdUnit(adData);
         return res.status(201).json(newAdUnit);
       } catch (error) {
@@ -42,7 +85,13 @@ export default async function handler(
       }
       
       try {
-        const adData = req.body as Partial<AdUnit>;
+        const updateData: UpdateAdRequest = req.body;
+        const adData: Partial<AdUnit> = {
+          ...updateData,
+          startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
+          endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
+        };
+        
         const updatedAd = db.updateAdUnit(id, adData);
         
         if (!updatedAd) {

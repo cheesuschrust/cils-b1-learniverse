@@ -3,6 +3,43 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import DatabaseService from '@/services/DatabaseService';
 import { License } from '@/types/License';
 
+// Define request types specific to this API endpoint
+interface CreateLicenseRequest {
+  userId: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  validity: number;
+  status: string;
+  features: string[];
+  customization: {
+    logo: string;
+    colors: {
+      primary: string;
+      secondary: string;
+    };
+    domain: string;
+  };
+}
+
+interface UpdateLicenseRequest {
+  userId?: string;
+  company?: string;
+  startDate?: string;
+  endDate?: string;
+  validity?: number;
+  status?: string;
+  features?: string[];
+  customization?: {
+    logo?: string;
+    colors?: {
+      primary?: string;
+      secondary?: string;
+    };
+    domain?: string;
+  };
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -25,7 +62,17 @@ export default async function handler(
 
     case 'POST': {
       try {
-        const licenseData = req.body as Partial<License>;
+        const createData: CreateLicenseRequest = req.body;
+        if (!createData.userId || !createData.company) {
+          return res.status(400).json({ message: "Missing required fields" });
+        }
+
+        const licenseData: Partial<License> = {
+          ...createData,
+          startDate: new Date(createData.startDate),
+          endDate: new Date(createData.endDate),
+        };
+
         const newLicense = db.createLicense(licenseData);
         return res.status(201).json(newLicense);
       } catch (error) {
@@ -42,7 +89,13 @@ export default async function handler(
       }
       
       try {
-        const licenseData = req.body as Partial<License>;
+        const updateData: UpdateLicenseRequest = req.body;
+        const licenseData: Partial<License> = {
+          ...updateData,
+          startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
+          endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
+        };
+        
         const updatedLicense = db.updateLicense(id, licenseData);
         
         if (!updatedLicense) {
