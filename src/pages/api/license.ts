@@ -1,7 +1,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import DatabaseService from '@/services/DatabaseService';
-import { License } from '@/types/License';
+import { License, LicenseStatus } from '@/types/License';
 
 // Define request types specific to this API endpoint
 interface CreateLicenseRequest {
@@ -72,6 +72,7 @@ export default async function handler(
           // Convert string dates to Date objects for the service
           startDate: new Date(createData.startDate),
           endDate: new Date(createData.endDate),
+          status: createData.status as LicenseStatus
         };
 
         const newLicense = db.createLicense(licenseData);
@@ -95,6 +96,7 @@ export default async function handler(
           ...updateData,
           startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
           endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
+          status: updateData.status as LicenseStatus | undefined
         };
         
         const updatedLicense = db.updateLicense(id, licenseData);

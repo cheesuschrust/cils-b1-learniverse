@@ -23,8 +23,8 @@ export interface License {
   plan: string;
   seats: number;
   usedSeats: number;
-  startDate: Date; // Changed from string to Date
-  endDate: Date;   // Changed from string to Date
+  startDate: Date;
+  endDate: Date;
   status: LicenseStatus;
   contactName: string;
   contactEmail: string;
