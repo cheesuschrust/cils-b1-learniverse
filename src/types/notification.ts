@@ -16,6 +16,21 @@ export type NotificationType =
   | 'update'
   | 'default';
 
+// Map from notification type to button variant
+export type NotificationVariantMapping = {
+  [key in NotificationType]?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
+};
+
+export const notificationToVariantMap: NotificationVariantMapping = {
+  success: 'default',
+  error: 'destructive',
+  warning: 'secondary',
+  info: 'outline',
+  system: 'secondary',
+  achievement: 'default',
+  default: 'secondary'
+};
+
 export interface NotificationAction {
   label: string;
   action: () => void;

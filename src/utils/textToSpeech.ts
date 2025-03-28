@@ -40,5 +40,66 @@ export function speak(text: string, voiceName?: string): Promise<void> {
   });
 }
 
+/**
+ * Stops any ongoing speech synthesis
+ */
+export function stopSpeaking(): void {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+/**
+ * Checks if speech synthesis is supported in the current browser
+ * @returns Boolean indicating if speech synthesis is supported
+ */
+export function isSpeechSupported(): boolean {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
+/**
+ * Get a list of available voices
+ * Alias for getAvailableVoices for backwards compatibility
+ */
+export function getVoices(): SpeechSynthesisVoice[] {
+  return getAvailableVoices();
+}
+
+/**
+ * Voice preference interface
+ */
+export interface VoicePreference {
+  enabled: boolean;
+  rate: number;
+  pitch: number;
+  volume: number;
+  voice: string;
+  language: string;
+}
+
+/**
+ * Get default voice preferences
+ */
+export function getDefaultVoicePreferences(): Record<string, VoicePreference> {
+  return {
+    english: {
+      enabled: true,
+      rate: 1.0,
+      pitch: 1.0,
+      volume: 1.0,
+      voice: '',
+      language: 'en-US'
+    },
+    italian: {
+      enabled: true,
+      rate: 1.0,
+      pitch: 1.0,
+      volume: 1.0,
+      voice: '',
+      language: 'it-IT'
+    }
+  };
+}
+
 // Export getAvailableVoices as default for backward compatibility
 export default getAvailableVoices;

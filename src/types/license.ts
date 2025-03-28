@@ -1,19 +1,8 @@
 
-export type LicenseType = 'university' | 'k12' | 'language-school' | 'corporate';
-export type LicenseStatus = 'active' | 'expired' | 'trial' | 'pending' | 'suspended';
-export type RenewalStatus = 
-  | 'auto' 
-  | 'manual' 
-  | 'pending' 
-  | 'canceled' 
-  | 'not-started' 
-  | 'in-progress' 
-  | 'renewed' 
-  | 'not-applicable' 
-  | 'expired'
-  | 'auto-renewal'
-  | 'pending-renewal'
-  | 'cancelled'; // Including all variants for backward compatibility
+// Define license types
+export type LicenseType = "university" | "k12" | "language-school" | "corporate";
+export type LicenseStatus = "active" | "inactive" | "expired" | "pending";
+export type RenewalStatus = "pending" | "scheduled" | "auto-renewal" | "manual" | "not-renewing" | "canceled"; 
 
 export interface License {
   id: string;
@@ -35,7 +24,37 @@ export interface License {
     };
     domain: string;
   };
-  domain?: string; // For backward compatibility
   value: number;
   renewalStatus: RenewalStatus;
+}
+
+export interface LicenseUserAssignment {
+  licenseId: string;
+  userId: string;
+  assignedAt: Date;
+  role: "student" | "teacher" | "admin";
+  status: "active" | "suspended";
+}
+
+export interface LicenseFeature {
+  id: string;
+  name: string;
+  included: boolean;
+  limit?: number;
+  used?: number;
+}
+
+export interface LicenseInvoice {
+  id: string;
+  licenseId: string;
+  amount: number;
+  status: "draft" | "pending" | "paid" | "overdue" | "cancelled";
+  date: Date;
+  dueDate: Date;
+  items: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
 }

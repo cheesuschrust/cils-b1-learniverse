@@ -21,7 +21,7 @@ export interface LineChartProps {
   categories: string[];
   colors: string[];
   valueFormatter: (value: number) => string;
-  yAxisWidth?: number; // Made this optional
+  yAxisWidth?: number;
   className?: string;
 }
 
