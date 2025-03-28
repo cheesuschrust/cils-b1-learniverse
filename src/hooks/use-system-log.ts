@@ -1,62 +1,65 @@
 
-import { useAuth } from "@/contexts/AuthContext";
-import type { LogCategory } from "@/contexts/shared-types";
+import { useAuth } from '@/contexts/AuthContext';
+import { useCallback } from 'react';
 
-/**
- * Hook for system logging operations
- * Provides type-safe methods for different log categories
- */
+// This hook provides a simple way to log system events
 export function useSystemLog() {
   const { addSystemLog } = useAuth();
-  
-  /**
-   * Log a user-related action
-   */
-  const logUserAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('user', action, details, level);
-  };
-  
-  /**
-   * Log a system-related action
-   */
-  const logSystemAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('system', action, details, level);
-  };
-  
-  /**
-   * Log an authentication-related action
-   */
-  const logAuthAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('auth', action, details, level);
-  };
-  
-  /**
-   * Log a content-related action
-   */
-  const logContentAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('content', action, details, level);
-  };
-  
-  /**
-   * Log an email-related action
-   */
-  const logEmailAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('email', action, details, level);
-  };
-  
-  /**
-   * Log an AI-related action
-   */
-  const logAIAction = (action: string, details?: string, level: 'info' | 'warning' | 'error' = 'info') => {
-    addSystemLog('ai', action, details, level);
-  };
-  
+
+  // Log information messages
+  const logInfo = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'info');
+    },
+    [addSystemLog]
+  );
+
+  // Log warning messages
+  const logWarning = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'warning');
+    },
+    [addSystemLog]
+  );
+
+  // Log error messages
+  const logError = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'error');
+    },
+    [addSystemLog]
+  );
+
+  // Log debug messages
+  const logDebug = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'debug');
+    },
+    [addSystemLog]
+  );
+
+  // Log security-related messages
+  const logSecurity = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'security');
+    },
+    [addSystemLog]
+  );
+
+  // Log audit trail messages
+  const logAudit = useCallback(
+    (action: string, details: string) => {
+      addSystemLog(action, details, 'audit');
+    },
+    [addSystemLog]
+  );
+
   return {
-    logUserAction,
-    logSystemAction,
-    logAuthAction,
-    logContentAction,
-    logEmailAction,
-    logAIAction
+    logInfo,
+    logWarning,
+    logError,
+    logDebug,
+    logSecurity,
+    logAudit,
   };
 }

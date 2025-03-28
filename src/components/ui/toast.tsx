@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -31,9 +32,9 @@ const toastVariants = cva(
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         success:
-          "success group border-green-500 bg-green-500 text-white dark:border-green-500 dark:bg-green-500/20 dark:text-green-500",
+          "success group border-green-500 bg-green-500 text-white",
         warning:
-          "warning group border-orange-500 bg-orange-500 text-white dark:border-orange-500 dark:bg-orange-500/20 dark:text-orange-500",
+          "warning group border-yellow-500 bg-yellow-500 text-white",
       },
     },
     defaultVariants: {
@@ -42,21 +43,20 @@ const toastVariants = cva(
   }
 )
 
-export interface ToastProps
-  extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>,
-    VariantProps<typeof toastVariants> {
+// This is the interface for the Toast component props
+interface ToastProps extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>,
+  VariantProps<typeof toastVariants> {
   duration?: number;
 }
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   ToastProps
->(({ className, variant, duration, ...props }, ref) => {
+>(({ className, variant, ...props }, ref) => {
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
-      duration={duration}
       {...props}
     />
   )
@@ -120,7 +120,7 @@ const ToastDescription = React.forwardRef<
 ))
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 
-type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
+type ToastProps2 = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 

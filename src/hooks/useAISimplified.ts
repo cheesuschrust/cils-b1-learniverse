@@ -1,263 +1,159 @@
 
-import { useState, useCallback, useRef } from 'react';
-import { UseAIReturn } from '@/types/ai';
-import AIServiceStub from '@/services/AIServiceStub';
+import { useState, useCallback } from 'react';
+import { AIStatus, UseAIReturn } from '@/types/ai';
+import { useToast } from '@/components/ui/use-toast';
 
-/**
- * Simplified hook for AI capabilities
- */
-export const useAISimplified = (): UseAIReturn => {
+// This is a simplified version of useAI hook for components that don't need all functionalities
+export default function useAISimplified(): UseAIReturn {
   const [isLoading, setIsLoading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [status, setStatus] = useState<string>('idle');
-  const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [controller, setController] = useState<AbortController | null>(null);
+  const { toast } = useToast();
 
-  // Create a new abort controller
-  const createAbortController = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-    return abortControllerRef.current;
-  }, []);
+  const handleError = useCallback((error: Error) => {
+    setError(error);
+    setIsLoading(false);
+    toast({
+      title: "AI Error",
+      description: error.message || "An error occurred while processing your request.",
+      variant: "destructive",
+    });
+  }, [toast]);
 
-  // Generate text using the AI model
-  const generateText = useCallback(async (prompt: string, options?: any): Promise<string> => {
+  const generateText = useCallback(async (prompt: string): Promise<string> => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use the stub service
-      const result = await AIServiceStub.generateText(prompt, options);
-      
+      // Create a new AbortController for this request
+      const newController = new AbortController();
+      setController(newController);
+
+      // Simulate an API call with a slight delay
+      const mockResponse = await new Promise<string>((resolve, reject) => {
+        setTimeout(() => {
+          if (newController.signal.aborted) {
+            reject(new Error('Request was aborted'));
+            return;
+          }
+          
+          // Simple mock response
+          const response = `Response to: ${prompt}\n\nThis is a simplified mock AI response for demonstration purposes. In a real implementation, this would call an actual AI service.`;
+          resolve(response);
+        }, 1500);
+      });
+
+      setResult(mockResponse);
       setIsLoading(false);
-      return result;
+      return mockResponse;
     } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error occurred');
+      handleError(error);
+      return error.message;
+    } finally {
+      setController(null);
+    }
+  }, [handleError]);
+
+  const abort = useCallback(() => {
+    if (controller) {
+      controller.abort();
+      setController(null);
       setIsLoading(false);
-      const errorMessage = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(errorMessage);
-      throw errorMessage;
     }
-  }, [createAbortController]);
+  }, [controller]);
 
-  // Get confidence score for a content type
-  const getConfidenceScore = useCallback(async (text: string, contentType: string): Promise<number> => {
-    try {
-      // Simply return the confidence score from the stub service
-      return AIServiceStub.getConfidenceScore(contentType);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err : new Error('Failed to get confidence score');
-      setError(errorMessage);
-      return 60; // Default fallback score
-    }
-  }, []);
+  // Mock confidence score calculation based on content type
+  const getConfidenceScore = (contentType: string): number => {
+    const scoreMap: Record<string, number> = {
+      'writing': 0.85,
+      'speaking': 0.78,
+      'listening': 0.92,
+      'multiple-choice': 0.95,
+      'flashcards': 0.89
+    };
+    
+    return scoreMap[contentType] || 0.7; // Default to 0.7 if content type not found
+  };
 
-  // Classify text content
-  const classifyText = useCallback(async (text: string): Promise<any> => {
-    try {
-      setIsProcessing(true);
-      setError(null);
-      
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use the stub service for classification
-      const classifications = await AIServiceStub.classifyText(text);
-      
-      setIsProcessing(false);
-      return {
-        contentType: 'writing', // Default content type
-        confidence: 0.75,
-        classifications
-      };
-    } catch (err) {
-      setIsProcessing(false);
-      const errorMessage = err instanceof Error ? err : new Error('Failed to classify text');
-      setError(errorMessage);
-      throw errorMessage;
-    }
-  }, [createAbortController]);
+  // Mock method to classify text
+  const classifyText = async (text: string): Promise<any[]> => {
+    return [
+      { label: 'positive', score: 0.75 },
+      { label: 'neutral', score: 0.20 },
+      { label: 'negative', score: 0.05 }
+    ];
+  };
 
-  // Generate flashcards
-  const generateFlashcards = useCallback(async (
-    topic: string, 
+  // Mock method for flashcard generation
+  const generateFlashcards = async (
+    content: string, 
     count: number = 5, 
     difficulty: string = 'intermediate'
   ): Promise<any[]> => {
-    try {
-      setIsProcessing(true);
-      setError(null);
-      
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use the stub service
-      const flashcards = await AIServiceStub.generateFlashcards(topic, count, difficulty);
-      
-      setIsProcessing(false);
-      return flashcards;
-    } catch (err) {
-      setIsProcessing(false);
-      const errorMessage = err instanceof Error ? err : new Error('Failed to generate flashcards');
-      setError(errorMessage);
-      throw errorMessage;
+    const flashcards = [];
+    for (let i = 0; i < count; i++) {
+      flashcards.push({
+        id: `card-${i}`,
+        front: `Term ${i+1} from ${content}`,
+        back: `Definition ${i+1} for ${difficulty} level`,
+        level: 0,
+        mastered: false,
+        tags: ['generated', difficulty],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
     }
-  }, [createAbortController]);
+    return flashcards;
+  };
 
-  // Generate questions
-  const generateQuestions = useCallback(async (
-    content: string, 
-    count: number = 5, 
-    type: string = 'multiple-choice'
+  // Mock method for generating questions
+  const generateQuestions = async (
+    content: string,
+    contentType: string,
+    count: number,
+    difficulty: string
   ): Promise<any[]> => {
-    try {
-      setIsProcessing(true);
-      setError(null);
-      
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use the stub service
-      const questions = await AIServiceStub.generateQuestions(content, count, type);
-      
-      setIsProcessing(false);
-      return questions;
-    } catch (err) {
-      setIsProcessing(false);
-      const errorMessage = err instanceof Error ? err : new Error('Failed to generate questions');
-      setError(errorMessage);
-      throw errorMessage;
+    const questions = [];
+    for (let i = 0; i < count; i++) {
+      questions.push({
+        id: `question-${i}`,
+        text: `Question ${i+1} about ${content}?`,
+        options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswer: 'Option A',
+        difficulty,
+        category: contentType,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        tags: [contentType, difficulty],
+        points: 10
+      });
     }
-  }, [createAbortController]);
+    return questions;
+  };
 
-  // Translate text to target language
-  const translateText = useCallback(async (
-    text: string, 
-    targetLang: 'english' | 'italian'
-  ): Promise<string> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use prompt template for translation
-      const sourceLang = targetLang === 'english' ? 'italian' : 'english';
-      const prompt = `Translate the following ${sourceLang} text to ${targetLang}: ${text}`;
-      
-      // Use the generative text API for translation
-      const result = await AIServiceStub.generateText(prompt, { temperature: 0.3 });
-      
-      setIsLoading(false);
-      return result;
-    } catch (err) {
-      setIsLoading(false);
-      const errorMessage = err instanceof Error ? err : new Error('Failed to translate text');
-      setError(errorMessage);
-      throw errorMessage;
-    }
-  }, [createAbortController, generateText]);
+  const loadModel = async (): Promise<void> => {
+    // Mock implementation
+    console.log("Loading AI model...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log("AI model loaded");
+  };
 
-  // Check grammar and provide corrections
-  const checkGrammar = useCallback(async (
-    text: string, 
-    lang: 'english' | 'italian'
-  ): Promise<{text: string, corrections: any[]}> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Create abort controller for this request
-      createAbortController();
-      
-      // Use prompt template for grammar checking
-      const prompt = `Check the grammar of the following ${lang} text and provide corrections: ${text}`;
-      
-      // Use the generative text API for grammar checking
-      const result = await AIServiceStub.generateText(prompt, { temperature: 0.2 });
-      
-      // Parse corrections from the result (simplified mock implementation)
-      const corrections: any[] = [];
-      
-      // Add a few mock corrections
-      if (text.length > 10) {
-        corrections.push({
-          original: text.split(' ')[0],
-          correction: text.split(' ')[0] + ' (corrected)',
-          position: 0
-        });
-      }
-      
-      setIsLoading(false);
-      return {
-        text: result,
-        corrections
-      };
-    } catch (err) {
-      setIsLoading(false);
-      const errorMessage = err instanceof Error ? err : new Error('Failed to check grammar');
-      setError(errorMessage);
-      throw errorMessage;
-    }
-  }, [createAbortController, generateText]);
-
-  // Load model
-  const loadModel = useCallback(async (modelName: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setStatus(`Loading model: ${modelName}...`);
-      
-      // Simulate model loading
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setIsModelLoaded(true);
-      setStatus('Model loaded successfully');
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      setIsLoading(false);
-      setStatus('Error loading model');
-      const errorMessage = err instanceof Error ? err : new Error('Failed to load model');
-      setError(errorMessage);
-      return false;
-    }
-  }, []);
-
-  // Abort ongoing requests
-  const abort = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsLoading(false);
-      setIsProcessing(false);
-    }
-    
-    // Also abort all requests in the service
-    AIServiceStub.abortAllRequests();
-  }, []);
-
+  // Return the simplified API
   return {
-    generateText,
-    getConfidenceScore,
     isLoading,
     error,
+    result,
+    generateText,
     abort,
-    generateFlashcards,
-    isProcessing,
-    classifyText,
-    isModelLoaded,
-    status,
+    status: 'ready' as AIStatus,
+    isModelLoaded: true,
     loadModel,
     generateQuestions,
-    translateText,
-    checkGrammar
+    isProcessing: isLoading,
+    generateFlashcards,
+    classifyText,
+    getConfidenceScore
   };
-};
-
-export default useAISimplified;
+}

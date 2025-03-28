@@ -30,7 +30,7 @@ export interface ConfidenceIndicatorProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   indicatorClassName?: string;
-  contentType?: 'writing' | 'speaking' | 'listening' | 'multiple-choice' | 'flashcards';
+  contentType?: 'flashcards' | 'listening' | 'writing' | 'speaking' | 'multiple-choice' | 'unknown';
 }
 
 // Fix Flashcard interface to support both old and new properties
@@ -42,7 +42,7 @@ export interface Flashcard {
   english: string; // Required per error message
   examples?: string[];
   notes?: string;
-  tags?: string[]; // Changed to optional based on errors
+  tags: string[]; // Required based on errors
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   lastReviewed?: Date;
   nextReviewDate?: Date;
@@ -199,7 +199,7 @@ export interface AIPreferences {
 export interface LevelBadgeProps {
   level?: number;
   showInfo?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | string;
 }
 
 // Define AISetupWizardProps
@@ -236,7 +236,7 @@ export interface Toast {
 
 // Add missing ProtectedRouteProps
 export interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   allowedRoles?: string[];
   requireAdmin?: boolean; // Added for compatibility
 }
@@ -344,8 +344,9 @@ export interface MultipleChoiceQuestion {
   question: string;
   options: string[];
   correctOption: string;
+  correctAnswer?: string; // Added for compatibility
   explanation?: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'Beginner' | 'Intermediate' | 'Advanced';
   category?: string;
   tags?: string[];
   text?: string; // Added for compatibility
@@ -375,13 +376,13 @@ export interface UseAIReturn {
 export interface License {
   id: string;
   name: string;
-  type: "university" | "k12" | "language-school" | "corporate";
+  type: "university" | "k12" | "language-school" | "corporate" | string;
   plan: string;
   seats: number;
   usedSeats: number;
   startDate: string;
   endDate: string;
-  status: "active" | "suspended" | "pending" | "expired" | "trial";
+  status: "active" | "suspended" | "pending" | "expired" | "trial" | string;
   contactName: string;
   contactEmail: string;
   customization: {
@@ -390,7 +391,7 @@ export interface License {
       primary: string;
       secondary: string;
     };
-    domain: string;
+    domain?: string;
   };
   value: number;
   renewalStatus: string;
@@ -400,10 +401,16 @@ export interface License {
 // Define AdUnit and related types
 export interface AdSettings {
   enabled: boolean;
-  defaultNetwork: string;
-  frequencyCap: number;
-  showToPremiumUsers: boolean;
-  blockList: string[];
+  defaultNetwork?: string;
+  frequencyCap?: number;
+  showToPremiumUsers?: boolean;
+  blockList?: string[];
+  enableAds?: boolean; // For backward compatibility
+  refreshInterval?: number;
+  placement?: string[]; // For compatibility
+  frequency?: number;  // For compatibility
+  userGroupTargeting?: string[]; // For compatibility
+  networks?: string[]; // For compatibility with existing code
 }
 
 export interface AdUnit {
@@ -419,5 +426,56 @@ export interface AdUnit {
   lastUpdated: Date;
   content: string;
   targetUrl: string;
-  impression: number;
+  impression?: number;
+}
+
+// Adding missing components for import errors
+export type ContentType = 'flashcards' | 'multiple-choice' | 'listening' | 'writing' | 'speaking' | 'pdf' | string;
+
+// Email Settings interface
+export interface EmailSettings {
+  provider: string;
+  fromEmail: string;
+  fromName: string;
+  templates: Record<string, any>;
+  config?: any;
+  temporaryInboxDuration?: any;
+}
+
+// QuestionService interfaces
+export interface QuestionService {
+  getQuestions: (filter?: any) => Promise<Question[]>;
+  getQuestionSets?: (filter?: any) => Promise<QuestionSet[]>;
+  getQuestionAttempts?: (userId: string) => Promise<any[]>;
+  getQuizAttempts?: (userId: string) => Promise<any[]>;
+  createQuestion: (question: Partial<Question>) => Promise<Question>;
+  createQuestionSet?: (questionSet: Partial<QuestionSet>) => Promise<QuestionSet>;
+  updateQuestion: (id: string, question: Partial<Question>) => Promise<Question>;
+  updateQuestionSet?: (id: string, questionSet: Partial<QuestionSet>) => Promise<QuestionSet>;
+  deleteQuestion: (id: string) => Promise<boolean>;
+  deleteQuestionSet?: (id: string) => Promise<boolean>;
+  saveQuizAttempt?: (attempt: any) => Promise<any>;
+}
+
+// For Email Settings data handling
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  variables: string[];
+}
+
+// Weekly Challenge interface
+export interface WeeklyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  goal: number;
+  xpReward: number;
+  startDate: Date;
+  endDate: Date;
+  currentProgress: number;
+  completed: boolean;
+  completedAt: Date;
 }

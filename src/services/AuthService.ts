@@ -139,6 +139,54 @@ export class AuthService implements IAuthService {
     }
   };
   
+  // New methods to match interface
+  getEmailSettings = async (): Promise<any> => {
+    try {
+      return await API.handleRequest<any>("/email/settings", "GET");
+    } catch (error) {
+      console.error("Get email settings error:", error);
+      throw this.formatError(error, "Failed to fetch email settings");
+    }
+  };
+
+  updateEmailSettings = async (settings: any): Promise<void> => {
+    try {
+      return await API.handleRequest<void>("/email/settings", "PUT", settings);
+    } catch (error) {
+      console.error("Update email settings error:", error);
+      throw this.formatError(error, "Failed to update email settings");
+    }
+  };
+
+  getSystemLogs = async (): Promise<any[]> => {
+    try {
+      const response = await API.handleRequest<{logs: any[]}>("/system/logs", "GET");
+      return response.logs || [];
+    } catch (error) {
+      console.error("Get system logs error:", error);
+      throw this.formatError(error, "Failed to fetch system logs");
+    }
+  };
+
+  updateSystemLog = async (id: string, data: any): Promise<void> => {
+    try {
+      return await API.handleRequest<void>(`/system/logs/${id}`, "PUT", data);
+    } catch (error) {
+      console.error("Update system log error:", error);
+      throw this.formatError(error, "Failed to update system log");
+    }
+  };
+
+  addSystemLog = (action: string, details: string, level: string = "info"): void => {
+    // For client-side logging, we'll just log to console
+    // In a real implementation, this might queue logs to be sent to the server
+    console.log(`[${level.toUpperCase()}] ${action}: ${details}`);
+    
+    // In a real implementation, we might do something like:
+    // this.systemLogQueue.push({ action, details, level, timestamp: new Date() });
+    // this.processPendingLogs();
+  };
+  
   private formatError(error: any, defaultMessage: string): ServiceError {
     // Return a standardized error format
     return {
@@ -206,6 +254,26 @@ export const resendVerificationEmail = async (email: string): Promise<boolean> =
 
 export const socialLogin = async (provider: string): Promise<boolean> => {
   return new AuthService().socialLogin(provider);
+};
+
+export const getEmailSettings = async (): Promise<any> => {
+  return new AuthService().getEmailSettings();
+};
+
+export const updateEmailSettings = async (settings: any): Promise<void> => {
+  return new AuthService().updateEmailSettings(settings);
+};
+
+export const getSystemLogs = async (): Promise<any[]> => {
+  return new AuthService().getSystemLogs();
+};
+
+export const updateSystemLog = async (id: string, data: any): Promise<void> => {
+  return new AuthService().updateSystemLog(id, data);
+};
+
+export const addSystemLog = (action: string, details: string, level: string = "info"): void => {
+  return new AuthService().addSystemLog(action, details, level);
 };
 
 // Create a default export

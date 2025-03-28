@@ -1,119 +1,114 @@
 
-import React, { createContext, useContext, useState } from 'react';
-import { Notification, NotificationsContextType } from '@/types/notification';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Notification, NotificationType } from '@/types/notification';
 
-// Initial state
-const initialState: { notifications: Notification[] } = {
-  notifications: []
-};
+export { Notification }; // Re-export for component imports
 
-// Create the context
+// Define the context interface
+interface NotificationsContextType {
+  notifications: Notification[];
+  addNotification: (notification: Notification) => string;
+  removeNotification: (id: string) => void;
+  markAsRead: (id: string) => void;
+  clearAll: () => void;
+  dismissAll: () => void; // Alias for clearAll
+  unreadCount: number;
+  markAllAsRead: () => void;
+  dismissNotification: (id: string) => void; // Alias for removeNotification
+  dismissAllNotifications: () => void; // Alias for clearAll
+  getFileProcessingNotifications: () => Notification[];
+}
+
+// Create the context with a default value
 const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
-  unreadCount: 0,
-  addNotification: () => '',
+  addNotification: () => "",
   removeNotification: () => {},
-  dismissNotification: () => {}, // Added
   markAsRead: () => {},
-  markAllAsRead: () => {}, // Added
   clearAll: () => {},
   dismissAll: () => {}, // Alias for clearAll
+  unreadCount: 0,
+  markAllAsRead: () => {},
+  dismissNotification: () => {}, // Alias for removeNotification 
   dismissAllNotifications: () => {}, // Alias for clearAll
-  getFileProcessingNotifications: () => [] // Added
+  getFileProcessingNotifications: () => [],
 });
 
-// Provider component
+// Create a hook for easy context usage
+export const useNotifications = () => useContext(NotificationsContext);
+
+// Create the provider component
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState(initialState);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Calculate unread count
-  const unreadCount = state.notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
 
-  // Add a new notification
-  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
-    const id = `notification-${Date.now()}`;
-    const newNotification: Notification = {
+  // Add a notification
+  const addNotification = useCallback((notification: Notification) => {
+    const id = notification.id || Math.random().toString(36).substring(2, 11);
+    const newNotification = {
       ...notification,
       id,
-      createdAt: new Date(),
-      timestamp: new Date(), // For compatibility
-      read: false
+      createdAt: notification.createdAt || new Date(),
+      read: notification.read || false,
     };
 
-    setState(prevState => ({
-      ...prevState,
-      notifications: [newNotification, ...prevState.notifications]
-    }));
-
+    setNotifications((prev) => [newNotification, ...prev]);
     return id;
-  };
+  }, []);
 
   // Remove a notification
-  const removeNotification = (id: string) => {
-    setState(prevState => ({
-      ...prevState,
-      notifications: prevState.notifications.filter(n => n.id !== id)
-    }));
-  };
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+  }, []);
 
   // Mark a notification as read
-  const markAsRead = (id: string) => {
-    setState(prevState => ({
-      ...prevState,
-      notifications: prevState.notifications.map(n =>
-        n.id === id ? { ...n, read: true } : n
+  const markAsRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
       )
-    }));
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setState(prevState => ({
-      ...prevState,
-      notifications: prevState.notifications.map(n => ({ ...n, read: true }))
-    }));
-  };
+    );
+  }, []);
 
   // Clear all notifications
-  const clearAll = () => {
-    setState(prevState => ({
-      ...prevState,
-      notifications: []
-    }));
-  };
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, read: true }))
+    );
+  }, []);
 
   // Get file processing notifications
-  const getFileProcessingNotifications = () => {
-    return state.notifications.filter(n => n.type === 'file-processing');
+  const getFileProcessingNotifications = useCallback(() => {
+    return notifications.filter((notification) => notification.type === 'file-processing');
+  }, [notifications]);
+
+  // Create the context value
+  const value = {
+    notifications,
+    addNotification,
+    removeNotification,
+    markAsRead,
+    clearAll,
+    dismissAll: clearAll, // Alias for clearAll
+    unreadCount,
+    markAllAsRead,
+    dismissNotification: removeNotification, // Alias for removeNotification
+    dismissAllNotifications: clearAll, // Alias for clearAll
+    getFileProcessingNotifications,
   };
 
-  // Aliases for consistency
-  const dismissNotification = removeNotification;
-  const dismissAll = clearAll;
-  const dismissAllNotifications = clearAll;
-
   return (
-    <NotificationsContext.Provider
-      value={{
-        notifications: state.notifications,
-        addNotification,
-        removeNotification,
-        dismissNotification,
-        markAsRead,
-        markAllAsRead,
-        clearAll,
-        dismissAll,
-        dismissAllNotifications,
-        unreadCount,
-        getFileProcessingNotifications
-      }}
-    >
+    <NotificationsContext.Provider value={value}>
       {children}
     </NotificationsContext.Provider>
   );
 };
-
-// Custom hook for accessing notifications context
-export const useNotifications = () => useContext(NotificationsContext);
 
 export default NotificationsContext;

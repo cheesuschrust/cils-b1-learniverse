@@ -44,6 +44,13 @@ export interface User {
   preferences?: UserPreferences;
   preferredLanguage?: 'english' | 'italian' | 'both';
   preferred_language?: 'english' | 'italian' | 'both';
+  language?: 'english' | 'italian' | 'both'; // For backward compatibility
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+    [key: string]: any;
+  };
   dailyQuestionCounts?: {
     flashcards: number;
     multipleChoice: number;
@@ -51,12 +58,6 @@ export interface User {
     writing: number;
     speaking: number;
     [key: string]: number;
-  };
-  metrics?: {
-    totalQuestions: number;
-    correctAnswers: number;
-    streak: number;
-    [key: string]: any;
   };
 }
 
@@ -77,7 +78,7 @@ export function getUserDisplayName(user: User): string | undefined {
 }
 
 export function getUserPreferredLanguage(user: User): string | undefined {
-  return user.preferredLanguage || user.preferred_language;
+  return user.preferredLanguage || user.preferred_language || user.language;
 }
 
 export function getUserCreatedDate(user: User): Date | undefined {
