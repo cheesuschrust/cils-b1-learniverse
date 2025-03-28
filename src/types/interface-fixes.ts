@@ -40,7 +40,7 @@ export interface MultipleChoiceQuestion {
   id: string;
   question: string;
   options: string[];
-  correctOption: string;
+  correctAnswer: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   category: string;
   explanation?: string;
@@ -56,4 +56,57 @@ export interface MultipleChoiceSet {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ImportFormat {
+  format: 'csv' | 'json' | 'txt';
+  hasHeaders?: boolean;
+  delimiter?: string;
+  columns?: {
+    front?: string | number;
+    back?: string | number;
+    category?: string | number;
+    tags?: string | number;
+  };
+}
+
+export interface SupportTicketExtension {
+  assignee?: string;
+  priority?: 'low' | 'medium' | 'high';
+  status?: 'open' | 'in-progress' | 'resolved' | 'closed';
+}
+
+export interface ProgressProps {
+  value: number;
+  max?: number;
+  size?: 'sm' | 'md' | 'lg';
+  showValue?: boolean;
+  label?: string;
+  className?: string;
+}
+
+export interface AnalyticsReportProps {
+  userId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  includeActivity?: boolean;
+  includeProgress?: boolean;
+  includeStats?: boolean;
+}
+
+export interface ReviewSchedule {
+  today: number;
+  tomorrow: number;
+  nextWeek: number;
+  later: number;
+  dueByDate: Record<string, number>;
+}
+
+export interface ReviewPerformance {
+  accuracy: number;
+  retention: number;
+  speed: number;
+  consistency: number;
+  improvement: number;
+  totalReviewed: number;
 }

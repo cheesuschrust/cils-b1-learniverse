@@ -1,3 +1,4 @@
+
 // Flashcard related types
 
 export interface Flashcard {
@@ -8,7 +9,7 @@ export interface Flashcard {
   level: number;
   
   // Review-related properties
-  nextReview: Date;
+  nextReview?: Date;
   lastReviewed?: Date;
   dueDate?: Date;
   

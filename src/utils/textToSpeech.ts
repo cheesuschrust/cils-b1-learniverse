@@ -6,6 +6,15 @@ export interface VoicePreference {
   voicePitch: number;
 }
 
+export interface TextToSpeechOptions {
+  language: 'en' | 'it';
+  rate?: number;
+  pitch?: number;
+  voiceURI?: string;
+}
+
+export type SpeechState = 'idle' | 'speaking' | 'paused' | 'error';
+
 /**
  * Checks if speech synthesis is supported in the browser
  */
@@ -41,50 +50,11 @@ export const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
 };
 
 /**
- * Get a list of English voices
+ * Text to speech function
  */
-export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  const voices = await getAvailableVoices();
-  return voices.filter(voice => 
-    voice.lang.startsWith('en') || voice.name.toLowerCase().includes('english')
-  );
-};
-
-/**
- * Get a list of Italian voices
- */
-export const getItalianVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  const voices = await getAvailableVoices();
-  return voices.filter(voice => 
-    voice.lang.startsWith('it') || voice.name.toLowerCase().includes('italian')
-  );
-};
-
-/**
- * Get default voice preferences based on available voices
- */
-export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => {
-  const englishVoices = await getEnglishVoices();
-  const italianVoices = await getItalianVoices();
-  
-  return {
-    englishVoiceURI: englishVoices.length > 0 ? englishVoices[0].voiceURI : '',
-    italianVoiceURI: italianVoices.length > 0 ? italianVoices[0].voiceURI : '',
-    voiceRate: 1.0,
-    voicePitch: 1.0
-  };
-};
-
-/**
- * Speaks the provided text using the browser's speech synthesis API
- * @param text Text to speak
- * @param language Language code ('en' or 'it')
- * @param preferences Voice preferences
- */
-export const speak = async (
-  text: string, 
-  language: 'en' | 'it',
-  preferences: VoicePreference
+export const textToSpeech = async (
+  text: string,
+  options: TextToSpeechOptions
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
@@ -98,22 +68,20 @@ export const speak = async (
       const utterance = new SpeechSynthesisUtterance(text);
       
       // Set language
-      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
+      utterance.lang = options.language === 'en' ? 'en-US' : 'it-IT';
       
-      // Set voice based on language
-      const voices = window.speechSynthesis.getVoices();
-      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
-      const voice = voices.find(v => v.voiceURI === voiceURI);
+      // Set rate and pitch if provided
+      if (options.rate) utterance.rate = options.rate;
+      if (options.pitch) utterance.pitch = options.pitch;
       
-      if (voice) {
-        utterance.voice = voice;
-      } else {
-        console.warn(`Voice with URI "${voiceURI}" not found. Using default voice.`);
+      // Set voice if voiceURI is provided
+      if (options.voiceURI) {
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find(v => v.voiceURI === options.voiceURI);
+        if (voice) {
+          utterance.voice = voice;
+        }
       }
-      
-      // Set rate and pitch
-      utterance.rate = preferences.voiceRate;
-      utterance.pitch = preferences.voicePitch;
       
       // Set event handlers
       utterance.onend = () => resolve();
@@ -132,38 +100,75 @@ export const speak = async (
 };
 
 /**
- * Stops all speech synthesis
+ * Get English voices
  */
+export const getEnglishVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAvailableVoices();
+  return voices.filter(voice => 
+    voice.lang.startsWith('en') || voice.name.toLowerCase().includes('english')
+  );
+};
+
+/**
+ * Get Italian voices
+ */
+export const getItalianVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  const voices = await getAvailableVoices();
+  return voices.filter(voice => 
+    voice.lang.startsWith('it') || voice.name.toLowerCase().includes('italian')
+  );
+};
+
+/**
+ * Get default voice preferences
+ */
+export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => {
+  const englishVoices = await getEnglishVoices();
+  const italianVoices = await getItalianVoices();
+  
+  return {
+    englishVoiceURI: englishVoices.length > 0 ? englishVoices[0].voiceURI : '',
+    italianVoiceURI: italianVoices.length > 0 ? italianVoices[0].voiceURI : '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  };
+};
+
+// Adding the previously existing functions to maintain backward compatibility
+export const speak = async (
+  text: string, 
+  language: 'en' | 'it',
+  preferences: VoicePreference
+): Promise<void> => {
+  return textToSpeech(text, {
+    language,
+    rate: preferences.voiceRate,
+    pitch: preferences.voicePitch,
+    voiceURI: language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI
+  });
+};
+
 export const stopSpeaking = (): void => {
   if (isSpeechSupported()) {
     window.speechSynthesis.cancel();
   }
 };
 
-/**
- * Pauses speech synthesis
- */
 export const pauseSpeaking = (): void => {
   if (isSpeechSupported()) {
     window.speechSynthesis.pause();
   }
 };
 
-/**
- * Resumes speech synthesis
- */
 export const resumeSpeaking = (): void => {
   if (isSpeechSupported()) {
     window.speechSynthesis.resume();
   }
 };
 
-// Add utility to export all available voices
-export const getAllVoices = async (): Promise<SpeechSynthesisVoice[]> => {
-  return await getAvailableVoices();
-};
+// Adding aliases for backward compatibility
+export const getAllVoices = getAvailableVoices;
 
-// Add utility to export voice by URI
 export const getVoiceByURI = async (voiceURI: string): Promise<SpeechSynthesisVoice | undefined> => {
   const voices = await getAvailableVoices();
   return voices.find(v => v.voiceURI === voiceURI);

@@ -1,8 +1,8 @@
 
 export interface Flashcard {
   id: string;
-  italian: string;
-  english: string;
+  front: string;
+  back: string;
   mastered: boolean;
   level: number;
   dueDate: Date;
@@ -12,6 +12,15 @@ export interface Flashcard {
   category?: string;
   imageUrl?: string;
   audioUrl?: string;
+  
+  // Legacy compatibility
+  italian?: string;
+  english?: string;
+  
+  // Required tags
+  tags: string[];
+  nextReview?: Date;
+  updatedAt: Date;
 }
 
 export interface FlashcardSet {

@@ -21,12 +21,10 @@ export interface User {
   username?: string;
   firstName?: string; 
   lastName?: string;
-  first_name?: string; // Including snake case properties for backward compatibility
-  last_name?: string;
   displayName?: string;
   name?: string;
   
-  // Profile image properties
+  // Profile image properties - using photoURL as the standard
   photoURL?: string;
   profileImage?: string;
   avatar?: string;
@@ -36,15 +34,11 @@ export interface User {
   isVerified?: boolean;
   isAdmin?: boolean;
   
-  // Date properties with both formats
+  // Date properties
   createdAt?: Date;
-  created_at?: Date; // Snake case property for backward compatibility
-  updatedAt: Date; // Required property
-  updated_at?: Date; // Snake case property for backward compatibility
+  updatedAt: Date;
   lastLogin?: Date;
-  last_login?: Date; // Snake case property for backward compatibility 
   lastActive?: Date;
-  last_active?: Date; // Snake case property for backward compatibility
   
   // Status and subscription
   status?: 'active' | 'inactive' | 'suspended';
@@ -57,10 +51,9 @@ export interface User {
   // User preferences
   preferences?: UserPreferences;
   
-  // Language preferences with multiple formats
+  // Language preferences
   preferredLanguage?: 'english' | 'italian' | 'both';
-  preferred_language?: 'english' | 'italian' | 'both';
-  language?: 'english' | 'italian' | 'both' | 'en' | 'it'; // For backward compatibility
+  language?: 'english' | 'italian' | 'both' | 'en' | 'it';
   
   // User metrics
   metrics?: {
@@ -81,13 +74,13 @@ export interface User {
   };
 }
 
-// Helper functions for backward compatibility
+// Helper functions for user properties
 export function getUserFirstName(user: User): string | undefined {
-  return user.firstName || user.first_name;
+  return user.firstName;
 }
 
 export function getUserLastName(user: User): string | undefined {
-  return user.lastName || user.last_name;
+  return user.lastName;
 }
 
 export function getUserDisplayName(user: User): string | undefined {
@@ -99,20 +92,19 @@ export function getUserDisplayName(user: User): string | undefined {
 
 export function getUserPreferredLanguage(user: User): string | undefined {
   if (user.preferredLanguage) return user.preferredLanguage;
-  if (user.preferred_language) return user.preferred_language;
   if (user.language === 'en') return 'english';
   if (user.language === 'it') return 'italian';
   return user.language;
 }
 
 export function getUserCreatedDate(user: User): Date | undefined {
-  return user.createdAt || user.created_at;
+  return user.createdAt;
 }
 
 export function getUserLastLogin(user: User): Date | undefined {
-  return user.lastLogin || user.last_login;
+  return user.lastLogin;
 }
 
 export function getUserLastActive(user: User): Date | undefined {
-  return user.lastActive || user.last_active;
+  return user.lastActive;
 }
