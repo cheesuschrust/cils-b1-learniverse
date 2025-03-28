@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,63 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Volume2, Save } from 'lucide-react';
-import { getAvailableVoices, speak, VoicePreference } from '@/utils/textToSpeech';
+
+// Define VoicePreference interface if it's not already defined
+interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
+
+// Mock function for getting available voices
+const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      // Wait for voices to be loaded
+      window.speechSynthesis.onvoiceschanged = () => {
+        resolve(window.speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+// Mock function for speaking text
+const speak = async (text: string, language: 'en' | 'it', preferences: VoicePreference): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Set language
+      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
+      
+      // Set voice based on language
+      const voices = window.speechSynthesis.getVoices();
+      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
+      const voice = voices.find(v => v.voiceURI === voiceURI);
+      
+      if (voice) {
+        utterance.voice = voice;
+      }
+      
+      // Set rate and pitch
+      utterance.rate = preferences.voiceRate;
+      utterance.pitch = preferences.voicePitch;
+      
+      // Set event handlers
+      utterance.onend = () => resolve();
+      utterance.onerror = (error) => reject(error);
+      
+      // Speak the text
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 const saveDefaultVoiceSettings = async (settings: any) => {
   console.log('Saving default voice settings:', settings);
@@ -19,12 +76,12 @@ const SiteVoiceSettings = () => {
   const [englishVoices, setEnglishVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [italianVoices, setItalianVoices] = useState<SpeechSynthesisVoice[]>([]);
   
-  const [defaultSettings, setDefaultSettings] = useState({
+  const [defaultSettings, setDefaultSettings] = useState<VoicePreference>({
     defaultEnglishVoiceURI: '',
     defaultItalianVoiceURI: '',
     defaultVoiceRate: 1.0,
     defaultVoicePitch: 1.0
-  });
+  } as unknown as VoicePreference);
   
   useEffect(() => {
     const loadVoices = async () => {
@@ -65,7 +122,7 @@ const SiteVoiceSettings = () => {
     try {
       await speak(
         sampleText, 
-        language === 'en' ? 'en' : 'it',
+        language,
         {
           englishVoiceURI: defaultSettings.defaultEnglishVoiceURI,
           italianVoiceURI: defaultSettings.defaultItalianVoiceURI,

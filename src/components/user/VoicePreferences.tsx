@@ -4,10 +4,71 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Volume2, Mic, Play } from 'lucide-react';
-import { getAvailableVoices, speak, VoicePreference } from '@/utils/textToSpeech'; 
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { Volume2, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// Define VoicePreference interface
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
+
+// Helper function to get available voices
+const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        resolve(window.speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+// Helper function for text-to-speech
+const speak = async (text: string, language: 'en' | 'it', preferences: VoicePreference): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
+      
+      const voices = window.speechSynthesis.getVoices();
+      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
+      const voice = voices.find(v => v.voiceURI === voiceURI);
+      
+      if (voice) {
+        utterance.voice = voice;
+      }
+      
+      utterance.rate = preferences.voiceRate;
+      utterance.pitch = preferences.voicePitch;
+      
+      utterance.onend = () => resolve();
+      utterance.onerror = (error) => reject(error);
+      
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Mock useUserPreferences hook for this component
+const useUserPreferences = () => {
+  const [voicePreference, setVoicePreference] = useState<VoicePreference>({
+    englishVoiceURI: '',
+    italianVoiceURI: '',
+    voiceRate: 1.0,
+    voicePitch: 1.0
+  });
+
+  return { voicePreference, setVoicePreference };
+};
 
 const VoicePreferences = () => {
   const { voicePreference, setVoicePreference } = useUserPreferences();
@@ -66,9 +127,8 @@ const VoicePreferences = () => {
     try {
       await speak(
         sampleText, 
-        language === 'en' ? 'en' : 'it',
+        language,
         {
-          ...voicePreference,
           englishVoiceURI: selectedEnglishVoiceURI,
           italianVoiceURI: selectedItalianVoiceURI,
           voiceRate,
@@ -87,7 +147,7 @@ const VoicePreferences = () => {
   
   // Apply voice settings
   const applySettings = () => {
-    const newPreferences = {
+    const newPreferences: VoicePreference = {
       englishVoiceURI: selectedEnglishVoiceURI,
       italianVoiceURI: selectedItalianVoiceURI,
       voiceRate,

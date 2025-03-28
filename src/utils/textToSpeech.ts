@@ -1,105 +1,87 @@
 
-/**
- * Returns a list of available speech synthesis voices on the current device
- * @returns An array of SpeechSynthesisVoice objects
- */
-export function getAvailableVoices(): SpeechSynthesisVoice[] {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    return window.speechSynthesis.getVoices();
-  }
-  return [];
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
 }
 
 /**
- * Speaks the provided text using the specified voice
- * @param text The text to be spoken
- * @param voiceName Optional name of the voice to use
- * @returns Promise that resolves when speech is completed or rejects on error
+ * Gets available voices from the browser's speech synthesis API
  */
-export function speak(text: string, voiceName?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      reject(new Error('Speech synthesis not supported'));
-      return;
+export const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        resolve(window.speechSynthesis.getVoices());
+      };
     }
+  });
+};
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    if (voiceName) {
+/**
+ * Speaks the provided text using the browser's speech synthesis API
+ * @param text Text to speak
+ * @param language Language code ('en' or 'it')
+ * @param preferences Voice preferences
+ */
+export const speak = async (
+  text: string, 
+  language: 'en' | 'it',
+  preferences: VoicePreference
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Set language
+      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
+      
+      // Set voice based on language
       const voices = window.speechSynthesis.getVoices();
-      const voice = voices.find(v => v.name === voiceName);
+      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
+      const voice = voices.find(v => v.voiceURI === voiceURI);
+      
       if (voice) {
         utterance.voice = voice;
       }
+      
+      // Set rate and pitch
+      utterance.rate = preferences.voiceRate;
+      utterance.pitch = preferences.voicePitch;
+      
+      // Set event handlers
+      utterance.onend = () => resolve();
+      utterance.onerror = (error) => reject(error);
+      
+      // Speak the text
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      reject(error);
     }
-
-    utterance.onend = () => resolve();
-    utterance.onerror = (event) => reject(new Error(`Speech synthesis error: ${event.error}`));
-
-    window.speechSynthesis.speak(utterance);
   });
-}
+};
 
 /**
- * Stops any ongoing speech synthesis
+ * Stops all speech synthesis
  */
-export function stopSpeaking(): void {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
-}
+export const stopSpeaking = (): void => {
+  window.speechSynthesis.cancel();
+};
 
 /**
- * Checks if speech synthesis is supported in the current browser
- * @returns Boolean indicating if speech synthesis is supported
+ * Pauses speech synthesis
  */
-export function isSpeechSupported(): boolean {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
-}
+export const pauseSpeaking = (): void => {
+  window.speechSynthesis.pause();
+};
 
 /**
- * Get a list of available voices
- * Alias for getAvailableVoices for backwards compatibility
+ * Resumes speech synthesis
  */
-export function getVoices(): SpeechSynthesisVoice[] {
-  return getAvailableVoices();
-}
-
-/**
- * Voice preference interface
- */
-export interface VoicePreference {
-  enabled: boolean;
-  rate: number;
-  pitch: number;
-  volume: number;
-  voice: string;
-  language: string;
-}
-
-/**
- * Get default voice preferences
- */
-export function getDefaultVoicePreferences(): Record<string, VoicePreference> {
-  return {
-    english: {
-      enabled: true,
-      rate: 1.0,
-      pitch: 1.0,
-      volume: 1.0,
-      voice: '',
-      language: 'en-US'
-    },
-    italian: {
-      enabled: true,
-      rate: 1.0,
-      pitch: 1.0,
-      volume: 1.0,
-      voice: '',
-      language: 'it-IT'
-    }
-  };
-}
-
-// Export getAvailableVoices as default for backward compatibility
-export default getAvailableVoices;
+export const resumeSpeaking = (): void => {
+  window.speechSynthesis.resume();
+};
