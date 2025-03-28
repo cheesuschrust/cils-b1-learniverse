@@ -180,3 +180,30 @@ export const normalizeFlashcard = (card: any): Flashcard => {
   
   return flashcard;
 };
+
+// Additional function to convert legacy flashcard objects to the new format
+export function convertLegacyFlashcard(legacy: any): Flashcard {
+  // Handle legacy flashcards that might only have italian/english properties
+  const flashcard: Flashcard = {
+    id: legacy.id,
+    front: legacy.italian || legacy.front || '',
+    back: legacy.english || legacy.back || '',
+    level: legacy.level || 0,
+    tags: legacy.tags || [],
+    createdAt: legacy.createdAt ? new Date(legacy.createdAt) : new Date(),
+    updatedAt: legacy.updatedAt ? new Date(legacy.updatedAt) : new Date(),
+  };
+  
+  // Copy over all other properties
+  Object.keys(legacy).forEach(key => {
+    if (!['id', 'front', 'back'].includes(key)) {
+      (flashcard as any)[key] = legacy[key];
+    }
+  });
+  
+  // Set legacy mappings for compatibility
+  flashcard.italian = legacy.italian;
+  flashcard.english = legacy.english;
+  
+  return flashcard;
+}

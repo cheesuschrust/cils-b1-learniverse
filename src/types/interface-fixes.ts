@@ -68,6 +68,9 @@ export interface ImportFormat {
     category?: string | number;
     tags?: string | number;
   };
+  // Legacy support
+  type?: 'csv' | 'json' | 'txt';
+  fieldMap?: Record<string, string | number>;
 }
 
 export interface SupportTicketExtension {
@@ -84,6 +87,7 @@ export interface ProgressProps {
   label?: string;
   className?: string;
   indicator?: string; // CSS class for the indicator
+  indicatorClassName?: string; // For backward compatibility
 }
 
 export interface AnalyticsReportProps {
@@ -120,4 +124,16 @@ export interface ReviewPerformance {
   streakDays?: number;
   correctReviews?: number;
   reviewsByCategory?: Record<string, number>;
+}
+
+// Re-export Flashcard type for components that import from interface-fixes
+export { Flashcard } from './flashcard';
+export type { FlashcardSet, FlashcardStats } from './flashcard';
+
+// Voice preference type from textToSpeech
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
 }

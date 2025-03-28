@@ -1,10 +1,6 @@
 
-export interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
-}
+import { User } from '@/types/user';
+import { VoicePreference } from '@/types/interface-fixes';
 
 export interface TextToSpeechOptions {
   language: 'en' | 'it';
@@ -14,11 +10,12 @@ export interface TextToSpeechOptions {
   voice?: string;
 }
 
-export type TextToSpeechState = 'idle' | 'speaking' | 'paused' | 'error';
-export type SpeechState = {
+export interface SpeechState {
   speaking: boolean;
   voices: SpeechSynthesisVoice[];
-};
+}
+
+export type TextToSpeechState = 'idle' | 'speaking' | 'paused' | 'error';
 
 /**
  * Checks if speech synthesis is supported in the browser
@@ -146,7 +143,7 @@ export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => 
   };
 };
 
-// Adding the previously existing functions to maintain backward compatibility
+// Adding legacy functions to maintain backward compatibility
 export const speak = async (
   text: string, 
   language: 'en' | 'it',
