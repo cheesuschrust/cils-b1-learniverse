@@ -130,6 +130,20 @@ export interface ReviewPerformance {
 export type { Flashcard } from './flashcard';
 export type { FlashcardSet, FlashcardStats } from './flashcard';
 
+// Text-to-speech interface
+export interface TextToSpeechOptions {
+  voice?: string;
+  rate?: number;
+  pitch?: number;
+  language?: string;
+}
+
+export interface SpeechState {
+  speaking: boolean;
+  voices: SpeechSynthesisVoice[];
+  currentVoice?: string;
+}
+
 // Voice preference type from textToSpeech
 export interface VoicePreference {
   englishVoiceURI: string;

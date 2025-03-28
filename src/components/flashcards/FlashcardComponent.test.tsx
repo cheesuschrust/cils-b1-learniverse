@@ -7,6 +7,8 @@ import FlashcardComponent from './FlashcardComponent';
 describe('FlashcardComponent', () => {
   const mockCard = {
     id: '1',
+    front: 'Ciao',
+    back: 'Hello',
     italian: 'Ciao',
     english: 'Hello',
     level: 1,

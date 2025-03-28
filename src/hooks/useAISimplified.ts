@@ -181,8 +181,8 @@ export function normalizeFlashcard(card: any): Flashcard {
     createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
     updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
     mastered: card.mastered || false,
-    italian: card.italian,
-    english: card.english
+    italian: card.italian || card.front,
+    english: card.english || card.back
   };
 }
 

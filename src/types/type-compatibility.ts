@@ -1,3 +1,4 @@
+
 // This file provides type compatibility between different type naming conventions
 // across the codebase, reducing the need for type assertions
 
@@ -84,7 +85,8 @@ export const normalizeUser = (user: any): User => {
   if (!user) return null as any;
   
   return {
-    id: user.id,
+    id: user.id || user.uid,
+    uid: user.uid,
     email: user.email,
     firstName: user.firstName || user.first_name,
     lastName: user.lastName || user.last_name,
@@ -107,6 +109,25 @@ export const normalizeUser = (user: any): User => {
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
     }
+  };
+};
+
+// Normalize flashcard data for consistency
+export const normalizeFlashcard = (card: any): Flashcard => {
+  if (!card) return null as any;
+  
+  return {
+    id: card.id || '',
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    level: card.level || 0,
+    tags: card.tags || [],
+    nextReview: card.nextReview || card.dueDate || new Date(),
+    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
+    mastered: card.mastered || false,
+    italian: card.italian,
+    english: card.english
   };
 };
 
@@ -148,11 +169,45 @@ export const normalizeUserRecords = (users: any[]): User[] => {
   return users.map(user => normalizeUser(user));
 };
 
+/**
+ * Normalized field mappings for supporting conversion between naming conventions
+ */
+export function normalizeFields<T extends Record<string, any>>(data: T): T {
+  const mappings = {
+    photo_url: 'photoURL',
+    display_name: 'displayName',
+    first_name: 'firstName',
+    last_name: 'lastName',
+    is_verified: 'isVerified',
+    created_at: 'createdAt',
+    updated_at: 'updatedAt',
+    last_login: 'lastLogin',
+    last_active: 'lastActive',
+    phone_number: 'phoneNumber',
+    preferred_language: 'preferredLanguage'
+  };
+
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const newKey = mappings[key as keyof typeof mappings] || key;
+    return { ...acc, [newKey]: value };
+  }, {} as T);
+}
+
+/**
+ * Convert legacy user object to current User format
+ */
+export function convertLegacyUser(user: any): User {
+  return normalizeUser(user);
+}
+
 export default {
   normalizeUser,
   normalizeUserRecords,
   normalizeDifficulty,
   normalizeLanguage,
   normalizeAIModel,
-  normalizeLicense
+  normalizeLicense,
+  normalizeFlashcard,
+  convertLegacyUser,
+  normalizeFields
 };

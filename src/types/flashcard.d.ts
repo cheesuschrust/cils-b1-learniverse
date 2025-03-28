@@ -5,7 +5,7 @@ export interface Flashcard {
   back: string;
   mastered: boolean;
   level: number;
-  dueDate: Date;
+  dueDate?: Date;
   lastReviewed?: Date;
   createdAt: Date;
   explanation?: string;
@@ -33,6 +33,9 @@ export interface FlashcardSet {
   createdAt: Date;
   updatedAt: Date;
   authorId?: string;
+  creator?: string;
+  isPublic?: boolean;
+  isFavorite?: boolean;
 }
 
 export interface FlashcardStudySession {
@@ -69,4 +72,14 @@ export interface FlashcardProgress {
   lastStudyDate: Date | null;
   averageAccuracy: number;
   totalReviews: number;
+}
+
+export interface FlashcardStats {
+  total: number;
+  mastered: number;
+  learning: number;
+  toReview: number;
+  avgMasteryTime: number;
+  totalReviews: number;
+  correctReviews: number;
 }
