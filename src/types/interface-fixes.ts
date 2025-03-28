@@ -127,7 +127,7 @@ export interface ReviewPerformance {
 }
 
 // Re-export Flashcard type for components that import from interface-fixes
-export { Flashcard } from './flashcard';
+export type { Flashcard } from './flashcard';
 export type { FlashcardSet, FlashcardStats } from './flashcard';
 
 // Voice preference type from textToSpeech

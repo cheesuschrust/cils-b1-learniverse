@@ -1,7 +1,9 @@
 
 // Re-export the simplified AI hook
-import { useAISimplified } from './useAISimplified';
+import useAISimplified from './useAISimplified';
+import { normalizeFlashcard, convertLegacyUser } from './useAISimplified';
 
 // Export the hook with the same interface
 export const useAI = useAISimplified;
+export { normalizeFlashcard, convertLegacyUser };
 export default useAI;

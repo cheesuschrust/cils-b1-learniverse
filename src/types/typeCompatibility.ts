@@ -60,7 +60,15 @@ export function normalizeUserRecords(users: any[]): OriginalUser[] {
   return users.map(user => normalizeUser(user));
 }
 
+/**
+ * Convert legacy user object to current User format
+ */
+export function convertLegacyUser(user: any): OriginalUser {
+  return normalizeUser(user);
+}
+
 export default {
   normalizeUser,
-  normalizeUserRecords
+  normalizeUserRecords,
+  convertLegacyUser
 };

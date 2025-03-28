@@ -1,5 +1,6 @@
 
 import { User } from '@/types/user';
+import { Flashcard } from '@/types/flashcard';
 
 /**
  * Normalizes user object properties to ensure compatibility across the codebase
@@ -43,7 +44,37 @@ export function normalizeUserRecords(users: any[]): User[] {
   return users.map(user => normalizeUser(user));
 }
 
+/**
+ * Normalizes flashcard data to ensure consistency
+ */
+export function normalizeFlashcard(card: any): Flashcard {
+  if (!card) return null as any;
+  
+  return {
+    id: card.id || '',
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    level: card.level || 0,
+    tags: card.tags || [],
+    nextReview: card.nextReview || card.dueDate || new Date(),
+    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
+    mastered: card.mastered || false,
+    italian: card.italian,
+    english: card.english
+  };
+}
+
+/**
+ * Convert legacy user format to current User format
+ */
+export function convertLegacyUser(user: any): User {
+  return normalizeUser(user);
+}
+
 export default {
   normalizeUser,
-  normalizeUserRecords
+  normalizeUserRecords,
+  normalizeFlashcard,
+  convertLegacyUser
 };

@@ -1,6 +1,4 @@
-
 import { User } from '@/types/user';
-import { VoicePreference } from '@/types/interface-fixes';
 
 export interface TextToSpeechOptions {
   language: 'en' | 'it';
@@ -16,6 +14,16 @@ export interface SpeechState {
 }
 
 export type TextToSpeechState = 'idle' | 'speaking' | 'paused' | 'error';
+
+/**
+ * Voice preference settings
+ */
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
 
 /**
  * Checks if speech synthesis is supported in the browser

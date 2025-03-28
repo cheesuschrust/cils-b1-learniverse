@@ -2,6 +2,15 @@
 import { useState, useCallback } from 'react';
 import { AIStatus, UseAIReturn } from '@/types/ai';
 import { useToast } from '@/components/ui/use-toast';
+import { User } from '@/types/user';
+import { Flashcard } from '@/types/flashcard';
+
+// Define options interface for AI operations
+export interface AIOptions {
+  temperature?: number;
+  maxTokens?: number;
+  model?: string;
+}
 
 // This is a simplified version of useAI hook for components that don't need all functionalities
 export default function useAISimplified(): UseAIReturn {
@@ -157,3 +166,43 @@ export default function useAISimplified(): UseAIReturn {
     getConfidenceScore
   };
 }
+
+// Backward compatibility functions for Flashcard normalization
+export function normalizeFlashcard(card: any): Flashcard {
+  if (!card) return null as any;
+  
+  return {
+    id: card.id || '',
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    level: card.level || 0,
+    tags: card.tags || [],
+    nextReview: card.nextReview || card.dueDate || new Date(),
+    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
+    mastered: card.mastered || false,
+    italian: card.italian,
+    english: card.english
+  };
+}
+
+// Backward compatibility function for User normalization
+export function convertLegacyUser(user: any): User {
+  if (!user) return null as any;
+  
+  return {
+    id: user.id || user.uid,
+    uid: user.uid,
+    email: user.email,
+    photoURL: user.photoURL || user.photo_url,
+    displayName: user.displayName || user.display_name,
+    firstName: user.firstName || user.first_name,
+    lastName: user.lastName || user.last_name,
+    createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+    updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
+    role: user.role || 'user'
+  };
+}
+
+// Re-export from useAISimplified for backward compatibility
+export { useAISimplified };
