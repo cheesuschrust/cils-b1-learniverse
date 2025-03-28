@@ -1,5 +1,6 @@
 
-import { User as OriginalUser } from '@/types/user';
+import { User } from '@/types/user';
+import { normalizeUser, normalizeUserRecords, convertLegacyUser, normalizeFields } from '@/types/core';
 
 /**
  * Legacy interface with snake_case field names for backward compatibility
@@ -18,78 +19,13 @@ export interface LegacyUserFields {
   preferred_language?: 'english' | 'italian' | 'both';
 }
 
-/**
- * Normalizes user object properties to ensure compatibility across the codebase
- */
-export function normalizeUser(user: any): OriginalUser {
-  if (!user) return null as any;
-  
-  return {
-    id: user.id || user.uid,
-    email: user.email,
-    firstName: user.firstName || user.first_name,
-    lastName: user.lastName || user.last_name,
-    displayName: user.displayName || user.display_name || user.name,
-    photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
-    role: user.role || 'user',
-    isVerified: user.isVerified || user.is_verified || false,
-    createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-    lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    status: user.status || 'active',
-    subscription: user.subscription || 'free',
-    phoneNumber: user.phoneNumber || user.phone_number,
-    address: user.address,
-    preferences: user.preferences || {},
-    preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-    language: user.language || user.preferredLanguage || user.preferred_language || 'english',
-    metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-    dailyQuestionCounts: user.dailyQuestionCounts || { 
-      flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
-    },
-    uid: user.uid
-  };
-}
-
-/**
- * Normalizes user records, ensuring consistent property naming
- */
-export function normalizeUserRecords(users: any[]): OriginalUser[] {
-  if (!users || !Array.isArray(users)) return [];
-  return users.map(user => normalizeUser(user));
-}
-
-/**
- * Convert legacy user object to current User format
- */
-export function convertLegacyUser(user: any): OriginalUser {
-  return normalizeUser(user);
-}
-
-/**
- * Normalized field mappings for supporting conversion between naming conventions
- */
-export function normalizeFields<T extends Record<string, any>>(data: T): T {
-  const mappings = {
-    photo_url: 'photoURL',
-    display_name: 'displayName',
-    first_name: 'firstName',
-    last_name: 'lastName',
-    is_verified: 'isVerified',
-    created_at: 'createdAt',
-    updated_at: 'updatedAt',
-    last_login: 'lastLogin',
-    last_active: 'lastActive',
-    phone_number: 'phoneNumber',
-    preferred_language: 'preferredLanguage'
-  };
-
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    const newKey = mappings[key as keyof typeof mappings] || key;
-    return { ...acc, [newKey]: value };
-  }, {} as T);
-}
+// Re-export the functions from core.ts
+export { 
+  normalizeUser,
+  normalizeUserRecords,
+  convertLegacyUser,
+  normalizeFields
+};
 
 export default {
   normalizeUser,

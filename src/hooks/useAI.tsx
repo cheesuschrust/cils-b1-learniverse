@@ -1,8 +1,10 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { ContentType } from '@/types/contentType';
 import AIService from '@/services/AIService';
 import { analyzeContent } from '@/utils/AITrainingUtils';
 import { UseAIReturn } from '@/types/interface-fixes';
+import { normalizeFlashcard, convertLegacyUser } from '@/types/core';
 
 export const useAI = (): UseAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
@@ -243,4 +245,6 @@ export const useAI = (): UseAIReturn => {
   };
 };
 
+// Export the normalization functions from core.ts
+export { normalizeFlashcard, convertLegacyUser };
 export default useAI;
