@@ -1,7 +1,7 @@
 
 // Re-export the simplified AI hook
 import useAISimplified from './useAISimplified';
-import { AIOptions } from '@/types/core';
+import { AIOptions } from '@/types/ai';
 import { normalizeFlashcard, convertLegacyUser } from '@/types/core';
 
 // Export the hook with the same interface
