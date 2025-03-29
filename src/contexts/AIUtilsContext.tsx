@@ -5,6 +5,25 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { speak, stopSpeaking, isSpeechSupported, getVoices } from '@/utils/textToSpeech';
 import { useToast } from '@/hooks/use-toast';
 
+// Add these interfaces
+interface GrammarCheckResult {
+  text: string;
+  corrections: GrammarCorrection[];
+}
+
+interface GrammarCorrection {
+  original: string;
+  suggestion: string;
+  explanation: string;
+  offset: number;
+  length: number;
+}
+
+interface GrammarService {
+  add: (text: string) => GrammarCheckResult;
+  check: (text: string) => Promise<GrammarCheckResult>;
+}
+
 // Define the types for AI settings
 interface AISettings {
   enabled: boolean;
@@ -42,6 +61,8 @@ interface AIUtilsContextType {
   isTranslating: boolean;
   hasActiveMicrophone: boolean;
   checkMicrophoneAccess: () => Promise<boolean>;
+  // Add this to your existing interface:
+  grammarCheck: (text: string) => Promise<GrammarCheckResult>;
   // New integration methods
   getPersonalizedTips: (contentType: ContentType, userLevel: string) => Promise<string[]>;
   generateStudyPlan: (topics: string[], timeAvailable: number) => Promise<any>;
@@ -88,6 +109,8 @@ const AIUtilsContext = createContext<AIUtilsContextType>({
   isTranslating: false,
   hasActiveMicrophone: false,
   checkMicrophoneAccess: async () => false,
+  // Add this to the default context value object:
+  grammarCheck: async () => ({ text: '', corrections: [] }),
   // New integration methods
   getPersonalizedTips: async () => [],
   generateStudyPlan: async () => ({}),
@@ -157,6 +180,70 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
       title: "Settings Reset",
       description: "AI settings have been reset to defaults"
     });
+  };
+
+  // Add this implementation before the other method implementations
+  // Grammar checker functionality
+  const grammarCheck = async (text: string): Promise<GrammarCheckResult> => {
+    if (!settings.enabled) {
+      return { text, corrections: [] };
+    }
+    
+    setIsProcessing(true);
+    try {
+      // Simulate API call with timeout
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Create a mock grammar service with an add method for backward compatibility
+      const grammarService: GrammarService = {
+        add: (text: string): GrammarCheckResult => {
+          // Simple mock implementation
+          const corrections: GrammarCorrection[] = [];
+          
+          // Look for common errors
+          if (text.includes('i am')) {
+            corrections.push({
+              original: 'i am',
+              suggestion: 'I am',
+              explanation: 'Capitalize the pronoun "I"',
+              offset: text.indexOf('i am'),
+              length: 4
+            });
+          }
+          
+          // Check for double spaces
+          const doubleSpaceMatch = text.match(/\s\s+/g);
+          if (doubleSpaceMatch) {
+            doubleSpaceMatch.forEach(match => {
+              corrections.push({
+                original: match,
+                suggestion: ' ',
+                explanation: 'Remove extra space',
+                offset: text.indexOf(match),
+                length: match.length
+              });
+            });
+          }
+          
+          return {
+            text,
+            corrections
+          };
+        },
+        
+        check: async (text: string): Promise<GrammarCheckResult> => {
+          return grammarService.add(text);
+        }
+      };
+      
+      // Use the mock service's add method for backward compatibility
+      return grammarService.add(text);
+    } catch (error) {
+      console.error('Error checking grammar:', error);
+      return { text, corrections: [] };
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Simulate content generation
@@ -682,6 +769,8 @@ export const AIUtilsProvider: React.FC<{children: React.ReactNode}> = ({ childre
     isTranslating,
     hasActiveMicrophone,
     checkMicrophoneAccess,
+    // Add this line:
+    grammarCheck,
     // New integration methods
     getPersonalizedTips,
     generateStudyPlan,
