@@ -37,6 +37,15 @@ interface ExtendedUser extends User {
   uid?: string;
 }
 
+const emptyUserPreferences: UserPreferences = {
+  theme: 'light',
+  language: 'english',
+  notifications: true,
+  emailNotifications: true,
+  difficulty: 'beginner',
+  onboardingCompleted: false
+};
+
 const UserManagementComponent: React.FC = () => {
   const { getAllUsers, createUser, updateUser, deleteUser } = useAuth();
   const { toast } = useToast();
@@ -107,7 +116,7 @@ const UserManagementComponent: React.FC = () => {
       subscription: 'free',
       phoneNumber: '',
       address: '',
-      preferences: {},
+      preferences: emptyUserPreferences,
       preferredLanguage: 'english',
       language: 'english',
       dailyQuestionCounts: {
