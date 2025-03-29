@@ -170,6 +170,8 @@ export const getDatabase = async (): Promise<MockDatabase> => {
   const mockFlashcards: Flashcard[] = [
     {
       id: uuidv4(),
+      front: 'casa',
+      back: 'house',
       italian: 'casa',
       english: 'house',
       level: 1,

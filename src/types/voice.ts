@@ -1,59 +1,54 @@
 
+// Voice and speech related types
+
 /**
- * Voice and Speech related types and utilities
+ * Voice preferences for text-to-speech
  */
-
-// Type Guards
-export const isValidDate = (date: any): date is Date =>
-  date instanceof Date && !isNaN(date.getTime());
+export type VoicePreference = 'default' | 'male' | 'female' | 'natural' | 'robotic';
 
 /**
- * Voice preferences for text-to-speech functionality
- */
-export interface VoicePreference {
-  voice: string;
-  rate: number;
-  pitch: number;
-  preferredLanguage?: string;
-  volume?: number;
-  autoPlay?: boolean;
-  useNative?: boolean;
-}
-
-/**
- * Text-to-speech options for the voice API
+ * Text-to-speech configuration options
  */
 export interface TextToSpeechOptions {
-  voice?: string;
-  rate?: number;
+  voice: VoicePreference;
   pitch?: number;
-  language?: string;
+  rate?: number;
   volume?: number;
+  language?: 'en' | 'it';
 }
 
 /**
- * Voice options configuration
+ * Voice component options
  */
 export interface VoiceOptions {
-  voice: string;
-  rate: number;
-  pitch: number;
-  volume?: number;
+  autoPlay?: boolean;
+  includePronunciation?: boolean;
+  repeatEnabled?: boolean;
+  maxRepeatCount?: number;
 }
 
 /**
- * State for the speech synthesis system
+ * Speech recognition state
  */
 export interface SpeechState {
-  speaking: boolean;
-  voices: SpeechSynthesisVoice[];
-  currentVoice: string | null;
+  isListening: boolean;
+  transcript: string;
+  confidence: number;
   error?: string;
-  isPaused?: boolean;
-  isLoading?: boolean;
-  performance?: {
-    loadTime: number;
-    errorCount: number;
-    lastError?: string;
-  };
+  supported: boolean;
 }
+
+/**
+ * Utility function to check if a value is a valid date
+ */
+export const isValidDate = (date: any): boolean => {
+  if (!date) return false;
+  if (date instanceof Date) {
+    return !isNaN(date.getTime());
+  }
+  return false;
+};
+
+export default {
+  isValidDate
+};

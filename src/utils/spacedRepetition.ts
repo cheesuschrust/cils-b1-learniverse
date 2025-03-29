@@ -1,9 +1,8 @@
-
 /**
  * Simplified spaced repetition utilities
  */
 
-import { Flashcard } from '@/types/interface-fixes';
+import { Flashcard } from '@/types/core';
 import { isFeatureEnabled } from '@/utils/featureFlags';
 import { ErrorCategory, ErrorSeverity, errorMonitoring } from '@/utils/errorMonitoring';
 
@@ -176,9 +175,16 @@ export const generateReviewSchedule = (flashcards: Flashcard[] = []): any => {
   }
 };
 
+// Export calculateReviewPerformance function to fix import errors
+export const calculateReviewPerformance = (correctCount: number, totalCount: number): number => {
+  if (totalCount === 0) return 0;
+  return (correctCount / totalCount) * 100;
+};
+
 export default {
   calculateNextReview,
   isDueForReview,
   daysUntilReview,
-  generateReviewSchedule
+  generateReviewSchedule,
+  calculateReviewPerformance
 };

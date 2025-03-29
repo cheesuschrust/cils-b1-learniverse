@@ -1,6 +1,35 @@
 
 // Re-export all types and utilities from the specialized modules
 
+// Import needed utilities and types first
+import { isValidDate } from './voice';
+import { normalizeFields } from './utils';
+import { 
+  normalizeUser, 
+  normalizeUserRecords,
+  convertLegacyUser,
+  User,
+  UserSettings,
+  UserPerformance,
+  UserRole,
+  LegacyFields
+} from './user-types';
+import {
+  calculateReviewPerformance,
+  normalizeFlashcard,
+  ReviewPerformance,
+  ReviewHistory,
+  FlashcardMetadata,
+  Flashcard
+} from './flashcard-types';
+import { AIOptions } from './ai';
+import {
+  VoicePreference,
+  TextToSpeechOptions,
+  VoiceOptions,
+  SpeechState
+} from './voice';
+
 // Type Guards and Utilities
 export { isValidDate } from './voice';
 export { normalizeFields } from './utils';

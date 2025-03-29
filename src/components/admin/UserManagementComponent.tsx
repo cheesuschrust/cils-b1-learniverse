@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { User, normalizeUser } from '@/types/core';
-import { UserRole } from '@/types/user';
+import { UserRole } from '@/types/user-types';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -34,15 +34,23 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
+interface ExtendedUser extends User {
+  id?: string;
+  uid: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  isVerified?: boolean;
+  subscription?: 'free' | 'premium' | 'trial';
+}
+
 const UserManagementComponent: React.FC = () => {
   const { getAllUsers, createUser, updateUser, deleteUser } = useAuth();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<ExtendedUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ExtendedUser | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -86,8 +94,9 @@ const UserManagementComponent: React.FC = () => {
     }
   };
 
-  const handleOpenModal = (user: User | null, createMode: boolean) => {
+  const handleOpenModal = (user: ExtendedUser | null, createMode: boolean) => {
     setSelectedUser(user ? { ...user } : {
+      uid: '',
       id: '',
       email: '',
       firstName: '',
@@ -107,11 +116,21 @@ const UserManagementComponent: React.FC = () => {
       preferences: {},
       preferredLanguage: 'english',
       language: 'english',
-      metrics: { totalQuestions: 0, correctAnswers: 0, streak: 0 },
-      dailyQuestionCounts: { 
-        flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
+      settings: {
+        theme: 'system',
+        notifications: true,
+        reviewInterval: 24,
+        dailyGoal: 10,
+        audioEnabled: true,
+        autoAdvance: false
+      },
+      performance: {
+        totalReviews: 0,
+        correctStreak: 0,
+        averageAccuracy: 0,
+        dailyStats: []
       }
-    } as User);
+    } as ExtendedUser);
     setIsCreateMode(createMode);
     setIsModalOpen(true);
   };

@@ -1,105 +1,61 @@
 
-/**
- * Configuration options for AI-powered services
- */
+// AI related types
+
+export type AIModel = 
+  | 'small' 
+  | 'medium' 
+  | 'large' 
+  | 'gpt-4o' 
+  | 'gpt-4o-mini' 
+  | 'gpt-4' 
+  | 'gpt-3.5-turbo'
+  | 'mistral-small'
+  | 'mistral-medium'
+  | 'mistral-large'
+  | 'claude-instant'
+  | 'claude-2';
+
+export type AIModelSize = 'small' | 'medium' | 'large';
+
 export interface AIOptions {
+  model: AIModel;
   temperature?: number;
   maxTokens?: number;
-  model?: string;
-  context?: string;
-  systemPrompt?: string;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
   streaming?: boolean;
-  presence_penalty?: number;
-  frequency_penalty?: number;
-}
-
-/**
- * AI service interfaces and types
- */
-export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
-export type AIModel = 'small' | 'medium' | 'large';
-export type AILanguage = 'english' | 'italian' | 'auto';
-
-export interface AIPreference {
-  enabled: boolean;
-  modelSize: AIModel;
-  defaultModelSize?: AIModel;
-  useWebGPU?: boolean;
-  cacheResponses: boolean;
-  defaultLanguage?: AILanguage;
-  voiceEnabled: boolean;
-  voiceRate?: number;
-  voicePitch?: number;
-  italianVoiceURI?: string;
-  englishVoiceURI?: string;
-  anonymousAnalytics?: boolean;
-}
-
-export interface AIFeedback {
-  exercise: string;
-  type: string;
-  input: string;
-  correction: string;
-  explanation: string;
-  confidence: number;
-}
-
-export interface AIServiceOptions {
-  maxLength?: number;
-  temperature?: number;
-  model?: string;
-  stream?: boolean;
-}
-
-export interface AIServiceInterface {
-  generateText(prompt: string, options?: AIServiceOptions): Promise<string>;
-  classifyText(text: string): Promise<Array<{ label: string; score: number }>>;
-  generateImage?(prompt: string, size?: string): Promise<string>;
-  getConfidenceScore(contentType: string): number;
-  addTrainingExamples(contentType: string, examples: any[]): number;
-  generateFlashcards(topic: string, count?: number, difficulty?: string): Promise<any[]>;
-  generateQuestions(content: string, count?: number, type?: string): Promise<any[]>;
-  abortRequest(requestId: string): void;
-  abortAllRequests(): void;
-}
-
-export interface UseAIReturn {
-  generateText: (prompt: string, options?: any) => Promise<string>;
-  getConfidenceScore: (text: string, contentType: string) => Promise<number>;
-  translateText?: (text: string, targetLang: 'english' | 'italian') => Promise<string>;
-  checkGrammar?: (text: string, lang: 'english' | 'italian') => Promise<{text: string, corrections: any[]}>;
-  isLoading?: boolean;
-  error: Error | null;
-  abort?: () => void;
-  generateFlashcards?: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
-  isProcessing?: boolean;
-  classifyText?: (text: string) => Promise<any>;
-  isModelLoaded?: boolean;
-  status?: string;
-  loadModel?: (modelName: string) => Promise<boolean>;
-  generateQuestions?: (content: string, count?: number, type?: string) => Promise<any[]>;
+  contextLength?: number;
 }
 
 export interface AISettings {
-  modelName: string;
+  enabled: boolean;
+  model: AIModel;
+  provider: string;
   temperature: number;
   maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  stopSequences: string[];
+  features: {
+    contentGeneration: boolean;
+    contentAnalysis: boolean;
+    errorCorrection: boolean;
+    personalization: boolean;
+    pronunciationHelp: boolean;
+    conversationalLearning: boolean;
+    progressTracking: boolean;
+    difficultyAdjustment: boolean;
+    languageTranslation: boolean;
+  };
+  streaming: boolean;
+  contentSafety: boolean;
+  debugMode: boolean;
 }
 
-export interface ConfidenceIndicatorProps {
-  score: number;
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-  indicatorClassName?: string;
-  contentType?: string;
-  value?: number;
-}
+export type AIPreference = 'minimal' | 'balanced' | 'extensive';
 
-export interface AISetupWizardProps {
-  onComplete?: () => void;
-  initialStep?: number;
+export type AIStatus = 'idle' | 'loading' | 'generating' | 'error';
+
+export interface AIFeedbackSettings {
+  showConfidenceScore: boolean;
+  includeExplanations: boolean;
+  highlightErrors: boolean;
+  suggestImprovements: boolean;
 }

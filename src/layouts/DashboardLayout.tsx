@@ -28,16 +28,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import HelpDocumentation from '@/components/help/HelpDocumentation';
 
-interface DashboardLayoutProps {
+// Define interface for DashboardLayout props
+export interface DashboardLayoutProps {
   suggestions?: string[];
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ suggestions = [] }) => {
+const DashboardLayout = ({ suggestions = [] }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [localSuggestions, setSuggestions] = useState<string[]>(suggestions);
+  const [localSuggestions, setLocalSuggestions] = useState<string[]>(suggestions);
   const { isAIEnabled } = useAIUtils();
   
   const getCurrentPage = () => {
@@ -67,7 +68,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ suggestions = [] }) =
         userPreferences
       );
       
-      setSuggestions(pageSuggestions);
+      setLocalSuggestions(pageSuggestions);
     }
   }, [location.pathname, isAIEnabled, user]);
   

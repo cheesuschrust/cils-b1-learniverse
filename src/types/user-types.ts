@@ -43,7 +43,7 @@ export interface UserPerformance {
 /**
  * User role in the system
  */
-export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher';
+export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
 
 /**
  * Complete user information
@@ -56,12 +56,13 @@ export interface User extends Partial<LegacyFields> {
   firstName: string;
   lastName: string;
   createdAt: Date;
-  preferredLanguage?: string;
+  preferredLanguage?: 'english' | 'italian' | 'both';
   settings: UserSettings;
   lastActive?: Date;
   isPremium?: boolean;
   performance: UserPerformance;
   role?: UserRole;
+  language?: 'english' | 'italian' | 'both' | 'en' | 'it';
 }
 
 /**
@@ -96,19 +97,20 @@ export const normalizeUser = (input: Record<string, any>): User => {
   };
 
   return {
-    uid: input.uid || '',
+    uid: input.uid || input.id || '',
     email: input.email || '',
     photoURL: input.photoURL || input.photo_url || '',
     displayName: input.displayName || input.display_name || '',
     firstName: input.firstName || input.first_name || '',
     lastName: input.lastName || input.last_name || '',
     createdAt: parseDate(input.createdAt || input.created_at),
-    preferredLanguage: input.preferredLanguage || input.preferred_language,
+    preferredLanguage: input.preferredLanguage || input.preferred_language || 'english',
     settings: { ...defaultSettings, ...input.settings },
     lastActive: parseDate(input.lastActive),
     isPremium: Boolean(input.isPremium),
     performance: { ...defaultPerformance, ...input.performance },
     role: input.role || 'user',
+    language: input.language || input.preferredLanguage || 'english',
 
     // Legacy fields preservation
     ...(input.photo_url && { photo_url: input.photo_url }),
