@@ -1,6 +1,5 @@
 
-import { Flashcard } from '@/types/interface-fixes';
-import { normalizeFlashcard } from '@/types/interface-fixes';
+import { Flashcard } from '@/lib/interface-fixes';
 
 /**
  * Convert various flashcard formats to the unified Flashcard type
@@ -22,6 +21,32 @@ export function adaptFlashcards(cards: any[]): Flashcard[] {
 }
 
 /**
+ * Normalize a flashcard object to ensure it has all required properties
+ * @param card The card to normalize
+ * @returns A normalized flashcard
+ */
+export function normalizeFlashcard(card: any): Flashcard {
+  const now = new Date();
+  const tags = Array.isArray(card.tags) ? card.tags : 
+    (typeof card.tags === 'string' ? card.tags.split(',').map(t => t.trim()) : []);
+  
+  return {
+    id: card.id || crypto.randomUUID(),
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    italian: card.italian || card.front || '',
+    english: card.english || card.back || '',
+    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
+    tags: tags,
+    lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : null,
+    nextReview: card.nextReview ? new Date(card.nextReview) : null,
+    createdAt: card.createdAt ? new Date(card.createdAt) : now,
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : undefined,
+    reviewHistory: card.reviewHistory || []
+  };
+}
+
+/**
  * Convert a flashcard to a display format with proper labels
  * @param card Flashcard to format
  * @param frontFieldName Custom name for the front field
@@ -37,12 +62,9 @@ export function formatFlashcardForDisplay(
     id: card.id,
     [frontFieldName]: card.front || card.italian || '',
     [backFieldName]: card.back || card.english || '',
-    level: card.level,
     difficulty: card.difficulty,
     tags: card.tags?.join(', ') || '',
-    mastered: card.mastered ? 'Yes' : 'No',
     nextReview: card.nextReview ? new Date(card.nextReview).toLocaleDateString() : 'Not scheduled',
-    // Add other fields as needed
   };
 }
 

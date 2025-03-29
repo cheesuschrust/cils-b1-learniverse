@@ -1,3 +1,4 @@
+
 import { Provider } from '@supabase/supabase-js';  
 import { supabase } from './supabase';  
 import { User } from './interface-fixes';  
@@ -32,3 +33,24 @@ export function getCurrentUser(): Promise<User | null> {
     };  
   });  
 }  
+
+export function isPremiumUser(user: any): boolean {  
+  return !!user?.isPremiumUser;  
+}  
+
+export function hasReachedDailyLimit(user: any): boolean {  
+  return !isPremiumUser(user);  
+}
+
+export async function trackQuestionUsage(userId: string, questionType: string): Promise<void> {
+  // This is a placeholder implementation
+  console.log(`Tracking question usage for user ${userId}, type: ${questionType}`);
+  // In a real implementation, this would update the database
+}
+
+export async function updateUserSubscription(userId: string, subscriptionType: string): Promise<boolean> {
+  // This is a placeholder implementation
+  console.log(`Updating subscription for user ${userId} to ${subscriptionType}`);
+  // In a real implementation, this would update the database
+  return true;
+}
