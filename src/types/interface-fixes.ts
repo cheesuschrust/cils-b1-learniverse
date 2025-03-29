@@ -1,7 +1,7 @@
 
 // This file provides additional interface definitions needed to fix build errors
 
-import { User } from './user-types';
+import { User as BaseUser } from './user-types';
 import { Flashcard as BaseFlashcard, FlashcardSet as BaseFlashcardSet, FlashcardStats as BaseFlashcardStats } from './flashcard';
 
 export interface AnalyticsReportProps {
@@ -50,7 +50,7 @@ export interface AnalyticsReportProps {
 }
 
 // Add missing interfaces needed throughout the application
-export interface Flashcard {
+export interface Flashcard extends BaseFlashcard {
   id: string;
   front: string;
   back: string;
@@ -79,7 +79,7 @@ export interface Flashcard {
   difficulty?: number;
 }
 
-export interface FlashcardSet {
+export interface FlashcardSet extends BaseFlashcardSet {
   id: string;
   title: string;
   name?: string;
@@ -99,7 +99,7 @@ export interface FlashcardSet {
   tags: string[];
 }
 
-export interface FlashcardStats {
+export interface FlashcardStats extends BaseFlashcardStats {
   total: number;
   mastered: number;
   learning: number;
@@ -123,6 +123,8 @@ export interface ReviewSchedule {
   upcoming: Flashcard[];
   totalDue: number;
   nextWeekCount: number;
+  dueThisWeek?: number;
+  dueNextWeek?: number;
 }
 
 export interface ReviewPerformance {
@@ -131,6 +133,11 @@ export interface ReviewPerformance {
   consistency: number;
   retention: number;
   overall: number;
+  efficiency?: number;
+  totalReviews?: number;
+  correctReviews?: number;
+  streakDays?: number;
+  reviewsByCategory?: Record<string, any>;
 }
 
 export interface FlashcardComponentProps {
@@ -162,6 +169,9 @@ export interface ImportFormat {
   italianColumn?: string | number;
   englishColumn?: string | number;
   categoryColumn?: string | number;
+  type?: 'csv' | 'json' | 'txt'; // For backwards compatibility
+  fieldMap?: Record<string, string | number>; // For backwards compatibility
+  hasHeader?: boolean; // For backwards compatibility
 }
 
 export interface SupportTicketExtension {
@@ -197,7 +207,7 @@ export interface ReviewHistory {
   avgResponseTime: number;
 }
 
-export interface User {
+export interface User extends BaseUser {
   id: string;
   firstName: string;
   lastName: string;
@@ -219,6 +229,76 @@ export interface User {
     totalQuestions: number;
     correctAnswers: number;
     streak: number;
+  };
+}
+
+// Export additional functions to fix errors in utils/spacedRepetition.ts
+export function daysUntilReview(card: Flashcard): number {
+  if (!card.nextReview) return 0;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const reviewDate = new Date(card.nextReview);
+  reviewDate.setHours(0, 0, 0, 0);
+  const diffTime = reviewDate.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+export function isDueForReview(card: Flashcard): boolean {
+  if (!card.nextReview) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const reviewDate = new Date(card.nextReview);
+  reviewDate.setHours(0, 0, 0, 0);
+  return reviewDate <= now;
+}
+
+export function generateReviewSchedule(cards: Flashcard[]): ReviewSchedule {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const nextWeek = new Date(now);
+  nextWeek.setDate(now.getDate() + 7);
+  
+  const dueByDate: Record<string, number> = {};
+  const dueToday: Flashcard[] = [];
+  const overdue: Flashcard[] = [];
+  const upcoming: Flashcard[] = [];
+  let totalDue = 0;
+  let nextWeekCount = 0;
+  
+  cards.forEach(card => {
+    if (!card.nextReview) return;
+    
+    const reviewDate = new Date(card.nextReview);
+    reviewDate.setHours(0, 0, 0, 0);
+    const dateStr = reviewDate.toISOString().split('T')[0];
+    
+    if (!dueByDate[dateStr]) {
+      dueByDate[dateStr] = 0;
+    }
+    dueByDate[dateStr]++;
+    
+    if (reviewDate < now) {
+      overdue.push(card);
+      totalDue++;
+    } else if (reviewDate.getTime() === now.getTime()) {
+      dueToday.push(card);
+      totalDue++;
+    } else if (reviewDate <= nextWeek) {
+      upcoming.push(card);
+      nextWeekCount++;
+    }
+  });
+  
+  return {
+    dueByDate,
+    dueToday,
+    overdue,
+    upcoming,
+    totalDue,
+    nextWeekCount,
+    dueThisWeek: totalDue + nextWeekCount,
+    dueNextWeek: nextWeekCount
   };
 }
 

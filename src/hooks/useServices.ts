@@ -1,9 +1,9 @@
 
 import { useContext, createContext } from 'react';
-import serviceFactory, { ServiceFactory } from '@/services/ServiceFactory';
+import serviceFactory from '@/services/ServiceFactory';
 
 // Create a context for the service factory
-export const ServiceContext = createContext<ServiceFactory>(serviceFactory);
+export const ServiceContext = createContext(serviceFactory);
 
 // Hook for consuming services
 export function useServices() {
@@ -14,11 +14,11 @@ export function useServices() {
 // Hook specifically for auth service
 export function useAuthService() {
   const services = useServices();
-  return services.authService;
+  return services.getService('authService');
 }
 
 // Hook specifically for document service
 export function useDocumentService() {
   const services = useServices();
-  return services.documentService;
+  return services.getService('documentService');
 }

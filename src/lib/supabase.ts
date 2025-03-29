@@ -23,4 +23,7 @@ export const getSupabaseClient = () => {
   return supabase;
 };
 
+// Export auth helpers for easier usage
+export { signInWithOAuth, isPremiumUser, hasReachedDailyLimit, trackQuestionUsage, updateUserSubscription } from '@/utils/auth-helpers';
+
 export default supabase;

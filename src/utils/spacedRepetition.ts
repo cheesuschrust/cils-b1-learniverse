@@ -210,11 +210,83 @@ export function getScheduleStats(cards: Flashcard[]): {
   };
 }
 
+export function daysUntilReview(card: Flashcard): number {
+  if (!card.nextReview) return 0;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const reviewDate = new Date(card.nextReview);
+  reviewDate.setHours(0, 0, 0, 0);
+  const diffTime = reviewDate.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+export function isDueForReview(card: Flashcard): boolean {
+  if (!card.nextReview) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const reviewDate = new Date(card.nextReview);
+  reviewDate.setHours(0, 0, 0, 0);
+  return reviewDate <= now;
+}
+
+export function generateReviewSchedule(cards: Flashcard[]): any {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const nextWeek = new Date(now);
+  nextWeek.setDate(now.getDate() + 7);
+  
+  const dueByDate: Record<string, number> = {};
+  const dueToday: Flashcard[] = [];
+  const overdue: Flashcard[] = [];
+  const upcoming: Flashcard[] = [];
+  let totalDue = 0;
+  let nextWeekCount = 0;
+  
+  cards.forEach(card => {
+    if (!card.nextReview) return;
+    
+    const reviewDate = new Date(card.nextReview);
+    reviewDate.setHours(0, 0, 0, 0);
+    const dateStr = reviewDate.toISOString().split('T')[0];
+    
+    if (!dueByDate[dateStr]) {
+      dueByDate[dateStr] = 0;
+    }
+    dueByDate[dateStr]++;
+    
+    if (reviewDate < now) {
+      overdue.push(card);
+      totalDue++;
+    } else if (reviewDate.getTime() === now.getTime()) {
+      dueToday.push(card);
+      totalDue++;
+    } else if (reviewDate <= nextWeek) {
+      upcoming.push(card);
+      nextWeekCount++;
+    }
+  });
+  
+  return {
+    dueByDate,
+    dueToday,
+    overdue,
+    upcoming,
+    totalDue,
+    nextWeekCount,
+    dueThisWeek: totalDue + nextWeekCount,
+    dueNextWeek: nextWeekCount
+  };
+}
+
 export default {
   calculateNextReview,
   getDueCards,
   calculateReviewPerformance,
   calculateMasteryLevel,
   organizeCardsByDueDate,
-  getScheduleStats
+  getScheduleStats,
+  daysUntilReview,
+  isDueForReview,
+  generateReviewSchedule
 };
