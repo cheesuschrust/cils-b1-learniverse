@@ -1,6 +1,10 @@
 
 // Core interfaces and type compatibility functions
 
+// Type Guards  
+const isValidDate = (date: any): date is Date =>   
+  date instanceof Date && !isNaN(date.getTime());  
+
 // VoicePreference interfaces
 export interface VoiceOptions {
   voice: string;
@@ -24,6 +28,10 @@ export interface SpeechState {
   error?: string;  
   isPaused?: boolean;
   isLoading?: boolean;
+  performance?: {  
+    loadTime?: number;  
+    errorCount?: number;  
+  };  
 }
 
 export interface VoicePreference {
@@ -49,11 +57,25 @@ export interface AIOptions {
   frequency_penalty?: number;
 }  
 
+export interface ReviewPerformance {  
+  accuracy: number;  
+  timeTaken: number;  
+  timestamp: Date;  
+}  
+
 export interface ReviewHistory {  
   reviewedAt: Date;  
   performance: number;  
   timeTaken?: number;  
+  details?: ReviewPerformance;  
 }
+
+export interface FlashcardMetadata {  
+  created: Date;  
+  modified: Date;  
+  tags?: string[];  
+  difficulty?: 'easy' | 'medium' | 'hard';  
+}  
 
 export interface Flashcard {  
   id?: string;
@@ -73,6 +95,7 @@ export interface Flashcard {
   modified?: Date;
   reviewHistory?: ReviewHistory[];
   streak?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';  
   
   // Legacy compatibility
   italian?: string;
@@ -104,6 +127,14 @@ export interface UserSettings {
   notifications?: boolean;  
   reviewInterval?: number;  
   dailyGoal?: number;  
+  audioEnabled?: boolean;
+}
+
+export interface UserPerformance {  
+  totalReviews: number;  
+  correctStreak: number;  
+  lastReviewDate?: Date;  
+  averageAccuracy?: number;  
 }
 
 // User interface with all required fields
@@ -122,6 +153,7 @@ export interface User {
   settings?: UserSettings | Record<string, unknown>;
   isPremium?: boolean;
   lastActive?: Date;
+  performance?: UserPerformance;
   
   // Legacy compatibility fields
   photo_url?: string;  
@@ -166,6 +198,16 @@ export function normalizeFlashcard(card: any): Flashcard {
   if (!card) return null as any;
   
   const now = new Date();
+  const parseDate = (date: any): Date | null => {  
+    if (isValidDate(date)) return date;  
+    if (!date) return null;  
+    try {  
+      const parsed = new Date(date);  
+      return isValidDate(parsed) ? parsed : null;  
+    } catch {  
+      return null;  
+    }  
+  };
   
   return {
     id: card.id || '',
@@ -174,22 +216,19 @@ export function normalizeFlashcard(card: any): Flashcard {
     level: typeof card.level === 'number' ? card.level : 0,
     tags: Array.isArray(card.tags) ? card.tags : [],
     mastered: card.mastered || false,
-    nextReview: card.nextReview instanceof Date 
-      ? card.nextReview 
-      : card.nextReview 
-        ? new Date(card.nextReview) 
-        : null,
-    createdAt: card.createdAt instanceof Date ? card.createdAt : card.created instanceof Date ? card.created : now,
-    updatedAt: card.updatedAt instanceof Date ? card.updatedAt : card.modified instanceof Date ? card.modified : now,
+    nextReview: parseDate(card.nextReview),
+    createdAt: isValidDate(card.createdAt) ? card.createdAt : isValidDate(card.created) ? card.created : now,
+    updatedAt: isValidDate(card.updatedAt) ? card.updatedAt : isValidDate(card.modified) ? card.modified : now,
     language: card.language || undefined,
-    lastReviewed: card.lastReviewed instanceof Date 
-      ? card.lastReviewed 
-      : card.lastReviewed 
-        ? new Date(card.lastReviewed) 
-        : undefined,
-    created: card.created instanceof Date ? card.created : now,
-    modified: card.modified instanceof Date ? card.modified : now,
-    reviewHistory: Array.isArray(card.reviewHistory) ? card.reviewHistory : [],
+    lastReviewed: parseDate(card.lastReviewed),
+    created: parseDate(card.created) || now,
+    modified: parseDate(card.modified) || now,
+    difficulty: card.difficulty || 'medium',
+    reviewHistory: Array.isArray(card.reviewHistory) ? card.reviewHistory.map((review: any) => ({  
+      ...review,  
+      reviewedAt: parseDate(review.reviewedAt) || now,  
+      performance: typeof review.performance === 'number' ? review.performance : 0  
+    })) : [],
     streak: typeof card.streak === 'number' ? Math.max(0, card.streak) : 0,
     italian: card.italian || card.front,
     english: card.english || card.back
@@ -202,16 +241,19 @@ export function normalizeFlashcard(card: any): Flashcard {
 export function normalizeUser(user: any): User {
   if (!user) return null as any;
   
+  const parseDate = (date: any): Date => {  
+    if (isValidDate(date)) return date;  
+    if (!date) return new Date();  
+    try {  
+      const parsed = new Date(date);  
+      return isValidDate(parsed) ? parsed : new Date();  
+    } catch {  
+      return new Date();  
+    }  
+  };
+  
   // Ensure date is properly handled
-  const createdAtDate = user.createdAt instanceof Date   
-    ? user.createdAt   
-    : user.createdAt   
-      ? new Date(user.createdAt)   
-      : user.created_at instanceof Date
-        ? user.created_at
-        : user.created_at
-          ? new Date(user.created_at)
-          : new Date();
+  const createdAtDate = parseDate(user.createdAt || user.created_at);
   
   return {
     id: user.id || user.uid || '',
@@ -224,9 +266,9 @@ export function normalizeUser(user: any): User {
     role: user.role || 'user',
     isVerified: user.isVerified || user.is_verified || false,
     createdAt: createdAtDate,
-    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-    lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+    updatedAt: parseDate(user.updatedAt || user.updated_at),
+    lastLogin: user.lastLogin || user.last_login ? parseDate(user.lastLogin || user.last_login) : undefined,
+    lastActive: user.lastActive || user.last_active ? parseDate(user.lastActive || user.last_active) : undefined,
     status: user.status || 'active',
     subscription: user.subscription || 'free',
     phoneNumber: user.phoneNumber || user.phone_number || '',
@@ -234,19 +276,30 @@ export function normalizeUser(user: any): User {
     preferences: user.preferences || {},
     preferredLanguage: user.preferredLanguage || user.preferred_language || '',
     language: user.language || user.preferredLanguage || user.preferred_language || '',
-    settings: user.settings || {},
+    settings: user.settings || {
+      theme: 'system',  
+      notifications: true,
+      reviewInterval: 24,
+      dailyGoal: 10,
+      audioEnabled: true
+    },
     metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
     },
     isPremium: Boolean(user.isPremium),
+    performance: user.performance || {  
+      totalReviews: 0,  
+      correctStreak: 0,  
+      averageAccuracy: 0  
+    },
     
     // Legacy compatibility fields
     photo_url: user.photo_url || user.photoURL || '',
     display_name: user.display_name || user.displayName || '',
     first_name: user.first_name || user.firstName || '',
     last_name: user.last_name || user.lastName || '',
-    created_at: user.created_at ? new Date(user.created_at) : createdAtDate,
+    created_at: user.created_at ? parseDate(user.created_at) : createdAtDate,
     isAdmin: user.isAdmin || user.role === 'admin' || false
   };
 }
