@@ -1,122 +1,110 @@
-import { createClient, Provider } from '@supabase/supabase-js';  
 
-// Safely get environment variables with fallbacks - use dummy values for development  
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co';  
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key-for-development-only';  
+import { Provider } from '@supabase/supabase-js';  
+import { createClient } from '@supabase/supabase-js';  
 
-// Check if we're using real values and log accordingly  
-const usingPlaceholders = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;  
-if (usingPlaceholders) {  
-  console.info('Using placeholder Supabase credentials. Authentication features will be simulated but not functional.');  
-}   
+// Browser-safe environment variable handling  
+const supabaseUrl = 'https://mock.supabase.co';  
+const supabaseKey = 'mock-key-for-development';  
 
-// Create the Supabase client - always create something so the app doesn't crash  
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);  
+console.log('Using placeholder Supabase credentials. Authentication features will be simulated but not functional.');
 
-// Export a function to safely get the Supabase client  
-export const getSupabaseClient = () => {  
-  // Instead of throwing errors, log warnings and return the client  
-  if (usingPlaceholders) {  
-    console.warn('Using non-functional Supabase client. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for authentication to work.');  
-  }  
-  return supabase;  
-};  
+// Create supabase client  
+export const supabase = createClient(supabaseUrl, supabaseKey);  
 
-// ADD MISSING AUTHENTICATION FUNCTIONS THAT LOGIN.TSX NEEDS  
-// These will gracefully degrade when using placeholder credentials  
-
-export const signInWithOAuth = async (provider: Provider, options: any = {}) => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log(`OAuth sign-in with ${provider} would be triggered here`);  
-    return { data: null, error: null };  
-  }  
-  return await client.auth.signInWithOAuth({  
+export async function signInWithOAuth(provider: Provider, options: any = {}) {  
+  return await supabase.auth.signInWithOAuth({  
     provider,  
     ...options  
   });  
-};  
+}  
 
-export const signInWithEmail = async (email: string, password: string) => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log(`Sign-in attempted for email: ${email}`);  
-    return { data: { user: { email, id: 'mock-user-id' }, session: {} }, error: null };  
-  }  
-  return await client.auth.signInWithPassword({  
-    email,  
-    password  
-  });  
-};  
+export async function signInWithEmail(email: string, password: string) {  
+  // Mock successful response for development
+  return {
+    data: { 
+      user: { 
+        id: 'mock-user-id', 
+        email, 
+        user_metadata: { 
+          first_name: 'Demo', 
+          last_name: 'User' 
+        } 
+      },
+      session: { access_token: 'mock-token' }
+    },
+    error: null
+  };
+}  
 
-export const signUp = async (email: string, password: string) => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log(`Sign-up attempted for email: ${email}`);  
-    return { data: { user: { email }, session: {} }, error: null };  
-  }  
-  return await client.auth.signUp({  
-    email,  
-    password  
-  });  
-};  
+export async function signUp(email: string, password: string) {
+  // Mock successful response for development
+  return {
+    data: { 
+      user: { 
+        id: 'new-mock-user-id', 
+        email,
+        user_metadata: {} 
+      } 
+    },
+    error: null
+  };
+}
 
-export const signOut = async () => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log('Sign-out attempted');  
-    return { error: null };  
-  }  
-  return await client.auth.signOut();  
-};  
+export async function resetPassword(email: string) {
+  // Mock for development
+  console.log(`Password reset requested for ${email}`);
+  return { error: null };
+}
 
-export const resetPassword = async (email: string) => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log(`Password reset attempted for email: ${email}`);  
-    return { data: {}, error: null };  
-  }  
-  return await client.auth.resetPasswordForEmail(email, {  
-    redirectTo: `${window.location.origin}/reset-password`  
-  });  
-};  
+export async function updatePassword(newPassword: string) {
+  // Mock for development
+  console.log('Password updated');
+  return { error: null };
+}
 
-export const updatePassword = async (newPassword: string) => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log('Password update attempted');  
-    return { data: {}, error: null };  
-  }  
-  return await client.auth.updateUser({  
-    password: newPassword  
-  });  
-};  
+export async function signOut() {  
+  return await supabase.auth.signOut();  
+}  
 
-export const getCurrentUser = async () => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log('Getting current user (mock)');  
-    return { id: 'mock-user-id', email: 'user@example.com', isPremiumUser: true };  
-  }  
-  const { data } = await client.auth.getUser();  
-  return data.user;  
-};  
+export async function getSession() {
+  // Mock successful session for development
+  return { 
+    data: { 
+      session: { 
+        user: { 
+          id: 'mock-user-id', 
+          email: 'user@example.com' 
+        } 
+      } 
+    },
+    error: null
+  };
+}
 
-export const getSession = async () => {  
-  const client = getSupabaseClient();  
-  if (usingPlaceholders) {  
-    console.log('Getting session (mock)');  
-    return { user: { id: 'mock-user-id', email: 'user@example.com' } };  
-  }  
-  const { data } = await client.auth.getSession();  
-  return data.session;  
-};  
+export function getCurrentUser() {  
+  // Mock user data for development
+  return Promise.resolve({
+    id: 'mock-user-id',
+    email: 'user@example.com',
+    firstName: 'Demo',
+    lastName: 'User',
+    isPremiumUser: true
+  });
+}  
 
-// Simple helper functions  
-export const isPremiumUser = (user: any): boolean => {  
+export function isPremiumUser(user: any): boolean {  
   return !!user?.isPremiumUser;  
-};  
+}  
 
-export const hasReachedDailyLimit = (user: any): boolean => {  
+export function hasReachedDailyLimit(user: any): boolean {  
   return !isPremiumUser(user);  
-};  
+}
+
+export async function trackQuestionUsage(userId: string, questionType: string): Promise<void> {
+  console.log(`Tracking question usage for user ${userId}, type: ${questionType}`);
+}
+
+export async function updateUserSubscription(userId: string, subscriptionType: string): Promise<boolean> {
+  console.log(`Updating subscription for user ${userId} to ${subscriptionType}`);
+  return true;
+}

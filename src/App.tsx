@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, Suspense } from 'react';  
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';  
 import Dashboard from '@/pages/Dashboard';  
@@ -28,7 +29,8 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';  
 import FeedbackWidget from '@/components/feedback/FeedbackWidget';  
 import HelpDocumentation from '@/components/help/HelpDocumentation';  
-import { useAuth } from '@/contexts/AuthContext';  
+import { useAuth } from '@/contexts/AuthContext'; 
+import Index from '@/pages/Index';
 import { errorReporting, ErrorCategory, ErrorSeverity } from '@/utils/errorReporting';  
 import './App.css';  
 
@@ -53,17 +55,6 @@ function App() {
     console.log("Auth state:", { user, loading, error });  
   }, [user, loading, error]);  
   
-  // Force exit loading state after 5 seconds max  
-  useEffect(() => {  
-    const timer = setTimeout(() => {  
-      if (loading) {  
-        console.warn("Application still loading after timeout - please check authentication provider");  
-      }  
-    }, 5000);  
-    
-    return () => clearTimeout(timer);  
-  }, [loading]);  
-  
   // Check if the user needs to see onboarding  
   useEffect(() => {  
     if (user && user.preferences?.onboardingCompleted === false) {  
@@ -76,9 +67,6 @@ function App() {
     // Log page view for analytics  
     const pageName = location.pathname || '/';  
     console.log(`Page view: ${pageName}`);  
-    
-    // In a real app, you would call your analytics service here  
-    // Example: analytics.logPageView(pageName);  
     
     // Reset any error states when navigating  
     const handleError = (error: Error) => {  
@@ -114,11 +102,6 @@ function App() {
     return true;  
   };  
 
-  // *** IMPORTANT: Show loading state first ***  
-  if (loading) {  
-    return <LoadingScreen />;  
-  }  
-
   // Show error state if there's an auth error  
   if (error) {  
     return (  
@@ -142,7 +125,8 @@ function App() {
             <div className="App">  
               <Suspense fallback={<LoadingScreen />}>  
                 <Routes>  
-                  {/* Public routes */}  
+                  {/* Public routes */}
+                  <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />  
                   <Route path="/signup" element={<Signup />} />  
                   <Route path="/email-verification/:token" element={<EmailVerification />} />  
@@ -151,7 +135,7 @@ function App() {
                   <Route element={<ProtectedRoute>  
                     <DashboardLayout />  
                   </ProtectedRoute>}>  
-                    <Route path="/" element={  
+                    <Route path="/dashboard" element={  
                       <ErrorBoundary>  
                         <Dashboard />  
                       </ErrorBoundary>  

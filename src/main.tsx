@@ -1,14 +1,18 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom'; // Add this import
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import './styles/flashcard.css';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <BrowserRouter> {/* Add this wrapper */}
-      <App />
-    </BrowserRouter> {/* Close the wrapper */}
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

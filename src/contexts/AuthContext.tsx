@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types/user';
 import {
@@ -82,12 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     newFeatures: true,
   });
 
-  // EMERGENCY FIX - immediate loading fix
+  // Create an emergency user immediately to prevent hanging
   useEffect(() => {
-    console.log("🚨 EMERGENCY LOADING FIX ACTIVATED");
-    
-    // Force loading to false immediately 
-    setLoading(false);
+    console.log("🚀 AuthProvider: Initializing auth state");
     
     // Create a properly typed emergency user
     const emergencyUser: User = {
@@ -116,68 +112,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Set the emergency user
     setUser(emergencyUser);
-    console.log("🚨 SET EMERGENCY USER:", emergencyUser);
-  }, []);
-
-  // Initialize auth state - check if user is already logged in
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        // This would normally check with Supabase if a session exists
-        const session = await getSession();
-        
-        if (session?.user) {
-          // We have a logged in user
-          const userData = await getCurrentUser();
-          
-          // Create a mock user that matches your User type
-          const mockUser: User = {
-            id: userData?.id || 'mock-user-id',
-            email: userData?.email || 'user@example.com',
-            firstName: 'Demo',
-            lastName: 'User',
-            role: 'user' as UserRole,
-            isVerified: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            preferences: {
-              theme: 'light' as 'light' | 'dark' | 'system',
-              language: 'en',
-              notifications: true,
-              onboardingCompleted: true
-            },
-            dailyQuestionCounts: {
-              flashcards: 0,
-              multipleChoice: 0,
-              speaking: 0,
-              writing: 0,
-              listening: 0
-            }
-          };
-          
-          setUser(mockUser);
-        }
-      } catch (err) {
-        console.error("Error loading user:", err);
-        setError(err instanceof Error ? err : new Error('Failed to load user'));
-      } finally {
-        // Always set loading to false when done
-        setLoading(false);
-      }
-    }
-
-    // Don't actually run this in our emergency mode
-    // loadUser();
     
-    // Set a timeout to prevent infinite loading
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.warn("Auth loading timeout - forcing completion");
-        setLoading(false);
-      }
-    }, 3000);
+    // Force loading to false immediately
+    setLoading(false);
     
-    return () => clearTimeout(timer);
+    console.log("🚀 AuthProvider: Auth initialized with emergency user");
   }, []);
 
   // Authentication methods
