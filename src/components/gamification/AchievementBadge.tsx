@@ -1,2 +1,4 @@
 
-          <Badge variant="default" className="bg-green-500 text-white">
+          <Badge variant="outline" className="bg-green-500 text-white">
+            Achievement
+          </Badge>
