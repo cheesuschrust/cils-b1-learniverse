@@ -12,6 +12,7 @@ describe('FlashcardComponent', () => {
     italian: 'Ciao',
     english: 'Hello',
     level: 1,
+    difficulty: 2.5, // Added difficulty
     mastered: false,
     tags: ['greeting'],
     createdAt: new Date(),

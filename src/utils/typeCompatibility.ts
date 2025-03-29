@@ -38,6 +38,7 @@ export function formatFlashcardForDisplay(
     [frontFieldName]: card.front || card.italian || '',
     [backFieldName]: card.back || card.english || '',
     level: card.level,
+    difficulty: card.difficulty,
     tags: card.tags?.join(', ') || '',
     mastered: card.mastered ? 'Yes' : 'No',
     nextReview: card.nextReview ? new Date(card.nextReview).toLocaleDateString() : 'Not scheduled',

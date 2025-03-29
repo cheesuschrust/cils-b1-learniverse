@@ -38,7 +38,8 @@ export interface ImportFormat {
   };
   delimiter?: string;
   hasHeaders: boolean;
-}
+  type?: string; // Add for compatibility with existing code
+};
 
 // Utility function to normalize flashcard data across the application
 export function normalizeFlashcard(card: any): Flashcard {
@@ -130,6 +131,7 @@ export interface ProgressProps {
   max?: number;
   className?: string;
   style?: React.CSSProperties;
+  indicatorClassName?: string; // Added to fix progress component errors
 }
 
 // Add FlashcardSet type
@@ -149,6 +151,7 @@ export interface FlashcardSet {
   totalCards: number;
   masteredCards: number;
   tags: string[];
+  name?: string; // Added for compatibility
 }
 
 // Add FlashcardStats interface
@@ -183,22 +186,18 @@ export interface User {
 // Add SupportTicketExtension interface
 export interface SupportTicketExtension {
   assignedTo: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | 'urgent';
   status: 'open' | 'in-progress' | 'resolved';
   category: string;
 }
 
 // Add necessary prop types for the SupportTicketItem component
-export interface SupportTicketProps {
+export interface SupportTicketProps extends SupportTicketExtension {
   id: string;
   title: string;
   description: string;
-  status: 'open' | 'in-progress' | 'resolved';
   createdAt: Date;
   userId: string;
-  assignedTo?: string;
-  priority: 'high' | 'medium' | 'low';
-  category: string;
   onStatusChange?: (id: string, status: string) => void;
   onAssigneeChange?: (id: string, assignee: string) => void;
   onPriorityChange?: (id: string, priority: string) => void;
@@ -213,4 +212,3 @@ export interface AnalyticsReportProps {
   reportData?: any;
   onClose?: () => void;
 }
-
