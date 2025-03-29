@@ -22,7 +22,7 @@ import {
   FlashcardMetadata,
   Flashcard
 } from './flashcard-types';
-import { AIOptions } from './ai';
+import { AIOptions, AIModel, AIStatus, AIFeedbackSettings } from './ai';
 import {
   VoicePreference,
   TextToSpeechOptions,
@@ -43,7 +43,12 @@ export type {
 } from './voice';
 
 // AI and System Types
-export type { AIOptions } from './ai';
+export type { 
+  AIOptions,
+  AIModel,
+  AIStatus,
+  AIFeedbackSettings
+} from './ai';
 
 // User Management Types
 export type {

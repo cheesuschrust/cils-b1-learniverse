@@ -1,283 +1,316 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Question, QuestionSet, QuizAttempt } from '@/types/question';
-import questionService from '@/services/questionService';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
+import { serviceFactory } from '@/services/ServiceFactory';
+import { QuestionService } from '@/services/questionService';
+import { useToast } from '@/hooks/use-toast';
+import { Question, QuestionSet } from '@/types/question';
 
-export const useMultipleChoice = () => {
+export function useMultipleChoice() {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
-  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedSet, setSelectedSet] = useState<QuestionSet | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [score, setScore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { user, incrementDailyQuestionCount } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const currentUserId = user?.id || 'guest';
   
-  // Load question sets and quiz attempts
+  const questionService = serviceFactory.get<QuestionService>('questionService');
+
+  // Load question sets
   useEffect(() => {
-    const fetchData = async () => {
+    async function loadQuestionSets() {
       try {
-        setIsLoading(true);
-        const loadedSets = await questionService.getQuestionSets();
-        setQuestionSets(loadedSets);
-        
-        if (currentUserId !== 'guest') {
-          const loadedAttempts = await questionService.getQuizAttempts(currentUserId);
-          setQuizAttempts(loadedAttempts);
-        }
-        
-        setError(null);
+        setLoading(true);
+        const sets = await questionService.getQuestions();
+        setQuestionSets(sets as QuestionSet[]);
+        setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load question data'));
+        setError(err instanceof Error ? err : new Error('Failed to load question sets'));
+        setLoading(false);
         toast({
-          title: "Error loading questions",
-          description: "Could not load questions. Please try again later.",
-          variant: "destructive"
+          title: "Error",
+          description: "Failed to load question sets",
+          variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    }
     
-    fetchData();
-  }, [currentUserId, toast]);
+    if (user) {
+      loadQuestionSets();
+    }
+  }, [user, toast]);
   
   // Create a new question set
-  const createQuestionSet = useCallback(async (set: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuestionSet> => {
+  const createQuestionSet = async (set: Omit<QuestionSet, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const newSet = await questionService.createQuestionSet(set);
-      setQuestionSets(prev => [...prev, newSet]);
+      setLoading(true);
+      const newSet = await questionService.createQuestion({ 
+        ...set, 
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as QuestionSet);
+      
+      setQuestionSets(prev => [...prev, {
+        ...newSet,
+        questions: Array.isArray(newSet.questions) ? newSet.questions : [],
+        updatedAt: new Date(),
+      } as QuestionSet]);
+      
       toast({
-        title: "Question set created",
-        description: `Successfully created "${newSet.title}" question set`,
+        title: "Success",
+        description: "Question set created successfully",
+        variant: "default",
       });
+      
+      setLoading(false);
       return newSet;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create question set';
+      setError(err instanceof Error ? err : new Error('Failed to create question set'));
       toast({
-        title: "Error creating question set",
-        description: errorMessage,
-        variant: "destructive"
+        title: "Error",
+        description: "Failed to create question set",
+        variant: "destructive",
       });
+      setLoading(false);
       throw err;
     }
-  }, [toast]);
+  };
   
-  // Update a question set
-  const updateQuestionSet = useCallback(async (id: string, updates: Partial<QuestionSet>): Promise<QuestionSet | null> => {
+  // Update an existing question set
+  const updateQuestionSet = async (id: string, updates: Partial<QuestionSet>) => {
     try {
-      const updatedSet = await questionService.updateQuestionSet(id, updates);
+      setLoading(true);
+      const updatedSet = await questionService.updateQuestion(id, {
+        ...updates,
+        updatedAt: new Date(),
+      });
       
-      if (updatedSet) {
-        setQuestionSets(prev => prev.map(set => set.id === id ? updatedSet : set));
-        toast({
-          title: "Question set updated",
-          description: `Successfully updated "${updatedSet.title}" question set`,
-        });
+      setQuestionSets(prev => prev.map(set => 
+        set.id === id ? {
+          ...set,
+          ...updatedSet,
+          questions: Array.isArray(updatedSet.questions) ? updatedSet.questions : set.questions,
+          updatedAt: new Date(),
+        } as QuestionSet : set
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Question set updated successfully",
+        variant: "default",
+      });
+      
+      setLoading(false);
+      return updatedSet;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update question set'));
+      toast({
+        title: "Error",
+        description: "Failed to update question set",
+        variant: "destructive",
+      });
+      setLoading(false);
+      throw err;
+    }
+  };
+  
+  // Delete a question set
+  const deleteQuestionSet = async (id: string) => {
+    try {
+      setLoading(true);
+      await questionService.deleteQuestion(id);
+      
+      setQuestionSets(prev => prev.filter(set => set.id !== id));
+      
+      toast({
+        title: "Success",
+        description: "Question set deleted successfully",
+        variant: "default",
+      });
+      
+      setLoading(false);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to delete question set'));
+      toast({
+        title: "Error",
+        description: "Failed to delete question set",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return false;
+    }
+  };
+  
+  // Add questions to a set
+  const addQuestionsToSet = async (setId: string, newQuestions: Question[]) => {
+    try {
+      const existingSet = questionSets.find(set => set.id === setId);
+      if (!existingSet) {
+        throw new Error("Question set not found");
       }
+      
+      const updatedSet = await questionService.addQuestionsToSet(setId, newQuestions);
+      
+      setQuestionSets(prev => prev.map(set => 
+        set.id === setId ? {
+          ...set,
+          questions: [...set.questions, ...newQuestions] as Question[],
+          updatedAt: new Date(),
+        } as QuestionSet : set
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Questions added successfully",
+        variant: "default",
+      });
       
       return updatedSet;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update question set';
+      setError(err instanceof Error ? err : new Error('Failed to add questions'));
       toast({
-        title: "Error updating question set",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return null;
-    }
-  }, [toast]);
-  
-  // Delete a question set
-  const deleteQuestionSet = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      const deleted = await questionService.deleteQuestionSet(id);
-      
-      if (deleted) {
-        setQuestionSets(prev => prev.filter(set => set.id !== id));
-        toast({
-          title: "Question set deleted",
-          description: "Question set was successfully deleted",
-        });
-      }
-      
-      return deleted;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete question set';
-      toast({
-        title: "Error deleting question set",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return false;
-    }
-  }, [toast]);
-  
-  // Get a question set by ID
-  const getQuestionSetById = useCallback((id: string): QuestionSet | null => {
-    return questionSets.find(set => set.id === id) || null;
-  }, [questionSets]);
-  
-  // Add a question to a set
-  const addQuestion = useCallback(async (setId: string, question: Omit<Question, 'id' | 'createdAt' | 'updatedAt'>): Promise<Question | null> => {
-    try {
-      const newQuestion = await questionService.createQuestion(setId, question);
-      
-      if (newQuestion) {
-        setQuestionSets(prev => prev.map(set => {
-          if (set.id === setId) {
-            return {
-              ...set,
-              questions: [...set.questions, newQuestion],
-              updatedAt: new Date()
-            };
-          }
-          return set;
-        }));
-        toast({
-          title: "Question added",
-          description: "Question was successfully added to the set",
-        });
-      }
-      
-      return newQuestion;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add question';
-      toast({
-        title: "Error adding question",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return null;
-    }
-  }, [toast]);
-  
-  // Update a question
-  const updateQuestion = useCallback(async (setId: string, questionId: string, updates: Partial<Question>): Promise<Question | null> => {
-    try {
-      const updatedQuestion = await questionService.updateQuestion(setId, questionId, updates);
-      
-      if (updatedQuestion) {
-        setQuestionSets(prev => prev.map(set => {
-          if (set.id === setId) {
-            return {
-              ...set,
-              questions: set.questions.map(q => q.id === questionId ? updatedQuestion : q),
-              updatedAt: new Date()
-            };
-          }
-          return set;
-        }));
-        toast({
-          title: "Question updated",
-          description: "Question was successfully updated",
-        });
-      }
-      
-      return updatedQuestion;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update question';
-      toast({
-        title: "Error updating question",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return null;
-    }
-  }, [toast]);
-  
-  // Delete a question
-  const deleteQuestion = useCallback(async (setId: string, questionId: string): Promise<boolean> => {
-    try {
-      const deleted = await questionService.deleteQuestion(setId, questionId);
-      
-      if (deleted) {
-        setQuestionSets(prev => prev.map(set => {
-          if (set.id === setId) {
-            return {
-              ...set,
-              questions: set.questions.filter(q => q.id !== questionId),
-              updatedAt: new Date()
-            };
-          }
-          return set;
-        }));
-        toast({
-          title: "Question deleted",
-          description: "Question was successfully deleted",
-        });
-      }
-      
-      return deleted;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete question';
-      toast({
-        title: "Error deleting question",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return false;
-    }
-  }, [toast]);
-  
-  // Save a quiz attempt and increment daily question count
-  const saveQuizAttempt = useCallback(async (attempt: Omit<QuizAttempt, 'createdAt'>): Promise<QuizAttempt> => {
-    try {
-      if (user) {
-        await incrementDailyQuestionCount('multipleChoice');
-      }
-      
-      const newAttempt = await questionService.saveQuizAttempt({...attempt, userId: currentUserId});
-      setQuizAttempts(prev => [...prev, newAttempt]);
-      
-      return newAttempt;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save quiz attempt';
-      toast({
-        title: "Error saving attempt",
-        description: errorMessage,
-        variant: "destructive"
+        title: "Error",
+        description: "Failed to add questions to set",
+        variant: "destructive",
       });
       throw err;
     }
-  }, [currentUserId, incrementDailyQuestionCount, toast, user]);
+  };
   
-  // Get quiz attempts for a specific question set
-  const getQuizAttemptsForSet = useCallback((setId: string): QuizAttempt[] => {
-    return quizAttempts.filter(attempt => attempt.questionSetId === setId);
-  }, [quizAttempts]);
+  // Update questions in a set
+  const updateQuestionsInSet = async (setId: string, updatedQuestions: Question[]) => {
+    try {
+      const existingSet = questionSets.find(set => set.id === setId);
+      if (!existingSet) {
+        throw new Error("Question set not found");
+      }
+      
+      const updatedSet = await questionService.updateQuestionsInSet(setId, updatedQuestions);
+      
+      setQuestionSets(prev => prev.map(set => 
+        set.id === setId ? {
+          ...set,
+          questions: updatedQuestions as Question[],
+          updatedAt: new Date(),
+        } as QuestionSet : set
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Questions updated successfully",
+        variant: "default",
+      });
+      
+      return updatedSet;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update questions'));
+      toast({
+        title: "Error",
+        description: "Failed to update questions in set",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
   
-  // Get the user's progress on a question set
-  const getSetProgress = useCallback((setId: string): { completed: number; total: number; percentage: number } => {
-    const attempts = getQuizAttemptsForSet(setId);
-    const completedAttempts = attempts.filter(a => a.completed);
-    const set = questionSets.find(s => s.id === setId);
-    const total = set?.questions.length || 0;
-    
-    return {
-      completed: completedAttempts.length,
-      total,
-      percentage: total > 0 ? (completedAttempts.length / total) * 100 : 0
-    };
-  }, [getQuizAttemptsForSet, questionSets]);
+  // Remove questions from a set
+  const removeQuestionsFromSet = async (setId: string, questionIds: string[]) => {
+    try {
+      const existingSet = questionSets.find(set => set.id === setId);
+      if (!existingSet) {
+        throw new Error("Question set not found");
+      }
+      
+      await questionService.removeQuestionsFromSet(setId, questionIds);
+      
+      setQuestionSets(prev => prev.map(set => 
+        set.id === setId ? {
+          ...set,
+          questions: set.questions.filter(q => !questionIds.includes(q.id)) as Question[],
+          updatedAt: new Date(),
+        } as QuestionSet : set
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Questions removed successfully",
+        variant: "default",
+      });
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to remove questions'));
+      toast({
+        title: "Error",
+        description: "Failed to remove questions from set",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+  
+  // Save quiz attempt
+  const saveQuizAttempt = async (quizData: any) => {
+    try {
+      const result = await questionService.saveQuizAttempt(quizData);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to save quiz attempt'));
+      toast({
+        title: "Error",
+        description: "Failed to save quiz attempt",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+  
+  // Load user's quiz attempts
+  const loadQuizAttempts = async () => {
+    try {
+      if (user) {
+        const attempts = await questionService.getQuestionAttempts(user.id);
+        return attempts;
+      }
+      return [];
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to load quiz attempts'));
+      toast({
+        title: "Error", 
+        description: "Failed to load quiz attempts",
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
   
   return {
+    questions,
     questionSets,
-    quizAttempts,
-    isLoading,
+    selectedSet,
+    currentQuestion,
+    answers,
+    score,
+    loading,
     error,
+    setSelectedSet,
+    setCurrentQuestion,
+    setAnswers,
+    setScore,
     createQuestionSet,
     updateQuestionSet,
     deleteQuestionSet,
-    getQuestionSetById,
-    addQuestion,
-    updateQuestion,
-    deleteQuestion,
+    addQuestionsToSet,
+    updateQuestionsInSet,
+    removeQuestionsFromSet,
     saveQuizAttempt,
-    getQuizAttemptsForSet,
-    getSetProgress
+    loadQuizAttempts
   };
-};
+}
 
 export default useMultipleChoice;

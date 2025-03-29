@@ -50,6 +50,7 @@ export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
  */
 export interface User extends Partial<LegacyFields> {
   uid: string;
+  id?: string;
   email: string;
   photoURL: string;
   displayName: string;
@@ -63,6 +64,10 @@ export interface User extends Partial<LegacyFields> {
   performance: UserPerformance;
   role?: UserRole;
   language?: 'english' | 'italian' | 'both' | 'en' | 'it';
+  isVerified?: boolean;
+  lastLogin?: Date;
+  status?: 'active' | 'inactive' | 'suspended';
+  subscription?: 'free' | 'premium' | 'trial';
 }
 
 /**
@@ -98,6 +103,7 @@ export const normalizeUser = (input: Record<string, any>): User => {
 
   return {
     uid: input.uid || input.id || '',
+    id: input.id || input.uid || '',
     email: input.email || '',
     photoURL: input.photoURL || input.photo_url || '',
     displayName: input.displayName || input.display_name || '',
@@ -111,6 +117,10 @@ export const normalizeUser = (input: Record<string, any>): User => {
     performance: { ...defaultPerformance, ...input.performance },
     role: input.role || 'user',
     language: input.language || input.preferredLanguage || 'english',
+    isVerified: Boolean(input.isVerified),
+    lastLogin: parseDate(input.lastLogin),
+    status: input.status || 'active',
+    subscription: input.subscription || 'free',
 
     // Legacy fields preservation
     ...(input.photo_url && { photo_url: input.photo_url }),

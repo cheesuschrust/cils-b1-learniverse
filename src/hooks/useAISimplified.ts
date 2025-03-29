@@ -1,169 +1,57 @@
 
 import { useState, useCallback } from 'react';
-import { AIStatus, UseAIReturn } from '@/types/ai';
-import { useToast } from '@/components/ui/use-toast';
-import { User } from '@/types/user-types';
-import { Flashcard } from '@/types/flashcard-types';
-import { normalizeFlashcard } from '@/types/flashcard-types';
-import { convertLegacyUser } from '@/types/user-types';
-import { AIOptions } from '@/types/ai';
+import { serviceFactory } from '@/services/ServiceFactory';
+import { AIOptions, UseAIReturn } from '@/types/ai';
+import { errorMonitoring } from '@/utils/errorMonitoring';
 
-// This is a simplified version of useAI hook for components that don't need all functionalities
-export default function useAISimplified(): UseAIReturn {
+const useAISimplified = (): UseAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [result, setResult] = useState<string | null>(null);
-  const [controller, setController] = useState<AbortController | null>(null);
-  const { toast } = useToast();
-
-  const handleError = useCallback((error: Error) => {
-    setError(error);
-    setIsLoading(false);
-    toast({
-      title: "AI Error",
-      description: error.message || "An error occurred while processing your request.",
-      variant: "destructive",
-    });
-  }, [toast]);
-
-  const generateText = useCallback(async (prompt: string): Promise<string> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Create a new AbortController for this request
-      const newController = new AbortController();
-      setController(newController);
-
-      // Simulate an API call with a slight delay
-      const mockResponse = await new Promise<string>((resolve, reject) => {
-        setTimeout(() => {
-          if (newController.signal.aborted) {
-            reject(new Error('Request was aborted'));
-            return;
-          }
-          
-          // Simple mock response
-          const response = `Response to: ${prompt}\n\nThis is a simplified mock AI response for demonstration purposes. In a real implementation, this would call an actual AI service.`;
-          resolve(response);
-        }, 1500);
-      });
-
-      setResult(mockResponse);
-      setIsLoading(false);
-      return mockResponse;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      handleError(error);
-      return error.message;
-    } finally {
-      setController(null);
-    }
-  }, [handleError]);
-
-  const abort = useCallback(() => {
-    if (controller) {
-      controller.abort();
-      setController(null);
-      setIsLoading(false);
-    }
-  }, [controller]);
-
-  // Mock confidence score calculation based on content type
-  const getConfidenceScore = async (text: string, contentType: string): Promise<number> => {
-    const scoreMap: Record<string, number> = {
-      'writing': 0.85,
-      'speaking': 0.78,
-      'listening': 0.92,
-      'multiple-choice': 0.95,
-      'flashcards': 0.89
-    };
+  
+  const aiService = serviceFactory.get('aiService');
+  
+  const generateText = useCallback(async (prompt: string, options?: AIOptions): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
     
-    return scoreMap[contentType] || 0.7; // Default to 0.7 if content type not found
-  };
-
-  // Mock method to classify text
-  const classifyText = async (text: string): Promise<any[]> => {
-    return [
-      { label: 'positive', score: 0.75 },
-      { label: 'neutral', score: 0.20 },
-      { label: 'negative', score: 0.05 }
-    ];
-  };
-
-  // Mock method for flashcard generation
-  const generateFlashcards = async (
-    content: string, 
-    count: number = 5, 
-    difficulty: string = 'intermediate'
-  ): Promise<any[]> => {
-    const flashcards = [];
-    for (let i = 0; i < count; i++) {
-      flashcards.push({
-        id: `card-${i}`,
-        front: `Term ${i+1} from ${content}`,
-        back: `Definition ${i+1} for ${difficulty} level`,
-        level: 0,
-        mastered: false,
-        tags: ['generated', difficulty],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    try {
+      const response = await aiService.generateText(prompt, options);
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('AI text generation failed');
+      setError(error);
+      errorMonitoring.captureError(error);
+      return '';
+    } finally {
+      setIsLoading(false);
     }
-    return flashcards;
-  };
-
-  // Mock method for generating questions
-  const generateQuestions = async (
-    content: string,
-    count: number = 5,
-    type: string = 'multiple-choice'
-  ): Promise<any[]> => {
-    const questions = [];
-    for (let i = 0; i < count; i++) {
-      questions.push({
-        id: `question-${i}`,
-        text: `Question ${i+1} about ${content}?`,
-        options: ['Option A', 'Option B', 'Option C', 'Option D'],
-        correctAnswer: 'Option A',
-        difficulty: 'intermediate',
-        category: type,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        tags: [type, 'intermediate'],
-        points: 10
-      });
+  }, [aiService]);
+  
+  const getConfidenceScore = useCallback(async (text: string, contentType: string): Promise<number> => {
+    try {
+      return aiService.getConfidenceScore(contentType) || 0;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to get confidence score');
+      errorMonitoring.captureError(error);
+      return 0;
     }
-    return questions;
-  };
-
-  const loadModel = async (): Promise<boolean> => {
-    // Mock implementation
-    console.log("Loading AI model...");
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("AI model loaded");
-    return true;
-  };
-
-  // Return the simplified API
+  }, [aiService]);
+  
+  const abort = useCallback(() => {
+    try {
+      aiService.abortAllRequests();
+    } catch (error) {
+      console.error('Failed to abort AI requests:', error);
+    }
+  }, [aiService]);
+  
   return {
+    generateText,
+    getConfidenceScore,
     isLoading,
     error,
-    result,
-    generateText,
-    abort,
-    status: 'ready' as AIStatus,
-    isModelLoaded: true,
-    loadModel,
-    generateQuestions,
-    isProcessing: isLoading,
-    generateFlashcards,
-    classifyText,
-    getConfidenceScore
+    abort
   };
-}
+};
 
-// Re-export from useAISimplified for backward compatibility
-export { useAISimplified };
-export type { AIOptions };
-export { normalizeFlashcard, convertLegacyUser };
+export default useAISimplified;

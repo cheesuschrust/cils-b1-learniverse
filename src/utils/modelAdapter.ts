@@ -65,8 +65,14 @@ export function getModelForProvider(provider: string, size: AIModelSize): AIMode
   return providerMap[size];
 }
 
+// Alias functions for backward compatibility
+export const adaptModelToSize = mapExternalModelToInternal;
+export const adaptSizeToModel = getModelForProvider;
+
 // Export default for module compatibility
 export default {
   mapExternalModelToInternal,
-  getModelForProvider
+  getModelForProvider,
+  adaptModelToSize,
+  adaptSizeToModel
 };
