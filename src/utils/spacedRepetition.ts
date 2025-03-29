@@ -1,292 +1,140 @@
-import { Flashcard } from '@/types/flashcard';
 
-// Constants for spaced repetition algorithm
-const INITIAL_INTERVAL = 1; // 1 day
-const EASY_BONUS = 1.3;
-const HARD_PENALTY = 0.5;
-const MINIMUM_INTERVAL = 1; // 1 day
-const MAXIMUM_INTERVAL = 365; // 1 year
-const INTERVAL_MODIFIER = 1.0; // Default modifier
+import { Flashcard } from '@/types/interface-fixes';
+
+interface ReviewResult {
+  nextReviewDate: Date;
+  difficultyFactor: number;
+}
 
 /**
- * Calculate the next review date based on performance
- * @param card The flashcard being reviewed
- * @param performance 'again' | 'hard' | 'good' | 'easy'
- * @returns Date object for next review
+ * Calculate the next review date for a flashcard based on spaced repetition algorithm
+ * @param correct Whether the answer was correct
+ * @param difficultyFactor Current difficulty factor (default 2.5)
+ * @param consecutiveCorrect Number of consecutive correct answers
  */
 export function calculateNextReview(
-  card: Flashcard,
-  performance: 'again' | 'hard' | 'good' | 'easy'
-): Date {
-  // Get current level or default to 0
-  const currentLevel = card.level || 0;
+  correct: boolean,
+  difficultyFactor: number = 2.5,
+  consecutiveCorrect: number = 0
+): ReviewResult {
+  // Default values
+  let newDifficultyFactor = difficultyFactor;
+  let intervalDays = 1;
   
-  // Calculate new interval based on performance
-  let newInterval: number;
-  let newLevel: number;
-  
-  switch (performance) {
-    case 'again':
-      // Reset to beginning
-      newInterval = INITIAL_INTERVAL;
-      newLevel = 0;
-      break;
-    case 'hard':
-      // Increase interval but with penalty
-      newInterval = Math.max(
-        MINIMUM_INTERVAL,
-        Math.round((currentLevel || INITIAL_INTERVAL) * HARD_PENALTY)
-      );
-      newLevel = Math.max(1, currentLevel);
-      break;
-    case 'good':
-      // Standard progression
-      if (currentLevel === 0) {
-        newInterval = INITIAL_INTERVAL;
-      } else if (currentLevel === 1) {
-        newInterval = 3; // 3 days
-      } else {
-        newInterval = Math.round(currentLevel * INTERVAL_MODIFIER);
-      }
-      newLevel = currentLevel + 1;
-      break;
-    case 'easy':
-      // Faster progression
-      if (currentLevel === 0) {
-        newInterval = 3; // Skip to 3 days
-      } else {
-        newInterval = Math.round(currentLevel * EASY_BONUS);
-      }
-      newLevel = currentLevel + 2;
-      break;
-    default:
-      newInterval = INITIAL_INTERVAL;
-      newLevel = currentLevel;
+  if (correct) {
+    // If correct, increase the interval based on the SM-2 algorithm
+    if (consecutiveCorrect === 0) {
+      intervalDays = 1; // First correct answer
+    } else if (consecutiveCorrect === 1) {
+      intervalDays = 3; // Second correct answer
+    } else {
+      // For three or more correct answers, use the SM-2 formula
+      intervalDays = Math.round(intervalDays * difficultyFactor);
+    }
+    
+    // Adjust the difficulty factor (ease) based on performance
+    newDifficultyFactor = Math.max(1.3, difficultyFactor + 0.1);
+  } else {
+    // If incorrect, reset the interval and decrease the difficulty factor
+    intervalDays = 1;
+    newDifficultyFactor = Math.max(1.3, difficultyFactor - 0.2);
   }
-  
-  // Cap the interval at the maximum
-  newInterval = Math.min(newInterval, MAXIMUM_INTERVAL);
   
   // Calculate the next review date
-  const nextReview = new Date();
-  nextReview.setDate(nextReview.getDate() + newInterval);
+  const now = new Date();
+  const nextReviewDate = new Date(now);
+  nextReviewDate.setDate(now.getDate() + intervalDays);
   
-  return nextReview;
+  return {
+    nextReviewDate,
+    difficultyFactor: newDifficultyFactor
+  };
 }
 
 /**
- * Get cards due for review today
- * @param cards Array of flashcards
- * @returns Array of cards due today
+ * Determine if a card is due for review
+ * @param card Flashcard to check
+ * @returns true if the card is due for review, false otherwise
  */
-export function getDueCards(cards: Flashcard[]): Flashcard[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+export function isDueForReview(card: Flashcard): boolean {
+  if (!card.nextReview) return true;
   
-  return cards.filter(card => {
-    const dueDate = card.nextReview || card.dueDate;
-    if (!dueDate) return false;
-    
-    const dueDateObj = new Date(dueDate);
-    dueDateObj.setHours(0, 0, 0, 0);
-    
-    return dueDateObj <= today;
-  });
+  const now = new Date();
+  const nextReview = new Date(card.nextReview);
+  return nextReview <= now;
 }
 
 /**
- * Calculate review performance based on correct and total counts
+ * Calculate days until the next review
+ * @param card Flashcard to check
+ * @returns Number of days until next review, or 0 if overdue
  */
-export function calculateReviewPerformance(reviews: any[], totalCards: number): number {
-  if (!reviews || reviews.length === 0 || totalCards === 0) return 0;
+export function daysUntilReview(card: Flashcard): number {
+  if (!card.nextReview) return 0;
   
-  const correctCount = reviews.filter(review => review.isCorrect).length;
-  return (correctCount / totalCards) * 100;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  const nextReview = new Date(card.nextReview);
+  nextReview.setHours(0, 0, 0, 0);
+  
+  const diffTime = nextReview.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, diffDays);
 }
 
 /**
- * Calculate mastery level based on review history
- * @param card Flashcard to evaluate
- * @returns number between 0-100 representing mastery percentage
+ * Generate a review schedule for a set of flashcards
+ * @param flashcards Array of flashcards
+ * @returns Review schedule data
  */
-export function calculateMasteryLevel(card: Flashcard): number {
-  if (!card.reviewHistory || card.reviewHistory.length === 0) {
-    return 0;
-  }
+export function generateReviewSchedule(flashcards: Flashcard[]): any {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
   
-  // Calculate based on level and correct reviews
-  const level = card.level || 0;
-  const maxLevel = 10; // Maximum level for full mastery
-  
-  // Basic calculation based on level
-  let masteryFromLevel = Math.min(100, (level / maxLevel) * 100);
-  
-  // Adjust based on review history if available
-  if (card.correctReviews !== undefined && card.totalReviews !== undefined && card.totalReviews > 0) {
-    const accuracyRate = (card.correctReviews / card.totalReviews) * 100;
-    
-    // Weighted average: 70% level progress, 30% accuracy
-    return (masteryFromLevel * 0.7) + (accuracyRate * 0.3);
-  }
-  
-  return masteryFromLevel;
-}
-
-/**
- * Organize cards by their due dates
- * @param cards Array of flashcards
- * @returns Object with cards organized by due date
- */
-export function organizeCardsByDueDate(cards: Flashcard[]): Record<string, Flashcard[]> {
-  const organized: Record<string, Flashcard[]> = {};
-  
-  cards.forEach(card => {
-    const dueDate = card.nextReview || card.dueDate;
-    if (!dueDate) return;
-    
-    const dateStr = new Date(dueDate).toISOString().split('T')[0];
-    
-    if (!organized[dateStr]) {
-      organized[dateStr] = [];
-    }
-    
-    organized[dateStr].push(card);
-  });
-  
-  return organized;
-}
-
-/**
- * Get statistics about the spaced repetition schedule
- * @param cards Array of flashcards
- * @returns Object with statistics
- */
-export function getScheduleStats(cards: Flashcard[]): {
-  dueToday: number;
-  dueThisWeek: number;
-  overdue: number;
-  averageInterval: number;
-} {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const nextWeek = new Date(today);
-  nextWeek.setDate(today.getDate() + 7);
-  
+  const dueByDate: {[key: string]: number} = {};
   let dueToday = 0;
   let dueThisWeek = 0;
+  let dueNextWeek = 0;
   let overdue = 0;
-  let totalInterval = 0;
-  let cardsWithInterval = 0;
   
-  cards.forEach(card => {
-    const dueDate = card.nextReview || card.dueDate;
-    if (!dueDate) return;
+  // Calculate the end dates for this week and next week
+  const endOfThisWeek = new Date(now);
+  endOfThisWeek.setDate(now.getDate() + (6 - now.getDay()));
+  
+  const endOfNextWeek = new Date(endOfThisWeek);
+  endOfNextWeek.setDate(endOfThisWeek.getDate() + 7);
+  
+  flashcards.forEach(card => {
+    if (!card.nextReview) return;
     
-    const dueDateObj = new Date(dueDate);
-    dueDateObj.setHours(0, 0, 0, 0);
+    const reviewDate = new Date(card.nextReview);
+    const dateKey = reviewDate.toISOString().split('T')[0];
     
-    if (dueDateObj < today) {
-      overdue++;
-    } else if (dueDateObj.getTime() === today.getTime()) {
-      dueToday++;
-    } else if (dueDateObj <= nextWeek) {
-      dueThisWeek++;
-    }
+    // Count by date
+    dueByDate[dateKey] = (dueByDate[dateKey] || 0) + 1;
     
-    if (card.level && card.level > 0) {
-      totalInterval += card.level;
-      cardsWithInterval++;
+    // Count by time period
+    if (reviewDate < now) {
+      overdue += 1;
+    } else if (reviewDate.toDateString() === now.toDateString()) {
+      dueToday += 1;
+    } else if (reviewDate <= endOfThisWeek) {
+      dueThisWeek += 1;
+    } else if (reviewDate <= endOfNextWeek) {
+      dueNextWeek += 1;
     }
   });
-  
-  const averageInterval = cardsWithInterval > 0 ? totalInterval / cardsWithInterval : 0;
   
   return {
     dueToday,
     dueThisWeek,
-    overdue,
-    averageInterval
-  };
-}
-
-export function daysUntilReview(card: Flashcard): number {
-  if (!card.nextReview) return 0;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const reviewDate = new Date(card.nextReview);
-  reviewDate.setHours(0, 0, 0, 0);
-  const diffTime = reviewDate.getTime() - now.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-export function isDueForReview(card: Flashcard): boolean {
-  if (!card.nextReview) return false;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const reviewDate = new Date(card.nextReview);
-  reviewDate.setHours(0, 0, 0, 0);
-  return reviewDate <= now;
-}
-
-export function generateReviewSchedule(cards: Flashcard[]): any {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  
-  const nextWeek = new Date(now);
-  nextWeek.setDate(now.getDate() + 7);
-  
-  const dueByDate: Record<string, number> = {};
-  const dueToday: Flashcard[] = [];
-  const overdue: Flashcard[] = [];
-  const upcoming: Flashcard[] = [];
-  let totalDue = 0;
-  let nextWeekCount = 0;
-  
-  cards.forEach(card => {
-    if (!card.nextReview) return;
-    
-    const reviewDate = new Date(card.nextReview);
-    reviewDate.setHours(0, 0, 0, 0);
-    const dateStr = reviewDate.toISOString().split('T')[0];
-    
-    if (!dueByDate[dateStr]) {
-      dueByDate[dateStr] = 0;
-    }
-    dueByDate[dateStr]++;
-    
-    if (reviewDate < now) {
-      overdue.push(card);
-      totalDue++;
-    } else if (reviewDate.getTime() === now.getTime()) {
-      dueToday.push(card);
-      totalDue++;
-    } else if (reviewDate <= nextWeek) {
-      upcoming.push(card);
-      nextWeekCount++;
-    }
-  });
-  
-  return {
+    dueNextWeek,
     dueByDate,
-    dueToday,
     overdue,
-    upcoming,
-    totalDue,
-    nextWeekCount,
-    dueThisWeek: totalDue + nextWeekCount,
-    dueNextWeek: nextWeekCount
+    upcoming: dueThisWeek + dueNextWeek,
+    totalDue: overdue + dueToday,
+    nextWeekCount: dueNextWeek
   };
 }
-
-export default {
-  calculateNextReview,
-  getDueCards,
-  calculateReviewPerformance,
-  calculateMasteryLevel,
-  organizeCardsByDueDate,
-  getScheduleStats,
-  daysUntilReview,
-  isDueForReview,
-  generateReviewSchedule
-};
