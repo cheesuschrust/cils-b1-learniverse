@@ -1,8 +1,8 @@
 
-
 import { User } from '@/types/user-types';
 import { normalizeUser, normalizeUserRecords, convertLegacyUser } from '@/types/user-types';
 import { normalizeFields } from '@/types/utils';
+import { calculateReviewPerformance } from '@/types/flashcard-types';
 
 /**
  * Legacy interface with snake_case field names for backward compatibility
@@ -26,12 +26,14 @@ export {
   normalizeUser,
   normalizeUserRecords,
   convertLegacyUser,
-  normalizeFields
+  normalizeFields,
+  calculateReviewPerformance
 };
 
 export default {
   normalizeUser,
   normalizeUserRecords,
   convertLegacyUser,
-  normalizeFields
+  normalizeFields,
+  calculateReviewPerformance
 };

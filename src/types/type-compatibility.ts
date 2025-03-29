@@ -93,14 +93,6 @@ export const normalizeUser = (user: any): User => {
     photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage || '',
     role: user.role || 'user',
     createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    subscription: user.subscription || 'free',
-    phoneNumber: user.phoneNumber || user.phone_number || '',
-    address: user.address || '',
-    preferences: user.preferences || {},
-    preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-    language: user.language || user.preferredLanguage || user.preferred_language || 'english',
     settings: {
       theme: 'system',
       notifications: true,
@@ -110,6 +102,8 @@ export const normalizeUser = (user: any): User => {
       autoAdvance: false,
       ...(user.settings || {})
     },
+    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
+    isPremium: Boolean(user.isPremium),
     performance: {
       totalReviews: 0,
       correctStreak: 0,
@@ -176,6 +170,12 @@ export const normalizeUserRecords = (users: any[]): User[] => {
   return users.map(user => normalizeUser(user));
 };
 
+// Export for calculateReviewPerformance
+export const calculateReviewPerformance = (correctCount: number, totalCount: number): number => {
+  if (totalCount === 0) return 0;
+  return (correctCount / totalCount) * 100;
+};
+
 export default {
   normalizeUser,
   normalizeUserRecords,
@@ -184,5 +184,6 @@ export default {
   normalizeAIModel,
   normalizeFlashcard,
   convertLegacyUser,
-  normalizeFields
+  normalizeFields,
+  calculateReviewPerformance
 };

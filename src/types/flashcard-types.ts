@@ -2,112 +2,86 @@
 import { isValidDate } from './voice';
 
 /**
- * Performance metrics for flashcard reviews
+ * Review performance metrics
  */
 export interface ReviewPerformance {
   accuracy: number;
-  timeTaken: number;
-  timestamp: Date;
+  speed: number;
+  consistency: number;
+  retention: number;
+  overall: number;
 }
 
 /**
- * History of flashcard reviews
+ * Review session history record
  */
 export interface ReviewHistory {
-  reviewedAt: Date;
-  performance: number;
-  timeTaken: number;
-  details: ReviewPerformance;
+  date: Date;
+  cardsReviewed: number;
+  correctCount: number;
+  incorrectCount: number;
+  avgResponseTime: number;
 }
 
 /**
- * Metadata for flashcards
+ * Flashcard additional metadata
  */
 export interface FlashcardMetadata {
-  created: Date;
-  modified: Date;
-  tags: string[];
-  difficulty: 'easy' | 'medium' | 'hard';
-  category?: string;
   source?: string;
+  notes?: string;
+  examples?: string[];
+  pronunciation?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 /**
- * Flashcard with complete information
+ * Flashcard model
  */
-export interface Flashcard extends FlashcardMetadata {
-  id?: string;
+export interface Flashcard {
+  id: string;
   front: string;
   back: string;
-  nextReview: Date | null;
   level: number;
-  language?: string;
-  lastReviewed?: Date;
-  reviewHistory: ReviewHistory[];
-  streak: number;
-  // Legacy support
+  tags: string[];
+  nextReview: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  mastered: boolean;
   italian?: string;
   english?: string;
+  metadata?: FlashcardMetadata;
+  lastReviewed?: Date;
+  reviewHistory?: ReviewHistory[];
+  reviewCount?: number;
 }
 
 /**
- * Calculates review performance metrics
+ * Calculate review performance based on correct and total counts
  */
-export const calculateReviewPerformance = (performance: number, timeTaken: number): ReviewPerformance => ({
-  accuracy: Math.max(0, Math.min(1, performance)),
-  timeTaken: Math.max(0, timeTaken),
-  timestamp: new Date()
-});
+export const calculateReviewPerformance = (correctCount: number, totalCount: number): number => {
+  if (totalCount === 0) return 0;
+  return (correctCount / totalCount) * 100;
+};
 
 /**
- * Normalizes flashcard data to ensure consistency
+ * Normalize flashcard data
  */
-export const normalizeFlashcard = (card: Record<string, any>): Flashcard => {
-  const now = new Date();
-  const parseDate = (date: any): Date | null => {
-    if (isValidDate(date)) return date;
-    if (!date) return null;
-    try {
-      const parsed = new Date(date);
-      return isValidDate(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const normalizeReviewHistory = (history: any[]): ReviewHistory[] => {
-    if (!Array.isArray(history)) return [];
-    return history.map(review => ({
-      reviewedAt: parseDate(review.reviewedAt) || now,
-      performance: typeof review.performance === 'number' ? Math.max(0, Math.min(1, review.performance)) : 0,
-      timeTaken: typeof review.timeTaken === 'number' ? Math.max(0, review.timeTaken) : 0,
-      details: {
-        accuracy: typeof review.details?.accuracy === 'number' ? Math.max(0, Math.min(1, review.details.accuracy)) : 0,
-        timeTaken: typeof review.details?.timeTaken === 'number' ? Math.max(0, review.details.timeTaken) : 0,
-        timestamp: parseDate(review.details?.timestamp) || now
-      }
-    }));
-  };
-
+export const normalizeFlashcard = (card: any): Flashcard => {
+  if (!card) return null as any;
+  
   return {
-    id: card.id || undefined,
+    id: card.id || '',
     front: card.front || card.italian || '',
     back: card.back || card.english || '',
-    nextReview: parseDate(card.nextReview),
-    level: typeof card.level === 'number' ? Math.max(0, card.level) : 0,
-    language: card.language || undefined,
-    lastReviewed: parseDate(card.lastReviewed),
-    created: parseDate(card.created) || now,
-    modified: parseDate(card.modified) || now,
-    tags: Array.isArray(card.tags) ? card.tags : [],
-    difficulty: ['easy', 'medium', 'hard'].includes(card.difficulty) ? card.difficulty : 'medium',
-    category: card.category || undefined,
-    source: card.source || undefined,
-    reviewHistory: normalizeReviewHistory(card.reviewHistory),
-    streak: typeof card.streak === 'number' ? Math.max(0, card.streak) : 0,
-
-    // Legacy language fields
-    ...(card.italian && { italian: card.italian }),
-    ...(card.english && { english: card.english })
+    level: card.level || 0,
+    tags: card.tags || [],
+    nextReview: card.nextReview || card.dueDate || new Date(),
+    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
+    mastered: card.mastered || false,
+    italian: card.italian,
+    english: card.english
   };
 };
