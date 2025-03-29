@@ -21,6 +21,8 @@ export type Flashcard = {
   status?: string;
   audioUrl?: string;
   imageUrl?: string;
+  first_name?: string;     // Legacy support
+  last_name?: string;      // Legacy support 
 };
 
 export interface ImportFormat {
@@ -173,6 +175,8 @@ export interface User {
   createdAt?: Date;
   lastActive?: Date;
   settings?: Record<string, any>;
+  first_name?: string; // Legacy support
+  last_name?: string;  // Legacy support
   // Add other user properties as needed
 }
 
@@ -206,4 +210,7 @@ export interface AnalyticsReportProps {
   timeRange?: 'day' | 'week' | 'month' | 'year';
   categories?: string[];
   includeCharts?: boolean;
+  reportData?: any;
+  onClose?: () => void;
 }
+

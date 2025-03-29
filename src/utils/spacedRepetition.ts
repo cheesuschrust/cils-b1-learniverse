@@ -1,4 +1,3 @@
-
 import { Flashcard } from '@/types/interface-fixes';
 
 interface ReviewResult {
@@ -49,6 +48,20 @@ export function calculateNextReview(
     nextReviewDate,
     difficultyFactor: newDifficultyFactor
   };
+}
+
+/**
+ * Calculate the next review date based on card and performance
+ * @param card Flashcard to calculate next review for
+ * @param performance Performance data from the review
+ * @returns Next review date
+ */
+export function calculateNextReviewDate(card: Flashcard, performance: { score: number, time?: number, date?: Date }): Date {
+  const now = new Date();
+  const daysToAdd = Math.max(1, Math.round(card.difficulty * performance.score));
+  const nextDate = new Date(now);
+  nextDate.setDate(now.getDate() + daysToAdd);
+  return nextDate;
 }
 
 /**
@@ -150,4 +163,36 @@ export function generateReviewSchedule(flashcards: Flashcard[]): any {
     totalDue: overdue + dueToday,
     nextWeekCount: dueNextWeek
   };
+}
+
+/**
+ * Calculate review performance metrics
+ * @param response Review response data
+ * @returns ReviewPerformance object
+ */
+export function calculateReviewPerformance(response: any): { score: number, time: number, date: Date } {
+  return {
+    score: response.score || 0,
+    time: response.time || 0,
+    date: new Date()
+  };
+}
+
+/**
+ * Adjust difficulty based on performance
+ * @param card Flashcard to adjust
+ * @param performance Performance metrics
+ * @returns Updated difficulty value
+ */
+export function adjustDifficulty(card: Flashcard, performance: { score: number }): number {
+  // Base difficulty adjustment on score (0-1)
+  if (performance.score >= 0.8) {
+    // Good performance, make card slightly easier
+    return Math.max(1, card.difficulty - 0.1);
+  } else if (performance.score <= 0.3) {
+    // Poor performance, make card harder
+    return Math.min(5, card.difficulty + 0.2);
+  }
+  // Moderate performance, keep difficulty the same
+  return card.difficulty;
 }
