@@ -70,7 +70,7 @@ export default function useAISimplified(): UseAIReturn {
   }, [controller]);
 
   // Mock confidence score calculation based on content type
-  const getConfidenceScore = (contentType: string): number => {
+  const getConfidenceScore = async (text: string, contentType: string): Promise<number> => {
     const scoreMap: Record<string, number> = {
       'writing': 0.85,
       'speaking': 0.78,

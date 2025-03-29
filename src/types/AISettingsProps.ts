@@ -1,5 +1,5 @@
 
-import { AIPreferences, AISettings } from './ai';
+import { AISettings } from './ai';
 
 export interface AISettingsProps {
   initialSettings?: AISettings;
