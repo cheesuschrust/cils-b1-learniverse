@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -5,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Loader2, Volume, Info } from "lucide-react";
-import { ConfidenceIndicator } from "@/components/ai/ConfidenceIndicator";
-import { SpeakableWord } from "@/components/learning/SpeakableWord";
+import ConfidenceIndicator from "@/components/ai/ConfidenceIndicator";
+import SpeakableWord from "@/components/learning/SpeakableWord";
 import { FlashcardPronunciation } from "@/components/flashcards/FlashcardPronunciation";
 
 const SpeakingPage: React.FC = () => {
