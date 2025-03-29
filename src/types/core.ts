@@ -21,8 +21,9 @@ export interface SpeechState {
   speaking: boolean;
   voices: SpeechSynthesisVoice[];
   currentVoice: string | null;
-  error?: string;  // Added for error handling
+  error?: string;  
   isPaused?: boolean;
+  isLoading?: boolean;
 }
 
 export interface VoicePreference {
@@ -30,8 +31,10 @@ export interface VoicePreference {
   italianVoiceURI: string;
   voiceRate: number;
   voicePitch: number;
-  preferredLanguage?: string;  // Added based on file analysis
+  preferredLanguage?: string;
   volume?: number;
+  autoPlay?: boolean;
+  useNative?: boolean;
 }
 
 // Base interfaces for type safety  
@@ -39,9 +42,18 @@ export interface AIOptions {
   temperature?: number;  
   maxTokens?: number;  
   model?: string;  
-  context?: string;  // Added based on usage patterns
+  context?: string;
   systemPrompt?: string;
+  streaming?: boolean;
+  presence_penalty?: number;
+  frequency_penalty?: number;
 }  
+
+export interface ReviewHistory {  
+  reviewedAt: Date;  
+  performance: number;  
+  timeTaken?: number;  
+}
 
 export interface Flashcard {  
   id?: string;
@@ -59,6 +71,8 @@ export interface Flashcard {
   // Additional metadata
   created?: Date;  
   modified?: Date;
+  reviewHistory?: ReviewHistory[];
+  streak?: number;
   
   // Legacy compatibility
   italian?: string;
@@ -84,6 +98,14 @@ export interface LegacyUser {
 // Import UserRole from the user types
 import { UserRole } from '@/types/user';
 
+// User settings interface
+export interface UserSettings {  
+  theme?: 'light' | 'dark' | 'system';  
+  notifications?: boolean;  
+  reviewInterval?: number;  
+  dailyGoal?: number;  
+}
+
 // User interface with all required fields
 export interface User {  
   id: string;
@@ -97,18 +119,20 @@ export interface User {
   updatedAt: Date;
   role: UserRole;
   preferredLanguage?: string;
-  settings?: Record<string, unknown>;
+  settings?: UserSettings | Record<string, unknown>;
+  isPremium?: boolean;
+  lastActive?: Date;
   
   // Legacy compatibility fields
   photo_url?: string;  
   display_name?: string;  
   first_name?: string;  
   last_name?: string;
+  created_at?: Date;
   
   // Additional fields from the existing User interfaces
   isVerified?: boolean;
   lastLogin?: Date;
-  lastActive?: Date;
   status?: 'active' | 'inactive' | 'suspended';
   subscription?: 'free' | 'premium' | 'trial';
   phoneNumber?: string;
@@ -149,6 +173,7 @@ export function normalizeFlashcard(card: any): Flashcard {
     back: card.back || card.english || '',
     level: typeof card.level === 'number' ? card.level : 0,
     tags: Array.isArray(card.tags) ? card.tags : [],
+    mastered: card.mastered || false,
     nextReview: card.nextReview instanceof Date 
       ? card.nextReview 
       : card.nextReview 
@@ -156,7 +181,6 @@ export function normalizeFlashcard(card: any): Flashcard {
         : null,
     createdAt: card.createdAt instanceof Date ? card.createdAt : card.created instanceof Date ? card.created : now,
     updatedAt: card.updatedAt instanceof Date ? card.updatedAt : card.modified instanceof Date ? card.modified : now,
-    mastered: card.mastered || false,
     language: card.language || undefined,
     lastReviewed: card.lastReviewed instanceof Date 
       ? card.lastReviewed 
@@ -165,6 +189,8 @@ export function normalizeFlashcard(card: any): Flashcard {
         : undefined,
     created: card.created instanceof Date ? card.created : now,
     modified: card.modified instanceof Date ? card.modified : now,
+    reviewHistory: Array.isArray(card.reviewHistory) ? card.reviewHistory : [],
+    streak: typeof card.streak === 'number' ? Math.max(0, card.streak) : 0,
     italian: card.italian || card.front,
     english: card.english || card.back
   };
@@ -213,12 +239,14 @@ export function normalizeUser(user: any): User {
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
     },
+    isPremium: Boolean(user.isPremium),
     
     // Legacy compatibility fields
     photo_url: user.photo_url || user.photoURL || '',
     display_name: user.display_name || user.displayName || '',
     first_name: user.first_name || user.firstName || '',
     last_name: user.last_name || user.lastName || '',
+    created_at: user.created_at ? new Date(user.created_at) : createdAtDate,
     isAdmin: user.isAdmin || user.role === 'admin' || false
   };
 }

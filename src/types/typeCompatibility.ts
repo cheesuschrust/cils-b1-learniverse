@@ -16,7 +16,7 @@ export interface LegacyUserFields {
   updated_at?: Date;
   last_login?: Date;
   last_active?: Date;
-  preferred_language?: 'english' | 'italian' | 'both';
+  preferred_language?: string;
 }
 
 // Re-export the functions from core.ts
