@@ -2,7 +2,8 @@
 // This file provides type compatibility between different type naming conventions
 // across the codebase, reducing the need for type assertions
 
-import { UserRole, User, UserSettings } from './user-types';
+import { UserRole, User } from './user';
+import { UserSettings } from './user-types';
 import { Notification, NotificationType, NotificationAction } from './notification';
 import { AIModel, AIStatus, AIPreference } from './ai';
 import { Flashcard, FlashcardSet } from './flashcard';
@@ -85,32 +86,37 @@ export const normalizeUser = (user: any): User => {
   if (!user) return null as any;
   
   return {
-    uid: user.uid || user.id || '',
+    id: user.id || user.uid || '',
     email: user.email || '',
     firstName: user.firstName || user.first_name || '',
     lastName: user.lastName || user.last_name || '',
     displayName: user.displayName || user.display_name || '',
     photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage || '',
-    role: user.role || 'user',
+    role: (user.role || 'user') as UserRole,
     createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-    settings: {
-      theme: 'system',
+    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
+    preferences: user.preferences || {
+      theme: 'light',
+      language: 'en',
       notifications: true,
-      reviewInterval: 24,
-      dailyGoal: 10,
-      audioEnabled: true,
-      autoAdvance: false,
-      ...(user.settings || {})
+      onboardingCompleted: true
+    },
+    dailyQuestionCounts: user.dailyQuestionCounts || {
+      flashcards: 0,
+      multipleChoice: 0,
+      speaking: 0,
+      writing: 0,
+      listening: 0
     },
     lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    isPremium: Boolean(user.isPremium),
-    performance: {
-      totalReviews: 0,
-      correctStreak: 0,
-      averageAccuracy: 0,
-      dailyStats: [],
-      ...(user.performance || {})
-    }
+    subscription: user.subscription || 'free',
+    status: user.status || 'active',
+    metrics: user.metrics || {
+      totalQuestions: 0,
+      correctAnswers: 0,
+      streak: 0
+    },
+    preferredLanguage: user.preferredLanguage || user.preferred_language || 'english'
   };
 };
 
@@ -129,7 +135,8 @@ export const normalizeFlashcard = (card: any): Flashcard => {
     updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
     mastered: card.mastered || false,
     italian: card.italian,
-    english: card.english
+    english: card.english,
+    difficulty: card.difficulty || 0
   };
 };
 

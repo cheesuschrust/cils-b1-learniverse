@@ -1,5 +1,5 @@
 
-export type UserRole = 'user' | 'admin' | 'teacher';
+export type UserRole = 'user' | 'admin' | 'teacher' | 'moderator' | 'editor';
 
 export type ThemeOption = 'light' | 'dark' | 'system';
 
@@ -8,6 +8,20 @@ export interface UserPreferences {
   language: string;
   notifications: boolean;
   onboardingCompleted: boolean;
+  emailNotifications?: boolean; // Added for compatibility
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  fontSize?: number;
+  notificationsEnabled?: boolean;
+  animationsEnabled?: boolean;
+  preferredLanguage?: string;
+  voiceSpeed?: number;
+  autoPlayAudio?: boolean;
+  showProgressMetrics?: boolean;
+  aiEnabled?: boolean;
+  aiModelSize?: string;
+  aiProcessingOnDevice?: boolean;
+  confidenceScoreVisible?: boolean;
+  bio?: string;
 }
 
 export interface DailyQuestionCounts {
@@ -17,6 +31,13 @@ export interface DailyQuestionCounts {
   speaking: number;
   writing: number;
   listening: number;
+}
+
+export interface UserMetrics {
+  totalQuestions: number;
+  correctAnswers: number;
+  streak: number;
+  [key: string]: any;
 }
 
 export interface User {
@@ -30,4 +51,27 @@ export interface User {
   updatedAt: Date;
   preferences: UserPreferences;
   dailyQuestionCounts: DailyQuestionCounts;
+  
+  // Additional properties referenced in the codebase
+  displayName?: string;
+  photoURL?: string;
+  avatar?: string;
+  profileImage?: string;
+  name?: string;
+  username?: string;
+  phoneNumber?: string;
+  address?: string;
+  preferredLanguage?: 'english' | 'italian' | 'both';
+  lastActive?: Date;
+  lastLogin?: Date;
+  status?: 'active' | 'inactive' | 'suspended';
+  subscription?: 'free' | 'premium' | 'trial';
+  metrics?: UserMetrics;
+  isAdmin?: boolean;
+  
+  // Legacy support fields
+  first_name?: string;
+  last_name?: string;
+  photo_url?: string;
+  display_name?: string;
 }

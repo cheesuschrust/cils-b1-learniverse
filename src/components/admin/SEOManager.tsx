@@ -1,18 +1,19 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { Check, Globe, Search, Share2, BarChart2, TrendingUp, FileIcon, RefreshCw, ArrowUpRight, Tag, Edit, Trash } from 'lucide-react';
+import { Check, Globe, Search, Share2, BarChart2, TrendingUp, FileText, RefreshCw, ArrowUpRight, Tag, Edit, Trash } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { ExtendedAlertVariant } from '@/types/variant-fixes';
 
 /**
  * SEO Manager Component
@@ -95,7 +96,7 @@ const SEOManager = () => {
       toast({
         title: "SEO settings saved",
         description: "Your metadata changes have been applied successfully.",
-        variant: "success",
+        variant: "success" as any,
       });
     }, 1000);
   };
@@ -182,6 +183,18 @@ const SEOManager = () => {
     });
   };
   
+  // Get status variant - fix the type by using the ExtendedAlertVariant
+  const getStatusVariant = (status: string): ExtendedAlertVariant => {
+    switch (status) {
+      case 'high':
+        return 'destructive';
+      case 'medium':
+        return 'warning';
+      default:
+        return 'secondary';
+    }
+  };
+  
   return (
     <>
       <Helmet>
@@ -242,7 +255,7 @@ const SEOManager = () => {
                   
                   <div className="space-y-3">
                     <Label htmlFor="meta-description">Meta Description</Label>
-                    <textarea 
+                    <Textarea 
                       id="meta-description" 
                       placeholder="Enter meta description" 
                       value={metadata.description}
@@ -257,7 +270,7 @@ const SEOManager = () => {
                 
                 <div>
                   <Label htmlFor="meta-keywords">Meta Keywords</Label>
-                  <textarea 
+                  <Textarea 
                     id="meta-keywords" 
                     placeholder="Enter keywords separated by commas" 
                     value={metadata.keywords}
@@ -282,7 +295,7 @@ const SEOManager = () => {
                   
                   <div className="space-y-3">
                     <Label htmlFor="og-description">OG Description</Label>
-                    <textarea 
+                    <Textarea 
                       id="og-description" 
                       placeholder="Enter Open Graph description" 
                       value={metadata.ogDescription}
@@ -318,7 +331,7 @@ const SEOManager = () => {
                   
                   <div className="space-y-3">
                     <Label htmlFor="twitter-description">Twitter Description</Label>
-                    <textarea 
+                    <Textarea 
                       id="twitter-description" 
                       placeholder="Enter Twitter description" 
                       value={metadata.twitterDescription}
@@ -353,7 +366,7 @@ const SEOManager = () => {
                 
                 <div className="space-y-3">
                   <Label htmlFor="robots-txt">robots.txt Content</Label>
-                  <textarea 
+                  <Textarea 
                     id="robots-txt" 
                     placeholder="Enter robots.txt content" 
                     value={metadata.robotsTxt}
@@ -364,7 +377,7 @@ const SEOManager = () => {
                 
                 <div className="space-y-3">
                   <Label htmlFor="structured-data">Structured Data (JSON-LD)</Label>
-                  <textarea 
+                  <Textarea 
                     id="structured-data" 
                     placeholder="Enter JSON-LD structured data" 
                     value={metadata.structuredData}
@@ -416,7 +429,7 @@ const SEOManager = () => {
                       </>
                     ) : (
                       <>
-                        <FileIcon className="mr-2 h-4 w-4" />
+                        <FileText className="mr-2 h-4 w-4" />
                         Generate Sitemap
                       </>
                     )}
@@ -710,7 +723,7 @@ const SEOManager = () => {
                 
                 <div className="space-y-3">
                   <Label htmlFor="custom-scripts">Custom Head Scripts</Label>
-                  <textarea 
+                  <Textarea 
                     id="custom-scripts" 
                     placeholder="<!-- Custom tracking code -->" 
                     value={analyticsConnections.customHeadScripts}

@@ -15,7 +15,8 @@ export type ExtendedAlertVariant =
   | 'default'
   | 'destructive'
   | 'warning'
-  | 'success';
+  | 'success'
+  | 'outline';
 
 // Adding extended confidence types
 export type ContentType = 
@@ -24,6 +25,7 @@ export type ContentType =
   | 'writing'
   | 'speaking'
   | 'multiple-choice'
+  | 'pdf'
   | 'unknown';
 
 // Adding confidence indicator types

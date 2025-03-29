@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, normalizeUser } from '@/types/core';
-import { UserRole } from '@/types/user-types';
+import { User, UserRole } from '@/types/user';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,11 +34,7 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ExtendedUser extends User {
-  uid: string;
-  status: 'active' | 'inactive' | 'suspended';
-  isVerified: boolean;
-  subscription: 'free' | 'premium' | 'trial';
-  language: 'english' | 'italian' | 'both' | 'en' | 'it';
+  uid?: string;
 }
 
 const UserManagementComponent: React.FC = () => {
@@ -60,9 +55,8 @@ const UserManagementComponent: React.FC = () => {
       setLoading(true);
       try {
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
-        setUsers(normalizedUsers);
-        setFilteredUsers(normalizedUsers);
+        setUsers(data);
+        setFilteredUsers(data);
       } catch (error) {
         console.error("Failed to fetch users:", error);
         toast({
@@ -116,19 +110,12 @@ const UserManagementComponent: React.FC = () => {
       preferences: {},
       preferredLanguage: 'english',
       language: 'english',
-      settings: {
-        theme: 'system',
-        notifications: true,
-        reviewInterval: 24,
-        dailyGoal: 10,
-        audioEnabled: true,
-        autoAdvance: false
-      },
-      performance: {
-        totalReviews: 0,
-        correctStreak: 0,
-        averageAccuracy: 0,
-        dailyStats: []
+      dailyQuestionCounts: {
+        flashcards: 0,
+        multipleChoice: 0,
+        speaking: 0,
+        writing: 0,
+        listening: 0
       }
     } as ExtendedUser);
     setIsCreateMode(createMode);
@@ -146,12 +133,12 @@ const UserManagementComponent: React.FC = () => {
     try {
       setLoading(true);
       if (isCreateMode) {
-        const newUser = {
+        const newUser: Partial<User> = {
           id: selectedUser.id,
           email: selectedUser.email,
           firstName: selectedUser.firstName,
           lastName: selectedUser.lastName,
-          role: selectedUser.role as UserRole,
+          role: selectedUser.role,
           isVerified: selectedUser.isVerified,
           createdAt: new Date(selectedUser.createdAt || new Date()),
           updatedAt: new Date(),
@@ -160,7 +147,19 @@ const UserManagementComponent: React.FC = () => {
           status: selectedUser.status,
           subscription: selectedUser.subscription,
           preferredLanguage: selectedUser.preferredLanguage || 'english',
-          language: selectedUser.preferredLanguage || 'english'
+          dailyQuestionCounts: {
+            flashcards: 0,
+            multipleChoice: 0,
+            speaking: 0,
+            writing: 0,
+            listening: 0
+          },
+          preferences: {
+            theme: 'light',
+            language: 'en',
+            notifications: true,
+            onboardingCompleted: true
+          }
         };
         await createUser(newUser);
         toast({
@@ -170,8 +169,7 @@ const UserManagementComponent: React.FC = () => {
       } else {
         await updateUser(selectedUser.id, {
           ...selectedUser,
-          role: selectedUser.role as UserRole,
-          language: selectedUser.preferredLanguage || 'english'
+          role: selectedUser.role
         });
         toast({
           title: "Success",
@@ -180,9 +178,8 @@ const UserManagementComponent: React.FC = () => {
       }
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
-      setUsers(normalizedUsers);
-      setFilteredUsers(normalizedUsers);
+      setUsers(data);
+      setFilteredUsers(data);
       handleCloseModal();
     } catch (error) {
       console.error("Failed to save user:", error);
@@ -206,9 +203,8 @@ const UserManagementComponent: React.FC = () => {
       });
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
-      setUsers(normalizedUsers);
-      setFilteredUsers(normalizedUsers);
+      setUsers(data);
+      setFilteredUsers(data);
     } catch (error) {
       console.error("Failed to delete user:", error);
       toast({
@@ -229,8 +225,7 @@ const UserManagementComponent: React.FC = () => {
         updatedUser.role = newRole;
         await updateUser(userId, {
           ...updatedUser,
-          role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage || 'english'
+          role: updatedUser.role
         });
         toast({
           title: "Success",
@@ -238,9 +233,8 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
-        setUsers(normalizedUsers);
-        setFilteredUsers(normalizedUsers);
+        setUsers(data);
+        setFilteredUsers(data);
       }
     } catch (error) {
       console.error("Failed to update user role:", error);
@@ -262,8 +256,7 @@ const UserManagementComponent: React.FC = () => {
         updatedUser.status = newStatus;
         await updateUser(userId, {
           ...updatedUser,
-          role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage || 'english'
+          role: updatedUser.role
         });
         toast({
           title: "Success",
@@ -271,9 +264,8 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
-        setUsers(normalizedUsers);
-        setFilteredUsers(normalizedUsers);
+        setUsers(data);
+        setFilteredUsers(data);
       }
     } catch (error) {
       console.error("Failed to update user status:", error);

@@ -1,3 +1,4 @@
+
 // Unified Flashcard type that works across the application  
 export type Flashcard = {  
   id: string;  
@@ -77,14 +78,19 @@ export const calculateReviewPerformance = (correctCount: number, totalCount: num
 
 // Fixed ReviewPerformance interface to match what spacedRepetition.ts expects  
 export interface ReviewPerformance {  
-  accuracy: number;  
-  speed: number;  
-  consistency: number;  
-  retention: number;  
-  overall: number;  
-  score: number;  // Made required (not optional)  
-  time: number;   // Made required (not optional)  
-  date: Date;     // Made required (not optional)  
+  accuracy?: number;  
+  speed?: number;  
+  consistency?: number;  
+  retention?: number;  
+  overall?: number;  
+  score: number;  // Required for compatibility
+  time: number;   // Required for compatibility
+  date: Date;     // Required for compatibility
+  efficiency?: number; // Added for compatibility
+  totalReviews?: number; // Added for compatibility
+  correctReviews?: number; // Added for compatibility
+  streakDays?: number; // Added for compatibility
+  reviewsByCategory?: Record<string, any>; // Added for compatibility
 }  
 
 export interface ReviewSchedule {  
@@ -104,7 +110,7 @@ export interface ReviewSchedule {
 // Fixed FlashcardComponentProps to ensure card is Flashcard type  
 export interface FlashcardComponentProps {  
   flashcard?: Flashcard;  
-  card: Flashcard; // Changed from card?: any to card: Flashcard  
+  card: Flashcard; // This field is required
   onFlip?: () => void;  
   onNext?: () => void;  
   onPrevious?: () => void;  
@@ -152,7 +158,8 @@ export interface FlashcardSet {
   totalCards: number;  
   masteredCards: number;  
   tags: string[];  
-  name?: string; // Added for compatibility  
+  name?: string; // Added for compatibility
+  difficulty?: string; // Added for compatibility
 }  
 
 // Add FlashcardStats interface  
@@ -188,7 +195,7 @@ export interface User {
 export interface SupportTicketExtension {  
   assignedTo: string;  
   priority: 'high' | 'medium' | 'low' | 'urgent';  
-  status: 'open' | 'in-progress' | 'resolved';  
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';  
   category: string;  
 }  
 
