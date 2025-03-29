@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -103,6 +104,7 @@ const DashboardLayout: React.FC = () => {
         </div>
       </div>
       
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col border-r w-64 h-full overflow-hidden bg-background">
         <div className="p-4 border-b">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl">
@@ -174,6 +176,7 @@ const DashboardLayout: React.FC = () => {
         </div>
       </aside>
       
+      {/* Mobile menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -257,6 +260,7 @@ const DashboardLayout: React.FC = () => {
         )}
       </AnimatePresence>
       
+      {/* Main content area */}
       <main className="flex-1 overflow-y-auto bg-background">
         <AnimatePresence>
           {isAIEnabled && suggestions.length > 0 && (
@@ -304,6 +308,7 @@ const DashboardLayout: React.FC = () => {
         </div>
       </main>
       
+      {/* User profile shortcut */}
       <div className="hidden md:block border-l w-16 overflow-hidden bg-background">
         <div className="h-full flex flex-col items-center py-6">
           <TooltipProvider>
