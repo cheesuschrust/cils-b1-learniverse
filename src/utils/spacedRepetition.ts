@@ -56,10 +56,17 @@ export function calculateNextReview(
  * @param card Flashcard to check
  * @returns true if the card is due for review, false otherwise
  */
-export function isDueForReview(card: Flashcard): boolean {
-  if (!card.nextReview) return true;
+export function isDueForReview(card: Flashcard | Date): boolean {
+  if (!card) return false;
   
   const now = new Date();
+  
+  if (card instanceof Date) {
+    return card <= now;
+  }
+  
+  if (!card.nextReview) return true;
+  
   const nextReview = new Date(card.nextReview);
   return nextReview <= now;
 }
@@ -69,13 +76,19 @@ export function isDueForReview(card: Flashcard): boolean {
  * @param card Flashcard to check
  * @returns Number of days until next review, or 0 if overdue
  */
-export function daysUntilReview(card: Flashcard): number {
-  if (!card.nextReview) return 0;
-  
+export function daysUntilReview(card: Flashcard | Date): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   
-  const nextReview = new Date(card.nextReview);
+  let nextReview: Date;
+  
+  if (card instanceof Date) {
+    nextReview = new Date(card);
+  } else {
+    if (!card.nextReview) return 0;
+    nextReview = new Date(card.nextReview);
+  }
+  
   nextReview.setHours(0, 0, 0, 0);
   
   const diffTime = nextReview.getTime() - now.getTime();

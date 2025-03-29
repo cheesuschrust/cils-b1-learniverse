@@ -7,10 +7,10 @@ export type Flashcard = {
   italian?: string;        // Legacy/compatibility field
   english?: string;        // Legacy/compatibility field
   level: number;           // Required (not optional)
-  difficulty?: number;     // Use number type (not string)
+  difficulty: number;      // Use number type (not string)
   tags: string[];          // Make required
   mastered?: boolean;
-  createdAt?: Date;
+  createdAt: Date;
   updatedAt?: Date;
   lastReviewed?: Date | null;
   nextReview?: Date | null;
@@ -80,6 +80,9 @@ export interface ReviewPerformance {
   consistency: number;
   retention: number;
   overall: number;
+  score?: number;
+  time?: number;
+  date?: Date;
 }
 
 export interface ReviewSchedule {
@@ -91,6 +94,9 @@ export interface ReviewSchedule {
   totalDue: number;
   nextWeekCount: number;
   dueByDate: Record<string, number>;
+  interval?: number;
+  dueDate?: Date;
+  difficulty?: number;
 }
 
 // Add FlashcardComponentProps for the FlashcardComponent
@@ -152,6 +158,22 @@ export interface FlashcardStats {
   avgMasteryTime: number;
   totalReviews: number;
   correctReviews: number;
+}
+
+// Add User interface for consistency
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;  // Use camelCase consistently
+  lastName: string;   // Use camelCase consistently
+  isVerified?: boolean;
+  displayName?: string;
+  photoURL?: string;  
+  role?: string;
+  createdAt?: Date;
+  lastActive?: Date;
+  settings?: Record<string, any>;
+  // Add other user properties as needed
 }
 
 // Add SupportTicketExtension interface
