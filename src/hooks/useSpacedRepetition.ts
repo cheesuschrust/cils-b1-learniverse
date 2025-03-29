@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { Flashcard } from '@/types/interface-fixes';
+import { Flashcard, ReviewSchedule } from '@/types/interface-fixes';
 import { calculateNextReview, daysUntilReview, isDueForReview, generateReviewSchedule } from '@/utils/spacedRepetition';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { optimizeStudySchedule } from '@/utils/AIIntegrationUtils';
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards);
   const [dueCards, setDueCards] = useState<Flashcard[]>([]);
-  const [reviewSchedule, setReviewSchedule] = useState<any>({});
+  const [reviewSchedule, setReviewSchedule] = useState<ReviewSchedule>({} as ReviewSchedule);
   const [performanceData, setPerformanceData] = useState<{[id: string]: number}>({});
   const { isAIEnabled } = useAIUtils();
   const { awardXp } = useGamification();
@@ -21,7 +21,7 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
       card.nextReview && isDueForReview(card)
     );
     setDueCards(due);
-    setReviewSchedule(generateReviewSchedule(flashcards));
+    setReviewSchedule(generateReviewSchedule(flashcards) as ReviewSchedule);
   }, [flashcards]);
 
   const processAnswer = useCallback((

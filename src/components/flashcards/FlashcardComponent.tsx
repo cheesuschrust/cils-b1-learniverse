@@ -119,7 +119,7 @@ const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
                 </Button>
                 
                 <Button
-                  variant="success"
+                  variant="default"
                   size="sm"
                   onClick={(e) => { 
                     e.stopPropagation(); 
@@ -161,6 +161,6 @@ const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
       </CardContent>
     </Card>
   );
-};
+}
 
 export default FlashcardComponent;

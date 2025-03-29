@@ -13,7 +13,7 @@ export type Flashcard = {
   createdAt?: Date;
   updatedAt?: Date;
   lastReviewed?: Date | null;
-  nextReview?: Date;
+  nextReview?: Date | null;
   examples?: string[];
   explanation?: string;
   reviewHistory?: any[];   // For spacedRepetition.ts
@@ -54,9 +54,9 @@ export function normalizeFlashcard(card: any): Flashcard {
     english: card.english || back,
     level: typeof card.level === 'number' ? card.level : 0,
     difficulty: typeof card.difficulty === 'number' ? card.difficulty : 0,
-    tags: card.tags || [],
+    tags: Array.isArray(card.tags) ? card.tags : [],
     mastered: !!card.mastered,
-    nextReview: card.nextReview || card.dueDate || new Date(),
+    nextReview: card.nextReview || card.dueDate || null,
     createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
     updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
     lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : null,
@@ -91,4 +91,97 @@ export interface ReviewSchedule {
   totalDue: number;
   nextWeekCount: number;
   dueByDate: Record<string, number>;
+}
+
+// Add FlashcardComponentProps for the FlashcardComponent
+export interface FlashcardComponentProps {
+  flashcard?: Flashcard;
+  card?: any; // Legacy support
+  onFlip?: () => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
+  onRating?: (rating: number) => void; // Legacy support
+  onSkip?: () => void; // Legacy support
+  flipped?: boolean; // Legacy support
+  showControls?: boolean;
+  showHints?: boolean;
+  showPronunciation?: boolean; // Legacy support
+  showActions?: boolean; // Legacy support
+  onKnown?: () => void; // Legacy support
+  onUnknown?: () => void; // Legacy support
+  className?: string; // Legacy support
+  autoFlip?: boolean;
+  frontLabel?: string;
+  backLabel?: string;
+}
+
+// Add ProgressProps for the progress component
+export interface ProgressProps {
+  value?: number;
+  max?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// Add FlashcardSet type
+export interface FlashcardSet {
+  id: string;
+  title: string;
+  description: string;
+  language: 'english' | 'italian';
+  category: string;
+  cards: Flashcard[];
+  createdAt: Date;
+  updatedAt: Date;
+  authorId?: string;
+  creator: string;
+  isPublic: boolean;
+  isFavorite: boolean;
+  totalCards: number;
+  masteredCards: number;
+  tags: string[];
+}
+
+// Add FlashcardStats interface
+export interface FlashcardStats {
+  total: number;
+  mastered: number;
+  learning: number;
+  toReview: number;
+  avgMasteryTime: number;
+  totalReviews: number;
+  correctReviews: number;
+}
+
+// Add SupportTicketExtension interface
+export interface SupportTicketExtension {
+  assignedTo: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'open' | 'in-progress' | 'resolved';
+  category: string;
+}
+
+// Add necessary prop types for the SupportTicketItem component
+export interface SupportTicketProps {
+  id: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in-progress' | 'resolved';
+  createdAt: Date;
+  userId: string;
+  assignedTo?: string;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+  onStatusChange?: (id: string, status: string) => void;
+  onAssigneeChange?: (id: string, assignee: string) => void;
+  onPriorityChange?: (id: string, priority: string) => void;
+}
+
+// Add AnalyticsReportProps
+export interface AnalyticsReportProps {
+  userId?: string;
+  timeRange?: 'day' | 'week' | 'month' | 'year';
+  categories?: string[];
+  includeCharts?: boolean;
 }
