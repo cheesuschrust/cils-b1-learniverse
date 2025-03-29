@@ -92,7 +92,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
   
   // Toggle headers
   const handleHeaderToggle = (checked: boolean) => {
-    updateImportFormat({ hasHeader: checked });
+    updateImportFormat({ hasHeaders: checked });
   };
   
   // Update delimiter
@@ -202,7 +202,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="hasHeader"
-              checked={importFormat.hasHeader}
+              checked={importFormat.hasHeaders}
               onCheckedChange={handleHeaderToggle}
             />
             <Label htmlFor="hasHeader">File has header row</Label>
