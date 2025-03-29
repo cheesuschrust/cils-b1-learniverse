@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { User, normalizeUser } from '@/types/core';
@@ -26,20 +26,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ExtendedUser extends User {
-  id?: string;
+  id: string;
   uid: string;
-  status?: 'active' | 'inactive' | 'suspended';
-  isVerified?: boolean;
-  subscription?: 'free' | 'premium' | 'trial';
+  status: 'active' | 'inactive' | 'suspended';
+  isVerified: boolean;
+  subscription: 'free' | 'premium' | 'trial';
+  language: 'english' | 'italian' | 'both' | 'en' | 'it';
 }
 
 const UserManagementComponent: React.FC = () => {
@@ -159,8 +160,8 @@ const UserManagementComponent: React.FC = () => {
           lastActive: selectedUser.lastActive ? new Date(selectedUser.lastActive) : undefined,
           status: selectedUser.status,
           subscription: selectedUser.subscription,
-          preferredLanguage: selectedUser.preferredLanguage || '',
-          language: selectedUser.preferredLanguage || ''
+          preferredLanguage: selectedUser.preferredLanguage || 'english',
+          language: selectedUser.preferredLanguage || 'english'
         };
         await createUser(newUser);
         toast({
@@ -171,7 +172,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(selectedUser.id, {
           ...selectedUser,
           role: selectedUser.role as UserRole,
-          language: selectedUser.preferredLanguage || ''
+          language: selectedUser.preferredLanguage || 'english'
         });
         toast({
           title: "Success",
@@ -230,7 +231,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(userId, {
           ...updatedUser,
           role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage || ''
+          language: updatedUser.preferredLanguage || 'english'
         });
         toast({
           title: "Success",
@@ -263,7 +264,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(userId, {
           ...updatedUser,
           role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage || ''
+          language: updatedUser.preferredLanguage || 'english'
         });
         toast({
           title: "Success",

@@ -1,57 +1,24 @@
 
-import { IAuthService, LoginCredentials, RegisterData, AuthResponse } from '@/types/service';
-import { IDocumentService } from '@/types/service';
-import { AuthService } from './AuthService';
-import DocumentService from './DocumentService';
+class ServiceFactory {
+  private services: Map<string, any> = new Map();
 
-// Service factory to enable dependency injection and easier mocking
-export class ServiceFactory {
-  private static _instance: ServiceFactory;
-  private _authService: IAuthService;
-  private _documentService: IDocumentService;
-  
-  private constructor() {
-    this._authService = AuthService;
-    this._documentService = DocumentService;
+  register(name: string, service: any): void {
+    this.services.set(name, service);
   }
-  
-  public static getInstance(): ServiceFactory {
-    if (!ServiceFactory._instance) {
-      ServiceFactory._instance = new ServiceFactory();
+
+  getService(name: string): any {
+    if (!this.services.has(name)) {
+      throw new Error(`Service ${name} not registered`);
     }
-    return ServiceFactory._instance;
+    return this.services.get(name);
   }
   
-  // For testing - allows overriding services with mocks
-  public static resetInstance(): void {
-    ServiceFactory._instance = new ServiceFactory();
-  }
-  
-  // For testing - allows injecting mock services
-  public injectServices(services: {
-    authService?: IAuthService;
-    documentService?: IDocumentService;
-  }) {
-    if (services.authService) {
-      this._authService = services.authService;
-    }
-    
-    if (services.documentService) {
-      this._documentService = services.documentService;
-    }
-  }
-  
-  public get authService(): IAuthService {
-    return this._authService;
-  }
-  
-  public get documentService(): IDocumentService {
-    return this._documentService;
+  // For backward compatibility
+  get(name: string): any {
+    return this.getService(name);
   }
 }
 
-// Create and export a default instance
-export const serviceFactory = ServiceFactory.getInstance();
+export const serviceFactory = new ServiceFactory();
 
-// Convenience method for accessing services
 export default serviceFactory;

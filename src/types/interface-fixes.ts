@@ -115,6 +115,23 @@ export interface FlashcardStats {
   lastReviewDate?: Date;
 }
 
+export interface ReviewSchedule {
+  dueByDate: Record<string, number>;
+  dueToday: Flashcard[];
+  overdue: Flashcard[];
+  upcoming: Flashcard[];
+  totalDue: number;
+  nextWeekCount: number;
+}
+
+export interface ReviewPerformance {
+  accuracy: number;
+  speed: number;
+  consistency: number;
+  retention: number;
+  overall: number;
+}
+
 export interface FlashcardComponentProps {
   flashcard?: Flashcard;
   card?: Flashcard; // Legacy support
@@ -135,23 +152,6 @@ export interface FlashcardComponentProps {
   autoFlip?: boolean;
   frontLabel?: string;
   backLabel?: string;
-}
-
-export interface ReviewPerformance {
-  accuracy: number;
-  speed: number;
-  consistency: number;
-  retention: number;
-  overall: number;
-}
-
-export interface ReviewSchedule {
-  dueByDate: Record<string, number>;
-  dueToday: Flashcard[];
-  overdue: Flashcard[];
-  upcoming: Flashcard[];
-  totalDue: number;
-  nextWeekCount: number;
 }
 
 export interface ImportFormat {
