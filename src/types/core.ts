@@ -1,9 +1,15 @@
 
 // Core interfaces and type compatibility functions
 
-// Type Guards  
+// Type Guards and Utilities  
 const isValidDate = (date: any): date is Date =>   
   date instanceof Date && !isNaN(date.getTime());  
+
+const calculateReviewPerformance = (performance: number, timeTaken: number): ReviewPerformance => ({  
+  accuracy: Math.max(0, Math.min(1, performance)),  
+  timeTaken: Math.max(0, timeTaken),  
+  timestamp: new Date()  
+});  
 
 // VoicePreference interfaces
 export interface VoiceOptions {
@@ -21,89 +27,45 @@ export interface TextToSpeechOptions {
   volume?: number;
 }
 
-export interface SpeechState {
-  speaking: boolean;
-  voices: SpeechSynthesisVoice[];
-  currentVoice: string | null;
-  error?: string;  
-  isPaused?: boolean;
-  isLoading?: boolean;
-  performance?: {  
-    loadTime?: number;  
-    errorCount?: number;  
-  };  
-}
-
-export interface VoicePreference {
+// Speech and Voice Types  
+export interface VoicePreference {  
   englishVoiceURI: string;
   italianVoiceURI: string;
   voiceRate: number;
   voicePitch: number;
   preferredLanguage?: string;
-  volume?: number;
-  autoPlay?: boolean;
-  useNative?: boolean;
-}
+  volume?: number;  
+  autoPlay?: boolean;  
+  useNative?: boolean;  
+}  
 
-// Base interfaces for type safety  
+export interface SpeechState {  
+  speaking: boolean;  
+  voices: SpeechSynthesisVoice[];  
+  currentVoice: string | null;  
+  error?: string;  
+  isPaused?: boolean;  
+  isLoading?: boolean;  
+  performance?: {  
+    loadTime?: number;  
+    errorCount?: number;  
+    lastError?: string;  
+  };  
+}  
+
+// AI and System Types  
 export interface AIOptions {  
   temperature?: number;  
   maxTokens?: number;  
   model?: string;  
   context?: string;
-  systemPrompt?: string;
-  streaming?: boolean;
-  presence_penalty?: number;
-  frequency_penalty?: number;
+  systemPrompt?: string;  
+  streaming?: boolean;  
+  presence_penalty?: number;  
+  frequency_penalty?: number;  
 }  
 
-export interface ReviewPerformance {  
-  accuracy: number;  
-  timeTaken: number;  
-  timestamp: Date;  
-}  
-
-export interface ReviewHistory {  
-  reviewedAt: Date;  
-  performance: number;  
-  timeTaken?: number;  
-  details?: ReviewPerformance;  
-}
-
-export interface FlashcardMetadata {  
-  created: Date;  
-  modified: Date;  
-  tags?: string[];  
-  difficulty?: 'easy' | 'medium' | 'hard';  
-}  
-
-export interface Flashcard {  
-  id?: string;
-  front: string;  
-  back: string;  
-  nextReview: Date | null;  
-  level: number;
-  tags?: string[];
-  mastered?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-  language?: string;
-  lastReviewed?: Date;
-  
-  // Additional metadata
-  created?: Date;  
-  modified?: Date;
-  reviewHistory?: ReviewHistory[];
-  streak?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';  
-  
-  // Legacy compatibility
-  italian?: string;
-  english?: string;
-  dueDate?: Date;
-}  
-
-// Legacy User interface for backward compatibility
+// User Management Types  
 export interface LegacyUser {
   uid?: string;
   photo_url?: string;
@@ -128,13 +90,19 @@ export interface UserSettings {
   reviewInterval?: number;  
   dailyGoal?: number;  
   audioEnabled?: boolean;
+  autoAdvance?: boolean;
 }
 
 export interface UserPerformance {  
   totalReviews: number;  
   correctStreak: number;  
   lastReviewDate?: Date;  
-  averageAccuracy?: number;  
+  averageAccuracy?: number;
+  dailyStats?: {  
+    date: string;  
+    completed: number;  
+    accuracy: number;  
+  }[];  
 }
 
 // User interface with all required fields
@@ -189,7 +157,56 @@ export interface User {
   isAdmin?: boolean;
 }
 
-// Type normalization functions
+// Flashcard System Types  
+export interface ReviewPerformance {  
+  accuracy: number;  
+  timeTaken: number;  
+  timestamp: Date;  
+}  
+
+export interface ReviewHistory {  
+  reviewedAt: Date;  
+  performance: number;  
+  timeTaken?: number;  
+  details?: ReviewPerformance;  
+}
+
+export interface FlashcardMetadata {  
+  created: Date;  
+  modified: Date;  
+  tags?: string[];  
+  difficulty?: 'easy' | 'medium' | 'hard';
+  category?: string;  
+  source?: string;
+}  
+
+export interface Flashcard {  
+  id?: string;
+  front: string;  
+  back: string;  
+  nextReview: Date | null;  
+  level: number;
+  tags?: string[];
+  mastered?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  language?: string;
+  lastReviewed?: Date;
+  
+  // Additional metadata
+  created?: Date;  
+  modified?: Date;
+  reviewHistory?: ReviewHistory[];
+  streak?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  category?: string;  
+  source?: string;
+  
+  // Legacy compatibility
+  italian?: string;
+  english?: string;
+  dueDate?: Date;
+}  
 
 /**
  * Normalizes flashcard data to ensure consistency across the application
@@ -209,6 +226,20 @@ export function normalizeFlashcard(card: any): Flashcard {
     }  
   };
   
+  const normalizeReviewHistory = (history: any[]): ReviewHistory[] => {  
+    if (!Array.isArray(history)) return [];  
+    return history.map(review => ({  
+      reviewedAt: parseDate(review.reviewedAt) || now,  
+      performance: typeof review.performance === 'number' ? Math.max(0, Math.min(1, review.performance)) : 0,  
+      timeTaken: typeof review.timeTaken === 'number' ? Math.max(0, review.timeTaken) : 0,  
+      details: {  
+        accuracy: typeof review.details?.accuracy === 'number' ? Math.max(0, Math.min(1, review.details.accuracy)) : 0,  
+        timeTaken: typeof review.details?.timeTaken === 'number' ? Math.max(0, review.details.timeTaken) : 0,  
+        timestamp: parseDate(review.details?.timestamp) || now  
+      }  
+    }));  
+  };
+  
   return {
     id: card.id || '',
     front: card.front || card.italian || '',
@@ -223,12 +254,10 @@ export function normalizeFlashcard(card: any): Flashcard {
     lastReviewed: parseDate(card.lastReviewed),
     created: parseDate(card.created) || now,
     modified: parseDate(card.modified) || now,
-    difficulty: card.difficulty || 'medium',
-    reviewHistory: Array.isArray(card.reviewHistory) ? card.reviewHistory.map((review: any) => ({  
-      ...review,  
-      reviewedAt: parseDate(review.reviewedAt) || now,  
-      performance: typeof review.performance === 'number' ? review.performance : 0  
-    })) : [],
+    difficulty: ['easy', 'medium', 'hard'].includes(card.difficulty) ? card.difficulty : 'medium',
+    category: card.category || undefined,
+    source: card.source || undefined,
+    reviewHistory: normalizeReviewHistory(card.reviewHistory),
     streak: typeof card.streak === 'number' ? Math.max(0, card.streak) : 0,
     italian: card.italian || card.front,
     english: card.english || card.back
@@ -250,6 +279,22 @@ export function normalizeUser(user: any): User {
     } catch {  
       return new Date();  
     }  
+  };
+  
+  const defaultSettings: UserSettings = {  
+    theme: 'system',  
+    notifications: true,  
+    reviewInterval: 24,  
+    dailyGoal: 10,  
+    audioEnabled: true,  
+    autoAdvance: false  
+  };  
+
+  const defaultPerformance: UserPerformance = {  
+    totalReviews: 0,  
+    correctStreak: 0,  
+    averageAccuracy: 0,  
+    dailyStats: []  
   };
   
   // Ensure date is properly handled
@@ -276,23 +321,13 @@ export function normalizeUser(user: any): User {
     preferences: user.preferences || {},
     preferredLanguage: user.preferredLanguage || user.preferred_language || '',
     language: user.language || user.preferredLanguage || user.preferred_language || '',
-    settings: user.settings || {
-      theme: 'system',  
-      notifications: true,
-      reviewInterval: 24,
-      dailyGoal: 10,
-      audioEnabled: true
-    },
+    settings: { ...defaultSettings, ...(user.settings || {}) },
     metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
     },
     isPremium: Boolean(user.isPremium),
-    performance: user.performance || {  
-      totalReviews: 0,  
-      correctStreak: 0,  
-      averageAccuracy: 0  
-    },
+    performance: { ...defaultPerformance, ...(user.performance || {}) },
     
     // Legacy compatibility fields
     photo_url: user.photo_url || user.photoURL || '',
@@ -344,10 +379,17 @@ export function normalizeFields<T extends Record<string, any>>(data: T): T {
 }
 
 // Export all from this central location
+export {  
+  isValidDate,  
+  calculateReviewPerformance,  
+};
+
 export default {
   normalizeUser,
   normalizeUserRecords,
   normalizeFlashcard,
   convertLegacyUser,
-  normalizeFields
+  normalizeFields,
+  calculateReviewPerformance,
+  isValidDate
 };
