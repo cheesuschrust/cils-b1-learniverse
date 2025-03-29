@@ -49,17 +49,18 @@ export interface AnalyticsReportProps {
   };
 }
 
-// Add missing interfaces needed throughout the application
-export interface Flashcard extends BaseFlashcard {
+// Define the core Flashcard type
+export interface Flashcard {
   id: string;
   front: string;
   back: string;
-  level?: number;
   tags: string[];
-  nextReview: Date;
+  difficulty?: number;
+  level?: number;
+  nextReview?: Date;
   createdAt: Date;
   updatedAt: Date;
-  mastered: boolean;
+  mastered?: boolean;
   italian?: string;
   english?: string;
   metadata?: FlashcardMetadata;
@@ -76,10 +77,9 @@ export interface Flashcard extends BaseFlashcard {
   correctReviews?: number;
   totalReviews?: number;
   dueDate?: Date;
-  difficulty?: number;
 }
 
-export interface FlashcardSet extends BaseFlashcardSet {
+export interface FlashcardSet {
   id: string;
   title: string;
   name?: string;
@@ -99,7 +99,7 @@ export interface FlashcardSet extends BaseFlashcardSet {
   tags: string[];
 }
 
-export interface FlashcardStats extends BaseFlashcardStats {
+export interface FlashcardStats {
   total: number;
   mastered: number;
   learning: number;
@@ -207,7 +207,7 @@ export interface ReviewHistory {
   avgResponseTime: number;
 }
 
-export interface User extends BaseUser {
+export interface User {
   id: string;
   firstName: string;
   lastName: string;
@@ -230,9 +230,10 @@ export interface User extends BaseUser {
     correctAnswers: number;
     streak: number;
   };
+  updatedAt: Date;
 }
 
-// Export additional functions to fix errors in utils/spacedRepetition.ts
+// Export functions for spaced repetition logic
 export function daysUntilReview(card: Flashcard): number {
   if (!card.nextReview) return 0;
   const now = new Date();
@@ -300,6 +301,13 @@ export function generateReviewSchedule(cards: Flashcard[]): ReviewSchedule {
     dueThisWeek: totalDue + nextWeekCount,
     dueNextWeek: nextWeekCount
   };
+}
+
+export function calculateReviewPerformance(reviews: any[], totalCards: number): number {
+  if (!reviews || reviews.length === 0 || totalCards === 0) return 0;
+  
+  const correctCount = reviews.filter(review => review.isCorrect).length;
+  return (correctCount / totalCards) * 100;
 }
 
 export type { Flashcard as BaseFlashcard, FlashcardSet as BaseFlashcardSet, FlashcardStats as BaseFlashcardStats };

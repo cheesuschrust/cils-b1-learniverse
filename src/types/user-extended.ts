@@ -1,6 +1,7 @@
 
 import { User } from './user';
 import { UserPreferences } from './user';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface UserSettings {
   theme?: 'light' | 'dark' | 'system';
