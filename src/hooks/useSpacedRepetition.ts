@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { Flashcard } from '@/types/flashcard';
+import { Flashcard } from '@/types/interface-fixes';
 import { calculateNextReview, daysUntilReview, isDueForReview, generateReviewSchedule } from '@/utils/spacedRepetition';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { optimizeStudySchedule } from '@/utils/AIIntegrationUtils';
@@ -18,7 +18,7 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
 
   useEffect(() => {
     const due = flashcards.filter(card => 
-      card.nextReview && isDueForReview(new Date(card.nextReview))
+      card.nextReview && isDueForReview(card)
     );
     setDueCards(due);
     setReviewSchedule(generateReviewSchedule(flashcards));
@@ -45,11 +45,14 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
           : 0;
         
         const currentFactor = (card as any).difficultyFactor || 2.5;
-        const { nextReviewDate, difficultyFactor } = calculateNextReview(
+        const result = calculateNextReview(
           correct,
           currentFactor,
           consecutiveCorrect
         );
+        
+        const nextReviewDate = result.nextReviewDate;
+        const difficultyFactor = result.difficultyFactor;
         
         const newLevel = Math.min(5, Math.floor(difficultyFactor * 2 - 2));
         const wasMastered = card.level >= 5;
@@ -84,7 +87,7 @@ export const useSpacedRepetition = (initialFlashcards: Flashcard[] = []) => {
     
     try {
       const optimizedCards = optimizeStudySchedule(flashcards, performanceData);
-      setFlashcards(optimizedCards);
+      setFlashcards(optimizedCards as Flashcard[]);
       
       toast({
         title: "Study Schedule Optimized",

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Flashcard, FlashcardSet, FlashcardStats } from '@/types/interface-fixes';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,6 +27,11 @@ export const useFlashcards = () => {
     const newFlashcard: Flashcard = {
       id: uuidv4(),
       ...flashcard,
+      // Ensure required fields are present
+      front: flashcard.front || flashcard.italian || '',
+      back: flashcard.back || flashcard.english || '',
+      level: flashcard.level || 0,
+      tags: flashcard.tags || [],
       createdAt: now,
       updatedAt: now,
       nextReview: flashcard.nextReview || now
@@ -215,7 +221,7 @@ export const useFlashcards = () => {
   
   const getDueCards = useCallback((): Flashcard[] => {
     const now = new Date();
-    return flashcards.filter(card => !card.mastered && new Date(card.nextReview) <= now);
+    return flashcards.filter(card => !card.mastered && card.nextReview && new Date(card.nextReview) <= now);
   }, [flashcards]);
   
   const getDifficultCards = useCallback((): Flashcard[] => {
@@ -230,11 +236,18 @@ export const useFlashcards = () => {
     
     const masteredCards = flashcards.filter(card => card.mastered && card.lastReviewed);
     let totalDays = 0;
+    let totalReviews = 0;
+    let correctReviews = 0;
     
     masteredCards.forEach(card => {
       if (card.lastReviewed && card.createdAt) {
         const msDiff = new Date(card.lastReviewed).getTime() - new Date(card.createdAt).getTime();
         totalDays += msDiff / (1000 * 60 * 60 * 24);
+      }
+      
+      if (card.reviewHistory) {
+        totalReviews += card.reviewHistory.length;
+        correctReviews += card.reviewHistory.filter(review => review.rating > 3).length;
       }
     });
     
@@ -245,7 +258,9 @@ export const useFlashcards = () => {
       mastered,
       learning,
       toReview,
-      avgMasteryTime
+      avgMasteryTime,
+      totalReviews,
+      correctReviews
     };
   }, [flashcards, getDueCards]);
   
@@ -253,16 +268,17 @@ export const useFlashcards = () => {
     const importedCards: Flashcard[] = [];
     
     cards.forEach(card => {
-      if (card.italian && card.english) {
+      if ((card.front && card.back) || (card.italian && card.english)) {
         const newCard = addFlashcard({
-          italian: card.italian,
-          english: card.english,
+          front: card.front || card.italian || '',
+          back: card.back || card.english || '',
+          italian: card.italian || card.front || '',
+          english: card.english || card.back || '',
           explanation: card.explanation || '',
           level: card.level || 0,
           mastered: card.mastered || false,
           tags: card.tags || [],
-          nextReview: new Date(),
-          lastReviewed: null
+          nextReview: new Date()
         });
         
         importedCards.push(newCard);

@@ -14,7 +14,7 @@ export const useFlashcardImporter = ({
 }: UseFlashcardImporterProps = {}) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importFormat, setImportFormat] = useState<ImportFormat>({
-    type: 'csv',
+    format: 'csv',
     fieldMap: {
       italian: 'italian',
       english: 'english',
@@ -25,7 +25,7 @@ export const useFlashcardImporter = ({
       explanation: 'explanation'
     },
     delimiter: ',',
-    hasHeader: true
+    hasHeaders: true
   });
   const [error, setError] = useState<Error | null>(null);
   
@@ -40,7 +40,7 @@ export const useFlashcardImporter = ({
   // Parse CSV data
   const parseCSV = useCallback((csvText: string): any[] => {
     const parseResult = Papa.parse(csvText, {
-      header: importFormat.hasHeader,
+      header: importFormat.hasHeaders,
       delimiter: importFormat.delimiter || ',',
       skipEmptyLines: true
     });
@@ -50,7 +50,7 @@ export const useFlashcardImporter = ({
     }
     
     return parseResult.data;
-  }, [importFormat.hasHeader, importFormat.delimiter]);
+  }, [importFormat.hasHeaders, importFormat.delimiter]);
   
   // Parse JSON data
   const parseJSON = useCallback((jsonText: string): any[] => {
@@ -83,6 +83,8 @@ export const useFlashcardImporter = ({
     return rawData.map(item => {
       // Extract fields based on field mapping
       const flashcard: Partial<Flashcard> = {
+        front: String(item[fieldMap.italian] || ''),
+        back: String(item[fieldMap.english] || ''),
         italian: String(item[fieldMap.italian] || ''),
         english: String(item[fieldMap.english] || '')
       };
@@ -124,7 +126,7 @@ export const useFlashcardImporter = ({
       }
       
       return flashcard;
-    }).filter(card => card.italian && card.english); // Only include cards with both fields
+    }).filter(card => card.front && card.back); // Only include cards with both fields
   }, [importFormat]);
   
   // Import from file
@@ -137,21 +139,15 @@ export const useFlashcardImporter = ({
       let rawData: any[] = [];
       
       // Parse based on file type
-      if (importFormat.type === 'csv') {
+      if (importFormat.format === 'csv') {
         rawData = parseCSV(fileText);
-      } else if (importFormat.type === 'json') {
+      } else if (importFormat.format === 'json') {
         rawData = parseJSON(fileText);
-      } else if (importFormat.type === 'anki' || importFormat.type === 'quizlet') {
-        // For Anki/Quizlet formats, we'd need more specialized parsing
-        // This is a simplified approach; real implementation would be more robust
-        if (file.name.endsWith('.txt')) {
-          // Assume tab-separated data for these formats
-          rawData = parseCSV(fileText.replace(/\t/g, ','));
-        } else {
-          throw new Error(`Unsupported file format for ${importFormat.type} import. Expected .txt file.`);
-        }
+      } else if (importFormat.format === 'txt') {
+        // For txt formats, assume tab-separated data
+        rawData = parseCSV(fileText.replace(/\t/g, ','));
       } else {
-        throw new Error(`Unsupported import format: ${importFormat.type}`);
+        throw new Error(`Unsupported import format: ${importFormat.format}`);
       }
       
       // Map to flashcards
@@ -179,10 +175,10 @@ export const useFlashcardImporter = ({
       setIsImporting(false);
       throw error;
     }
-  }, [importFormat.type, parseCSV, parseJSON, mapToFlashcards, onImportComplete, onError]);
+  }, [importFormat.format, parseCSV, parseJSON, mapToFlashcards, onImportComplete, onError]);
   
   // Import from text
-  const importFromText = useCallback((text: string, format: 'csv' | 'json' = 'csv'): Promise<Partial<Flashcard>[]> => {
+  const importFromText = useCallback((text: string, format: 'csv' | 'json' | 'txt' = 'csv'): Promise<Partial<Flashcard>[]> => {
     setIsImporting(true);
     setError(null);
     
@@ -194,6 +190,9 @@ export const useFlashcardImporter = ({
         rawData = parseCSV(text);
       } else if (format === 'json') {
         rawData = parseJSON(text);
+      } else if (format === 'txt') {
+        // For txt formats, assume tab-separated data
+        rawData = parseCSV(text.replace(/\t/g, ','));
       } else {
         throw new Error(`Unsupported import format: ${format}`);
       }

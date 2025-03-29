@@ -1,4 +1,3 @@
-
 import { User, UserRole } from '@/types/user';
 import { DocumentMeta, ParsedDocument } from '@/types/document';
 import { ChatMessage, ChatSession } from '@/types/chatbot';
@@ -20,13 +19,6 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   updatedAt: new Date(), // Required property
   lastLogin: new Date(),
   lastActive: new Date(),
-  // Support both naming conventions
-  first_name: 'Test',
-  last_name: 'User',
-  last_login: new Date(),
-  last_active: new Date(),
-  created_at: new Date(),
-  updated_at: new Date(),
   preferences: {
     theme: 'light',
     emailNotifications: true,
@@ -37,7 +29,6 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
   subscription: 'free',
   status: 'active',
   preferredLanguage: 'english',
-  preferred_language: 'english',
   displayName: 'Test User',
   name: 'Test User',
   isAdmin: false,

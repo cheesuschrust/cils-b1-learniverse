@@ -52,21 +52,20 @@ export interface AnalyticsReportProps {
 // Define the core Flashcard type
 export interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  front: string;           // Primary content field
+  back: string;            // Primary content field
+  italian?: string;        // Legacy/compatibility field
+  english?: string;        // Legacy/compatibility field
+  level: number;           // Required (not optional)
+  difficulty?: number;     // Use number type (not string)
   tags: string[];
-  difficulty?: number;
-  level?: number;
-  nextReview?: Date;
+  mastered?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  mastered?: boolean;
-  italian?: string;
-  english?: string;
+  lastReviewed?: Date | null;
+  nextReview?: Date;
+  reviewHistory?: any[];   // Add for spacedRepetition.ts
   metadata?: FlashcardMetadata;
-  lastReviewed?: Date;
-  reviewHistory?: ReviewHistory[];
-  reviewCount?: number;
   category?: string;
   explanation?: string;
   examples?: string[];
@@ -308,6 +307,37 @@ export function calculateReviewPerformance(reviews: any[], totalCards: number): 
   
   const correctCount = reviews.filter(review => review.isCorrect).length;
   return (correctCount / totalCards) * 100;
+}
+
+// Define calculation function for next review date
+export function calculateNextReview(isCorrect: boolean, currentFactor: number, consecutiveCorrect: number): { nextReviewDate: Date; difficultyFactor: number } {
+  // Base algorithm for spaced repetition
+  let difficultyFactor = currentFactor;
+  let daysToAdd = 1;
+  
+  if (isCorrect) {
+    // Increase difficulty factor slightly for correct answers
+    difficultyFactor = Math.min(2.5, difficultyFactor + 0.1);
+    
+    // Calculate days until next review based on consecutive correct answers
+    if (consecutiveCorrect === 1) {
+      daysToAdd = 1;
+    } else if (consecutiveCorrect === 2) {
+      daysToAdd = 3;
+    } else {
+      daysToAdd = Math.round(daysToAdd * difficultyFactor);
+    }
+  } else {
+    // Decrease difficulty factor for incorrect answers
+    difficultyFactor = Math.max(1.3, difficultyFactor - 0.2);
+    daysToAdd = 1; // Reset to 1 day for incorrect answers
+  }
+  
+  // Create next review date
+  const nextReviewDate = new Date();
+  nextReviewDate.setDate(nextReviewDate.getDate() + daysToAdd);
+  
+  return { nextReviewDate, difficultyFactor };
 }
 
 export type { Flashcard as BaseFlashcard, FlashcardSet as BaseFlashcardSet, FlashcardStats as BaseFlashcardStats };
