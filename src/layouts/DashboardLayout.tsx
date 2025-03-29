@@ -28,12 +28,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import HelpDocumentation from '@/components/help/HelpDocumentation';
 
-const DashboardLayout: React.FC = () => {
+interface DashboardLayoutProps {
+  suggestions?: string[];
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ suggestions = [] }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [localSuggestions, setSuggestions] = useState<string[]>(suggestions);
   const { isAIEnabled } = useAIUtils();
   
   const getCurrentPage = () => {
@@ -263,7 +267,7 @@ const DashboardLayout: React.FC = () => {
       {/* Main content area */}
       <main className="flex-1 overflow-y-auto bg-background">
         <AnimatePresence>
-          {isAIEnabled && suggestions.length > 0 && (
+          {isAIEnabled && localSuggestions.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -274,9 +278,9 @@ const DashboardLayout: React.FC = () => {
               <div className="container mx-auto flex items-center gap-3">
                 <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                 <div className="text-sm text-blue-700 dark:text-blue-300">
-                  {suggestions[0]}
+                  {localSuggestions[0]}
                 </div>
-                {suggestions.length > 1 && (
+                {localSuggestions.length > 1 && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -285,12 +289,12 @@ const DashboardLayout: React.FC = () => {
                           size="sm"
                           className="h-6 text-xs text-blue-600 dark:text-blue-400 ml-auto"
                         >
-                          +{suggestions.length - 1} more
+                          +{localSuggestions.length - 1} more
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent className="w-64">
                         <div className="space-y-2">
-                          {suggestions.slice(1).map((suggestion, index) => (
+                          {localSuggestions.slice(1).map((suggestion, index) => (
                             <p key={index} className="text-sm">{suggestion}</p>
                           ))}
                         </div>
