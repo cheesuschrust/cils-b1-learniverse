@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';  
 import { User, UserRole } from '@/types/user';  
 import {   
@@ -11,46 +10,6 @@ import {
   resetPassword as supaResetPassword,  
   updatePassword as supaUpdatePassword  
 } from '@/lib/supabase';  
-
-
-// Add this directly after your useState declarations in the AuthProvider component  
-
-// EMERGENCY FIX - Force exit loading state IMMEDIATELY  
-useEffect(() => {  
-  console.log("🚨 EMERGENCY LOADING FIX ACTIVATED");  
-  
-  // Force the loading state to false immediately  
-  setLoading(false);  
-  console.log("🚨 FORCED LOADING STATE TO FALSE");  
-  
-  // Set an emergency user to allow navigation  
-  const emergencyUser = {  
-    id: 'emergency-user-id',  
-    email: 'emergency@example.com',  
-    firstName: 'Emergency',  
-    lastName: 'User',  
-    role: 'user' as UserRole,  
-    isVerified: true,  
-    createdAt: new Date(),  
-    updatedAt: new Date(),  
-    preferences: {  
-      theme: 'light',  
-      language: 'en',  
-      notifications: true,  
-      onboardingCompleted: true  
-    },  
-    dailyQuestionCounts: {  
-      flashcards: 0,  
-      multipleChoice: 0,  
-      speaking: 0,  
-      writing: 0,  
-      listening: 0  
-    }  
-  };  
-  
-  setUser(emergencyUser);  
-  console.log("🚨 SET EMERGENCY USER:", emergencyUser);  
-}, []); // Empty dependency array means this runs once on mount  
 
 export interface AuthContextType {  
   user: User | null;  
@@ -121,6 +80,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     weeklyProgress: true,  
     newFeatures: true,  
   });  
+
+  // EMERGENCY FIX - Force exit loading state IMMEDIATELY  
+  useEffect(() => {  
+    console.log("🚨 EMERGENCY LOADING FIX ACTIVATED");  
+  
+    // Force the loading state to false immediately  
+    setLoading(false);  
+    console.log("🚨 FORCED LOADING STATE TO FALSE");  
+  
+    // Set an emergency user to allow navigation  
+    const emergencyUser = {  
+      id: 'emergency-user-id',  
+      email: 'emergency@example.com',  
+      firstName: 'Emergency',  
+      lastName: 'User',  
+      role: 'user' as UserRole,  
+      isVerified: true,  
+      createdAt: new Date(),  
+      updatedAt: new Date(),  
+      preferences: {  
+        theme: 'light',  
+        language: 'en',  
+        notifications: true,  
+        onboardingCompleted: true  
+      },  
+      dailyQuestionCounts: {  
+        flashcards: 0,  
+        multipleChoice: 0,  
+        speaking: 0,  
+        writing: 0,  
+        listening: 0  
+      }  
+    };  
+  
+    setUser(emergencyUser);  
+    console.log("🚨 SET EMERGENCY USER:", emergencyUser);  
+  }, []); // Empty dependency array means this runs once on mount
 
   // Initialize auth state - check if user is already logged in  
   useEffect(() => {  
@@ -659,4 +655,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 // Create a hook to use the auth context  
 export const useAuth = () => useContext(AuthContext);  
 
-export default AuthContext;  
+export default AuthContext;
