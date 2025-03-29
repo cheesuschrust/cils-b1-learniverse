@@ -35,7 +35,6 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ExtendedUser extends User {
-  id: string;
   uid: string;
   status: 'active' | 'inactive' | 'suspended';
   isVerified: boolean;
@@ -61,7 +60,7 @@ const UserManagementComponent: React.FC = () => {
       setLoading(true);
       try {
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user));
+        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       } catch (error) {
@@ -181,7 +180,7 @@ const UserManagementComponent: React.FC = () => {
       }
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => normalizeUser(user));
+      const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
       setUsers(normalizedUsers);
       setFilteredUsers(normalizedUsers);
       handleCloseModal();
@@ -207,7 +206,7 @@ const UserManagementComponent: React.FC = () => {
       });
 
       const data = await getAllUsers();
-      const normalizedUsers = data.map(user => normalizeUser(user));
+      const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
       setUsers(normalizedUsers);
       setFilteredUsers(normalizedUsers);
     } catch (error) {
@@ -239,7 +238,7 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user));
+        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       }
@@ -272,7 +271,7 @@ const UserManagementComponent: React.FC = () => {
         });
 
         const data = await getAllUsers();
-        const normalizedUsers = data.map(user => normalizeUser(user));
+        const normalizedUsers = data.map(user => normalizeUser(user) as ExtendedUser);
         setUsers(normalizedUsers);
         setFilteredUsers(normalizedUsers);
       }
@@ -288,7 +287,7 @@ const UserManagementComponent: React.FC = () => {
     }
   };
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (status) {
       case 'active':
         return 'outline';

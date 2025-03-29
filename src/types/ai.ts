@@ -13,7 +13,8 @@ export type AIModel =
   | 'mistral-medium'
   | 'mistral-large'
   | 'claude-instant'
-  | 'claude-2';
+  | 'claude-2'
+  | 'claude-3';
 
 export type AIModelSize = 'small' | 'medium' | 'large';
 

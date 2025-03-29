@@ -54,7 +54,7 @@ export interface Flashcard {
   id: string;
   front: string;
   back: string;
-  level: number;
+  level?: number;
   tags: string[];
   nextReview: Date;
   createdAt: Date;
@@ -76,6 +76,7 @@ export interface Flashcard {
   correctReviews?: number;
   totalReviews?: number;
   dueDate?: Date;
+  difficulty?: number;
 }
 
 export interface FlashcardSet {
@@ -194,6 +195,31 @@ export interface ReviewHistory {
   correctCount: number;
   incorrectCount: number;
   avgResponseTime: number;
+}
+
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
+  isVerified: boolean;
+  createdAt: Date;
+  lastLogin?: Date;
+  lastActive?: Date;
+  preferences?: Record<string, any>;
+  performance?: Record<string, any>;
+  status: string;
+  subscription: string;
+  displayName?: string;
+  photoURL?: string;
+  phoneNumber?: string;
+  preferredLanguage?: string;
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+  };
 }
 
 export type { Flashcard as BaseFlashcard, FlashcardSet as BaseFlashcardSet, FlashcardStats as BaseFlashcardStats };

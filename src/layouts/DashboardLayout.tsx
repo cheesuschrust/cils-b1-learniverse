@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -32,7 +33,7 @@ export interface DashboardLayoutProps {
   suggestions?: string[];
 }
 
-const DashboardLayout = ({ suggestions = [] }: DashboardLayoutProps) => {
+export function DashboardLayout({ suggestions = [] }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -336,6 +337,6 @@ const DashboardLayout = ({ suggestions = [] }: DashboardLayoutProps) => {
       <HelpDocumentation defaultTopic={getCurrentPage()} />
     </div>
   );
-};
+}
 
 export default DashboardLayout;
