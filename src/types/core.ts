@@ -18,7 +18,8 @@ export interface TextToSpeechOptions {
 export interface SpeechState {
   speaking: boolean;
   voices: SpeechSynthesisVoice[];
-  currentVoice?: string;
+  currentVoice: string | null;
+  error?: string;  // Added for error handling
 }
 
 export interface VoicePreference {
@@ -26,6 +27,7 @@ export interface VoicePreference {
   italianVoiceURI: string;
   voiceRate: number;
   voicePitch: number;
+  preferredLanguage?: string;  // Added based on file analysis
 }
 
 // Base interfaces for type safety  
@@ -33,6 +35,7 @@ export interface AIOptions {
   temperature?: number;  
   maxTokens?: number;  
   model?: string;  
+  context?: string;  // Added based on usage patterns
 }  
 
 export interface Flashcard {  
@@ -45,12 +48,13 @@ export interface Flashcard {
   mastered?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  language?: string;
+  lastReviewed?: Date;
   
   // Legacy compatibility
   italian?: string;
   english?: string;
   dueDate?: Date;
-  lastReviewed?: Date;
 }  
 
 // User interface with all required fields
@@ -65,13 +69,13 @@ export interface User {
   createdAt?: Date;  
   updatedAt: Date;
   role: UserRole;
+  preferredLanguage?: string;
   
   // Legacy compatibility fields
-  first_name?: string;
+  photo_url?: string;  
+  display_name?: string;  
+  first_name?: string;  
   last_name?: string;
-  photo_url?: string;
-  display_name?: string;
-  is_verified?: boolean;
   
   // Additional fields from the existing User interfaces
   isVerified?: boolean;
@@ -82,7 +86,6 @@ export interface User {
   phoneNumber?: string;
   address?: string;
   preferences?: any;
-  preferredLanguage?: 'english' | 'italian' | 'both';
   language?: string;
   metrics?: {
     totalQuestions: number;
@@ -138,6 +141,8 @@ export function normalizeFlashcard(card: any): Flashcard {
     createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
     updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
     mastered: card.mastered || false,
+    language: card.language || undefined,
+    lastReviewed: card.lastReviewed instanceof Date ? card.lastReviewed : undefined,
     italian: card.italian || card.front,
     english: card.english || card.back
   };
@@ -176,10 +181,10 @@ export function normalizeUser(user: any): User {
     },
     
     // Legacy compatibility fields
-    first_name: user.first_name || user.firstName,
-    last_name: user.last_name || user.lastName,
     photo_url: user.photo_url || user.photoURL,
     display_name: user.display_name || user.displayName,
+    first_name: user.first_name || user.firstName,
+    last_name: user.last_name || user.lastName,
     is_verified: user.is_verified || user.isVerified
   };
 }
