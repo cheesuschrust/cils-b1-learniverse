@@ -6,6 +6,7 @@ export interface VoiceOptions {
   voice: string;
   rate: number;
   pitch: number;
+  volume?: number;
 }
 
 export interface TextToSpeechOptions {
@@ -13,6 +14,7 @@ export interface TextToSpeechOptions {
   rate?: number;
   pitch?: number;
   language?: string;
+  volume?: number;
 }
 
 export interface SpeechState {
@@ -20,6 +22,7 @@ export interface SpeechState {
   voices: SpeechSynthesisVoice[];
   currentVoice: string | null;
   error?: string;  // Added for error handling
+  isPaused?: boolean;
 }
 
 export interface VoicePreference {
@@ -28,6 +31,7 @@ export interface VoicePreference {
   voiceRate: number;
   voicePitch: number;
   preferredLanguage?: string;  // Added based on file analysis
+  volume?: number;
 }
 
 // Base interfaces for type safety  
@@ -36,6 +40,7 @@ export interface AIOptions {
   maxTokens?: number;  
   model?: string;  
   context?: string;  // Added based on usage patterns
+  systemPrompt?: string;
 }  
 
 export interface Flashcard {  
@@ -51,11 +56,33 @@ export interface Flashcard {
   language?: string;
   lastReviewed?: Date;
   
+  // Additional metadata
+  created?: Date;  
+  modified?: Date;
+  
   // Legacy compatibility
   italian?: string;
   english?: string;
   dueDate?: Date;
 }  
+
+// Legacy User interface for backward compatibility
+export interface LegacyUser {
+  uid?: string;
+  photo_url?: string;
+  display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  is_verified?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
+  last_login?: Date;
+  last_active?: Date;
+  preferred_language?: string;
+}
+
+// Import UserRole from the user types
+import { UserRole } from '@/types/user';
 
 // User interface with all required fields
 export interface User {  
@@ -70,6 +97,7 @@ export interface User {
   updatedAt: Date;
   role: UserRole;
   preferredLanguage?: string;
+  settings?: Record<string, unknown>;
   
   // Legacy compatibility fields
   photo_url?: string;  
@@ -105,24 +133,6 @@ export interface User {
   isAdmin?: boolean;
 }
 
-// Legacy User interface for backward compatibility
-export interface LegacyUser {
-  uid?: string;
-  photo_url?: string;
-  display_name?: string;
-  first_name?: string;
-  last_name?: string;
-  is_verified?: boolean;
-  created_at?: Date;
-  updated_at?: Date;
-  last_login?: Date;
-  last_active?: Date;
-  preferred_language?: 'english' | 'italian' | 'both';
-}
-
-// Import UserRole from the user types
-import { UserRole } from '@/types/user';
-
 // Type normalization functions
 
 /**
@@ -131,18 +141,30 @@ import { UserRole } from '@/types/user';
 export function normalizeFlashcard(card: any): Flashcard {
   if (!card) return null as any;
   
+  const now = new Date();
+  
   return {
     id: card.id || '',
     front: card.front || card.italian || '',
     back: card.back || card.english || '',
     level: typeof card.level === 'number' ? card.level : 0,
-    tags: card.tags || [],
-    nextReview: card.nextReview || card.dueDate || null,
-    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
-    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
+    tags: Array.isArray(card.tags) ? card.tags : [],
+    nextReview: card.nextReview instanceof Date 
+      ? card.nextReview 
+      : card.nextReview 
+        ? new Date(card.nextReview) 
+        : null,
+    createdAt: card.createdAt instanceof Date ? card.createdAt : card.created instanceof Date ? card.created : now,
+    updatedAt: card.updatedAt instanceof Date ? card.updatedAt : card.modified instanceof Date ? card.modified : now,
     mastered: card.mastered || false,
     language: card.language || undefined,
-    lastReviewed: card.lastReviewed instanceof Date ? card.lastReviewed : undefined,
+    lastReviewed: card.lastReviewed instanceof Date 
+      ? card.lastReviewed 
+      : card.lastReviewed 
+        ? new Date(card.lastReviewed) 
+        : undefined,
+    created: card.created instanceof Date ? card.created : now,
+    modified: card.modified instanceof Date ? card.modified : now,
     italian: card.italian || card.front,
     english: card.english || card.back
   };
@@ -154,38 +176,50 @@ export function normalizeFlashcard(card: any): Flashcard {
 export function normalizeUser(user: any): User {
   if (!user) return null as any;
   
+  // Ensure date is properly handled
+  const createdAtDate = user.createdAt instanceof Date   
+    ? user.createdAt   
+    : user.createdAt   
+      ? new Date(user.createdAt)   
+      : user.created_at instanceof Date
+        ? user.created_at
+        : user.created_at
+          ? new Date(user.created_at)
+          : new Date();
+  
   return {
-    id: user.id || user.uid,
-    uid: user.uid,
-    email: user.email,
-    firstName: user.firstName || user.first_name,
-    lastName: user.lastName || user.last_name,
-    displayName: user.displayName || user.display_name || user.name,
-    photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage,
+    id: user.id || user.uid || '',
+    uid: user.uid || user.id,
+    email: user.email || '',
+    firstName: user.firstName || user.first_name || '',
+    lastName: user.lastName || user.last_name || '',
+    displayName: user.displayName || user.display_name || user.name || '',
+    photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage || '',
     role: user.role || 'user',
     isVerified: user.isVerified || user.is_verified || false,
-    createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
+    createdAt: createdAtDate,
     updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
     lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
     lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
     status: user.status || 'active',
     subscription: user.subscription || 'free',
-    phoneNumber: user.phoneNumber || user.phone_number,
-    address: user.address,
+    phoneNumber: user.phoneNumber || user.phone_number || '',
+    address: user.address || '',
     preferences: user.preferences || {},
-    preferredLanguage: user.preferredLanguage || user.preferred_language || 'english',
-    language: user.language || user.preferredLanguage || user.preferred_language || 'english',
+    preferredLanguage: user.preferredLanguage || user.preferred_language || '',
+    language: user.language || user.preferredLanguage || user.preferred_language || '',
+    settings: user.settings || {},
     metrics: user.metrics || { totalQuestions: 0, correctAnswers: 0, streak: 0 },
     dailyQuestionCounts: user.dailyQuestionCounts || { 
       flashcards: 0, multipleChoice: 0, listening: 0, writing: 0, speaking: 0 
     },
     
     // Legacy compatibility fields
-    photo_url: user.photo_url || user.photoURL,
-    display_name: user.display_name || user.displayName,
-    first_name: user.first_name || user.firstName,
-    last_name: user.last_name || user.lastName,
-    is_verified: user.is_verified || user.isVerified
+    photo_url: user.photo_url || user.photoURL || '',
+    display_name: user.display_name || user.displayName || '',
+    first_name: user.first_name || user.firstName || '',
+    last_name: user.last_name || user.lastName || '',
+    isAdmin: user.isAdmin || user.role === 'admin' || false
   };
 }
 

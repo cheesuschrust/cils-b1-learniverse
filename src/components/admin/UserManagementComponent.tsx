@@ -140,8 +140,8 @@ const UserManagementComponent: React.FC = () => {
           lastActive: selectedUser.lastActive ? new Date(selectedUser.lastActive) : undefined,
           status: selectedUser.status,
           subscription: selectedUser.subscription,
-          preferredLanguage: selectedUser.preferredLanguage,
-          language: selectedUser.preferredLanguage
+          preferredLanguage: selectedUser.preferredLanguage || '',
+          language: selectedUser.preferredLanguage || ''
         };
         await createUser(newUser);
         toast({
@@ -152,7 +152,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(selectedUser.id, {
           ...selectedUser,
           role: selectedUser.role as UserRole,
-          language: selectedUser.preferredLanguage
+          language: selectedUser.preferredLanguage || ''
         });
         toast({
           title: "Success",
@@ -211,7 +211,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(userId, {
           ...updatedUser,
           role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage
+          language: updatedUser.preferredLanguage || ''
         });
         toast({
           title: "Success",
@@ -244,7 +244,7 @@ const UserManagementComponent: React.FC = () => {
         await updateUser(userId, {
           ...updatedUser,
           role: updatedUser.role as UserRole,
-          language: updatedUser.preferredLanguage
+          language: updatedUser.preferredLanguage || ''
         });
         toast({
           title: "Success",

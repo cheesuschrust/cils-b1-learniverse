@@ -155,7 +155,7 @@ const AnalyticsReport: React.FC<AnalyticsReportProps> = ({
           <h1 className="text-3xl font-bold">Learning Analytics Report</h1>
           <div className="flex justify-between mt-2">
             <p className="text-muted-foreground">
-              {user?.first_name ? `${user.first_name} ${user.last_name}` : user?.email}
+              {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email}
             </p>
             <p className="text-muted-foreground">
               {getDateRangeLabel(reportData.dateRange)} • Generated on {format(new Date(), 'MMMM d, yyyy')}
