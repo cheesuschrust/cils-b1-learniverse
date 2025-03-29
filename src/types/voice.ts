@@ -1,5 +1,7 @@
 
-// Voice and Speech related types and utilities
+/**
+ * Voice and Speech related types and utilities
+ */
 
 // Type Guards
 export const isValidDate = (date: any): date is Date =>

@@ -1,6 +1,7 @@
 
-import { User } from '@/types/user';
-import { normalizeUser, normalizeUserRecords, convertLegacyUser, normalizeFields } from '@/types/core';
+import { User } from '@/types/user-types';
+import { normalizeUser, normalizeUserRecords, convertLegacyUser } from '@/types/user-types';
+import { normalizeFields } from '@/types/utils';
 
 /**
  * Legacy interface with snake_case field names for backward compatibility

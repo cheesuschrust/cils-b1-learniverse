@@ -1,153 +1,49 @@
 
-import { Flashcard } from './flashcard';
+// This file provides additional interface definitions needed to fix build errors
 
-export interface FlashcardComponentProps {
-  flashcard?: Flashcard;
-  card?: Flashcard; // Legacy support
-  onFlip?: () => void;
-  onNext?: () => void;
-  onPrevious?: () => void;
-  onMark?: (status: 'correct' | 'incorrect' | 'hard') => void;
-  onRating?: (rating: number) => void; // Legacy support
-  onSkip?: () => void; // Legacy support
-  flipped?: boolean; // Legacy support
-  showControls?: boolean;
-  showHints?: boolean;
-  showPronunciation?: boolean; // Legacy support
-  showActions?: boolean; // Legacy support
-  onKnown?: () => void; // Legacy support
-  onUnknown?: () => void; // Legacy support
-  className?: string; // Legacy support
-  autoFlip?: boolean;
-  frontLabel?: string;
-  backLabel?: string;
-}
-
-export interface LevelBadgeProps {
-  level: number;
-  showInfo?: boolean;
-}
-
-export interface HoverContentProps {
-  content: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-  side?: 'top' | 'bottom' | 'left' | 'right';
-  align?: 'start' | 'center' | 'end';
-}
-
-export interface MultipleChoiceQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
-  explanation?: string;
-}
-
-export interface MultipleChoiceSet {
-  id: string;
-  title: string;
-  description: string;
-  questions: MultipleChoiceQuestion[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ImportFormat {
-  format: 'csv' | 'json' | 'txt';
-  hasHeaders?: boolean;
-  delimiter?: string;
-  columns?: {
-    front?: string | number;
-    back?: string | number;
-    category?: string | number;
-    tags?: string | number;
-  };
-  // Legacy support
-  type?: 'csv' | 'json' | 'txt';
-  fieldMap?: Record<string, string | number>;
-}
-
-export interface SupportTicketExtension {
-  assignee?: string;
-  priority?: 'low' | 'medium' | 'high';
-  status?: 'open' | 'in-progress' | 'resolved' | 'closed';
-}
-
-export interface ProgressProps {
-  value: number;
-  max?: number;
-  size?: 'sm' | 'md' | 'lg';
-  showValue?: boolean;
-  label?: string;
-  className?: string;
-  indicator?: string; // CSS class for the indicator
-  indicatorClassName?: string; // For backward compatibility
-}
+import { User } from './user-types';
 
 export interface AnalyticsReportProps {
-  userId?: string;
-  startDate?: Date;
-  endDate?: Date;
-  includeActivity?: boolean;
-  includeProgress?: boolean;
-  includeStats?: boolean;
-  onClose?: () => void;
-  reportData?: any;
-}
-
-export interface ReviewSchedule {
-  today: number;
-  tomorrow: number;
-  nextWeek: number;
-  later: number;
-  dueByDate: Record<string, number>;
-  dueToday?: number;
-  dueThisWeek?: number;
-  dueNextWeek?: number;
-}
-
-export interface ReviewPerformance {
-  accuracy: number;
-  retention: number;
-  speed: number;
-  consistency: number;
-  improvement: number;
-  totalReviewed: number;
-  efficiency?: number;
-  totalReviews?: number;
-  streakDays?: number;
-  correctReviews?: number;
-  reviewsByCategory?: Record<string, number>;
-}
-
-// Re-export Flashcard type for components that import from interface-fixes
-export type { Flashcard } from './flashcard';
-export type { FlashcardSet, FlashcardStats } from './flashcard';
-
-// Text-to-speech interface
-export interface TextToSpeechOptions {
-  voice?: string;
-  rate?: number;
-  pitch?: number;
-  language?: string;
-}
-
-export interface SpeechState {
-  speaking: boolean;
-  voices: SpeechSynthesisVoice[];
-  currentVoice?: string;
-}
-
-// Voice preference type from textToSpeech
-export interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
+  onClose: () => void;
+  reportData: {
+    dateRange: string;
+    activityData: Array<{
+      date: string;
+      total: number;
+      correct: number;
+      score: number;
+      timeSpent: number;
+      attempts: number;
+    }>;
+    categoryData: Array<{
+      name: string;
+      correct: number;
+      incorrect: number;
+      percentage: number;
+    }>;
+    knowledgeGaps: Array<{
+      category: string;
+      topic: string;
+      correctRate: number;
+      recommendedActions: string[];
+    }>;
+    streak?: {
+      currentStreak: number;
+      longestStreak: number;
+      lastStudyDate: string;
+    };
+    recommendations: Array<{
+      focus: string;
+      reason: string;
+      resources?: string[];
+    }>;
+    sessionStats?: {
+      totalSessions: number;
+      averageSessionLength: number;
+      averageQuestionsPerSession: number;
+      completionRate: number;
+      timePerQuestion: number;
+      optimalTimeOfDay: string;
+    };
+  };
 }

@@ -2,9 +2,11 @@
 import { useState, useCallback } from 'react';
 import { AIStatus, UseAIReturn } from '@/types/ai';
 import { useToast } from '@/components/ui/use-toast';
-import { User } from '@/types/user';
-import { Flashcard } from '@/types/flashcard';
-import { normalizeFlashcard, convertLegacyUser, AIOptions } from '@/types/core';
+import { User } from '@/types/user-types';
+import { Flashcard } from '@/types/flashcard-types';
+import { normalizeFlashcard } from '@/types/flashcard-types';
+import { convertLegacyUser } from '@/types/user-types';
+import { AIOptions } from '@/types/ai';
 
 // This is a simplified version of useAI hook for components that don't need all functionalities
 export default function useAISimplified(): UseAIReturn {
@@ -114,9 +116,8 @@ export default function useAISimplified(): UseAIReturn {
   // Mock method for generating questions
   const generateQuestions = async (
     content: string,
-    contentType: string,
-    count: number,
-    difficulty: string
+    count: number = 5,
+    type: string = 'multiple-choice'
   ): Promise<any[]> => {
     const questions = [];
     for (let i = 0; i < count; i++) {
@@ -125,22 +126,23 @@ export default function useAISimplified(): UseAIReturn {
         text: `Question ${i+1} about ${content}?`,
         options: ['Option A', 'Option B', 'Option C', 'Option D'],
         correctAnswer: 'Option A',
-        difficulty,
-        category: contentType,
+        difficulty: 'intermediate',
+        category: type,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: [contentType, difficulty],
+        tags: [type, 'intermediate'],
         points: 10
       });
     }
     return questions;
   };
 
-  const loadModel = async (): Promise<void> => {
+  const loadModel = async (): Promise<boolean> => {
     // Mock implementation
     console.log("Loading AI model...");
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log("AI model loaded");
+    return true;
   };
 
   // Return the simplified API
@@ -161,9 +163,7 @@ export default function useAISimplified(): UseAIReturn {
   };
 }
 
-// Re-export types from core.ts
-export type { AIOptions };
-export { normalizeFlashcard, convertLegacyUser };
-
 // Re-export from useAISimplified for backward compatibility
 export { useAISimplified };
+export type { AIOptions };
+export { normalizeFlashcard, convertLegacyUser };

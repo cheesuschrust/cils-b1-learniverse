@@ -6,7 +6,7 @@ export { isValidDate } from './voice';
 export { normalizeFields } from './utils';
 
 // Voice and Speech Types
-export {
+export type {
   VoicePreference,
   TextToSpeechOptions,
   VoiceOptions,
@@ -14,26 +14,30 @@ export {
 } from './voice';
 
 // AI and System Types
-export { AIOptions } from './ai';
+export type { AIOptions } from './ai';
 
 // User Management Types
-export {
+export type {
   LegacyFields,
   UserSettings,
   UserPerformance,
   UserRole,
-  User,
+  User
+} from './user-types';
+export {
   normalizeUser,
   normalizeUserRecords,
   convertLegacyUser
 } from './user-types';
 
 // Flashcard System Types
-export {
+export type {
   ReviewPerformance,
   ReviewHistory,
   FlashcardMetadata,
-  Flashcard,
+  Flashcard
+} from './flashcard-types';
+export {
   calculateReviewPerformance,
   normalizeFlashcard
 } from './flashcard-types';
@@ -48,9 +52,3 @@ export default {
   calculateReviewPerformance,
   isValidDate
 };
-
-// Re-export from other modules for backwards compatibility
-import { normalizeUser, normalizeUserRecords, convertLegacyUser } from './user-types';
-import { normalizeFlashcard, calculateReviewPerformance } from './flashcard-types';
-import { isValidDate } from './voice';
-import { normalizeFields } from './utils';
