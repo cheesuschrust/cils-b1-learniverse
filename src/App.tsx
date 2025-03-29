@@ -140,7 +140,7 @@ function App() {
                         <Dashboard />  
                       </ErrorBoundary>  
                     } />  
-                    <Route path="/app/profile" element={  
+                    <Route path="/profile" element={  
                       <ErrorBoundary>  
                         <UserProfile />  
                       </ErrorBoundary>  

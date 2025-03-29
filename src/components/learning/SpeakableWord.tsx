@@ -6,11 +6,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { speak, isSpeechSupported, stopSpeaking } from '@/utils/textToSpeech';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import { useAIUtils } from '@/hooks/useAIUtils';
+import { useAIUtils } from '@/contexts/AIUtilsContext';
 
 interface SpeakableWordProps {
-  text?: string;
-  word?: string; // For backward compatibility
+  word: string;
   language?: 'it' | 'en';
   className?: string;
   onClick?: () => void;
@@ -24,7 +23,6 @@ interface SpeakableWordProps {
 
 const SpeakableWord: React.FC<SpeakableWordProps> = ({
   word,
-  text,
   language = 'it',
   className = '',
   onClick,
@@ -39,9 +37,6 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   const { voicePreference, autoPlayAudio } = useUserPreferences();
   const { isAIEnabled, speakText, isSpeaking, cancelSpeech } = useAIUtils();
   const [error, setError] = useState<string | null>(null);
-  
-  // Use word or text prop (text takes precedence for backward compatibility)
-  const wordToSpeak = text || word || '';
   
   // Check if speech is supported
   const speechSupported = isSpeechSupported();
@@ -59,10 +54,10 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   useEffect(() => {
     // Only auto-play if explicitly set to true AND user preference is true
     // And only if AI is enabled and speech is supported
-    if (autoPlay && autoPlayAudio && isAIEnabled && speechSupported && wordToSpeak) {
+    if (autoPlay && autoPlayAudio && isAIEnabled && speechSupported && word) {
       handleSpeak(null);
     }
-  }, [wordToSpeak, autoPlay, autoPlayAudio, isAIEnabled, speechSupported]); 
+  }, [word, autoPlay, autoPlayAudio, isAIEnabled, speechSupported]); 
 
   const handleSpeak = async (e: React.MouseEvent | null) => {
     if (e) {
@@ -89,13 +84,13 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       return;
     }
     
-    if (isSpeaking || disabled || !wordToSpeak) return;
+    if (isSpeaking || disabled || !word) return;
     
     setError(null);
     
     try {
-      console.log(`Speaking word: "${wordToSpeak}" in ${language} language`);
-      await speakText(wordToSpeak, language);
+      console.log(`Speaking word: "${word}" in ${language} language`);
+      await speakText(word, language);
       if (onPlayComplete) {
         onPlayComplete();
       }
@@ -119,7 +114,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   if (!speechSupported && !isAIEnabled) {
     return (
       <span className={className}>
-        {wordToSpeak}
+        {word}
       </span>
     );
   }
@@ -127,7 +122,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   const tooltipText = tooltipContent || (
     error 
       ? `Error: ${error}` 
-      : `Pronounce "${wordToSpeak}" in ${language === 'it' ? 'Italian' : 'English'}`
+      : `Pronounce "${word}" in ${language === 'it' ? 'Italian' : 'English'}`
   );
 
   const renderButton = () => (
@@ -136,9 +131,9 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       size="icon"
       variant="ghost"
       className={`ml-1 ${buttonSizeClass} ${isSpeaking ? 'opacity-100' : 'opacity-60 hover:opacity-100 focus:opacity-100'} ${error ? 'text-destructive' : isSpeaking ? 'text-primary' : ''}`}
-      disabled={disabled || isSpeaking || !isAIEnabled || !speechSupported || !wordToSpeak}
+      disabled={disabled || isSpeaking || !isAIEnabled || !speechSupported || !word}
       onClick={handleSpeak}
-      aria-label={`Pronounce "${wordToSpeak}"`}
+      aria-label={`Pronounce "${word}"`}
     >
       {error ? (
         <AlertCircle className={iconSizeClass} />
@@ -153,7 +148,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       className={`inline-flex items-center group relative ${className}`}
       onClick={onClick}
     >
-      {wordToSpeak}
+      {word}
       
       {showTooltip ? (
         <TooltipProvider>
