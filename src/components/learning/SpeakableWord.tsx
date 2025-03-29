@@ -6,26 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { speak, isSpeechSupported, stopSpeaking } from '@/utils/textToSpeech';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-
-// If this context and hook don't exist yet, you might need to create a simpler version
-const useAIUtils = () => {
-  return {
-    isAIEnabled: true,
-    speakText: async (text: string, language: string) => {
-      try {
-        await speak(text, language);
-        return true;
-      } catch (error) {
-        console.error("Error speaking text:", error);
-        throw error;
-      }
-    },
-    isSpeaking: false,
-    cancelSpeech: () => {
-      stopSpeaking();
-    }
-  };
-};
+import { useAIUtils } from '@/hooks/useAIUtils';
 
 interface SpeakableWordProps {
   text?: string;
