@@ -1,263 +1,367 @@
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AIModel, AIPreferences, AISetupWizardProps } from '@/types/ai';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Check, Cpu, HelpCircle, Shield, Volume2 } from 'lucide-react';
-import { adaptModelToSize, adaptSizeToModel } from '@/utils/modelAdapter';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAI } from '@/contexts/AIContext';
+import { Check, ChevronsRight, AlertCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const AISetupWizard: React.FC<AISetupWizardProps> = ({
-  open,
-  onOpenChange,
-  onComplete
-}) => {
-  const [activeTab, setActiveTab] = useState("model");
-  const [preferences, setPreferences] = useState<AIPreferences>({
-    model: 'medium',
-    contentSafety: true,
-    debugMode: false,
-    voicePreference: 'native',
-    autoPlayAudio: true,
-  });
+interface AISetupWizardProps {
+  onComplete?: () => void;
+}
 
-  const handleComplete = () => {
-    onComplete();
-    onOpenChange(false);
+const AISetupWizard: React.FC<AISetupWizardProps> = ({ onComplete }) => {
+  const { settings, updateSettings } = useAI();
+  const [step, setStep] = useState<'provider' | 'config' | 'testing' | 'complete'>('provider');
+  const [selectedProvider, setSelectedProvider] = useState<string>(settings.modelProvider);
+  const [apiKey, setApiKey] = useState<string>(settings.apiKey || '');
+  const [modelName, setModelName] = useState<string>(settings.modelName || '');
+  const [testMessage, setTestMessage] = useState<string>('');
+  const [testResponse, setTestResponse] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  const providers = [
+    { id: 'openai', name: 'OpenAI', description: 'Use OpenAI models like GPT-4o' },
+    { id: 'huggingface', name: 'Hugging Face', description: 'Use Hugging Face models locally or via API' },
+    { id: 'azure', name: 'Azure AI', description: 'Use Azure OpenAI services' },
+    { id: 'google', name: 'Google AI', description: 'Use Google Gemini models' },
+    { id: 'local', name: 'Local Models', description: 'Use locally running models (advanced)' }
+  ];
+
+  const handleSelectProvider = (provider: string) => {
+    setSelectedProvider(provider);
   };
 
   const handleNext = () => {
-    switch (activeTab) {
-      case "model":
-        setActiveTab("voice");
-        break;
-      case "voice":
-        setActiveTab("safety");
-        break;
-      case "safety":
-        handleComplete();
-        break;
+    if (step === 'provider') {
+      setStep('config');
+    } else if (step === 'config') {
+      handleSaveConfig();
+      setStep('testing');
+    } else if (step === 'testing') {
+      setStep('complete');
     }
   };
 
   const handleBack = () => {
-    switch (activeTab) {
-      case "voice":
-        setActiveTab("model");
-        break;
-      case "safety":
-        setActiveTab("voice");
-        break;
+    if (step === 'config') {
+      setStep('provider');
+    } else if (step === 'testing') {
+      setStep('config');
+    } else if (step === 'complete') {
+      setStep('testing');
     }
   };
 
-  const updatePreference = <K extends keyof AIPreferences>(
-    key: K,
-    value: AIPreferences[K]
-  ) => {
-    setPreferences((prev) => ({ ...prev, [key]: value }));
+  const handleSaveConfig = () => {
+    updateSettings({
+      modelProvider: selectedProvider as 'openai' | 'huggingface' | 'azure' | 'google' | 'local',
+      apiKey,
+      modelName
+    });
+  };
+
+  const handleComplete = () => {
+    if (onComplete) onComplete();
+  };
+
+  const handleTestConnection = async () => {
+    setIsLoading(true);
+    setTestError(null);
+    
+    try {
+      // In a real application, this would make an API call to test the connection
+      setTimeout(() => {
+        if (apiKey && modelName) {
+          setTestResponse("Connection successful! AI is properly configured.");
+        } else {
+          throw new Error("API key or model name is missing");
+        }
+        setIsLoading(false);
+      }, 1500);
+    } catch (error: any) {
+      setTestError(error.message || "Connection failed");
+      setIsLoading(false);
+    }
+  };
+
+  const getProviderInstructions = () => {
+    switch (selectedProvider) {
+      case 'openai':
+        return (
+          <div className="space-y-4 text-sm">
+            <p>To set up OpenAI integration, you'll need:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>An OpenAI API key from your OpenAI dashboard</li>
+              <li>Select one of the available models (GPT-4o recommended)</li>
+            </ol>
+            <p>Enter your OpenAI API key in the field below.</p>
+          </div>
+        );
+      case 'huggingface':
+        return (
+          <div className="space-y-4 text-sm">
+            <p>To set up Hugging Face integration, you'll need:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>A Hugging Face API key from your Hugging Face account</li>
+              <li>Choose either a hosted API model or a local model name</li>
+            </ol>
+            <p>Enter your Hugging Face API key in the field below.</p>
+          </div>
+        );
+      case 'azure':
+        return (
+          <div className="space-y-4 text-sm">
+            <p>To set up Azure OpenAI integration, you'll need:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>Your Azure OpenAI endpoint URL</li>
+              <li>Your Azure OpenAI API key</li>
+              <li>The deployed model name in your Azure instance</li>
+            </ol>
+            <p>Enter your Azure API key in the field below.</p>
+          </div>
+        );
+      case 'google':
+        return (
+          <div className="space-y-4 text-sm">
+            <p>To set up Google AI integration, you'll need:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>A Google AI Studio API key</li>
+              <li>Select one of the available Gemini models</li>
+            </ol>
+            <p>Enter your Google AI API key in the field below.</p>
+          </div>
+        );
+      case 'local':
+        return (
+          <div className="space-y-4 text-sm">
+            <p>To set up local model integration:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>Ensure you have a local model server running (Ollama, LM Studio, etc.)</li>
+              <li>Enter the local endpoint URL (typically http://localhost:port)</li>
+              <li>Specify the model name you have installed locally</li>
+            </ol>
+            <p>Enter your local endpoint URL in the field below.</p>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Local models require more technical setup and adequate hardware.
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>AI Assistant Setup</DialogTitle>
-          <DialogDescription>
-            Configure how you want the AI assistant to work for you.
-          </DialogDescription>
-        </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="model" data-active={activeTab === "model"}>
-              <Cpu className="h-4 w-4 mr-2" />
-              Model
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>AI Setup Wizard</CardTitle>
+        <CardDescription>Configure your AI provider for Italian language learning assistance</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs value={step} className="w-full">
+          <TabsList className="grid grid-cols-4 mb-6">
+            <TabsTrigger value="provider" disabled={step !== 'provider'}>
+              1. Select Provider
             </TabsTrigger>
-            <TabsTrigger value="voice" data-active={activeTab === "voice"}>
-              <Volume2 className="h-4 w-4 mr-2" />
-              Voice
+            <TabsTrigger value="config" disabled={step !== 'config'}>
+              2. Configuration
             </TabsTrigger>
-            <TabsTrigger value="safety" data-active={activeTab === "safety"}>
-              <Shield className="h-4 w-4 mr-2" />
-              Safety
+            <TabsTrigger value="testing" disabled={step !== 'testing'}>
+              3. Test Connection
+            </TabsTrigger>
+            <TabsTrigger value="complete" disabled={step !== 'complete'}>
+              4. Complete
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="model" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Choose AI Model Size</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a model size based on your needs. Larger models are more
-                  capable but may be slower.
-                </p>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <Button
-                    variant={preferences.model === "small" ? "default" : "outline"}
-                    onClick={() => updatePreference("model", "small")}
-                    className="flex flex-col h-auto py-4"
+          
+          <TabsContent value="provider" className="space-y-6">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium">Select an AI Provider</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose the AI provider you want to use for language learning features
+              </p>
+            </div>
+            
+            <RadioGroup 
+              value={selectedProvider} 
+              onValueChange={handleSelectProvider}
+              className="grid gap-4"
+            >
+              {providers.map((provider) => (
+                <div key={provider.id} className="flex items-center">
+                  <RadioGroupItem value={provider.id} id={provider.id} className="peer sr-only" />
+                  <Label
+                    htmlFor={provider.id}
+                    className="flex flex-col items-start gap-2 rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary w-full cursor-pointer"
                   >
-                    <span className="font-medium">Small</span>
-                    <span className="text-xs mt-1">Fast, Basic</span>
-                  </Button>
-                  <Button
-                    variant={preferences.model === "medium" ? "default" : "outline"}
-                    onClick={() => updatePreference("model", "medium")}
-                    className="flex flex-col h-auto py-4"
-                  >
-                    <span className="font-medium">Medium</span>
-                    <span className="text-xs mt-1">Balanced</span>
-                  </Button>
-                  <Button
-                    variant={preferences.model === "large" ? "default" : "outline"}
-                    onClick={() => updatePreference("model", "large")}
-                    className="flex flex-col h-auto py-4"
-                  >
-                    <span className="font-medium">Large</span>
-                    <span className="text-xs mt-1">Powerful</span>
-                  </Button>
+                    <div className="flex w-full justify-between">
+                      <span className="font-semibold">{provider.name}</span>
+                      {selectedProvider === provider.id && (
+                        <Check className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {provider.description}
+                    </span>
+                  </Label>
                 </div>
+              ))}
+            </RadioGroup>
+          </TabsContent>
+          
+          <TabsContent value="config" className="space-y-6">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium">{providers.find(p => p.id === selectedProvider)?.name} Configuration</h3>
+              <p className="text-sm text-muted-foreground">
+                Enter the required configuration details
+              </p>
+            </div>
+            
+            {getProviderInstructions()}
+            
+            <div className="space-y-4 mt-8">
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">API Key</Label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter your API key"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="modelName">Model Name</Label>
+                <Input
+                  id="modelName"
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  placeholder={
+                    selectedProvider === 'openai' ? 'gpt-4o-mini' : 
+                    selectedProvider === 'google' ? 'gemini-pro' :
+                    selectedProvider === 'huggingface' ? 'mistralai/mixtral-8x7b-instruct-v0.1' :
+                    selectedProvider === 'azure' ? 'gpt-4' :
+                    'localhost:11434/api/chat'
+                  }
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the model name you want to use
+                </p>
               </div>
             </div>
           </TabsContent>
-
-          <TabsContent value="voice" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Voice Settings</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure how the AI assistant sounds when speaking.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="autoPlayAudio">Auto-play audio</Label>
-                    <Switch
-                      id="autoPlayAudio"
-                      checked={preferences.autoPlayAudio}
-                      onCheckedChange={(checked) =>
-                        updatePreference("autoPlayAudio", checked)
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="mb-2 block">Voice Preference</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button
-                        variant={
-                          preferences.voicePreference === "native"
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => updatePreference("voicePreference", "native")}
-                        className="h-auto py-3"
-                      >
-                        Native Speaker
-                      </Button>
-                      <Button
-                        variant={
-                          preferences.voicePreference === "clear"
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => updatePreference("voicePreference", "clear")}
-                        className="h-auto py-3"
-                      >
-                        Clear Accent
-                      </Button>
-                    </div>
-                  </div>
+          
+          <TabsContent value="testing" className="space-y-6">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium">Test Your Connection</h3>
+              <p className="text-sm text-muted-foreground">
+                Verify that your AI configuration works correctly
+              </p>
+            </div>
+            
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium">Configuration Summary</h4>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Provider:</span>
+                  <span className="font-medium">{providers.find(p => p.id === selectedProvider)?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Model:</span>
+                  <span className="font-medium">{modelName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">API Key:</span>
+                  <span className="font-medium">••••••••••••••••</span>
                 </div>
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="testMessage">Test Message</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="testMessage"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="E.g., Translate 'hello' to Italian"
+                  disabled={isLoading}
+                />
+                <Button onClick={handleTestConnection} disabled={isLoading}>
+                  {isLoading ? "Testing..." : "Test"}
+                </Button>
+              </div>
+            </div>
+            
+            {testResponse && (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-lg">
+                <p className="text-green-800 dark:text-green-300 text-sm">{testResponse}</p>
+              </div>
+            )}
+            
+            {testError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{testError}</AlertDescription>
+              </Alert>
+            )}
           </TabsContent>
-
-          <TabsContent value="safety" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Safety & Privacy</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure safety and privacy settings for the AI assistant.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="contentSafety" className="mb-1 block">
-                        Content Safety Filter
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Filter harmful or inappropriate content
-                      </p>
-                    </div>
-                    <Switch
-                      id="contentSafety"
-                      checked={preferences.contentSafety}
-                      onCheckedChange={(checked) =>
-                        updatePreference("contentSafety", checked)
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="debugMode" className="mb-1 block">
-                        Debug Mode
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Show technical details about AI responses
-                      </p>
-                    </div>
-                    <Switch
-                      id="debugMode"
-                      checked={preferences.debugMode}
-                      onCheckedChange={(checked) =>
-                        updatePreference("debugMode", checked)
-                      }
-                    />
-                  </div>
+          
+          <TabsContent value="complete" className="space-y-6">
+            <div className="text-center">
+              <div className="mx-auto bg-green-100 dark:bg-green-900/20 h-12 w-12 rounded-full flex items-center justify-center mb-4">
+                <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-lg font-medium">Setup Complete!</h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                Your AI provider has been successfully configured. You can now use AI features throughout the application.
+              </p>
+            </div>
+            
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium">What's Next?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    You can adjust your AI settings at any time from the Admin dashboard. The AI will now be available for content generation, language correction, and student assistance.
+                  </p>
                 </div>
               </div>
             </div>
           </TabsContent>
         </Tabs>
-
-        <DialogFooter className="mt-2">
-          <div className="flex justify-between w-full">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={activeTab === "model"}
-            >
-              Back
-            </Button>
-            <Button onClick={handleNext}>
-              {activeTab === "safety" ? (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Complete Setup
-                </>
-              ) : (
-                "Next"
-              )}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        {step !== 'provider' && (
+          <Button variant="outline" onClick={handleBack} disabled={isLoading}>
+            Back
+          </Button>
+        )}
+        {step !== 'provider' && step === 'complete' ? (
+          <Button onClick={handleComplete}>
+            Finish
+          </Button>
+        ) : (
+          <Button onClick={handleNext} disabled={isLoading || (step === 'config' && (!apiKey || !modelName))}>
+            {step === 'testing' ? 'Finish Setup' : 'Continue'}
+            <ChevronsRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
 
