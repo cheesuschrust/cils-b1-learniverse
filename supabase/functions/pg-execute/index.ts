@@ -53,7 +53,7 @@ serve(async (req) => {
     }
 
     // Execute the query using the special rpc function for superuser access
-    // This requires the pg_execute function to be defined in your database
+    // This requires the execute_sql function to be defined in your database
     const { data, error } = await supabaseClient.rpc('execute_sql', {
       sql_query: sql_string
     })
