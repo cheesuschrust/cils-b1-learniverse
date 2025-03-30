@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, UserRole } from '@/types/user';
+import { User, UserRole, UserPreferences } from '@/types/user';
 import { MoreVertical, Edit, Trash2, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -89,6 +90,15 @@ const UserManagementComponent: React.FC = () => {
   };
 
   const handleOpenModal = (user: ExtendedUser | null, createMode: boolean) => {
+    const defaultPreferences: UserPreferences = {
+      theme: 'light',
+      language: 'english',
+      notifications: true,
+      emailNotifications: true,
+      difficulty: 'beginner',
+      onboardingCompleted: false,
+    };
+    
     setSelectedUser(user ? { ...user } : {
       uid: '',
       id: '',
@@ -107,7 +117,7 @@ const UserManagementComponent: React.FC = () => {
       subscription: 'free',
       phoneNumber: '',
       address: '',
-      preferences: {},
+      preferences: defaultPreferences,
       preferredLanguage: 'english',
       language: 'english',
       dailyQuestionCounts: {
@@ -158,6 +168,8 @@ const UserManagementComponent: React.FC = () => {
             theme: 'light',
             language: 'en',
             notifications: true,
+            emailNotifications: true,
+            difficulty: 'intermediate',
             onboardingCompleted: true
           }
         };

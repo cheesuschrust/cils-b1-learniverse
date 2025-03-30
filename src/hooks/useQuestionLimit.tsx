@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
  * Hook to manage and enforce daily question limits based on subscription
  */
 export const useQuestionLimit = () => {
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { preferences } = useUserPreferences();
   const { toast } = useToast();
   
@@ -19,7 +19,7 @@ export const useQuestionLimit = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   // Check if current user is premium
-  const isPremium = !!userProfile?.isPremiumUser || !!user?.isPremiumUser;
+  const isPremium = !!user?.isPremiumUser;
   
   // Determine if user has reached their limit
   const hasReachedLimit = usedToday >= dailyLimit && !isPremium;
@@ -33,7 +33,7 @@ export const useQuestionLimit = () => {
       // Set appropriate limit based on user type
       if (isPremium) {
         setDailyLimit(50); // Premium users get higher limits
-      } else if (userProfile?.role === 'teacher') {
+      } else if (user?.role === 'teacher') {
         setDailyLimit(25); // Teachers get higher limits than students
       } else {
         setDailyLimit(10); // Default limit for free users
@@ -43,7 +43,8 @@ export const useQuestionLimit = () => {
       const today = new Date().toISOString().split('T')[0];
       
       // Check if we have a count for today
-      const dailyCount = userProfile?.dailyQuestionCounts?.[today] || 0;
+      const dailyCount = user?.dailyQuestionCounts ? 
+        Object.values(user.dailyQuestionCounts).reduce((acc, curr) => acc + curr, 0) : 0;
       setUsedToday(dailyCount);
       setLastUpdated(new Date());
       
@@ -52,7 +53,7 @@ export const useQuestionLimit = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isPremium, userProfile]);
+  }, [isPremium, user]);
   
   /**
    * Increment the question count when a question is used
@@ -67,7 +68,7 @@ export const useQuestionLimit = () => {
       // Update local state immediately
       setUsedToday(prev => prev + 1);
       
-      // Would update to database in a real implementation
+      // In a real implementation, this would update the database
       console.log(`Incrementing question count for user ${user.id} on ${today}`);
       
       return true;
@@ -105,8 +106,12 @@ export const useQuestionLimit = () => {
     // Increment the question count
     const success = await incrementQuestionCount();
     
+    if (!success) {
+      return false;
+    }
+    
     // Check if user has now reached their limit after increment
-    if (success && usedToday + 1 >= dailyLimit && !isPremium) {
+    if (usedToday + 1 >= dailyLimit && !isPremium) {
       toast({
         variant: "warning",
         title: "Approaching limit",
@@ -114,7 +119,7 @@ export const useQuestionLimit = () => {
       });
     }
     
-    return success;
+    return true;
   }, [canUseQuestion, incrementQuestionCount, toast, usedToday, dailyLimit, isPremium]);
   
   // Load usage data when component mounts or user changes

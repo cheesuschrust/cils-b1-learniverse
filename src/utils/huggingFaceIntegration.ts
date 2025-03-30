@@ -143,7 +143,7 @@ export const recognizeSpeech = async (
   try {
     const model = await loadModel('automatic-speech-recognition', modelName);
     const result = await model(audioData);
-    return result;
+    return { text: result.text || result };
   } catch (error) {
     console.error('Error recognizing speech:', error);
     throw error;
@@ -203,21 +203,28 @@ export const calculateCosineSimilarity = (
   vec1: number[], 
   vec2: number[]
 ): number => {
+  // Make sure we're working with arrays
+  const v1 = Array.isArray(vec1) ? vec1 : [vec1];
+  const v2 = Array.isArray(vec2) ? vec2 : [vec2];
+  
   // Dot product
   let dotProduct = 0;
-  for (let i = 0; i < vec1.length; i++) {
-    dotProduct += vec1[i] * vec2[i];
+  for (let i = 0; i < v1.length; i++) {
+    dotProduct += v1[i] * v2[i];
   }
   
   // Magnitudes
   let mag1 = 0;
   let mag2 = 0;
-  for (let i = 0; i < vec1.length; i++) {
-    mag1 += vec1[i] * vec1[i];
-    mag2 += vec2[i] * vec2[i];
+  for (let i = 0; i < v1.length; i++) {
+    mag1 += v1[i] * v1[i];
+    mag2 += v2[i] * v2[i];
   }
   mag1 = Math.sqrt(mag1);
   mag2 = Math.sqrt(mag2);
+  
+  // Avoid division by zero
+  if (mag1 === 0 || mag2 === 0) return 0;
   
   return dotProduct / (mag1 * mag2);
 };

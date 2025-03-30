@@ -1,77 +1,84 @@
 
-/**
- * AI service interfaces and types
- */
+export type ContentType = 'flashcards' | 'multiple-choice' | 'listening' | 'writing' | 'speaking';
 
-export type AIStatus = 'idle' | 'loading' | 'ready' | 'error';
-export type AIModel = 'small' | 'medium' | 'large';
-export type AILanguage = 'english' | 'italian' | 'auto';
-
-export interface AIPreference {
-  enabled: boolean;
-  modelSize: AIModel;
-  defaultModelSize?: AIModel;
-  useWebGPU?: boolean;
-  cacheResponses: boolean;
-  defaultLanguage?: AILanguage;
-  voiceEnabled: boolean;
-  voiceRate?: number;
-  voicePitch?: number;
-  italianVoiceURI?: string;
-  englishVoiceURI?: string;
-  anonymousAnalytics?: boolean;
+export interface AISettings {
+  defaultModelSize: string;
+  useWebGPU: boolean;
+  voiceRate: number;
+  voicePitch: number;
+  italianVoiceURI: string;
+  englishVoiceURI: string;
+  defaultLanguage: string;
+  processOnDevice: boolean;
+  useLocalModels: boolean;
+  useCaching: boolean;
+  contentGeneration: boolean;
+  contentAnalysis: boolean;
+  errorCorrection: boolean;
+  personalization: boolean;
+  pronunciationHelp: boolean;
+  conversationalLearning: boolean;
+  progressTracking: boolean;
+  autoTranslation: boolean;
+  sentimentAnalysis: boolean;
+  advancedExplanations: boolean;
+  contentFiltering: boolean;
 }
 
-export interface AIFeedback {
-  exercise: string;
-  type: string;
-  input: string;
-  correction: string;
-  explanation: string;
-  confidence: number;
+export interface AIPreference {
+  flashcards: boolean;
+  questions: boolean;
+  listening: boolean;
+  speaking: boolean;
+  writing: boolean;
+  translation: boolean;
+  explanation: boolean;
+  correction: boolean;
+  simplified: boolean;
+  // Add more specific preferences as needed
 }
 
 export interface AIServiceOptions {
-  maxLength?: number;
-  temperature?: number;
   model?: string;
-  stream?: boolean;
+  temperature?: number;
+  maxLength?: number;
+  minLength?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  stopSequences?: string[];
+  timeout?: number;
+  language?: 'english' | 'italian' | 'both';
+  signal?: AbortSignal;
 }
 
 export interface AIServiceInterface {
-  generateText(prompt: string, options?: AIServiceOptions): Promise<string>;
-  classifyText(text: string): Promise<Array<{ label: string; score: number }>>;
-  generateImage?(prompt: string, size?: string): Promise<string>;
-  getConfidenceScore(contentType: string): number;
-  addTrainingExamples(contentType: string, examples: any[]): number;
-  generateFlashcards(topic: string, count?: number, difficulty?: string): Promise<any[]>;
-  generateQuestions(content: string, count?: number, type?: string): Promise<any[]>;
-  abortRequest(requestId: string): void;
-  abortAllRequests(): void;
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  classifyText: (text: string) => Promise<Array<{label: string; score: number}>>;
+  getConfidenceScore: (contentType: string) => number;
+  addTrainingExamples: (contentType: string, examples: any[]) => number;
+  generateFlashcards: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
+  generateQuestions: (content: string, count?: number, type?: string) => Promise<any[]>;
+  abortRequest: (requestId: string) => void;
+  abortAllRequests: () => void;
 }
 
-export interface UseAIReturn {
-  generateText: (prompt: string, options?: any) => Promise<string>;
-  getConfidenceScore: (text: string, contentType: string) => Promise<number>;
-  translateText?: (text: string, targetLang: 'english' | 'italian') => Promise<string>;
-  checkGrammar?: (text: string, lang: 'english' | 'italian') => Promise<{text: string, corrections: any[]}>;
-  isLoading?: boolean;
-  error: Error | null;
-  abort?: () => void;
-  generateFlashcards?: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
-  isProcessing?: boolean;
-  classifyText?: (text: string) => Promise<any>;
-  isModelLoaded?: boolean;
-  status?: string;
-  loadModel?: (modelName: string) => Promise<boolean>;
-  generateQuestions?: (content: string, count?: number, type?: string) => Promise<any[]>;
+// For AI Setup Wizard
+export interface AISetupWizardProps {
+  onComplete: (settings: AISettings) => void;
 }
 
+// For AI Content Processor
+export interface AIContentProcessorProps {
+  content: string;
+  contentType: ContentType;
+  onQuestionsGenerated: (questions: any[]) => void;
+}
+
+// For Confidence Indicator
 export interface ConfidenceIndicatorProps {
   score: number;
+  contentType?: ContentType;
   size?: 'sm' | 'md' | 'lg';
-  className?: string;
-  indicatorClassName?: string;
-  contentType?: string;
-  value?: number;
+  showLabel?: boolean;
 }

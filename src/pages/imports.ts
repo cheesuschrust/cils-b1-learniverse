@@ -1,43 +1,73 @@
-// Pages
-export { default as Dashboard } from './Dashboard';
-export { default as Login } from './Login';
-export { default as Signup } from './Signup';
-export { default as ResetPassword } from './ResetPassword';
-export { default as EmailVerification } from './EmailVerification';
-export { default as UserProfile } from './UserProfile';
-export { default as Settings } from './Settings';
-export { default as PrivacyPolicy } from './PrivacyPolicy';
-export { default as Documentation } from './Documentation';
-export { default as NotFound } from './NotFound';
-export { default as Index } from './Index';
-export { default as Support } from './Support';
-export { default as SupportCenter } from './SupportCenter';
-export { default as Flashcards } from './Flashcards';
-export { default as MultipleChoice } from './MultipleChoice';
-export { default as Listening } from './Listening';
-export { default as Speaking } from './Speaking';
-export { default as Writing } from './Writing';
-export { default as Calendar } from './Calendar';
-export { default as ContentPage } from './ContentPage';
-export { default as SubscriptionPage } from './SubscriptionPage';
-export { default as Analytics } from './Analytics';
 
-// Admin Pages
-export { default as AdminDashboard } from './admin/Dashboard';
-export { default as UserManagement } from './admin/UserManagement';
-export { default as ContentUploader } from './admin/ContentUploader';
-export { default as AdminAnalyticsDashboardPage } from './admin/AdminAnalyticsDashboard';
-export { default as SupportTickets } from './admin/SupportTickets';
-export { default as ChatbotManagement } from './admin/ChatbotManagement';
-export { default as SystemSettings } from './admin/SystemSettings';
-export { default as SEOManager } from './admin/SEOManager';
-export { default as EmailSettings } from './admin/EmailSettings';
-export { default as AdManagement } from './admin/AdManagement';
-export { default as EcommerceIntegration } from './admin/EcommerceIntegration';
-export { default as AppStoreListing } from './admin/AppStoreListing';
-export { default as InstitutionalLicensing } from './admin/InstitutionalLicensing';
-export { default as AIManagement } from './admin/AIManagement';
-export { default as AISetupWizard } from './admin/AISetupWizard';
-export { default as SystemLogs } from './admin/SystemLogs';
-export { default as ContentAnalysis } from './admin/ContentAnalysis';
-export { default as SystemTests } from './admin/SystemTests';
+// Import all pages to be used in the app
+import Home from './Home';
+import Dashboard from './Dashboard';
+import Login from './Login';
+import Signup from './Signup';
+import Profile from './Profile';
+import Flashcards from './Flashcards';
+import MultipleChoice from './MultipleChoice';
+import Writing from './Writing';
+import ListeningPage from './Listening'; // Changed from Listening to ListeningPage
+import Speaking from './Speaking';
+import Settings from './Settings';
+import Support from './Support';
+import Achievements from './Achievements';
+import NotFound from './NotFound';
+import Analytics from './Analytics';
+import VocabularyLists from './VocabularyLists';
+import Progress from './Progress';
+import EmailVerification from './EmailVerification';
+import ResetPassword from './ResetPassword';
+import AIAssistant from './AIAssistant';
+
+// Admin pages
+import AdminDashboard from './admin/AdminDashboard';
+import UserManagement from './admin/UserManagement';
+import ContentUploader from './admin/ContentUploader';
+import ContentAnalysis from './admin/ContentAnalysis';
+import AIManagement from './admin/AIManagement';
+import SystemLogs from './admin/SystemLogs';
+import SystemTests from './admin/SystemTests';
+import SystemSettings from './admin/SystemSettings';
+import AISetupWizard from './admin/AISetupWizard';
+import EmailSettings from './admin/EmailSettings';
+import AppStoreListing from './admin/AppStoreListing';
+import SEOManager from './admin/SEOManager';
+
+// Export all pages
+export {
+  Home,
+  Dashboard,
+  Login,
+  Signup,
+  Profile,
+  Flashcards,
+  MultipleChoice,
+  Writing,
+  ListeningPage as Listening, // Export as Listening
+  Speaking,
+  Settings,
+  Support,
+  Achievements,
+  NotFound,
+  Analytics,
+  VocabularyLists,
+  Progress,
+  EmailVerification,
+  ResetPassword,
+  AIAssistant,
+  // Admin pages
+  AdminDashboard,
+  UserManagement,
+  ContentUploader,
+  ContentAnalysis,
+  AIManagement,
+  SystemLogs,
+  SystemTests,
+  SystemSettings,
+  AISetupWizard,
+  EmailSettings,
+  AppStoreListing,
+  SEOManager
+};

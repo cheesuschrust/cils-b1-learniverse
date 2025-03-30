@@ -1,225 +1,217 @@
 
-import { ContentType } from '@/types/contentType';
-import { Flashcard } from '@/types/interface-fixes';
-import { Question, QuestionSet } from '@/types/question';
-import { calculateNextReview } from '@/utils/spacedRepetition';
-import { analyzeContent } from '@/utils/AITrainingUtils';
+import * as HuggingFace from '@/utils/huggingFaceIntegration';
+import { ContentType } from '@/types/ai';
 
 /**
- * Integrates AI capabilities with the spaced repetition system
- * to optimize study scheduling based on user performance.
+ * Get the confidence score for a content analysis result
  */
-export const optimizeStudySchedule = (
-  flashcards: Flashcard[], 
-  performance: { [id: string]: number },
-  confidenceThreshold: number = 0.7
-): Flashcard[] => {
-  return flashcards.map(card => {
-    // Get performance data for this card (0-1 range)
-    const cardPerformance = performance[card.id] || 0.5;
+export const getConfidenceScore = (contentType: string, text: string): number => {
+  // Implementation of a heuristic confidence calculation based on content and type
+  switch(contentType) {
+    case 'flashcards':
+      return text.includes(':') && text.split('\n').length > 3 ? 90 : 70;
+    case 'multiple-choice':
+      return text.includes('?') && (text.includes('1)') || text.includes('A)')) ? 85 : 65;
+    case 'listening':
+      return text.includes('Listen') || text.includes('Audio') ? 80 : 60;
+    case 'writing':
+      return text.length > 200 && !text.includes('?') ? 75 : 55;
+    case 'speaking':
+      return text.includes('Speak') || text.includes('Pronounce') ? 80 : 60;
+    default:
+      return 50;
+  }
+};
+
+/**
+ * Detect the primary language of a text
+ */
+export const detectLanguage = (text: string): 'english' | 'italian' | 'unknown' => {
+  const italianWords = ["il", "la", "i", "gli", "le", "un", "uno", "una", "e", "è", "ma", "se", "perché", "come", "quando"];
+  const englishWords = ["the", "a", "an", "and", "but", "if", "because", "how", "when", "what", "where", "who"];
+  
+  // Normalize and tokenize the input text
+  const words = text.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(/\s+/);
+  
+  let italianCount = 0;
+  let englishCount = 0;
+  
+  // Count occurrences of language-specific words
+  words.forEach(word => {
+    if (italianWords.includes(word)) italianCount++;
+    if (englishWords.includes(word)) englishCount++;
+  });
+  
+  // Determine the likely language
+  if (italianCount > englishCount && italianCount > 2) return 'italian';
+  if (englishCount > italianCount && englishCount > 2) return 'english';
+  
+  // Check for Italian-specific characters
+  if (text.match(/[àèéìíòóùú]/g)) return 'italian';
+  
+  return 'unknown';
+};
+
+/**
+ * Analyze content to determine its type and language
+ */
+export const analyzeContent = async (
+  text: string,
+  contentType?: ContentType
+): Promise<{
+  type: ContentType;
+  confidence: number;
+  language: 'english' | 'italian' | 'unknown';
+}> => {
+  try {
+    // Determine language
+    const detectedLanguage = detectLanguage(text);
     
-    // Calculate confidence adjustment based on performance
-    // Lower performance means we need to review sooner
-    const confidenceAdjustment = 1 - Math.min(cardPerformance, confidenceThreshold);
+    // Use the provided content type or detect it
+    let detectedType: ContentType = contentType || 'flashcards';
     
-    // Get current values or defaults
-    const currentFactor = (card as any).difficultyFactor || 2.5;
-    const consecutiveCorrect = (card as any).consecutiveCorrect || 0;
+    if (!contentType) {
+      // Simple heuristic content type detection
+      if (text.includes('?') && (text.includes('1)') || text.includes('A)') || text.includes('a)'))) {
+        detectedType = 'multiple-choice';
+      } else if (text.includes(':') && text.split('\n').length > 3) {
+        detectedType = 'flashcards';
+      } else if (text.length > 200 && !text.includes('?')) {
+        detectedType = 'writing';
+      } else if (text.includes('Listen') || text.includes('Audio')) {
+        detectedType = 'listening';
+      } else if (text.includes('Speak') || text.includes('Pronounce')) {
+        detectedType = 'speaking';
+      }
+    }
     
-    // Adjust the review schedule based on performance
-    const { nextReviewDate, difficultyFactor } = calculateNextReview(
-      cardPerformance > 0.6, // Consider correct if performance above 60%
-      currentFactor,
-      consecutiveCorrect,
-      confidenceAdjustment // Pass the adjustment factor
-    );
+    // Get confidence score
+    const confidence = getConfidenceScore(detectedType, text);
     
     return {
-      ...card,
-      nextReview: nextReviewDate,
-      difficultyFactor: difficultyFactor,
-      level: Math.floor(difficultyFactor * 2 - 2), // Map difficulty factor to level (0-5)
-      consecutiveCorrect
+      type: detectedType,
+      confidence,
+      language: detectedLanguage
     };
-  });
-};
-
-/**
- * Generates personalized challenges based on user progress and AI insights
- */
-export const generatePersonalizedChallenges = async (
-  userData: any,
-  contentTypes: ContentType[],
-  count: number = 3
-): Promise<any[]> => {
-  // Default challenges if AI is not available
-  const defaultChallenges = [
-    {
-      id: "daily-streak",
-      title: "Daily Streak",
-      description: "Practice for 5 consecutive days",
-      type: "streak",
-      target: 5,
-      reward: 50,
-      difficulty: "easy"
-    },
-    {
-      id: "master-flashcards",
-      title: "Flashcard Master",
-      description: "Master 10 new flashcards",
-      type: "mastery",
-      target: 10,
-      reward: 75,
-      difficulty: "medium"
-    },
-    {
-      id: "perfect-quiz",
-      title: "Perfect Quiz",
-      description: "Complete a quiz with 100% accuracy",
-      type: "achievement",
-      target: 1,
-      reward: 100,
-      difficulty: "hard"
-    }
-  ];
-  
-  try {
-    // Get user's weak areas
-    const weakAreas = userData.weakAreas || [];
-    const strengths = userData.strengths || [];
-    
-    // Select content types to focus on
-    const focusTypes = weakAreas.length > 0 
-      ? weakAreas 
-      : contentTypes.filter(t => strengths.indexOf(t) === -1);
-    
-    // If we have enough information, generate personalized challenges
-    if (focusTypes.length > 0 && userData.level) {
-      // Create challenges focusing on weak areas with appropriate difficulty
-      return defaultChallenges.map(challenge => ({
-        ...challenge,
-        focusArea: focusTypes[Math.floor(Math.random() * focusTypes.length)],
-        difficulty: userData.level < 5 ? "easy" : 
-                   userData.level < 15 ? "medium" : "hard",
-        target: Math.max(challenge.target, Math.floor(userData.level / 3))
-      }));
-    }
-    
-    return defaultChallenges;
   } catch (error) {
-    console.error("Error generating personalized challenges:", error);
-    return defaultChallenges;
+    console.error('Error analyzing content:', error);
+    return {
+      type: contentType || 'flashcards',
+      confidence: 50,
+      language: 'unknown'
+    };
   }
 };
 
 /**
- * Enhances existing content with AI-generated suggestions and insights
+ * Generate flashcards from content
  */
-export const enhanceContentWithAI = async (
+export const generateFlashcards = async (
   content: string,
-  contentType: ContentType,
-  difficulty: string
-): Promise<{
-  enhancedContent: string;
-  suggestions: string[];
-  relatedConcepts: string[];
-}> => {
-  // Default response
-  const defaultResponse = {
-    enhancedContent: content,
-    suggestions: [],
-    relatedConcepts: []
-  };
+  count: number = 10
+) => {
+  // This would use AI models to extract flashcard data
+  // For now, let's use simple patterns
   
-  try {
-    // Analyze content to understand it better
-    const analysis = analyzeContent(content);
+  const lines = content.split('\n').filter(line => line.trim() !== '');
+  const flashcards = [];
+  
+  for (let i = 0; i < lines.length && flashcards.length < count; i++) {
+    const line = lines[i];
+    const parts = line.split(/[:–-]/);
     
-    // If we have a high confidence in our analysis, provide suggestions
-    if (analysis.confidence > 0.7) {
-      // Look at the content features to generate suggestions
-      if (analysis.features.wordCount > 100) {
-        defaultResponse.suggestions.push("Consider breaking this into smaller sections for easier learning");
-      }
-      
-      if (analysis.features.questionMarks && analysis.features.questionMarks > 5) {
-        defaultResponse.suggestions.push("This content has many questions. Try creating a quiz from these questions.");
-      }
-      
-      // Add related concepts based on content type
-      if (contentType === 'writing') {
-        defaultResponse.relatedConcepts = ['grammar', 'vocabulary', 'sentence structure'];
-      } else if (contentType === 'speaking') {
-        defaultResponse.relatedConcepts = ['pronunciation', 'intonation', 'fluency'];
-      } else if (contentType === 'flashcards') {
-        defaultResponse.relatedConcepts = ['spaced repetition', 'memory techniques', 'active recall'];
-      }
+    if (parts.length >= 2) {
+      flashcards.push({
+        front: parts[0].trim(),
+        back: parts[1].trim(),
+        italian: parts[0].trim(),
+        english: parts[1].trim()
+      });
     }
+  }
+  
+  return flashcards;
+};
+
+/**
+ * Generate multiple choice questions from content
+ */
+export const generateMultipleChoice = async (
+  content: string,
+  count: number = 5
+) => {
+  // This would use AI models to generate questions
+  // For now, let's return basic question template
+  const questions = [];
+  
+  const sentences = content
+    .replace(/([.!?])\s*(?=[A-Z])/g, "$1|")
+    .split("|")
+    .filter(s => s.trim().length > 15);
+  
+  for (let i = 0; i < Math.min(count, sentences.length); i++) {
+    const sentence = sentences[i].trim();
     
-    return defaultResponse;
+    // Extract a key term
+    const words = sentence.split(/\s+/).filter(w => w.length > 4);
+    const keyWord = words[Math.floor(Math.random() * words.length)] || "term";
+    
+    questions.push({
+      question: `What does "${keyWord}" mean in the context: "${sentence}"?`,
+      options: [
+        "Definition A",
+        "Definition B",
+        "Definition C",
+        "Definition D"
+      ],
+      correctAnswerIndex: 0
+    });
+  }
+  
+  return questions;
+};
+
+/**
+ * Compare speech recordings for pronunciation
+ */
+export const comparePronunciation = async (
+  original: string,
+  recorded: Blob
+): Promise<number> => {
+  try {
+    // Transcribe the recorded audio
+    const transcription = await HuggingFace.recognizeSpeech(recorded);
+    
+    // Compare the transcription to the original text
+    const similarity = await HuggingFace.getTextSimilarity(
+      original, 
+      transcription.text
+    );
+    
+    return similarity;
   } catch (error) {
-    console.error("Error enhancing content with AI:", error);
-    return defaultResponse;
+    console.error('Error comparing pronunciation:', error);
+    return 0.5; // Default similarity
   }
 };
 
 /**
- * Generates contextual suggestions based on user activity and current page
+ * Parse content to extract vocabulary terms
  */
-export const getContextualSuggestions = (
-  currentPage: string,
-  userActivity: any,
-  userPreferences: any
-): string[] => {
-  const suggestions: string[] = [];
+export const extractVocabulary = (content: string) => {
+  const vocabulary = [];
+  const lines = content.split('\n');
   
-  // General suggestions
-  if (userActivity.lastActive && 
-      (new Date().getTime() - userActivity.lastActive.getTime()) > 3 * 24 * 60 * 60 * 1000) {
-    suggestions.push("Welcome back! Continue your learning journey where you left off.");
+  for (const line of lines) {
+    // Look for patterns like "term: definition" or "term - definition"
+    const match = line.match(/(.+?)[:–-]\s*(.+)/);
+    if (match) {
+      vocabulary.push({
+        term: match[1].trim(),
+        definition: match[2].trim()
+      });
+    }
   }
   
-  // Page-specific suggestions
-  switch (currentPage) {
-    case 'dashboard':
-      if (userActivity.streak && userActivity.streak > 0) {
-        suggestions.push(`You're on a ${userActivity.streak}-day streak! Keep it going!`);
-      }
-      break;
-      
-    case 'flashcards':
-      if (userActivity.dueCards && userActivity.dueCards > 0) {
-        suggestions.push(`You have ${userActivity.dueCards} flashcards due for review.`);
-      }
-      if (!userActivity.hasUsedSpacedRepetition) {
-        suggestions.push("Try the spaced repetition system to remember more effectively.");
-      }
-      break;
-      
-    case 'multiple-choice':
-      if (userActivity.questionAttempts && userActivity.questionAttempts > 10) {
-        suggestions.push("Try creating your own quiz to test your knowledge.");
-      }
-      break;
-      
-    case 'writing':
-      suggestions.push("Use the AI grammar checker to improve your writing.");
-      break;
-      
-    case 'speaking':
-      if (userPreferences.preferredVoice) {
-        suggestions.push("Listen to pronunciation examples to improve your accent.");
-      }
-      break;
-  }
-  
-  return suggestions;
-};
-
-// Export additional utility functions
-export default {
-  optimizeStudySchedule,
-  generatePersonalizedChallenges,
-  enhanceContentWithAI,
-  getContextualSuggestions
+  return vocabulary;
 };
