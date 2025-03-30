@@ -9,7 +9,590 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_providers: {
+        Row: {
+          capabilities: string[] | null
+          configuration: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          provider_type: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          capabilities?: string[] | null
+          configuration: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          provider_type: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          capabilities?: string[] | null
+          configuration?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          provider_type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_providers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_providers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_categories: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          exam_section: string | null
+          icon: string | null
+          id: string
+          name: string
+          order_index: number | null
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          exam_section?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          exam_section?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_requests: {
+        Row: {
+          completed_at: string | null
+          handled_by: string | null
+          id: string
+          notes: string | null
+          request_details: string | null
+          request_type: string
+          requested_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          handled_by?: string | null
+          id?: string
+          notes?: string | null
+          request_details?: string | null
+          request_type: string
+          requested_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          handled_by?: string | null
+          id?: string
+          notes?: string | null
+          request_details?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_requests_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flashcards: {
+        Row: {
+          back: string
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          difficulty: number | null
+          english: string
+          front: string
+          id: string
+          italian: string
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          back: string
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: number | null
+          english: string
+          front: string
+          id?: string
+          italian: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          back?: string
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: number | null
+          english?: string
+          front?: string
+          id?: string
+          italian?: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_content: {
+        Row: {
+          category_id: string | null
+          content: Json
+          content_type: string
+          created_at: string | null
+          created_by: string | null
+          difficulty: string | null
+          id: string
+          premium: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          content: Json
+          content_type: string
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: string | null
+          id?: string
+          premium?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          content?: Json
+          content_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: string | null
+          id?: string
+          premium?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_content_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_content_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_audit_log: {
+        Row: {
+          event_details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          occurred_at: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          event_details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          occurred_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          event_details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          occurred_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_id_monthly: string | null
+          price_id_yearly: string | null
+          price_monthly: number | null
+          price_yearly: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_id_monthly?: string | null
+          price_id_yearly?: string | null
+          price_monthly?: number | null
+          price_yearly?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_id_monthly?: string | null
+          price_id_yearly?: string | null
+          price_monthly?: number | null
+          price_yearly?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_flashcard_progress: {
+        Row: {
+          created_at: string | null
+          ease_factor: number | null
+          flashcard_id: string | null
+          id: string
+          interval_days: number | null
+          next_review: string | null
+          review_count: number | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ease_factor?: number | null
+          flashcard_id?: string | null
+          id?: string
+          interval_days?: number | null
+          next_review?: string | null
+          review_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ease_factor?: number | null
+          flashcard_id?: string | null
+          id?: string
+          interval_days?: number | null
+          next_review?: string | null
+          review_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_flashcard_progress_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flashcard_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          data_retention_policy: string | null
+          difficulty_level: string | null
+          notification_settings: Json | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+          voice_enabled: boolean | null
+          voice_speed: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_retention_policy?: string | null
+          difficulty_level?: string | null
+          notification_settings?: Json | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+          voice_enabled?: boolean | null
+          voice_speed?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data_retention_policy?: string | null
+          difficulty_level?: string | null
+          notification_settings?: Json | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string
+          voice_enabled?: boolean | null
+          voice_speed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_progress: {
+        Row: {
+          answers: Json | null
+          completed: boolean | null
+          content_id: string | null
+          created_at: string | null
+          id: string
+          last_activity: string | null
+          progress_percentage: number | null
+          score: number | null
+          time_spent: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          answers?: Json | null
+          completed?: boolean | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          progress_percentage?: number | null
+          score?: number | null
+          time_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          answers?: Json | null
+          completed?: boolean | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          progress_percentage?: number | null
+          score?: number | null
+          time_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "learning_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          account_verified: boolean | null
+          auth_provider: string | null
+          avatar_url: string | null
+          consent_timestamp: string | null
+          consent_version: string | null
+          created_at: string | null
+          data_processing_consent: boolean | null
+          email: string
+          full_name: string | null
+          id: string
+          last_login: string | null
+          login_count: number | null
+          marketing_consent: boolean | null
+          preferences: Json | null
+          role: string | null
+          subscription_expiry: string | null
+          subscription_tier: string | null
+          two_factor_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_verified?: boolean | null
+          auth_provider?: string | null
+          avatar_url?: string | null
+          consent_timestamp?: string | null
+          consent_version?: string | null
+          created_at?: string | null
+          data_processing_consent?: boolean | null
+          email: string
+          full_name?: string | null
+          id: string
+          last_login?: string | null
+          login_count?: number | null
+          marketing_consent?: boolean | null
+          preferences?: Json | null
+          role?: string | null
+          subscription_expiry?: string | null
+          subscription_tier?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_verified?: boolean | null
+          auth_provider?: string | null
+          avatar_url?: string | null
+          consent_timestamp?: string | null
+          consent_version?: string | null
+          created_at?: string | null
+          data_processing_consent?: boolean | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          last_login?: string | null
+          login_count?: number | null
+          marketing_consent?: boolean | null
+          preferences?: Json | null
+          role?: string | null
+          subscription_expiry?: string | null
+          subscription_tier?: string | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

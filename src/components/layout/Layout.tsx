@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import { Toaster } from '@/components/ui/toaster';
+import DataWizard from '@/components/DataWizard';
 
 interface LayoutProps {
   children?: ReactNode;
@@ -20,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       <Footer />
       <Toaster />
+      <DataWizard />
     </div>
   );
 };
