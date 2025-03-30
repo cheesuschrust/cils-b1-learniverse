@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -143,9 +142,9 @@ CREATE TABLE IF NOT EXISTS user_activity_log (
       
       setMessage('Updating your database...');
       
-      // Execute the SQL through Supabase's SQL executor
-      const { error } = await supabase.rpc('pg_execute', { 
-        sql_string: sqlScript 
+      // Execute the SQL through our edge function
+      const { data, error } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: sqlScript }
       });
       
       if (error) throw new Error(error.message);
