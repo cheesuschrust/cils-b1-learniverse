@@ -10,11 +10,13 @@ interface ReviewResult {
  * @param correct Whether the answer was correct
  * @param difficultyFactor Current difficulty factor (default 2.5)
  * @param consecutiveCorrect Number of consecutive correct answers
+ * @param confidenceAdjustment Optional adjustment based on confidence (0-1)
  */
 export function calculateNextReview(
   correct: boolean,
   difficultyFactor: number = 2.5,
-  consecutiveCorrect: number = 0
+  consecutiveCorrect: number = 0,
+  confidenceAdjustment: number = 0
 ): ReviewResult {
   // Default values
   let newDifficultyFactor = difficultyFactor;
@@ -28,7 +30,12 @@ export function calculateNextReview(
       intervalDays = 3; // Second correct answer
     } else {
       // For three or more correct answers, use the SM-2 formula
-      intervalDays = Math.round(intervalDays * difficultyFactor);
+      intervalDays = Math.round(consecutiveCorrect * difficultyFactor);
+    }
+    
+    // Adjust based on confidence if provided
+    if (confidenceAdjustment > 0) {
+      intervalDays = Math.max(1, Math.round(intervalDays * (1 - confidenceAdjustment)));
     }
     
     // Adjust the difficulty factor (ease) based on performance
@@ -170,11 +177,27 @@ export function generateReviewSchedule(flashcards: Flashcard[]): any {
  * @param response Review response data
  * @returns ReviewPerformance object
  */
-export function calculateReviewPerformance(response: any): { score: number, time: number, date: Date } {
+export function calculateReviewPerformance(response: any): { 
+  score: number,
+  time: number, 
+  date: Date,
+  accuracy: number,
+  speed: number, 
+  consistency: number,
+  retention: number,
+  overall: number
+} {
+  const now = new Date();
+  
   return {
     score: response.score || 0,
     time: response.time || 0,
-    date: new Date()
+    date: now,
+    accuracy: response.accuracy || response.score || 0,
+    speed: response.speed || 1,
+    consistency: response.consistency || 0.5,
+    retention: response.retention || 0.5,
+    overall: response.overall || response.score || 0
   };
 }
 

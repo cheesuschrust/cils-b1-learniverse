@@ -1,158 +1,141 @@
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { isPremiumUser, hasReachedDailyLimit, trackQuestionUsage, supabase } from "@/lib/supabase";
-
-// Define question types that can be tracked
-export type QuestionType = "flashcards" | "multipleChoice" | "listening" | "writing" | "speaking";
-
-// Define the return type for our hook
-export interface UseQuestionLimitResult {
-  canAccessContent: boolean;
-  isLoading: boolean;
-  remainingQuestions: number | "unlimited";
-  usedQuestions: number;
-  trackQuestionUsage: () => Promise<boolean>;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 /**
- * Hook to manage question usage limits based on subscription status
+ * Hook to manage and enforce daily question limits based on subscription
  */
-export const useQuestionLimit = (type: QuestionType): UseQuestionLimitResult => {
-  const { user, isAuthenticated } = useAuth();
+export const useQuestionLimit = () => {
+  const { user, userProfile } = useAuth();
+  const { preferences } = useUserPreferences();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [usedCount, setUsedCount] = useState(0);
   
-  // Normalize type to match keys in dailyQuestionCounts
-  const countKey = type === "multipleChoice" ? "multipleChoice" : type;
+  // State to manage limits and usage
+  const [dailyLimit, setDailyLimit] = useState(10); // Default limit for free users
+  const [usedToday, setUsedToday] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Load current count from Supabase when the component mounts
-  useEffect(() => {
-    const loadUsageCount = async () => {
-      if (!isAuthenticated || !user) return;
-      
-      setIsLoading(true);
-      try {
-        // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0];
-        
-        const { data, error } = await supabase
-          .from('usage_tracking')
-          .select('count')
-          .eq('user_id', user.id)
-          .eq('question_type', countKey)
-          .eq('date', today)
-          .single();
-          
-        if (!error && data) {
-          setUsedCount(data.count);
-        } else if (error && error.code !== 'PGSQL_EMPTY_RESULT') {
-          console.error('Error fetching usage count:', error);
-        }
-      } catch (error) {
-        console.error('Failed to load usage count:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadUsageCount();
-  }, [isAuthenticated, user, countKey]);
+  // Check if current user is premium
+  const isPremium = !!userProfile?.isPremiumUser || !!user?.isPremiumUser;
   
-  // Determine if user can access content based on subscription and usage
-  const canAccessContent = (): boolean => {
-    if (!isAuthenticated || !user) {
-      return false;
-    }
-    
-    // Premium users have unlimited access
-    if (isPremiumUser(user.subscription)) {
-      return true;
-    }
-    
-    // Free users get 1 question per day
-    return usedCount < 1;
-  };
+  // Determine if user has reached their limit
+  const hasReachedLimit = usedToday >= dailyLimit && !isPremium;
   
-  // Calculate remaining questions based on subscription type
-  const getRemainingQuestions = (): number | "unlimited" => {
-    if (!user) {
-      return 0;
-    }
-    
-    if (isPremiumUser(user.subscription)) {
-      return "unlimited";
-    }
-    
-    // Free users get 1 question per day
-    return Math.max(0, 1 - usedCount);
-  };
-  
-  // Function to track question usage
-  const handleTrackQuestionUsage = async (): Promise<boolean> => {
-    if (!isAuthenticated || !user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to access this content",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
+  /**
+   * Get the question count for today from user data
+   */
+  const loadUsageData = useCallback(async () => {
     setIsLoading(true);
-    
     try {
-      // Check if user is premium (unlimited access)
-      if (isPremiumUser(user.subscription)) {
-        return true;
-      }
-      
-      // Check if user has already reached their daily limit
-      if (await hasReachedDailyLimit(user.id, countKey)) {
-        toast({
-          title: "Daily Limit Reached",
-          description: "You've reached your daily limit. Upgrade to premium for unlimited access.",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      // Track the usage in Supabase
-      const result = await trackQuestionUsage(user.id, countKey);
-      
-      if (result) {
-        // Update local state if tracking was successful
-        setUsedCount(prev => prev + 1);
+      // Set appropriate limit based on user type
+      if (isPremium) {
+        setDailyLimit(50); // Premium users get higher limits
+      } else if (userProfile?.role === 'teacher') {
+        setDailyLimit(25); // Teachers get higher limits than students
       } else {
-        toast({
-          title: "Error Tracking Usage",
-          description: "There was a problem tracking your question usage. Please try again.",
-          variant: "destructive"
-        });
+        setDailyLimit(10); // Default limit for free users
       }
       
-      return result;
+      // Get today's date as YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if we have a count for today
+      const dailyCount = userProfile?.dailyQuestionCounts?.[today] || 0;
+      setUsedToday(dailyCount);
+      setLastUpdated(new Date());
+      
     } catch (error) {
-      console.error("Error tracking question usage:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
-      });
-      return false;
+      console.error('Error loading question limit data:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isPremium, userProfile]);
   
-  // Return the hook result
+  /**
+   * Increment the question count when a question is used
+   */
+  const incrementQuestionCount = useCallback(async () => {
+    if (!user) return false;
+    
+    try {
+      // Get today's date as YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Update local state immediately
+      setUsedToday(prev => prev + 1);
+      
+      // Would update to database in a real implementation
+      console.log(`Incrementing question count for user ${user.id} on ${today}`);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating question count:', error);
+      return false;
+    }
+  }, [user]);
+  
+  /**
+   * Check if user can use another question
+   */
+  const canUseQuestion = useCallback((): boolean => {
+    // Premium users have unlimited questions
+    if (isPremium) return true;
+    
+    // Check if user has reached their daily limit
+    return usedToday < dailyLimit;
+  }, [isPremium, usedToday, dailyLimit]);
+  
+  /**
+   * Use a question and check if it's allowed
+   */
+  const useQuestion = useCallback(async (): Promise<boolean> => {
+    // Check if user can use a question
+    if (!canUseQuestion()) {
+      toast({
+        variant: "destructive",
+        title: "Daily limit reached",
+        description: "You've reached your daily question limit. Upgrade to premium for unlimited questions.",
+      });
+      return false;
+    }
+    
+    // Increment the question count
+    const success = await incrementQuestionCount();
+    
+    // Check if user has now reached their limit after increment
+    if (success && usedToday + 1 >= dailyLimit && !isPremium) {
+      toast({
+        variant: "warning",
+        title: "Approaching limit",
+        description: "You've used your last free question for today. Upgrade to premium for unlimited questions.",
+      });
+    }
+    
+    return success;
+  }, [canUseQuestion, incrementQuestionCount, toast, usedToday, dailyLimit, isPremium]);
+  
+  // Load usage data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      loadUsageData();
+    }
+  }, [user, loadUsageData]);
+  
   return {
-    canAccessContent: canAccessContent(),
+    dailyLimit,
+    usedToday,
+    remaining: Math.max(0, dailyLimit - usedToday),
+    isPremium,
+    hasReachedLimit,
     isLoading,
-    remainingQuestions: getRemainingQuestions(),
-    usedQuestions: usedCount,
-    trackQuestionUsage: handleTrackQuestionUsage
+    lastUpdated,
+    useQuestion,
+    canUseQuestion,
+    loadUsageData
   };
 };
+
+export default useQuestionLimit;

@@ -1,5 +1,8 @@
 
-import { User } from '@/types/user';
+/**
+ * Text-to-Speech utilities for the application
+ * Provides speech synthesis functionality with voice selection
+ */
 
 export interface TextToSpeechOptions {
   language: 'en' | 'it';
@@ -64,6 +67,9 @@ export const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
  * Get available voices from the browser
  */
 export function getVoices(): SpeechSynthesisVoice[] {
+  if (!isSpeechSupported()) {
+    return [];
+  }
   return window.speechSynthesis.getVoices();
 }
 
@@ -82,6 +88,9 @@ export const textToSpeech = async (
         reject(error);
         return;
       }
+
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
       
@@ -152,17 +161,20 @@ export const getDefaultVoicePreferences = async (): Promise<VoicePreference> => 
   };
 };
 
-// Adding legacy functions to maintain backward compatibility
+// Legacy compatibility functions
 export const speak = async (
   text: string, 
   language: 'en' | 'it',
-  preferences: VoicePreference
+  preferences?: VoicePreference
 ): Promise<void> => {
+  // If preferences are not provided, use defaults
+  const voicePrefs = preferences || await getDefaultVoicePreferences();
+  
   return textToSpeech(text, {
     language,
-    rate: preferences.voiceRate,
-    pitch: preferences.voicePitch,
-    voiceURI: language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI
+    rate: voicePrefs.voiceRate,
+    pitch: voicePrefs.voicePitch,
+    voiceURI: language === 'en' ? voicePrefs.englishVoiceURI : voicePrefs.italianVoiceURI
   });
 };
 
@@ -184,7 +196,7 @@ export const resumeSpeaking = (): void => {
   }
 };
 
-// Adding aliases for backward compatibility
+// Aliases for backward compatibility
 export const getAllVoices = getAvailableVoices;
 
 export const getVoiceByURI = async (voiceURI: string): Promise<SpeechSynthesisVoice | undefined> => {

@@ -1,6 +1,8 @@
 
 import React, { createContext, useState, useCallback, useEffect, useContext } from 'react';
-import { useUserPreferences } from './UserPreferencesContext';
+import { UserPreferencesContext } from './UserPreferencesContext';
+import { textToSpeech } from '@/utils/textToSpeech';
+import { recognizeSpeech, translateText } from '@/utils/huggingFaceIntegration';
 
 // Grammar check types
 export interface GrammarCorrection {
@@ -110,10 +112,12 @@ export const AIUtilsContext = createContext<AIUtilsContextType>({
 
 // Provider component
 export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { preferences } = useUserPreferences();
+  const userPreferences = useContext(UserPreferencesContext);
   const [settings, setSettings] = useState<AIUtilsSettings>({
     ...defaultSettings,
-    enabled: preferences.aiEnabled !== undefined ? preferences.aiEnabled : true
+    enabled: userPreferences?.preferences?.aiEnabled !== undefined 
+      ? userPreferences.preferences.aiEnabled 
+      : true
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastQuery, setLastQuery] = useState<string | null>(null);
@@ -121,10 +125,10 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Update settings when user preferences change
   useEffect(() => {
-    if (preferences.aiEnabled !== undefined) {
-      setSettings(prev => ({ ...prev, enabled: preferences.aiEnabled! }));
+    if (userPreferences?.preferences?.aiEnabled !== undefined) {
+      setSettings(prev => ({ ...prev, enabled: userPreferences.preferences.aiEnabled! }));
     }
-  }, [preferences.aiEnabled]);
+  }, [userPreferences?.preferences?.aiEnabled]);
 
   const enableAI = useCallback(() => {
     setSettings(prev => ({ ...prev, enabled: true }));
@@ -171,12 +175,7 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsProcessing(true);
     
     try {
-      // Implement AI translation
-      // This is a placeholder for actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const translation = `Translated ${from} to ${to}: ${text}`;
-      return translation;
+      return await recognizeSpeech(text);
     } catch (error) {
       console.error('Error translating text:', error);
       return text;
@@ -371,39 +370,15 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setIsSpeaking(true);
       
-      // Create speech synthesis utterance
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language and voice preferences
-      utterance.lang = language === 'it' ? 'it-IT' : 'en-US';
-      utterance.rate = settings.voiceRate;
-      utterance.pitch = settings.voicePitch;
-      
-      // Use preferred voice if specified
-      if (language === 'it' && settings.italianVoiceURI) {
-        const voices = window.speechSynthesis.getVoices();
-        const voice = voices.find(v => v.voiceURI === settings.italianVoiceURI);
-        if (voice) utterance.voice = voice;
-      } else if (language === 'en' && settings.englishVoiceURI) {
-        const voices = window.speechSynthesis.getVoices();
-        const voice = voices.find(v => v.voiceURI === settings.englishVoiceURI);
-        if (voice) utterance.voice = voice;
-      }
-      
-      // Return a promise that resolves when speaking is done
-      return new Promise<void>((resolve, reject) => {
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          resolve();
-        };
-        
-        utterance.onerror = (event) => {
-          setIsSpeaking(false);
-          reject(new Error(`Speech synthesis error: ${event.error}`));
-        };
-        
-        window.speechSynthesis.speak(utterance);
+      // Use the textToSpeech utility
+      await textToSpeech(text, {
+        language,
+        rate: settings.voiceRate,
+        pitch: settings.voicePitch,
+        voiceURI: language === 'en' ? settings.englishVoiceURI : settings.italianVoiceURI
       });
+      
+      setIsSpeaking(false);
     } catch (error) {
       setIsSpeaking(false);
       console.error('Error speaking text:', error);
@@ -413,8 +388,10 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Cancel ongoing speech
   const cancelSpeech = useCallback(() => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
   }, []);
 
   // Analyze pronunciation from recorded audio
@@ -425,7 +402,13 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     try {
       // Implement pronunciation analysis
-      // This is a placeholder for actual implementation
+      // In a real implementation, we would:
+      // 1. Convert the blob to audio data
+      // 2. Use speech recognition to get transcription
+      // 3. Compare transcription to original text
+      // 4. Provide feedback based on similarity
+      
+      // For now, just simulate the process
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       return {
@@ -476,15 +459,6 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       {children}
     </AIUtilsContext.Provider>
   );
-};
-
-// Export the useAIUtils hook directly from this file for backward compatibility
-export const useAIUtils = () => {
-  const context = useContext(AIUtilsContext);
-  if (!context) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
-  }
-  return context;
 };
 
 export default AIUtilsProvider;
