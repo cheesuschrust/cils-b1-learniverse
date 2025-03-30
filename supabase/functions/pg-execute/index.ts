@@ -47,9 +47,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Execute the query using the special execute_sql function for secure execution
+    // Execute the query using the execute_sql function for secure execution
+    // CRITICAL: Pass sql_query parameter (not sql_string) to match the DB function parameter name
     const { data, error } = await supabaseClient.rpc('execute_sql', {
-      query_text: sql_string
+      sql_query: sql_string
     })
 
     if (error) throw error
