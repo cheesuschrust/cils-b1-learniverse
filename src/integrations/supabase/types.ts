@@ -600,9 +600,9 @@ export type Database = {
     Functions: {
       execute_sql: {
         Args: {
-          sql_query: string
+          query_text: string
         }
-        Returns: undefined
+        Returns: Json
       }
     }
     Enums: {

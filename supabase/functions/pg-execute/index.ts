@@ -37,9 +37,18 @@ serve(async (req) => {
       )
     }
 
-    // Execute the query using the special execute_sql function for superuser access
+    // Basic security check (prevent potentially dangerous operations)
+    const dangerousOperations = /^\s*(DROP|TRUNCATE|DELETE\s+FROM|ALTER\s+TABLE|CREATE\s+TABLE|INSERT\s+INTO|UPDATE\s+.*?SET)/i;
+    if (dangerousOperations.test(sql_string)) {
+      return new Response(
+        JSON.stringify({ error: 'Operation not permitted through this endpoint' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      )
+    }
+
+    // Execute the query using the special execute_sql function for secure execution
     const { data, error } = await supabaseClient.rpc('execute_sql', {
-      sql_query: sql_string
+      query_text: sql_string
     })
 
     if (error) throw error

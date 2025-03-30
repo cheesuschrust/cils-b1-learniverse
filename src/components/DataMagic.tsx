@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 export default function DataMagic() {
   const [status, setStatus] = useState<'idle' | 'initializing' | 'complete' | 'error'>('idle');
@@ -40,7 +42,7 @@ export default function DataMagic() {
     
     try {
       // Execute the complete setup in one go
-      const { error } = await supabase.functions.invoke('pg-execute', { 
+      const { data, error } = await supabase.functions.invoke('pg-execute', { 
         body: { sql_string: getFullDatabaseSetup() }
       });
       
@@ -288,7 +290,7 @@ export default function DataMagic() {
       setStatus('initializing');
       
       // Execute the SQL through our edge function
-      const { error } = await supabase.functions.invoke('pg-execute', { 
+      const { data, error } = await supabase.functions.invoke('pg-execute', { 
         body: { sql_string: sqlScript }
       });
       
@@ -451,12 +453,13 @@ CREATE TABLE IF NOT EXISTS user_activity_log (
           >
             Cancel
           </button>
-          <button
+          <Button
             onClick={updateDatabase}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            variant="default"
+            className="bg-purple-600 hover:bg-purple-700"
           >
             Update Database
-          </button>
+          </Button>
         </div>
         
         {status === 'initializing' && (
