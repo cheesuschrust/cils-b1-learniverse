@@ -1,0 +1,181 @@
+
+import React from "react";
+import { createBrowserRouter } from "react-router-dom";
+import RootLayout from "./layouts/RootLayout";
+import DashboardLayout from "./layouts/DashboardLayout";
+import AdminLayout from "./layouts/AdminLayout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Layout from "./components/layout/Layout";
+
+// Import pages
+import { 
+  Home,
+  Dashboard,
+  Login,
+  Signup,
+  Profile,
+  Flashcards,
+  MultipleChoice,
+  Writing,
+  Listening,
+  Speaking,
+  Settings,
+  Support,
+  Achievements,
+  NotFound,
+  Analytics,
+  VocabularyLists,
+  Progress,
+  EmailVerification,
+  ResetPassword,
+  AIAssistant,
+  // Admin pages
+  AdminDashboard,
+  UserManagement,
+  ContentUploader,
+  ContentAnalysis,
+  AIManagement,
+  SystemLogs,
+  SystemTests,
+  SystemSettings
+} from "./pages/imports";
+
+// Import auth components
+import LoginForm from "./components/auth/LoginForm";
+import RegisterForm from "./components/auth/RegisterForm";
+
+// Create router
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <RootLayout />,
+    children: [
+      {
+        index: true,
+        element: <Layout><Home /></Layout>,
+      },
+      {
+        path: "login",
+        element: <Layout><LoginForm /></Layout>,
+      },
+      {
+        path: "signup",
+        element: <Layout><RegisterForm /></Layout>,
+      },
+      {
+        path: "reset-password",
+        element: <Layout><ResetPassword /></Layout>,
+      },
+      {
+        path: "email-verification",
+        element: <Layout><EmailVerification /></Layout>,
+      },
+      {
+        path: "app",
+        element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
+        children: [
+          {
+            path: "dashboard",
+            element: <Dashboard />,
+          },
+          {
+            path: "flashcards",
+            element: <Flashcards />,
+          },
+          {
+            path: "multiple-choice",
+            element: <MultipleChoice />,
+          },
+          {
+            path: "writing",
+            element: <Writing />,
+          },
+          {
+            path: "listening",
+            element: <Listening />,
+          },
+          {
+            path: "speaking",
+            element: <Speaking />,
+          },
+          {
+            path: "analytics",
+            element: <Analytics />,
+          },
+          {
+            path: "vocabulary-lists",
+            element: <VocabularyLists />,
+          },
+          {
+            path: "achievements",
+            element: <Achievements />,
+          },
+          {
+            path: "progress",
+            element: <Progress />,
+          },
+          {
+            path: "profile",
+            element: <Profile />,
+          },
+          {
+            path: "settings",
+            element: <Settings />,
+          },
+          {
+            path: "support",
+            element: <Support />,
+          },
+          {
+            path: "ai-assistant",
+            element: <AIAssistant />,
+          },
+        ],
+      },
+      {
+        path: "admin",
+        element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
+        children: [
+          {
+            index: true,
+            element: <AdminDashboard />,
+          },
+          {
+            path: "user-management",
+            element: <UserManagement />,
+          },
+          {
+            path: "content-uploader",
+            element: <ContentUploader />,
+          },
+          {
+            path: "content-analysis",
+            element: <ContentAnalysis />,
+          },
+          {
+            path: "ai-management",
+            element: <AIManagement />,
+          },
+          {
+            path: "system-logs",
+            element: <SystemLogs />,
+          },
+          {
+            path: "system-tests",
+            element: <SystemTests />,
+          },
+          {
+            path: "system-settings",
+            element: <SystemSettings />,
+          },
+        ],
+      },
+      {
+        path: "*",
+        element: <NotFound />,
+      },
+    ],
+  },
+]);
+
+export default router;

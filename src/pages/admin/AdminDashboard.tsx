@@ -1,645 +1,147 @@
 
-import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/components/ui/use-toast';
-import {
-  BarChart as BarChartIcon,
-  Users,
-  ShoppingCart,
-  Package,
-  ArrowUpRight,
-  MoreHorizontal,
-  Download,
-  RefreshCw,
-  Calendar,
-  Settings,
-  Globe,
-  Book,
-  HelpCircle,
-  MessageSquare,
-  Upload,
-  ServerIcon,
-  Clock,
-  CheckCircle,
-  HardDrive,
-  Link,
-  FileText,
-} from 'lucide-react';
-import { Icons } from '@/components/ui/icons';
-import { Progress } from '@/components/ui/progress';
-import { format } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Activity, Users, FileText, PenSquare, Settings, Calendar, Database, DollarSign, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 
-// Import our custom components
-import EnhancedAnalyticsDashboard from '@/components/admin/EnhancedAnalyticsDashboard';
-import EcommerceIntegration from '@/components/admin/EcommerceIntegration';
-import SEOManager from '@/components/admin/SEOManager';
+const AdminDashboard = () => {
+  const stats = [
+    { title: "Active Users", value: "1,234", icon: <Users className="h-6 w-6" />, change: "+12%" },
+    { title: "Questions", value: "3,456", icon: <BookOpen className="h-6 w-6" />, change: "+8%" },
+    { title: "Content Items", value: "567", icon: <FileText className="h-6 w-6" />, change: "+5%" },
+    { title: "Revenue", value: "€8,901", icon: <DollarSign className="h-6 w-6" />, change: "+19%" },
+  ];
 
-type AdminTabType = 'overview' | 'analytics' | 'ecommerce' | 'seo' | 'settings';
-
-const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AdminTabType>('overview');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast } = useToast();
-
-  const handleRefreshData = () => {
-    setIsRefreshing(true);
-    
-    // Simulate data refresh
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast({
-        title: "Data refreshed",
-        description: "Dashboard data has been updated with the latest information.",
-      });
-    }, 2000);
-  };
-
-  const handleExportData = () => {
-    toast({
-      title: "Exporting data",
-      description: "Your dashboard data export has started. You'll be notified when it's ready.",
-    });
-    
-    // Simulate export completion
-    setTimeout(() => {
-      toast({
-        title: "Export completed",
-        description: "Your data has been exported successfully. Check your downloads folder.",
-      });
-    }, 3000);
-  };
+  const adminActions = [
+    { title: "User Management", description: "Manage users, roles and permissions", icon: <Users className="h-8 w-8" />, href: "/admin/user-management" },
+    { title: "Content Management", description: "Upload and manage learning content", icon: <FileText className="h-8 w-8" />, href: "/admin/content-uploader" },
+    { title: "Content Analysis", description: "Analytics on content usage and performance", icon: <Activity className="h-8 w-8" />, href: "/admin/content-analysis" },
+    { title: "AI Management", description: "Configure AI learning assistants", icon: <Settings className="h-8 w-8" />, href: "/admin/ai-management" },
+    { title: "System Logs", description: "View system activity and logs", icon: <Database className="h-8 w-8" />, href: "/admin/system-logs" },
+    { title: "Exam Scheduling", description: "Configure exam dates and settings", icon: <Calendar className="h-8 w-8" />, href: "/admin/exam-scheduling" },
+    { title: "Revenue Reports", description: "Review financial data and reports", icon: <DollarSign className="h-8 w-8" />, href: "/admin/revenue" },
+    { title: "Content Editor", description: "Create and edit learning materials", icon: <PenSquare className="h-8 w-8" />, href: "/admin/content-editor" },
+  ];
 
   return (
-    <>
-      <Helmet>
-        <title>Admin Dashboard - CILS B2 Cittadinanza</title>
-      </Helmet>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">
+          Manage your CILS B1 learning platform
+        </p>
+      </div>
       
-      <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="text-muted-foreground">
-              Manage your application, users, and content.
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2 ml-auto">
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshData}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Refresh
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportData}>
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportData}>
-                  Export as PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportData}>
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </div>
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AdminTabType)}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="ecommerce">E-commerce</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Users
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">2,853</div>
-                  <p className="text-xs text-muted-foreground">
-                    +19% from last month
-                  </p>
-                  <div className="mt-3">
-                    <Progress value={78} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <div>Monthly Target: 2,500</div>
-                      <div>78%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Active Subscriptions
-                  </CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">1,239</div>
-                  <p className="text-xs text-muted-foreground">
-                    +8% from last month
-                  </p>
-                  <div className="mt-3">
-                    <Progress value={62} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <div>Monthly Target: 2,000</div>
-                      <div>62%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Lesson Completions
-                  </CardTitle>
-                  <Book className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">18,396</div>
-                  <p className="text-xs text-muted-foreground">
-                    +22% from last month
-                  </p>
-                  <div className="mt-3">
-                    <Progress value={91} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <div>Monthly Target: 15,000</div>
-                      <div>91%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Support Tickets
-                  </CardTitle>
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">27</div>
-                  <p className="text-xs text-muted-foreground">
-                    -12% from last month
-                  </p>
-                  <div className="mt-3">
-                    <Progress value={42} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <div>Open: 12 / Resolved: 15</div>
-                      <div>42%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="lg:col-span-4">
-                <CardHeader>
-                  <CardTitle>User Engagement</CardTitle>
-                  <CardDescription>
-                    Daily active users and app usage metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    <BarChartIcon className="h-16 w-16 opacity-20" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                  <CardDescription>
-                    Latest system events and user activities
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[300px] pr-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-primary/10 p-2">
-                          <Users className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">New user registered</p>
-                          <p className="text-xs text-muted-foreground">
-                            Maria Rossi (maria@example.com)
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-orange-500/10 p-2">
-                          <ShoppingCart className="h-4 w-4 text-orange-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">New subscription purchased</p>
-                          <p className="text-xs text-muted-foreground">
-                            Premium Plan - Annual ($99.99)
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(Date.now() - 1000 * 60 * 30), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-green-500/10 p-2">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Content update completed</p>
-                          <p className="text-xs text-muted-foreground">
-                            25 new flashcards added to "B2 Grammar"
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(Date.now() - 1000 * 60 * 60), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-blue-500/10 p-2">
-                          <Upload className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">System update deployed</p>
-                          <p className="text-xs text-muted-foreground">
-                            Version 2.4.5 with bug fixes and performance improvements
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(Date.now() - 1000 * 60 * 120), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-red-500/10 p-2">
-                          <HelpCircle className="h-4 w-4 text-red-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Support ticket opened</p>
-                          <p className="text-xs text-muted-foreground">
-                            "Issue with audio playback on speaking exercises"
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(Date.now() - 1000 * 60 * 240), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Status</CardTitle>
-                  <CardDescription>
-                    Current system metrics and health
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ServerIcon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">API Server</span>
-                      </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Operational</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <HardDrive className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Database</span>
-                      </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Operational</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">CDN</span>
-                      </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Operational</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Chatbot</span>
-                      </div>
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Degraded</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Content API</span>
-                      </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Operational</Badge>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Memory Usage</span>
-                        <span className="text-xs text-muted-foreground">67%</span>
-                      </div>
-                      <Progress value={67} className="h-2" />
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">CPU Usage</span>
-                        <span className="text-xs text-muted-foreground">42%</span>
-                      </div>
-                      <Progress value={42} className="h-2" />
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Storage</span>
-                        <span className="text-xs text-muted-foreground">23%</span>
-                      </div>
-                      <Progress value={23} className="h-2" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Content Overview</CardTitle>
-                  <CardDescription>
-                    Content distribution and statistics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Lessons</span>
-                        <Badge>124</Badge>
-                      </div>
-                      <Progress value={62} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <div>Published: 124</div>
-                        <div>Drafts: 18</div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Flashcards</span>
-                        <Badge>2,456</Badge>
-                      </div>
-                      <Progress value={82} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <div>Active: 2,456</div>
-                        <div>Archived: 342</div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Multiple Choice</span>
-                        <Badge>892</Badge>
-                      </div>
-                      <Progress value={45} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <div>Published: 892</div>
-                        <div>Drafts: 56</div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Speaking Exercises</span>
-                        <Badge>238</Badge>
-                      </div>
-                      <Progress value={32} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <div>Published: 238</div>
-                        <div>Drafts: 24</div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Listening Exercises</span>
-                        <Badge>176</Badge>
-                      </div>
-                      <Progress value={28} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <div>Published: 176</div>
-                        <div>Drafts: 12</div>
-                      </div>
-                    </div>
-                    
-                    <Button variant="outline" className="w-full mt-2">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload New Content
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upcoming Tasks</CardTitle>
-                  <CardDescription>
-                    Scheduled tasks and reminders
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[300px] pr-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-blue-500/10 p-2">
-                          <Calendar className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Weekly Content Review</p>
-                          <p className="text-xs text-muted-foreground">
-                            Review and approve new content submissions
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">Tomorrow</Badge>
-                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">High Priority</Badge>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-purple-500/10 p-2">
-                          <Clock className="h-4 w-4 text-purple-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Database Backup</p>
-                          <p className="text-xs text-muted-foreground">
-                            Scheduled automatic backup of all database content
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">Today</Badge>
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Automated</Badge>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-green-500/10 p-2">
-                          <Upload className="h-4 w-4 text-green-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">App Store Update</p>
-                          <p className="text-xs text-muted-foreground">
-                            Submit new app version to App Store and Play Store
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">2 days</Badge>
-                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">High Priority</Badge>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-orange-500/10 p-2">
-                          <MessageSquare className="h-4 w-4 text-orange-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Support Team Meeting</p>
-                          <p className="text-xs text-muted-foreground">
-                            Weekly discussion of support ticket metrics and issues
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">3 days</Badge>
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Medium Priority</Badge>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-red-500/10 p-2">
-                          <BarChartIcon className="h-4 w-4 text-red-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Monthly Analytics Review</p>
-                          <p className="text-xs text-muted-foreground">
-                            Analysis of user engagement and conversion metrics
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">5 days</Badge>
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Medium Priority</Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="analytics">
-            <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                {React.cloneElement(stat.icon, { 
+                  className: "h-4 w-4 text-primary" 
+                })}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground flex items-center mt-1">
+                <span className={stat.change.startsWith('+') ? "text-green-600" : "text-red-600"}>
+                  {stat.change}
+                </span>
+                <span className="ml-1">from last month</span>
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      <h2 className="text-xl font-semibold">Quick Actions</h2>
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {adminActions.map((action, i) => (
+          <Link to={action.href} key={i}>
+            <Card className="h-full hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle>Enhanced Analytics</CardTitle>
-                <CardDescription>
-                  In-depth analytics and data visualization for your application
-                </CardDescription>
+                <div className="p-2 w-fit bg-primary/10 rounded-lg">
+                  {React.cloneElement(action.icon, { 
+                    className: "h-6 w-6 text-primary" 
+                  })}
+                </div>
+                <CardTitle className="text-lg">{action.title}</CardTitle>
+                <CardDescription>{action.description}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <EnhancedAnalyticsDashboard />
+              <CardContent className="pt-0">
+                <Button variant="ghost" className="w-full justify-start p-0">
+                  Access
+                </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="ecommerce">
-            <EcommerceIntegration />
-          </TabsContent>
-          
-          <TabsContent value="seo">
-            <SEOManager />
-          </TabsContent>
-          
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Application Settings</CardTitle>
-                <CardDescription>
-                  Configure core application settings and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-20 text-muted-foreground space-y-4">
-                  <Settings className="h-16 w-16 mx-auto text-muted-foreground/50" />
-                  <div>
-                    <h3 className="text-lg font-medium">Settings Panel</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Configure application settings, permissions, and system preferences here.
+          </Link>
+        ))}
+      </div>
+      
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
+                  <div className="flex-1">
+                    <p className="text-sm">
+                      {[
+                        "New user registered",
+                        "Content updated",
+                        "User upgraded to premium",
+                        "New question added",
+                        "System backup completed",
+                      ][i]}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(Date.now() - i * 3600000).toLocaleTimeString()}
                     </p>
                   </div>
-                  <Button className="mt-4">
-                    Open Settings
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
+                    <p className="text-sm">
+                      {[
+                        "Review 5 content submissions",
+                        "Process 3 refund requests",
+                        "Update exam schedule",
+                      ][i]}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    {["Review", "Process", "Update"][i]}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 };
 
