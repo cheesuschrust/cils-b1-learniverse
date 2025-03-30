@@ -108,7 +108,7 @@ function App() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">  
         <div className="max-w-md rounded-lg bg-white p-8 shadow-md">  
           <h1 className="mb-4 text-2xl font-bold text-red-600">Authentication Error</h1>  
-          <p className="mb-4 text-gray-700">{error.message || "An unknown authentication error occurred"}</p>  
+          <p className="mb-4 text-gray-700">{typeof error === 'string' ? error : error.message || "An unknown authentication error occurred"}</p>  
           <p className="text-sm text-gray-500">  
             Please refresh the page or try again later. If the problem persists, contact support.  
           </p>  

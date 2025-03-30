@@ -1,4 +1,5 @@
 
+
 // Adding missing button variant types
 export type ExtendedButtonVariant = 
   | 'default'
@@ -33,3 +34,4 @@ export interface ConfidenceIndicatorProps {
   contentType?: ContentType;
   score: number; // Add a default score value for speaking and listening
 }
+
