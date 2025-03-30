@@ -215,3 +215,127 @@ export const extractVocabulary = (content: string) => {
   
   return vocabulary;
 };
+
+/**
+ * Generate contextual suggestions based on user activity and page
+ * This function provides personalized suggestions to users based on context
+ */
+export const getContextualSuggestions = (
+  currentPage: string,
+  userActivity?: any,
+  userPreferences?: any
+): string[] => {
+  const suggestions: string[] = [];
+  
+  // Default suggestions that apply to most sections
+  const defaultSuggestions = [
+    "Try practicing daily for best results",
+    "Review your progress in the Analytics section",
+    "Set specific goals to track your improvement"
+  ];
+  
+  switch (currentPage.toLowerCase()) {
+    case 'dashboard':
+      suggestions.push(
+        "Welcome back! Continue your learning streak to build fluency",
+        "Try a variety of exercise types to strengthen different skills",
+        "Set a daily practice goal to maintain consistency"
+      );
+      break;
+      
+    case 'flashcards':
+      suggestions.push(
+        "Regularly reviewing flashcards improves retention",
+        "Try to create your own flashcard sets for personalized learning",
+        "Use spaced repetition for optimal memory retention"
+      );
+      
+      // Add suggestions based on user activity
+      if (userActivity && userActivity.hasUsedSpacedRepetition === false) {
+        suggestions.push("Try spaced repetition mode for better memory retention");
+      }
+      
+      if (userActivity && userActivity.dueCards > 10) {
+        suggestions.push(`You have ${userActivity.dueCards} cards due for review today`);
+      }
+      break;
+      
+    case 'multiple-choice':
+      suggestions.push(
+        "Take your time to carefully read each question",
+        "Review incorrect answers to understand mistakes",
+        "Create custom quizzes for targeted practice"
+      );
+      break;
+      
+    case 'writing':
+      suggestions.push(
+        "Regular writing practice improves grammar and vocabulary",
+        "Try different writing prompts to broaden your skills",
+        "Save your writings to track progress over time"
+      );
+      break;
+      
+    case 'speaking':
+      suggestions.push(
+        "Practice speaking daily, even for just a few minutes",
+        "Record yourself to hear your pronunciation",
+        "Try shadowing exercises by repeating after native speakers"
+      );
+      
+      // Add suggestions based on user preferences
+      if (userPreferences && userPreferences.preferredVoice === 'natural') {
+        suggestions.push("Use the natural voice option for more authentic pronunciation");
+      }
+      break;
+      
+    case 'listening':
+      suggestions.push(
+        "Start with slower audio and gradually increase speed",
+        "Listen to a variety of accents to improve comprehension",
+        "Try dictation exercises to combine listening and writing skills"
+      );
+      break;
+      
+    case 'analytics':
+      suggestions.push(
+        "Review your progress trends to identify areas for improvement",
+        "Set specific goals based on your analytics data",
+        "Focus on your weakest areas for balanced improvement"
+      );
+      
+      // Add suggestions based on user activity
+      if (userActivity && userActivity.questionAttempts < 10) {
+        suggestions.push("Complete more exercises to get more detailed analytics");
+      }
+      break;
+      
+    case 'achievements':
+      suggestions.push(
+        "Complete daily exercises to earn more achievements",
+        "Try different exercise types to unlock varied badges",
+        "Share your achievements to stay motivated"
+      );
+      break;
+      
+    case 'ai-assistant':
+      suggestions.push(
+        "Ask your AI assistant for vocabulary explanations",
+        "Use the AI to generate practice examples",
+        "Try conversation practice with the AI assistant"
+      );
+      break;
+      
+    default:
+      // Return default suggestions if page is not recognized
+      return defaultSuggestions;
+  }
+  
+  // Ensure we have at least 3 suggestions
+  while (suggestions.length < 3 && defaultSuggestions.length > 0) {
+    suggestions.push(defaultSuggestions.shift()!);
+  }
+  
+  return suggestions;
+};
+
