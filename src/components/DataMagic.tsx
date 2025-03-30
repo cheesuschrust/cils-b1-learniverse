@@ -30,8 +30,8 @@ export default function DataMagic() {
     
     try {
       // Execute the complete setup in one go
-      const { error } = await supabase.rpc('pg_execute', { 
-        sql_string: getFullDatabaseSetup() 
+      const { error } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: getFullDatabaseSetup() }
       });
       
       if (error) throw new Error(error.message);
