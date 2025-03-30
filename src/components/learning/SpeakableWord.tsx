@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { speak, isSpeechSupported, stopSpeaking } from '@/utils/textToSpeech';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { useAIUtils } from '@/hooks/useAIUtils';
 
 interface SpeakableWordProps {
   word: string;

@@ -86,7 +86,9 @@ const WeeklyChallengeCard: React.FC<WeeklyChallengeCardProps> = ({ className }) 
           <Award className="h-5 w-5 text-yellow-500" />
           Weekly Challenge
           {weeklyChallenge.completed && (
-            <Badge variant="success" className="ml-auto">Completed</Badge>
+            <Badge variant="secondary" className="ml-auto text-green-700 bg-green-100 dark:bg-green-900 dark:text-green-200">
+              Completed
+            </Badge>
           )}
         </CardTitle>
       </CardHeader>

@@ -1,177 +1,183 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { Volume, StopCircle, Mic, Loader2 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Volume2, Mic, StopCircle } from 'lucide-react';
+import { useAIUtils } from '@/hooks/useAIUtils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface FlashcardPronunciationProps {
   text: string;
-  language?: string;
-  showTranscription?: boolean;
+  language?: 'it' | 'en';
+  showFeedback?: boolean;
+  onPronunciationScore?: (score: number) => void;
+  className?: string;
 }
 
-export const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
+const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
   text,
-  language = 'it-IT',
-  showTranscription = false,
+  language = 'it',
+  showFeedback = true,
+  onPronunciationScore,
+  className = ''
 }) => {
-  const { 
-    speakText, 
-    isSpeaking, 
-    cancelSpeech, 
-    processAudioStream, 
-    stopAudioProcessing, 
-    isTranscribing, 
-    isAIEnabled 
-  } = useAIUtils();
-  const { toast } = useToast();
-  const [userPronunciation, setUserPronunciation] = useState('');
+  const { isAIEnabled, speakText, isSpeaking, analyzePronunciation } = useAIUtils();
   const [isRecording, setIsRecording] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const handleSpeak = async () => {
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [pronunciationResult, setPronunciationResult] = useState<{
+    score: number;
+    feedback: string;
+  } | null>(null);
+
+  const handlePlayPronunciation = async () => {
+    if (isSpeaking) return;
     try {
-      setError(null);
       await speakText(text, language);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to speak text');
+    } catch (error) {
+      console.error('Error playing pronunciation:', error);
     }
   };
-  
-  const handleRecord = async () => {
-    if (!isAIEnabled) {
-      toast({
-        title: "Feature Disabled",
-        description: "Speech recognition requires AI features to be enabled.",
-        variant: "destructive"
-      });
-      return;
-    }
+
+  const startRecording = async () => {
+    if (isRecording || !isAIEnabled) return;
     
     try {
-      setError(null);
-      setIsRecording(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
       
-      const stopRecording = await processAudioStream((transcript, isFinal) => {
-        if (isFinal) {
-          setUserPronunciation(transcript);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        
+        try {
+          // Analyze pronunciation
+          const result = await analyzePronunciation(text, audioBlob, language);
+          setPronunciationResult(result);
           
-          const similarity = calculateSimilarity(text.toLowerCase(), transcript.toLowerCase());
-          const message = similarity > 0.7 
-            ? "Great pronunciation!" 
-            : similarity > 0.4 
-              ? "Good attempt, keep practicing." 
-              : "Try again, focus on the pronunciation.";
+          if (onPronunciationScore && result.score) {
+            onPronunciationScore(result.score);
+          }
           
-          toast({
-            title: "Pronunciation Feedback",
-            description: message,
+          // Cleanup the stream tracks
+          stream.getTracks().forEach(track => track.stop());
+        } catch (error) {
+          console.error('Error analyzing pronunciation:', error);
+          setPronunciationResult({
+            score: 0,
+            feedback: 'Error analyzing pronunciation'
           });
         }
-      });
+      };
       
-      setTimeout(() => {
-        if (isRecording) {
-          stopRecording();
-          setIsRecording(false);
-        }
-      }, 5000);
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start recording');
+      recorder.start();
+      setIsRecording(true);
+      setAudioChunks([]);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
       setIsRecording(false);
     }
   };
-  
-  const handleStopRecording = () => {
-    stopAudioProcessing();
-    setIsRecording(false);
+
+  const getPronunciationBadge = () => {
+    if (!pronunciationResult) return null;
+    
+    const { score } = pronunciationResult;
+    
+    let variant = "outline";
+    let label = "Poor";
+    
+    if (score >= 0.9) {
+      variant = "default";
+      label = "Excellent";
+    } else if (score >= 0.75) {
+      variant = "secondary";
+      label = "Good";
+    } else if (score >= 0.6) {
+      variant = "outline";
+      label = "Fair";
+    } else {
+      variant = "destructive";
+      label = "Needs Work";
+    }
+    
+    return (
+      <Badge variant={variant as any}>
+        {label} ({Math.round(score * 100)}%)
+      </Badge>
+    );
   };
-  
-  const calculateSimilarity = (str1: string, str2: string): number => {
-    const track = Array(str2.length + 1).fill(null).map(() => 
-      Array(str1.length + 1).fill(null));
-    
-    for (let i = 0; i <= str1.length; i += 1) {
-      track[0][i] = i;
-    }
-    
-    for (let j = 0; j <= str2.length; j += 1) {
-      track[j][0] = j;
-    }
-    
-    for (let j = 1; j <= str2.length; j += 1) {
-      for (let i = 1; i <= str1.length; i += 1) {
-        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        track[j][i] = Math.min(
-          track[j][i - 1] + 1, // deletion
-          track[j - 1][i] + 1, // insertion
-          track[j - 1][i - 1] + indicator, // substitution
-        );
-      }
-    }
-    
-    const distance = track[str2.length][str1.length];
-    const maxLength = Math.max(str1.length, str2.length);
-    return maxLength === 0 ? 1 : 1 - distance / maxLength;
-  };
-  
+
+  if (!isAIEnabled) return null;
+
   return (
-    <div className="space-y-3">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="flex items-center space-x-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={isSpeaking ? cancelSpeech : handleSpeak}
-          title={isSpeaking ? "Stop pronunciation" : "Listen to pronunciation"}
-          className="w-28"
-        >
-          {isSpeaking ? (
-            <>
-              <StopCircle className="mr-1 h-4 w-4" />
-              Stop
-            </>
-          ) : (
-            <>
-              <Volume className="mr-1 h-4 w-4" />
-              Listen
-            </>
-          )}
-        </Button>
+    <div className={`flex flex-col items-center gap-2 ${className}`}>
+      <div className="flex items-center gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handlePlayPronunciation}
+                disabled={isSpeaking}
+              >
+                <Volume2 className={`h-4 w-4 ${isSpeaking ? 'animate-pulse' : ''}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Listen to pronunciation</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={isRecording ? handleStopRecording : handleRecord}
-          disabled={!isAIEnabled}
-          title={isRecording ? "Stop recording" : "Practice pronunciation"}
-          className="w-28"
-        >
-          {isRecording || isTranscribing ? (
-            <>
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              Recording...
-            </>
-          ) : (
-            <>
-              <Mic className="mr-1 h-4 w-4" />
-              Practice
-            </>
-          )}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {isRecording ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={stopRecording}
+                  className="text-red-500 animate-pulse"
+                >
+                  <StopCircle className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={startRecording}
+                  disabled={isSpeaking}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isRecording ? 'Stop recording' : 'Record your pronunciation'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
-      {showTranscription && userPronunciation && (
-        <div className="text-sm text-muted-foreground mt-1">
-          <p>Your pronunciation: <span className="font-medium">{userPronunciation}</span></p>
+      {showFeedback && pronunciationResult && (
+        <div className="flex flex-col items-center gap-1 mt-2">
+          {getPronunciationBadge()}
+          <p className="text-xs text-muted-foreground">{pronunciationResult.feedback}</p>
         </div>
       )}
     </div>
