@@ -37,23 +37,7 @@ serve(async (req) => {
       )
     }
 
-    // Validate SQL for safety - block DROP statements, etc.
-    const lowerSql = sql_string.toLowerCase()
-    if (
-      lowerSql.includes('drop table') || 
-      lowerSql.includes('drop database') || 
-      lowerSql.includes('delete from') || 
-      lowerSql.includes('truncate') ||
-      lowerSql.includes('alter database')
-    ) {
-      return new Response(
-        JSON.stringify({ error: 'Potentially destructive SQL is not allowed' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
-      )
-    }
-
-    // Execute the query using the special rpc function for superuser access
-    // This requires the execute_sql function to be defined in your database
+    // Execute the query using the special execute_sql function for superuser access
     const { data, error } = await supabaseClient.rpc('execute_sql', {
       sql_query: sql_string
     })
