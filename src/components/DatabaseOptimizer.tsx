@@ -26,8 +26,8 @@ export default function DatabaseOptimizer() {
     try {
       // Apply best practices SQL
       setStep('Creating indices');
-      const { error: indexError } = await supabase.rpc('pg_execute', { 
-        sql_string: `  
+      const { error: indexError } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: `  
           -- Add text search extension  
           CREATE EXTENSION IF NOT EXISTS "pg_trgm";  
           
@@ -50,15 +50,15 @@ export default function DatabaseOptimizer() {
           -- Text search for flashcards  
           CREATE INDEX IF NOT EXISTS idx_flashcards_italian_search ON flashcards USING GIN(italian gin_trgm_ops);  
           CREATE INDEX IF NOT EXISTS idx_flashcards_english_search ON flashcards USING GIN(english gin_trgm_ops);  
-        `
+        ` }
       });
       
       if (indexError) throw new Error(`Index creation failed: ${indexError.message}`);
       
       // Add auto timestamp updates  
       setStep('Setting up timestamp triggers');
-      const { error: triggerError } = await supabase.rpc('pg_execute', { 
-        sql_string: `  
+      const { error: triggerError } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: `  
           -- Function to update timestamps automatically  
           CREATE OR REPLACE FUNCTION update_updated_at_column()  
           RETURNS TRIGGER AS $$  
@@ -104,15 +104,15 @@ export default function DatabaseOptimizer() {
           BEFORE UPDATE ON user_flashcard_progress  
           FOR EACH ROW  
           EXECUTE PROCEDURE update_updated_at_column();  
-        `
+        ` }
       });
       
       if (triggerError) throw new Error(`Trigger creation failed: ${triggerError.message}`);
       
       // Setup Row Level Security  
       setStep('Setting up security policies');
-      const { error: rlsError } = await supabase.rpc('pg_execute', { 
-        sql_string: `  
+      const { error: rlsError } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: `  
           -- Setup row level security  
           ALTER TABLE users ENABLE ROW LEVEL SECURITY;  
           ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;  
@@ -173,15 +173,15 @@ export default function DatabaseOptimizer() {
                 (subscription_tier IN ('premium', 'instructor') OR role = 'admin')  
               )  
             );  
-        `
+        ` }
       });
       
       if (rlsError) throw new Error(`Security setup failed: ${rlsError.message}`);
       
       // Add maintenance functions  
       setStep('Setting up maintenance routines');
-      const { error: maintenanceError } = await supabase.rpc('pg_execute', { 
-        sql_string: `  
+      const { error: maintenanceError } = await supabase.functions.invoke('pg-execute', { 
+        body: { sql_string: `  
           -- Database maintenance functions  
           CREATE OR REPLACE FUNCTION public.maintenance_vacuum_analyze()  
           RETURNS void AS $$  
@@ -199,14 +199,16 @@ export default function DatabaseOptimizer() {
             execution_time_ms INTEGER,  
             details JSONB DEFAULT '{}'::JSONB  
           );  
-        `
+        ` }
       });
       
       if (maintenanceError) throw new Error(`Maintenance setup failed: ${maintenanceError.message}`);
       
       // Run initial vacuum  
       setStep('Running initial optimization');
-      await supabase.rpc('maintenance_vacuum_analyze');
+      await supabase.functions.invoke('pg-execute', {
+        body: { sql_string: 'SELECT maintenance_vacuum_analyze();' }
+      });
       
       setStep('');
       setMessage('✨ Database successfully enhanced with best practices! Your app now has optimized indices, security policies, and maintenance routines.');
