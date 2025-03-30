@@ -6,6 +6,7 @@ import Footer from './Footer';
 import { Toaster } from '@/components/ui/toaster';
 import DataWizard from '@/components/DataWizard';
 import DatabaseOptimizer from '@/components/DatabaseOptimizer';
+import DataMagic from '@/components/DataMagic';
 
 interface LayoutProps {
   children?: ReactNode;
@@ -24,6 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Toaster />
       <DataWizard />
       <DatabaseOptimizer />
+      <DataMagic />
     </div>
   );
 };
