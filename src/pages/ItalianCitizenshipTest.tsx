@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,12 +8,16 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { ItalianAIProvider } from '@/contexts/ItalianAIContext';
 import { EnhancedErrorBoundary } from '@/components/EnhancedErrorBoundary';
-import CitizenshipContentProcessor from '@/components/CitizenshipContentProcessor';
-import ItalianPracticeComponent from '@/components/ItalianPracticeComponent';
+import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';
+import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';
 import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';
 import { useAuth } from '@/contexts/AuthContext';
-import { DifficultyLevel, ContentType, AIQuestion } from '@/types/app-types';
 import { Flag, BookOpen, PenTool, Ear, MessageSquare, Layers, CheckCircle } from 'lucide-react';
+import { 
+  ItalianLevel, 
+  ItalianTestSection,
+  AIGeneratedQuestion 
+} from '@/types/italian-types';
 
 const ItalianCitizenshipTest = () => {
   const { user } = useAuth();

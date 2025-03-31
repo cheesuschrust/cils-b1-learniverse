@@ -28,3 +28,15 @@ export interface AIGenerationResult {
   questions: AIGeneratedQuestion[];
   error?: string;
 }
+
+// User profile for Italian learners
+export interface UserProfile {
+  id: string;
+  name?: string;
+  email: string;
+  italianLevel: ItalianLevel;
+  learningGoals?: string[];
+  completedLessons?: number;
+  citizenshipFocus?: boolean;
+  examDate?: Date;
+}
