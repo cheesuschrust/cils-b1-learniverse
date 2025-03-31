@@ -1,88 +1,122 @@
 
-# Type System Documentation
+# TypeScript Types Documentation
 
-This directory contains all TypeScript types and interfaces used throughout the application.
-The types are organized into different files based on their domain and use cases.
+This document provides an overview of the key types and interfaces used throughout the project.
 
-## Directory Structure
+## Core Types
 
-- `index.d.ts` - Main entry point that exports all common types
-- `service.d.ts` - Types related to services and API interactions
-- `component.d.ts` - Types for component props and state
-- `user.d.ts` - User-related types
-- `document.d.ts` - Document-related types
-- `ai.d.ts` - AI and machine learning related types
-- `chatbot.d.ts` - Chatbot and conversational UI types
-- `notification.d.ts` - Notification system types
-- `flashcard.d.ts` - Flashcard and learning content types
-- `question.d.ts` - Question and quiz types
-- `gamification.d.ts` - Gamification and achievement types
-- `analytics.d.ts` - Analytics and reporting types
-- `interface-fixes.ts` - Compatibility fixes for third-party libraries
+### User Types
+
+- `User`: The core user model containing authentication and profile information
+- `UserRole`: Role-based access control (`'user' | 'admin' | 'teacher' | 'moderator' | 'editor'`)
+- `UserPreferences`: User preferences including theme, notifications, and language settings
+- `UserMetrics`: User performance metrics including questions answered and accuracy
+
+### Content Types
+
+- `ContentType`: Types of educational content (`'flashcards' | 'multiple-choice' | 'listening' | 'writing' | 'speaking' | 'pdf' | 'unknown'`)
+- `Flashcard`: Structure for flashcard content with front, back, and metadata
+- `Question`: Structure for quiz questions and related metadata
+
+### AI Types
+
+- `AISettings`: Configuration options for AI processing
+- `AIModel`: Supported AI models (`'small' | 'medium' | 'large' | specific model names`)
+- `AIPreference`: Level of AI assistance (`'minimal' | 'balanced' | 'extensive'`)
+- `AIStatus`: Status of AI operations (`'idle' | 'loading' | 'generating' | 'error' | 'ready'`)
+
+### UI Types
+
+- `ExtendedAlertVariant`: Alert variants (`'default' | 'destructive' | 'outline' | 'secondary' | 'warning' | 'success' | 'primary' | 'info'`)
+- `ExtendedButtonVariant`: Button variants including additional options like `'success'` and `'warning'`
+- `ThemeOption`: Theme options (`'light' | 'dark' | 'system'`)
+
+## Context Types
+
+- `AuthContextType`: Authentication context with user state and auth functions
+- `AIUtilsContextType`: Utilities for AI content processing and generation
+- `UserPreferencesContextType`: User preferences management
+
+## Component Props
+
+- `ErrorBoundaryProps`: Props for error boundary components
+- `ProcessContentOptions`: Options for AI content processing
+- `ConfidenceIndicatorProps`: Props for displaying AI confidence scores
+- `FlashcardComponentProps`: Props for flashcard components
+
+## Type Utilities
+
+- `normalizeUser`: Converts between different user type formats
+- `normalizeFields`: Handles snake_case to camelCase conversions
+- `normalizeLanguage`: Normalizes language identifiers
+- `normalizeAIModel`: Standardizes AI model references
 
 ## Best Practices
 
-1. **Always use proper typing**: Avoid using `any` or `unknown` types when possible.
-2. **Use generics for reusable components**: Generic types help create flexible but type-safe components.
-3. **Define discriminated unions**: Use discriminated unions (with a type property) for complex state.
-4. **Nullable vs Optional**: Use `T | null` when a value can be explicitly null, and `T | undefined` (or optional `T?`) when a value might not be provided.
-5. **Document complex types**: Add JSDoc comments to explain complex types.
-6. **Use mapped types and utility types**: Leverage TypeScript's utility types like `Partial<T>`, `Required<T>`, `Pick<T>`, etc.
+1. **Import Types Consistently**: Always import types from `@/types` namespace
+   ```typescript
+   import { User, ContentType } from '@/types';
+   ```
 
-## Examples
+2. **Use Type Annotations**: Explicitly type function parameters and return values
+   ```typescript
+   function processContent(text: string, options?: ProcessContentOptions): Promise<string> {
+     // Implementation
+   }
+   ```
 
-### Defining a component with proper prop typing:
+3. **Component Props Typing**: Always define prop interfaces for React components
+   ```typescript
+   interface ButtonProps {
+     variant?: ExtendedButtonVariant;
+     onClick?: () => void;
+     children: React.ReactNode;
+   }
+   ```
 
-```tsx
-// Component props with proper typing
-interface ButtonProps extends BaseComponentProps {
-  variant?: 'primary' | 'secondary' | 'danger';
-  size?: 'small' | 'medium' | 'large';
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  isLoading?: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
+4. **Use Type Guards**: Create type guards for runtime type checking
+   ```typescript
+   function isUser(obj: any): obj is User {
+     return obj && typeof obj.id === 'string' && typeof obj.email === 'string';
+   }
+   ```
+
+5. **Avoid `any`**: Use specific types or generics instead of `any`
+
+6. **Use Type Utilities**: Leverage TypeScript utility types like `Partial<T>`, `Omit<T, K>`, etc.
+
+7. **Document Complex Types**: Add JSDoc comments to complex types
+
+## Type Structure
+
+The project's types are organized into several files:
+
+- `types/index.ts` - Core type exports 
+- `types/user.ts` - User-related types
+- `types/ai.ts` - AI-related types
+- `types/flashcard.ts` - Flashcard-related types
+- `types/variant-fixes.ts` - UI variant types and fixes
+- `types/type-compatibility.ts` - Type compatibility helpers
+
+## Type Resolution Order
+
+When resolving types, the system uses the following priority:
+
+1. Explicitly imported types
+2. Types from `@/types`
+3. Types from component prop definitions
+4. Library and React built-in types
+
+## Extending Types
+
+When extending existing types, use the TypeScript extension pattern:
+
+```typescript
+interface EnhancedUser extends User {
+  premiumFeatures: string[];
+  subscriptionDetails: {
+    plan: string;
+    expiresAt: Date;
+  };
 }
-
-// Component with prop types
-const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'medium',
-  onClick,
-  isLoading = false,
-  disabled = false,
-  children,
-  className,
-  ...props
-}) => {
-  // Component implementation
-};
-```
-
-### Using discriminated unions for state:
-
-```tsx
-// Discriminated union for API request state
-type RequestState<T> =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: Error };
-
-// Using the state in a component
-const [state, setState] = useState<RequestState<User>>({ status: 'idle' });
-
-// Type-safe rendering based on state
-const renderContent = () => {
-  switch (state.status) {
-    case 'idle':
-      return <p>Ready to load data</p>;
-    case 'loading':
-      return <Spinner />;
-    case 'success':
-      return <UserProfile user={state.data} />;
-    case 'error':
-      return <ErrorMessage message={state.error.message} />;
-  }
-};
 ```

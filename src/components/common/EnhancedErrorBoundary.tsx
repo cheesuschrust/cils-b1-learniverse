@@ -3,42 +3,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-
-// Define error severities
-export enum ErrorSeverity {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
-}
-
-// Define error categories
-export enum ErrorCategory {
-  UI = 'UI',
-  API = 'API',
-  DATA = 'DATA',
-  NETWORK = 'NETWORK',
-  AUTHENTICATION = 'AUTHENTICATION',
-  PERMISSIONS = 'PERMISSIONS',
-  VALIDATION = 'VALIDATION',
-  PERFORMANCE = 'PERFORMANCE',
-  STORAGE = 'STORAGE',
-  UNKNOWN = 'UNKNOWN',
-  FEATURE_FLAG = 'FEATURE_FLAG',
-  AI_SERVICE = 'AI_SERVICE',
-}
-
-// Interface for error reporting service
-export interface ErrorMonitoringService {
-  reportError: (errorData: {
-    error: Error;
-    errorInfo: ErrorInfo;
-    category: ErrorCategory;
-    severity: ErrorSeverity;
-    boundary?: string;
-    additionalInfo?: Record<string, any>;
-  }) => void;
-}
+import { ErrorSeverity, ErrorCategory, ErrorMonitoringService, ErrorBoundaryProps } from '@/types/type-definitions';
 
 // Default error monitoring service implementation
 class DefaultErrorMonitoringService implements ErrorMonitoringService {
@@ -55,11 +20,17 @@ class DefaultErrorMonitoringService implements ErrorMonitoringService {
   }
 }
 
+// State for the EnhancedErrorBoundary component
+interface EnhancedErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  timestamp: Date | null;
+  retry: number;
+}
+
 // Props for the EnhancedErrorBoundary component
-interface EnhancedErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+interface EnhancedErrorBoundaryProps extends ErrorBoundaryProps {
   errorMonitoringService?: ErrorMonitoringService;
   category?: ErrorCategory;
   severity?: ErrorSeverity;
@@ -69,15 +40,6 @@ interface EnhancedErrorBoundaryProps {
   boundary?: string;
   additionalInfo?: Record<string, any>;
   reportErrors?: boolean;
-}
-
-// State for the EnhancedErrorBoundary component
-interface EnhancedErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-  timestamp: Date | null;
-  retry: number;
 }
 
 /**

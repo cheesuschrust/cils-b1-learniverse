@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Brain, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAI } from '@/hooks/useAI';
-import { ContentType } from '@/utils/textAnalysis';
+import { ContentType } from '@/types/variant-fixes';
 
 interface AIContentProcessorProps {
   content: string;
@@ -49,7 +50,7 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
       // Convert content type if needed
       const contentTypeForAPI: ContentType = contentType;
 
-      // Updated to only use three arguments instead of four
+      // Fix: Pass the correct types for generateQuestions function
       const generatedQuestions = await generateQuestions(
         editableContent,
         contentTypeForAPI,
