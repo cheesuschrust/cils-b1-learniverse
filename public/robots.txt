@@ -1,3 +1,7 @@
+
+# Italian Language Learning Platform - Robots.txt Configuration
+
+# Allow all good crawlers
 User-agent: Googlebot
 Allow: /
 
@@ -10,5 +14,19 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+# Allow all other crawlers
 User-agent: *
 Allow: /
+
+# Disallow access to admin and API endpoints
+User-agent: *
+Disallow: /admin/
+Disallow: /api/
+Disallow: /internal/
+
+# Crawl delay (in seconds) for bots
+User-agent: *
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://yoursite.com/sitemap.xml
