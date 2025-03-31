@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,7 @@ interface CitizenshipContentProcessorProps {
   onContentGenerated?: (questions: AIGeneratedQuestion[]) => void; // Add alias for onQuestionsGenerated
 }
 
-const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
+export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
   onQuestionsGenerated,
   defaultContent = "",
   settings,
@@ -153,6 +152,4 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = 
   );
 };
 
-// Fix: Export the component both as default and as a named export
 export default CitizenshipContentProcessor;
-export { CitizenshipContentProcessor };

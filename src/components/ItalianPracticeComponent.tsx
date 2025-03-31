@@ -15,13 +15,17 @@ import { Loader2, BookOpen, Mic, FileText, PenTool, Languages } from 'lucide-rea
 interface ItalianPracticeComponentProps {
   initialSection?: ItalianTestSection;
   level?: ItalianLevel;
-  onComplete?: (score: number, section: ItalianTestSection) => void;
+  testSection?: ItalianTestSection;
+  isCitizenshipMode?: boolean;
+  onComplete?: (results: {score: number; time: number}) => void;
   userId?: string;
 }
 
 const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
   initialSection = 'grammar',
   level = 'intermediate',
+  testSection,
+  isCitizenshipMode = false,
   onComplete,
   userId
 }) => {
@@ -175,5 +179,6 @@ const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
   );
 };
 
+// Export both as default and named export
 export default ItalianPracticeComponent;
 export { ItalianPracticeComponent };
