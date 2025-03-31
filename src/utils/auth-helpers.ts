@@ -1,67 +1,57 @@
 
 import { Provider } from '@supabase/supabase-js';  
-import { createClient } from '@supabase/supabase-js';  
+import { supabase } from '@/lib/supabase-client';  
 
-// BROWSER-COMPATIBLE ENVIRONMENT VARIABLES - THIS FIXES THE RUNTIME ERROR  
-const supabaseUrl = typeof window !== 'undefined' && window.ENV_SUPABASE_URL ?   
-  window.ENV_SUPABASE_URL :   
-  '';  
-const supabaseKey = typeof window !== 'undefined' && window.ENV_SUPABASE_ANON_KEY ?   
-  window.ENV_SUPABASE_ANON_KEY :   
-  '';  
-export const supabase = createClient(supabaseUrl, supabaseKey);  
-
-export const signInWithOAuth = async (provider: Provider, options: any = {}) => {  
+export async function signInWithOAuth(provider: Provider, options: any = {}) {  
   return await supabase.auth.signInWithOAuth({  
     provider,  
     ...options  
   });  
-};  
+}  
 
 // Add more authentication helper functions as needed  
-export const signInWithEmail = async (email: string, password: string) => {  
+export async function signInWithEmail(email: string, password: string) {  
   return await supabase.auth.signInWithPassword({  
     email,  
     password  
   });  
-};  
+}  
 
-export const signUp = async (email: string, password: string) => {  
+export async function signUp(email: string, password: string) {  
   return await supabase.auth.signUp({  
     email,  
     password  
   });  
-};  
+}  
 
-export const signOut = async () => {  
+export async function signOut() {  
   return await supabase.auth.signOut();  
-};  
+}  
 
-export const resetPassword = async (email: string) => {  
+export async function resetPassword(email: string) {  
   return await supabase.auth.resetPasswordForEmail(email, {  
     redirectTo: `${window.location.origin}/reset-password`  
   });  
-};  
+}  
 
-export const updatePassword = async (newPassword: string) => {  
+export async function updatePassword(newPassword: string) {  
   return await supabase.auth.updateUser({  
     password: newPassword  
   });  
-};  
+}  
 
-export const getCurrentUser = async () => {  
+export async function getCurrentUser() {  
   const { data } = await supabase.auth.getUser();  
   return data.user;  
-};  
+}  
 
-export const getSession = async () => {  
+export async function getSession() {  
   const { data } = await supabase.auth.getSession();  
   return data.session;  
-};  
+}  
 
-// Adding these helper functions to fix missing exports  
+// Helper functions for user permissions and limits
 export const isPremiumUser = async (userId: string): Promise<boolean> => {  
-  // Check if user has premium subscription  
   try {  
     const { data, error } = await supabase  
       .from('users')  
