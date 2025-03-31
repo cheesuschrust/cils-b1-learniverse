@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ interface CitizenshipContentProcessorProps {
   onContentGenerated?: (questions: AIGeneratedQuestion[]) => void; // Add alias for onQuestionsGenerated
 }
 
+// Export as named export
 export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
   onQuestionsGenerated,
   defaultContent = "",
@@ -152,4 +154,5 @@ export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorPr
   );
 };
 
+// Also export as default
 export default CitizenshipContentProcessor;

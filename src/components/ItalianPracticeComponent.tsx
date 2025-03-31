@@ -21,7 +21,8 @@ interface ItalianPracticeComponentProps {
   userId?: string;
 }
 
-const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
+// Export as named export
+export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
   initialSection = 'grammar',
   level = 'intermediate',
   testSection,
@@ -78,7 +79,7 @@ const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
     }));
     
     if (onComplete) {
-      onComplete(score, activeTab);
+      onComplete({score, time: 0});
     }
   };
   
@@ -179,6 +180,5 @@ const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
   );
 };
 
-// Export both as default and named export
+// Also export as default
 export default ItalianPracticeComponent;
-export { ItalianPracticeComponent };
