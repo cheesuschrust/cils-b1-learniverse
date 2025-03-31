@@ -17,7 +17,9 @@ export type ExtendedAlertVariant =
   | 'outline'
   | 'secondary'
   | 'warning'
-  | 'success'; // Added warning and success variants
+  | 'success'
+  | 'primary'
+  | 'info'; // Added warning, success, primary and info variants
 
 // Adding extended confidence types
 export type ContentType = 
