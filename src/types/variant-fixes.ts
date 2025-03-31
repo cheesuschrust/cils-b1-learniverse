@@ -14,10 +14,10 @@ export type ExtendedButtonVariant =
 export type ExtendedAlertVariant =
   | 'default'
   | 'destructive'
-  | 'warning'
-  | 'success'
   | 'outline'
-  | 'secondary'; // Added 'secondary' variant
+  | 'secondary'
+  | 'warning'
+  | 'success'; // Added warning and success variants
 
 // Adding extended confidence types
 export type ContentType = 

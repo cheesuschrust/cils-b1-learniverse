@@ -191,7 +191,7 @@ const SEOManager = () => {
       case 'medium':
         return 'warning';
       default:
-        return 'secondary';
+        return 'default';
     }
   };
   
@@ -552,7 +552,7 @@ const SEOManager = () => {
                               <Badge variant={
                                 issue.severity === 'high' ? 'destructive' : 
                                 issue.severity === 'medium' ? 'warning' : 
-                                'secondary'
+                                'default'
                               }>
                                 {issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)}
                               </Badge>

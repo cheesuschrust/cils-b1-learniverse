@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -213,7 +212,7 @@ export const FileProcessor: React.FC<FileProcessorProps> = ({
             )}
             
             {contentType && (
-              <Alert variant="outline" className="bg-primary/5">
+              <Alert variant="default">
                 <AlertTitle className="flex items-center gap-2">
                   <Check className="h-4 w-4" />
                   Content Type Detected

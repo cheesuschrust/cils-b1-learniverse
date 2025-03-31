@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, Suspense } from 'react';  
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';  
 import Dashboard from '@/pages/Dashboard';  
@@ -34,7 +33,6 @@ import Index from '@/pages/Index';
 import { errorReporting, ErrorCategory, ErrorSeverity } from '@/utils/errorReporting';  
 import './App.css';  
 
-// Loading component  
 const LoadingScreen = () => (  
   <div className="flex min-h-screen items-center justify-center bg-gray-50">  
     <div className="text-center">  
@@ -45,30 +43,24 @@ const LoadingScreen = () => (
 );  
 
 function App() {  
-  // Get all auth state properties including loading  
   const { user, loading, error } = useAuth();  
   const [showOnboarding, setShowOnboarding] = useState(false);  
   const location = useLocation();  
   
-  // Add debug logging for auth state  
   useEffect(() => {  
     console.log("Auth state:", { user, loading, error });  
   }, [user, loading, error]);  
   
-  // Check if the user needs to see onboarding  
   useEffect(() => {  
     if (user && user.preferences?.onboardingCompleted === false) {  
       setShowOnboarding(true);  
     }  
   }, [user]);  
   
-  // Track page views for analytics  
   useEffect(() => {  
-    // Log page view for analytics  
     const pageName = location.pathname || '/';  
     console.log(`Page view: ${pageName}`);  
     
-    // Reset any error states when navigating  
     const handleError = (error: Error) => {  
       errorReporting.captureError(  
         error,  
@@ -78,7 +70,6 @@ function App() {
       );  
     };  
     
-    // Listen for errors  
     window.addEventListener('error', (event) => handleError(event.error));  
     
     return () => {  
@@ -86,23 +77,18 @@ function App() {
     };  
   }, [location]);  
   
-  // Handle onboarding completion  
   const handleOnboardingComplete = () => {  
     setShowOnboarding(false);  
   };  
   
-  // Handle feedback submission  
   const handleFeedbackSubmit = async (feedback: { type: string; message: string }) => {  
-    // In a real app, you would send this to your backend  
     console.log('Feedback submitted:', feedback);  
     
-    // Simulate API call  
     await new Promise(resolve => setTimeout(resolve, 1000));  
     
     return true;  
   };  
 
-  // Show error state if there's an auth error  
   if (error) {  
     return (  
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">  
@@ -125,13 +111,11 @@ function App() {
             <div className="App">  
               <Suspense fallback={<LoadingScreen />}>  
                 <Routes>  
-                  {/* Public routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />  
                   <Route path="/signup" element={<Signup />} />  
                   <Route path="/email-verification/:token" element={<EmailVerification />} />  
                   
-                  {/* Protected routes */}  
                   <Route element={<ProtectedRoute>  
                     <DashboardLayout />  
                   </ProtectedRoute>}>  
@@ -192,7 +176,6 @@ function App() {
                     } />  
                   </Route>  
 
-                  {/* Admin routes */}  
                   <Route element={<ProtectedRoute allowedRoles={["admin"]}>  
                     <AdminLayout />  
                   </ProtectedRoute>}>  
@@ -208,21 +191,17 @@ function App() {
                     } />  
                   </Route>  
 
-                  {/* NotFound route */}  
                   <Route path="*" element={<NotFound />} />  
                 </Routes>  
               </Suspense>  
               
-              {/* Onboarding flow */}  
               <OnboardingFlow   
                 isOpen={showOnboarding}   
                 onComplete={handleOnboardingComplete}   
               />  
               
-              {/* Feedback widget */}  
               <FeedbackWidget onSubmit={handleFeedbackSubmit} />  
               
-              {/* Help Documentation (visible on all pages) */}  
               <HelpDocumentation />  
               
               <Toaster />  

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Star, Trophy, Award, Check, CheckCircle, Flame } from 'lucide-react';
@@ -135,7 +134,9 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
                 <div className="text-xs flex flex-col gap-1">
                   <div className="flex justify-between">
                     <span>Status:</span>
-                    <Badge variant="success" className="text-xs px-1.5 py-0">Unlocked</Badge>
+                    <Badge variant="secondary" className="absolute -top-1 -right-1 bg-green-500 hover:bg-green-600">
+                      <span>Unlocked</span>
+                    </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>Earned:</span>
