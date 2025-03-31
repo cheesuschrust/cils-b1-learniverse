@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   HomeIcon, BookOpenText, GraduationCap, Headphones, Pen, 
-  CalendarDays, Users, LineChart, HelpCircle, User, Settings, LogOut
+  CalendarDays, Users, LineChart, HelpCircle, User, Settings, LogOut,
+  FileText, List
 } from 'lucide-react';
 
 interface MobileNavProps {
@@ -81,15 +82,16 @@ export function MobileNav({ onNavItemClick }: MobileNavProps) {
               Study Tools
             </h3>
             <NavItem to="/app/flashcards" icon={BookOpenText}>Flashcards</NavItem>
-            <NavItem to="/app/multiple-choice" icon={BookOpenText}>Multiple Choice</NavItem>
+            <NavItem to="/app/multiple-choice" icon={FileText}>Multiple Choice</NavItem>
             <NavItem to="/app/speaking" icon={Headphones}>Speaking Practice</NavItem>
             <NavItem to="/app/listening" icon={Headphones}>Listening Exercises</NavItem>
             <NavItem to="/app/writing" icon={Pen}>Writing Exercises</NavItem>
+            <NavItem to="/app/vocabulary-lists" icon={List}>Vocabulary Lists</NavItem>
           </div>
           
           <div>
             <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-              Community
+              Progress
             </h3>
             <NavItem to="/app/communities" icon={Users}>Communities</NavItem>
             <NavItem to="/app/progress" icon={LineChart}>Progress Tracker</NavItem>

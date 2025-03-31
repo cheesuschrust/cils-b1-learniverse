@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, Suspense } from 'react';  
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';  
 import Dashboard from '@/pages/Dashboard';  
@@ -30,6 +31,8 @@ import FeedbackWidget from '@/components/feedback/FeedbackWidget';
 import HelpDocumentation from '@/components/help/HelpDocumentation';  
 import { useAuth } from '@/contexts/AuthContext'; 
 import Index from '@/pages/Index';
+import VocabularyLists from '@/pages/VocabularyLists';
+import Progress from '@/pages/progress';
 import { errorReporting, ErrorCategory, ErrorSeverity } from '@/utils/errorReporting';  
 import './App.css';  
 
@@ -163,7 +166,17 @@ function App() {
                       <ErrorBoundary>  
                         <Achievements />  
                       </ErrorBoundary>  
-                    } />  
+                    } />
+                    <Route path="/vocabulary-lists" element={  
+                      <ErrorBoundary>  
+                        <VocabularyLists />  
+                      </ErrorBoundary>  
+                    } />
+                    <Route path="/progress" element={  
+                      <ErrorBoundary>  
+                        <Progress />  
+                      </ErrorBoundary>  
+                    } />
                     <Route path="/settings" element={  
                       <ErrorBoundary>  
                         <Settings />  

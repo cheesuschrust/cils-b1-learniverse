@@ -19,7 +19,9 @@ import {
   BarChart,
   Crown,
   Menu,
-  X
+  X,
+  List,
+  LineChart
 } from 'lucide-react';
 
 const MainNavigation: React.FC = () => {
@@ -62,6 +64,16 @@ const MainNavigation: React.FC = () => {
       name: "Writing",
       href: "/app/writing",
       icon: MessageSquare
+    },
+    {
+      name: "Vocabulary Lists",
+      href: "/app/vocabulary-lists",
+      icon: List
+    },
+    {
+      name: "Progress",
+      href: "/app/progress",
+      icon: LineChart
     },
     {
       name: "Calendar",
