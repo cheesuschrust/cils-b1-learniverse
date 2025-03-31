@@ -1,133 +1,130 @@
 
-// Context Types  
-export interface AIUtilsContextType {  
-  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;  
-  isGenerating: boolean;  
-  remainingCredits: number;  
-  usageLimit: number;
-  speak?: (text: string, language?: string) => Promise<void>;
-  recognizeSpeech?: (audioBlob: Blob) => Promise<string>;
-  compareTexts?: (text1: string, text2: string) => Promise<number>;
-  processContent?: (prompt: string, options?: any) => Promise<string>;
-  isProcessing?: boolean;
-  isAIEnabled?: boolean;
-  speakText?: (text: string, language?: string, onComplete?: () => void) => void;
-  isSpeaking?: boolean;
-  settings?: any;
-  updateSettings?: (settings: any) => void;
-  generateContent?: (prompt: string, options?: any) => Promise<string>;
-  processAudioStream?: (stream: MediaStream) => Promise<string>;
-  stopAudioProcessing?: () => void;
-  isTranscribing?: boolean;
-  hasActiveMicrophone?: boolean;
-  checkMicrophoneAccess?: () => Promise<boolean>;
-  resetCredits?: () => Promise<void>;
-}
+// Core application types for consistent usage across the app
+import { ReactNode } from 'react';
+import { AISettings } from './ai';
 
-export type DifficultyLevel = 'A1' | 'A2' | 'B1' | 'B1-Citizenship' | 'B2' | 'C1' | 'C2';
+// Basic UI types
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ContentType = 'reading' | 'writing' | 'listening' | 'speaking' | 'culture' | 'vocabulary' | 'grammar';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'destructive' | 'success';
 
-export type ContentType = 
-  | 'flashcards'
-  | 'multiple-choice'
-  | 'listening'
-  | 'writing'
-  | 'speaking'
-  | 'pdf'
-  | 'unknown'
-  | 'json';
-
-export type ButtonVariant =
-  | 'default'
-  | 'destructive'
-  | 'outline'
-  | 'secondary'
-  | 'ghost'
-  | 'link'
-  | 'success'
-  | 'warning';
-
-export interface QuestionGenerationParams {
-  language?: string;
-  difficulty?: DifficultyLevel;
-  contentTypes?: string[];
-  focusAreas?: string[];
-  count?: number;
-  isCitizenshipFocused?: boolean;
-  context?: string;
-  italianLevel?: DifficultyLevel;
-  testSection?: string;
-  topics?: string[];
-}
-
+// AI-related types
 export interface AIQuestion {
   id: string;
   text: string;
   options?: string[];
-  correctAnswer: string;
+  correctAnswer?: string;
   explanation?: string;
   type: string;
-  difficulty: string;
-  isCitizenshipRelevant?: boolean;
+  difficulty: string | number;
 }
 
-export interface AIGenerationResult {
-  questions: AIQuestion[];
-  error?: string;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  preferredLanguage?: string;
-  italianLevel?: DifficultyLevel;
-  learningGoals?: string[];
-  completedLessons?: number;
-  citizenshipFocus?: boolean;
-  examDate?: Date;
-}
-
+// Error boundary props
 export interface EnhancedErrorBoundaryProps {
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  children: React.ReactNode;
 }
 
-// Content processing props
+// AI Content processor props
 export interface AIContentProcessorProps {
-  settings: {
-    language: string;
-    difficulty: string;
-    contentTypes: string[];
-    focusAreas?: string[];
-  };
-  onContentGenerated?: (content: any[]) => void;
-  onError?: (error: string) => void;
+  content: string;
+  contentType: ContentType;
+  onQuestionsGenerated: (questions: any[]) => void;
 }
 
+// Process content options
 export interface ProcessContentOptions {
-  maxLength?: number;
-  format?: string;
   temperature?: number;
-  count?: number;
-  difficulty?: string;
   maxTokens?: number;
   topP?: number;
-  frequencyPenalty?: number;
   presencePenalty?: number;
+  frequencyPenalty?: number;
   model?: string;
 }
 
+// Confidence indicator props
 export interface ConfidenceIndicatorProps {
-  contentType?: ContentType;
   score: number;
+  contentType?: string;
   size?: 'sm' | 'md' | 'lg';
-  showLabel?: boolean;
+  className?: string;
+  indicatorClassName?: string;
 }
 
+// Level badge props
 export interface LevelBadgeProps {
-  level: number;
+  level: string;
   showInfo?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+}
+
+// Question generation params
+export interface QuestionGenerationParams {
+  italianLevel?: string;
+  testSection?: string;
+  difficulty?: string;
+  contentTypes?: string[];
+  focusAreas?: string[];
+  topics?: string[];
+  count?: number;
+  isCitizenshipFocused?: boolean;
+}
+
+// AI generation result
+export interface AIGenerationResult {
+  questions: AIGeneratedQuestion[];
+  error?: string;
+}
+
+// AI generated question
+export interface AIGeneratedQuestion extends AIQuestion {
+  isCitizenshipRelevant?: boolean;
+}
+
+// User profile
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  profileImage?: string;
+  bio?: string;
+  learningLevel?: string;
+  goals?: string[];
+  interests?: string[];
+  createdAt: Date;
+  lastLogin?: Date;
+  preferredLanguage?: string;
+  notificationSettings?: {
+    email: boolean;
+    push: boolean;
+    inApp: boolean;
+  };
+}
+
+// AI Utils Context Type
+export interface AIUtilsContextType {
+  processContent: (prompt: string, options?: any) => Promise<string>;
+  settings: AISettings;
+  updateSettings: (newSettings: AISettings) => void;
+  generateContent: (prompt: string, options?: any) => Promise<string>;
+  speakText: (text: string, language?: string, onComplete?: () => void) => void;
+  isSpeaking: boolean;
+  processAudioStream: (stream: MediaStream) => Promise<string>;
+  stopAudioProcessing: () => void;
+  isTranscribing: boolean;
+  hasActiveMicrophone: boolean;
+  checkMicrophoneAccess: () => Promise<boolean>;
+  generateQuestions: (params: any) => Promise<any>;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
+  resetCredits: () => Promise<void>;
+  speak: (text: string, language?: string) => Promise<void>;
+  recognizeSpeech: (audioBlob: Blob) => Promise<string>;
+  compareTexts: (text1: string, text2: string) => Promise<number>;
+  isProcessing: boolean;
+  isAIEnabled: boolean;
 }

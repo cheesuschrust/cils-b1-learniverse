@@ -1,47 +1,59 @@
 
 /**
- * Extended variant types for UI components
- * These types extend the base shadcn UI variants to provide more options
+ * Extended UI variants for consistent styling across components
  */
 
-// Extended alert variants
-export type ExtendedAlertVariant =
+// Extended Alert variant options
+export type ExtendedAlertVariant = 
   | 'default'
   | 'destructive'
-  | 'outline'
-  | 'secondary'
+  | 'success' 
   | 'warning'
-  | 'success'
-  | 'primary'
-  | 'info';
+  | 'info'
+  | 'outline';
 
-// Extended button variants for more semantic options
+// Extended Button variant options
 export type ExtendedButtonVariant = 
   | 'default'
   | 'destructive'
   | 'outline'
-  | 'secondary'
+  | 'secondary' 
   | 'ghost'
   | 'link'
   | 'success'
-  | 'warning';
+  | 'warning'
+  | 'info';
 
-// Extended select variants
-export type ExtendedSelectVariant =
+// Extended Select variant options
+export type ExtendedSelectVariant = 
   | 'default'
   | 'outline'
-  | 'underlined';
+  | 'subtle'
+  | 'underline'
+  | 'ghost';
 
-// Extended input variants
-export type ExtendedInputVariant =
+// Extended Input variant options
+export type ExtendedInputVariant = 
   | 'default'
   | 'outline'
-  | 'filled'
-  | 'underlined';
+  | 'ghost'
+  | 'underline'
+  | 'filled';
 
-// Extended theme variants
-export type ExtendedThemeVariant =
+// Extended Theme variant options
+export type ExtendedThemeVariant = 
   | 'light'
   | 'dark'
   | 'system'
-  | 'auto';
+  | 'high-contrast'
+  | 'dyslexic-friendly';
+
+// Content type options
+export type ContentType = 
+  | 'reading'
+  | 'writing'
+  | 'listening'
+  | 'speaking'
+  | 'grammar'
+  | 'vocabulary'
+  | 'culture';

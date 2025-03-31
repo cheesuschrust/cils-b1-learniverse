@@ -1,4 +1,3 @@
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { v4 as uuidv4 } from 'uuid';
 import { QuestionGenerationParams, AIGeneratedQuestion, ItalianLevel, ItalianTestSection } from '@/types/italian-types';
@@ -137,7 +136,7 @@ function createGrammarQuestion(level: ItalianLevel, isCitizenshipFocused: boolea
     correctAnswer: selectedQuestion.correctAnswer,
     explanation: selectedQuestion.explanation,
     type: 'grammar',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: selectedQuestion.citizenship
   };
 }
@@ -187,7 +186,7 @@ function createVocabularyQuestion(level: ItalianLevel, isCitizenshipFocused: boo
     correctAnswer: selectedQuestion.correctAnswer,
     explanation: selectedQuestion.explanation,
     type: 'vocabulary',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: selectedQuestion.citizenship
   };
 }
@@ -232,7 +231,7 @@ function createCultureQuestion(level: ItalianLevel, isCitizenshipFocused: boolea
     correctAnswer: selectedQuestion.correctAnswer,
     explanation: selectedQuestion.explanation,
     type: 'culture',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: selectedQuestion.citizenship
   };
 }
@@ -251,7 +250,7 @@ function createListeningQuestion(level: ItalianLevel, isCitizenshipFocused: bool
     correctAnswer: "Servizio immigrazione",
     explanation: "L'annuncio descrive gli orari e la posizione dell'ufficio immigrazione del comune.",
     type: 'listening',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: isCitizenshipFocused
   };
 }
@@ -270,7 +269,7 @@ function createReadingQuestion(level: ItalianLevel, isCitizenshipFocused: boolea
     correctAnswer: "Prefettura",
     explanation: "Come indicato nel testo, le domande di cittadinanza vanno presentate presso la Prefettura della provincia di residenza.",
     type: 'reading',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: true
   };
 }
@@ -289,7 +288,7 @@ function createWritingQuestion(level: ItalianLevel, isCitizenshipFocused: boolea
     correctAnswer: "Io ho richiesto la cittadinanza italiana l'anno scorso.",
     explanation: "La forma corretta del passato prossimo del verbo 'richiedere' è 'ho richiesto'.",
     type: 'writing',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: true
   };
 }
@@ -308,7 +307,7 @@ function createSpeakingQuestion(level: ItalianLevel, isCitizenshipFocused: boole
     correctAnswer: "Desidero diventare cittadino italiano perché amo la cultura e la lingua italiana.",
     explanation: "Questa risposta è formale, rispettosa e mostra una motivazione positiva.",
     type: 'speaking',
-    difficulty: getDifficultyForLevel(level),
+    difficulty: level,
     isCitizenshipRelevant: true
   };
 }

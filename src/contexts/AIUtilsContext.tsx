@@ -38,6 +38,9 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   }
 };
 
+// Create the context with a default value
+export const AIUtilsContext = createContext<AIUtilsContextType | null>(null);
+
 // Provider component
 export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -116,11 +119,11 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Call the AI service
       const response = await AIService.generateText(contextualizedPrompt, {
         temperature: options.temperature || settings.temperature,
-        maxTokens: options.maxTokens || settings.maxTokens,
         topP: options.topP || settings.topP,
         frequencyPenalty: options.frequencyPenalty || settings.frequencyPenalty,
         presencePenalty: options.presencePenalty || settings.presencePenalty,
         model: options.model || settings.model,
+        maxTokens: options.maxTokens || settings.maxTokens,
       });
       
       return response;
@@ -421,5 +424,3 @@ export function useAIUtils(): AIUtilsContextType {
   
   return context;
 }
-
-export { AIUtilsContext };

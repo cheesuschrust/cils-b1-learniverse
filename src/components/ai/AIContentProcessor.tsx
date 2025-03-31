@@ -9,13 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Brain, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAI } from '@/hooks/useAI';
-import { ContentType } from '@/types/variant-fixes';
-
-interface AIContentProcessorProps {
-  content: string;
-  contentType: ContentType;
-  onQuestionsGenerated: (questions: any[]) => void;
-}
+import { AIContentProcessorProps } from '@/types';
 
 const AIContentProcessor: React.FC<AIContentProcessorProps> = ({ 
   content, 
@@ -47,17 +41,12 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
 
     setIsLoading(true);
     try {
-      // Convert content type if needed
-      const contentTypeForAPI: ContentType = contentType;
-
-      // Fix: Pass the correct types for generateQuestions function
+      // Generate questions with the correct parameters
       const generatedQuestions = await generateQuestions(
         editableContent,
-        contentTypeForAPI,
-        { 
-          count: questionCount, 
-          difficulty: difficulty 
-        }
+        contentType,
+        questionCount,
+        difficulty.toLowerCase()
       );
 
       onQuestionsGenerated(generatedQuestions);
@@ -160,7 +149,7 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
         <div className="text-xs text-muted-foreground mt-2">
           <p className="flex items-center">
             <FileText className="h-3 w-3 mr-1" />
-            Content type: {contentType.replace('-', ' ')}
+            Content type: {contentType}
           </p>
         </div>
       </CardContent>

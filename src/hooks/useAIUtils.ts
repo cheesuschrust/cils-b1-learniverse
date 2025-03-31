@@ -7,7 +7,8 @@ import {
   QuestionGenerationParams,
   AIGeneratedQuestion,
   ItalianLevel,
-  ItalianTestSection
+  ItalianTestSection,
+  AIUtilsContextType
 } from '@/types';
 
 /**
@@ -65,22 +66,12 @@ export const useAIUtils = () => {
   return {
     ...context,
     generateQuestions,
-    speak: context.speak || (async (text: string, language?: string) => {
-      if (context.speakText) {
-        await context.speakText(text, language);
-      }
-    }),
-    recognizeSpeech: context.recognizeSpeech || (async (audioBlob: Blob) => {
-      return "Simulated speech recognition result";
-    }),
-    compareTexts: context.compareTexts || (async (text1: string, text2: string) => {
-      return 0.8; // Simulated similarity score
-    }),
-    processContent: context.processContent || (async (prompt: string) => {
-      return "Simulated AI content";
-    }),
-    isProcessing: context.isProcessing || false,
-    isAIEnabled: context.isAIEnabled || true
+    speak: context.speak,
+    recognizeSpeech: context.recognizeSpeech,
+    compareTexts: context.compareTexts,
+    processContent: context.processContent,
+    isProcessing: context.isProcessing,
+    isAIEnabled: context.isAIEnabled
   };
 };
 

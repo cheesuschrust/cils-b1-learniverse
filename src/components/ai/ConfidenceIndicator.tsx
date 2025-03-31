@@ -1,37 +1,62 @@
 
 import React from 'react';
-import { ConfidenceIndicatorProps, ContentType } from '@/types';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { ConfidenceIndicatorProps } from '@/types';
 
-const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
-  contentType = 'unknown',
+/**
+ * Displays a visual indicator of confidence/score with appropriate colors and labels
+ */
+const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({ 
   score,
+  value,  // For backward compatibility
+  contentType = 'unknown',
   size = 'md',
-  showLabel = true
+  className,
+  indicatorClassName
 }) => {
-  const getColorClass = (score: number): string => {
-    if (score >= 85) return 'bg-green-500';
-    if (score >= 70) return 'bg-blue-500';
-    if (score >= 50) return 'bg-yellow-500';
+  // Handle percentage or decimal scores (0-100 or 0-1)
+  // Support backward compatibility with 'value' prop
+  const scoreValue = value !== undefined ? value : score;
+  const normalizedScore = typeof scoreValue === 'number'
+    ? (scoreValue > 1 ? scoreValue : scoreValue * 100)
+    : 0;
+  
+  // Ensure score is between 0 and 100
+  const clampedScore = Math.max(0, Math.min(100, normalizedScore));
+  
+  // Determine color based on score
+  const getColorClass = (score: number) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
+    if (score >= 40) return 'bg-orange-500';
     return 'bg-red-500';
   };
   
-  const getLabel = (score: number): string => {
-    if (score >= 85) return 'High';
-    if (score >= 70) return 'Good';
-    if (score >= 50) return 'Medium';
-    return 'Low';
+  // Get appropriate label based on score
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Needs Work';
   };
   
-  const getBadgeVariant = (score: number): 'default' | 'success' | 'warning' | 'destructive' => {
-    if (score >= 85) return 'success';
-    if (score >= 70) return 'default';
-    if (score >= 50) return 'warning';
-    return 'destructive';
+  // Get appropriate description based on content type
+  const getDescription = (type: string) => {
+    switch (type) {
+      case 'writing':
+        return 'Writing Quality';
+      case 'speaking':
+        return 'Pronunciation';
+      case 'listening':
+        return 'Comprehension';
+      default:
+        return 'Confidence Score';
+    }
   };
   
-  const getSizeClasses = (): string => {
+  // Determine size class for the progress bar
+  const getSizeClass = (size: string) => {
     switch (size) {
       case 'sm': return 'h-1.5';
       case 'lg': return 'h-3';
@@ -40,29 +65,29 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
         return 'h-2';
     }
   };
-
-  // Validate content type
-  let validContentType: ContentType = 'unknown';
-  if (['flashcards', 'multiple-choice', 'writing', 'speaking', 'listening'].includes(contentType)) {
-    validContentType = contentType as ContentType;
-  }
+  
+  const description = getDescription(contentType);
+  const scoreLabel = getScoreLabel(clampedScore);
+  const colorClass = getColorClass(clampedScore);
+  const sizeClass = getSizeClass(size);
   
   return (
-    <div className="confidence-indicator">
-      <div className="flex items-center justify-between mb-1">
-        {showLabel && (
-          <div className="flex items-center gap-2 text-xs text-gray-600">
-            <span>Confidence: {validContentType}</span>
-            <Badge variant={getBadgeVariant(score)}>
-              {getLabel(score)} ({Math.round(score)}%)
-            </Badge>
-          </div>
-        )}
+    <div className={cn("flex flex-col gap-1", className)}>
+      <div className="flex justify-between text-sm">
+        <span className="font-medium">{description}</span>
+        <span className="font-medium">
+          {scoreLabel} ({Math.round(clampedScore)}%)
+        </span>
       </div>
-      <Progress
-        value={score}
-        className={`w-full ${getSizeClasses()}`}
-        fill={getColorClass(score)}
+      
+      <Progress 
+        value={clampedScore}
+        className={cn("w-full progress-bar", sizeClass)}
+        fill={cn("progress-bar-fill", colorClass, indicatorClassName)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clampedScore}
+        role="progressbar"
       />
     </div>
   );

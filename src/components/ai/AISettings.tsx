@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,41 @@ import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RotateCcw, Info } from 'lucide-react'; // Changed ArrowCounterClockwise to RotateCcw
-import { AISettingsProps } from '@/types/AISettingsProps';
-import { AIModel, AISettings as AISettingsType } from '@/types/ai'; // Use AISettingsType to avoid name conflict
-import { adaptModelToSize } from '@/utils/modelAdapter';
-import { Input } from '@/components/ui/input'; // Added missing Input import
+import { RotateCcw, Info } from 'lucide-react';
+import { AISettingsProps } from '@/types';
+import { AIModel } from '@/types/ai';
+import { Input } from '@/components/ui/input';
+
+interface AISettingsType {
+  enabled: boolean;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  features: {
+    contentGeneration: boolean;
+    contentAnalysis: boolean;
+    errorCorrection: boolean;
+    personalization: boolean;
+    pronunciationHelp: boolean;
+    conversationalLearning: boolean;
+    progressTracking: boolean;
+    difficultyAdjustment: boolean;
+    languageTranslation: boolean;
+    flashcards: boolean;
+    questions: boolean;
+    listening: boolean;
+    speaking: boolean;
+    writing: boolean;
+    translation: boolean;
+    explanation: boolean;
+    correction: boolean;
+    simplified: boolean;
+  };
+  streaming: boolean;
+  contentSafety: boolean;
+  provider: 'openai' | 'anthropic' | 'mistral' | 'local';
+  debugMode: boolean;
+}
 
 const defaultSettings: AISettingsType = {
   enabled: true,
@@ -20,6 +49,15 @@ const defaultSettings: AISettingsType = {
   temperature: 0.7,
   maxTokens: 1024,
   features: {
+    contentGeneration: true,
+    contentAnalysis: true,
+    errorCorrection: true,
+    personalization: true,
+    pronunciationHelp: true,
+    conversationalLearning: true,
+    progressTracking: true,
+    difficultyAdjustment: true,
+    languageTranslation: true,
     flashcards: true,
     questions: true,
     listening: true,

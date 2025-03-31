@@ -2,165 +2,161 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FlashcardComponentProps } from '@/types/interface-fixes';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { FlashcardComponentProps, Flashcard } from '@/types';
 
 const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
-  flashcard,
-  card, // Legacy support
+  card,
+  onRating,
+  onSkip,
+  flipped = false,
   onFlip,
-  onNext,
-  onPrevious,
-  onMark,
-  onRating, // Legacy support
-  onSkip, // Legacy support
-  flipped = false, // Legacy support
-  showControls = true,
+  showPronunciation = true,
+  showActions = true,
+  className,
   showHints = false,
-  showPronunciation = false, // Legacy support
-  showActions = true, // Legacy support
-  onKnown, // Legacy support
-  onUnknown, // Legacy support
-  className = '', // Legacy support
-  autoFlip = false,
-  frontLabel = 'Italian',
-  backLabel = 'English'
+  onUnknown
 }) => {
-  // Handle both new flashcard and legacy card prop
-  const actualCard = flashcard || card;
-  
-  if (!actualCard) {
-    return <div>No flashcard data available</div>;
-  }
-
-  // Determine front and back content
-  const frontContent = actualCard.front || actualCard.italian || '';
-  const backContent = actualCard.back || actualCard.english || '';
-  
   const [isFlipped, setIsFlipped] = useState(flipped);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
-    setIsFlipped(flipped);
-  }, [flipped]);
+    if (!initialLoad) {
+      setIsFlipped(flipped);
+    }
+    setInitialLoad(false);
+  }, [flipped, initialLoad]);
 
   const handleFlip = () => {
-    setIsFlipped(!isFlipped);
-    if (onFlip) onFlip();
+    const newFlippedState = !isFlipped;
+    setIsFlipped(newFlippedState);
+    if (onFlip) {
+      onFlip();
+    }
   };
 
-  const handleMark = (status: 'correct' | 'incorrect' | 'hard') => {
-    if (onMark) onMark(status);
-    
-    // Legacy support
-    if (status === 'correct' && onKnown) onKnown();
-    if (status === 'incorrect' && onUnknown) onUnknown();
+  const handleRating = (rating: number) => {
     if (onRating) {
-      const ratingMap = { correct: 5, hard: 3, incorrect: 1 };
-      onRating(ratingMap[status]);
+      onRating(rating);
+    }
+  };
+
+  const handleSkip = () => {
+    if (onSkip) {
+      onSkip();
+    }
+  };
+
+  const handleUnknown = () => {
+    if (onUnknown) {
+      onUnknown();
     }
   };
 
   return (
-    <Card className={`w-full max-w-md mx-auto overflow-hidden ${className}`}>
-      <CardContent 
-        className={`p-6 cursor-pointer h-64 flex flex-col justify-between transition-all duration-300`}
+    <div className={cn("w-full max-w-md mx-auto", className)}>
+      <Card
+        className={cn(
+          "w-full h-56 md:h-64 perspective-1000 cursor-pointer relative",
+          isFlipped ? "flashcard-flipped" : ""
+        )}
         onClick={handleFlip}
       >
-        <div className="text-center mb-2 text-sm text-gray-500">
-          {isFlipped ? backLabel : frontLabel}
+        <div className="w-full h-full relative transform-style-3d transition-transform duration-500">
+          {/* Front side */}
+          <CardContent
+            className={cn(
+              "absolute w-full h-full backface-hidden p-6 flex flex-col justify-between",
+              !isFlipped ? "z-10" : "z-0 rotate-y-180"
+            )}
+          >
+            <div className="flex justify-between items-start">
+              <Badge variant="outline" className="text-xs font-normal">
+                {card.tags && card.tags.length > 0 ? card.tags[0] : "Vocabulary"}
+              </Badge>
+              {card.level && (
+                <Badge variant={card.mastered ? "success" : "secondary"} className="text-xs">
+                  Level {card.level}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="text-center flex-grow flex flex-col justify-center">
+              <h3 className="text-2xl font-bold mb-2">{card.front || card.italian}</h3>
+              
+              {showHints && card.examples && card.examples.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2 italic">
+                  {card.examples[0]}
+                </p>
+              )}
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              Click to reveal translation
+            </div>
+          </CardContent>
+
+          {/* Back side */}
+          <CardContent
+            className={cn(
+              "absolute w-full h-full backface-hidden p-6 bg-muted/30 rotate-y-180 flex flex-col justify-between",
+              isFlipped ? "z-10" : "z-0"
+            )}
+          >
+            <div className="flex justify-between items-start">
+              <Badge variant="outline" className="text-xs font-normal">
+                Translation
+              </Badge>
+            </div>
+            
+            <div className="text-center flex-grow flex flex-col justify-center">
+              <h3 className="text-2xl font-bold mb-2">{card.back || card.english}</h3>
+              
+              {card.explanation && (
+                <p className="text-sm mt-4 text-muted-foreground">
+                  {card.explanation}
+                </p>
+              )}
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              Click to see the word again
+            </div>
+          </CardContent>
         </div>
-        
-        <div className="flex-grow flex items-center justify-center text-2xl font-semibold">
-          {isFlipped ? backContent : frontContent}
+      </Card>
+
+      {showActions && (
+        <div className="mt-4 flex justify-between items-center">
+          <Button variant="outline" size="sm" onClick={handleUnknown}>
+            Don't Know
+          </Button>
+
+          <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <Button
+                key={rating}
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRating(rating);
+                }}
+                className="w-8 h-8 p-0"
+              >
+                {rating}
+              </Button>
+            ))}
+          </div>
+
+          <Button variant="outline" size="sm" onClick={handleSkip}>
+            Skip
+          </Button>
         </div>
-        
-        {showHints && actualCard.examples && actualCard.examples.length > 0 && (
-          <div className="mt-4 text-sm text-gray-600 italic">
-            <p>Example: {actualCard.examples[0]}</p>
-          </div>
-        )}
-        
-        {showControls && (
-          <div className="mt-4 flex justify-between space-x-2">
-            {onPrevious && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onPrevious(); 
-                }}
-              >
-                Previous
-              </Button>
-            )}
-            
-            {showActions && (
-              <div className="flex space-x-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleMark('incorrect');
-                  }}
-                >
-                  Don't Know
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleMark('hard'); 
-                  }}
-                >
-                  Hard
-                </Button>
-                
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleMark('correct'); 
-                  }}
-                >
-                  Know
-                </Button>
-              </div>
-            )}
-            
-            {onNext && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onNext(); 
-                }}
-              >
-                Next
-              </Button>
-            )}
-            
-            {onSkip && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onSkip(); 
-                }}
-              >
-                Skip
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
-}
+};
 
 export default FlashcardComponent;

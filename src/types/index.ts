@@ -60,7 +60,8 @@ export type {
   ExtendedButtonVariant,
   ExtendedSelectVariant,
   ExtendedInputVariant,
-  ExtendedThemeVariant
+  ExtendedThemeVariant,
+  ContentType as VariantContentType
 } from './variant-fixes';
 
 // Helper functions
