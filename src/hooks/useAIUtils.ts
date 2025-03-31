@@ -15,7 +15,6 @@ export const useAIUtils = (): AIUtilsContextType => {
   
   return {
     ...context,
-    isAIEnabled: context.settings?.features?.contentGeneration !== false || true,
     // Add missing methods to prevent errors
     speak: async (text: string, language?: string) => {
       if (context.speakText) {
