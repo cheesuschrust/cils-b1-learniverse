@@ -9,11 +9,11 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { ItalianAIProvider } from '@/contexts/ItalianAIContext';
 import { EnhancedErrorBoundary } from '@/components/EnhancedErrorBoundary';
-import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';
-import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';
-import { CitizenshipReadinessComponent } from '@/components/CitizenshipReadinessComponent';
+import CitizenshipContentProcessor from '@/components/CitizenshipContentProcessor';
+import ItalianPracticeComponent from '@/components/ItalianPracticeComponent';
+import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';
 import { useAuth } from '@/contexts/AuthContext';
-import { ItalianLevel, ItalianTestSection, AIGeneratedQuestion } from '@/types/italian-types';
+import { DifficultyLevel, ContentType, AIQuestion } from '@/types/app-types';
 import { Flag, BookOpen, PenTool, Ear, MessageSquare, Layers, CheckCircle } from 'lucide-react';
 
 const ItalianCitizenshipTest = () => {

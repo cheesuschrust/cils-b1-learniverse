@@ -30,7 +30,13 @@ export const useAIUtils = (): AIUtilsContextType => {
       // This would be implemented in a real app
       console.log(`Comparing: "${text1}" with "${text2}"`);
       return 0.8; // Simulated similarity score
-    }
+    },
+    processContent: context.processContent || (async (prompt: string) => {
+      console.log("Processing content:", prompt);
+      return "Simulated AI content";
+    }),
+    isProcessing: false,
+    isAIEnabled: true
   };
 };
 

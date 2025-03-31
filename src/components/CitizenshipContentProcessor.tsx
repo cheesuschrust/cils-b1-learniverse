@@ -25,7 +25,8 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({
       difficulty: settings.italianLevel,  
       contentTypes: [settings.testSection],  
       focusAreas: settings.topics,  
-      count: 5 // Default to 5 questions  
+      count: 5, // Default to 5 questions  
+      isCitizenshipFocused: settings.isCitizenshipFocused
     };  
     
     const result = await generateQuestions(params);  
@@ -87,6 +88,11 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({
                 <p className="correct-answer">Risposta Corretta: {question.correctAnswer}</p>  
                 {question.explanation && (  
                   <p className="explanation">Spiegazione: {question.explanation}</p>  
+                )}
+                {question.isCitizenshipRelevant && (  
+                  <div className="citizenship-badge">  
+                    Pertinente per il test di cittadinanza  
+                  </div>  
                 )}
               </li>  
             ))}  

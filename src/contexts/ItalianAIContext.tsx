@@ -1,16 +1,16 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';  
 import {   
-  ItalianAIUtilsContextType,   
+  AIUtilsContextType,   
   QuestionGenerationParams,   
-  AIGenerationResult,   
-  AIGeneratedQuestion,
-  ItalianLevel  
-} from '../types/type-definitions';
-import { useAuth } from './AuthContext';
+  AIGenerationResult,
+  AIQuestion,
+  DifficultyLevel
+} from '../types/app-types';  
+import { useAuth } from './AuthContext';  
 
 // Create context with the proper type  
-const ItalianAIContext = createContext<ItalianAIUtilsContextType | undefined>(undefined);  
+const ItalianAIContext = createContext<AIUtilsContextType | undefined>(undefined);  
 
 export function ItalianAIProvider({ children }: { children: React.ReactNode }) {  
   const { user } = useAuth();  
@@ -60,7 +60,7 @@ export function ItalianAIProvider({ children }: { children: React.ReactNode }) {
       setRemainingCredits(prev => Math.max(0, prev - 1));  
 
       return {   
-        questions: result.questions as AIGeneratedQuestion[]  
+        questions: result.questions as AIQuestion[]  
       };  
     } catch (error) {  
       console.error('Error generating Italian questions:', error);  
@@ -74,7 +74,7 @@ export function ItalianAIProvider({ children }: { children: React.ReactNode }) {
   }  
 
   // Generate explanations in Italian  
-  async function generateItalianExplanation(italianText: string, level: ItalianLevel): Promise<string> {  
+  async function generateItalianExplanation(italianText: string, level: DifficultyLevel): Promise<string> {  
     if (!user || remainingCredits <= 0) {  
       return 'Unable to generate explanation. Please check your account status.';  
     }  
@@ -150,7 +150,7 @@ export function ItalianAIProvider({ children }: { children: React.ReactNode }) {
   async function evaluateWrittenResponse(  
     response: string,   
     prompt: string,   
-    level: ItalianLevel  
+    level: DifficultyLevel  
   ): Promise<{score: number; feedback: string}> {  
     if (!user || remainingCredits <= 0) {  
       return {  
@@ -197,11 +197,8 @@ export function ItalianAIProvider({ children }: { children: React.ReactNode }) {
     }  
   }  
 
-  const value: ItalianAIUtilsContextType = {  
+  const value: AIUtilsContextType = {  
     generateQuestions,  
-    generateItalianExplanation,  
-    translateToEnglish,  
-    evaluateWrittenResponse,  
     isGenerating,  
     remainingCredits,  
     usageLimit  
@@ -210,10 +207,12 @@ export function ItalianAIProvider({ children }: { children: React.ReactNode }) {
   return <ItalianAIContext.Provider value={value}>{children}</ItalianAIContext.Provider>;  
 }  
 
-export function useItalianAI(): ItalianAIUtilsContextType {  
+export function useItalianAI(): AIUtilsContextType {  
   const context = useContext(ItalianAIContext);  
   if (context === undefined) {  
     throw new Error('useItalianAI must be used within an ItalianAIProvider');  
   }  
   return context;  
-}
+}  
+
+export { ItalianAIContext };

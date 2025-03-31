@@ -11,3 +11,6 @@ export * from './interface-fixes';
 export * from './flashcard-types';
 export * from './user-types';
 export * from './notification';
+
+// Re-export license types to fix case sensitivity issues
+export * from './license';
