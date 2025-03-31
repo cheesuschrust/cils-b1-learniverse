@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { User, UserPreferences } from '@/types/user';
@@ -13,6 +12,7 @@ export interface AuthContextType {
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => {},
   loading: true,
   error: null,
+  isAuthenticated: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -217,7 +218,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Register with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -232,7 +232,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create user record in the users table
         const { error: userError } = await supabase.from('users').insert([
           {
             id: authData.user.id,
@@ -249,7 +248,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (userError) throw userError;
 
-        // Create user preferences
         const { error: prefsError } = await supabase.from('user_preferences').insert([
           {
             user_id: authData.user.id,
@@ -314,6 +312,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     loading,
     error,
+    isAuthenticated: !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

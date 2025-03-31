@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,16 +31,17 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<{
     google: boolean;
     apple: boolean;
   }>({ google: false, apple: false });
   
-  // Get the intended destination from location state, or default to /dashboard
+  // Get the intended destination from location state, or default to "/dashboard"
   const from = location.state?.from?.pathname || "/dashboard";
   
   // Define form with validation
@@ -56,13 +56,15 @@ const Login = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [user, navigate]);
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
+      setIsLoading(true);
+      
       // Save or remove email from localStorage based on rememberMe
       if (data.rememberMe) {
         localStorage.setItem("rememberedEmail", data.email);
@@ -86,6 +88,8 @@ const Login = () => {
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   

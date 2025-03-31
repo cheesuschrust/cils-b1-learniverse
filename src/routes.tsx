@@ -1,4 +1,3 @@
-
 import React from "react";
 import { createBrowserRouter } from "react-router-dom";
 import RootLayout from "./layouts/RootLayout";
@@ -43,6 +42,9 @@ import {
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 
+// Import the Calendar page
+import Calendar from "./pages/Calendar";
+
 // Wrap each route element with AuthProvider
 const withAuth = (element: React.ReactNode) => (
   <AuthProvider>{element}</AuthProvider>
@@ -75,12 +77,24 @@ const router = createBrowserRouter([
         element: <Layout><EmailVerification /></Layout>,
       },
       {
+        path: "dashboard",
+        element: <ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>,
+      },
+      {
+        path: "calendar",
+        element: <ProtectedRoute><DashboardLayout><Calendar /></DashboardLayout></ProtectedRoute>,
+      },
+      {
         path: "app",
         element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
         children: [
           {
             path: "dashboard",
             element: <Dashboard />,
+          },
+          {
+            path: "calendar",
+            element: <Calendar />,
           },
           {
             path: "flashcards",
