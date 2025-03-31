@@ -3,7 +3,6 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { ErrorMonitoringService } from '@/services/ErrorMonitoringService';
 
 // Define error severities
 export enum ErrorSeverity {
@@ -27,6 +26,33 @@ export enum ErrorCategory {
   UNKNOWN = 'UNKNOWN',
   FEATURE_FLAG = 'FEATURE_FLAG',
   AI_SERVICE = 'AI_SERVICE',
+}
+
+// Interface for error reporting service
+export interface ErrorMonitoringService {
+  reportError: (errorData: {
+    error: Error;
+    errorInfo: ErrorInfo;
+    category: ErrorCategory;
+    severity: ErrorSeverity;
+    boundary?: string;
+    additionalInfo?: Record<string, any>;
+  }) => void;
+}
+
+// Default error monitoring service implementation
+class DefaultErrorMonitoringService implements ErrorMonitoringService {
+  reportError(errorData: {
+    error: Error;
+    errorInfo: ErrorInfo;
+    category: ErrorCategory;
+    severity: ErrorSeverity;
+    boundary?: string;
+    additionalInfo?: Record<string, any>;
+  }): void {
+    console.error('Error reported:', errorData);
+    // In a real implementation, this would send errors to a monitoring system
+  }
 }
 
 // Props for the EnhancedErrorBoundary component
@@ -59,7 +85,7 @@ interface EnhancedErrorBoundaryState {
  * displays a fallback UI, and optionally reports errors to a monitoring service.
  */
 class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, EnhancedErrorBoundaryState> {
-  private errorMonitoringService: ErrorMonitoringService | null = null;
+  private errorMonitoringService: ErrorMonitoringService;
 
   static defaultProps = {
     showDetails: false,
@@ -82,11 +108,7 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
     };
 
     // Initialize error monitoring service if provided
-    if (props.errorMonitoringService) {
-      this.errorMonitoringService = props.errorMonitoringService;
-    } else {
-      this.errorMonitoringService = new ErrorMonitoringService();
-    }
+    this.errorMonitoringService = props.errorMonitoringService || new DefaultErrorMonitoringService();
   }
 
   static getDerivedStateFromError(error: Error): Partial<EnhancedErrorBoundaryState> {
@@ -103,7 +125,7 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
     }
 
     // Report error to monitoring service if enabled
-    if (this.props.reportErrors && this.errorMonitoringService) {
+    if (this.props.reportErrors) {
       const { category, severity, boundary, additionalInfo } = this.props;
 
       this.errorMonitoringService.reportError({

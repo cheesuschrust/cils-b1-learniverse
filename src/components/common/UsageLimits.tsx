@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertTriangle, CreditCard, Infinity, CheckCircle2 } from "lucide-react";
 import UpgradeDialog from "@/components/upgrade/UpgradeDialog";
-import { useQuestionLimit } from "@/hooks/useQuestionLimit";
 
 interface UsageLimitsProps {
   showUpgradeButton?: boolean;
@@ -18,12 +17,41 @@ const UsageLimits: React.FC<UsageLimitsProps> = ({ showUpgradeButton = true }) =
   const { user } = useAuth();
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   
-  // Use the hook to get live data for all question types
-  const flashcardLimit = useQuestionLimit('flashcards');
-  const multipleChoiceLimit = useQuestionLimit('multipleChoice');
-  const listeningLimit = useQuestionLimit('listening');
-  const writingLimit = useQuestionLimit('writing');
-  const speakingLimit = useQuestionLimit('speaking');
+  // Define usage limits for each question type
+  const flashcardLimit = { 
+    usedToday: user?.dailyQuestionCounts?.flashcards || 0,
+    dailyLimit: user?.subscription === "premium" ? Infinity : 1,
+    remaining: user?.subscription === "premium" ? Infinity : Math.max(0, 1 - (user?.dailyQuestionCounts?.flashcards || 0)),
+    hasReachedLimit: user?.subscription !== "premium" && (user?.dailyQuestionCounts?.flashcards || 0) >= 1
+  };
+  
+  const multipleChoiceLimit = {
+    usedToday: user?.dailyQuestionCounts?.multipleChoice || 0,
+    dailyLimit: user?.subscription === "premium" ? Infinity : 1,
+    remaining: user?.subscription === "premium" ? Infinity : Math.max(0, 1 - (user?.dailyQuestionCounts?.multipleChoice || 0)),
+    hasReachedLimit: user?.subscription !== "premium" && (user?.dailyQuestionCounts?.multipleChoice || 0) >= 1
+  };
+  
+  const listeningLimit = {
+    usedToday: user?.dailyQuestionCounts?.listening || 0,
+    dailyLimit: user?.subscription === "premium" ? Infinity : 1,
+    remaining: user?.subscription === "premium" ? Infinity : Math.max(0, 1 - (user?.dailyQuestionCounts?.listening || 0)),
+    hasReachedLimit: user?.subscription !== "premium" && (user?.dailyQuestionCounts?.listening || 0) >= 1
+  };
+  
+  const writingLimit = {
+    usedToday: user?.dailyQuestionCounts?.writing || 0,
+    dailyLimit: user?.subscription === "premium" ? Infinity : 1,
+    remaining: user?.subscription === "premium" ? Infinity : Math.max(0, 1 - (user?.dailyQuestionCounts?.writing || 0)),
+    hasReachedLimit: user?.subscription !== "premium" && (user?.dailyQuestionCounts?.writing || 0) >= 1
+  };
+  
+  const speakingLimit = {
+    usedToday: user?.dailyQuestionCounts?.speaking || 0,
+    dailyLimit: user?.subscription === "premium" ? Infinity : 1,
+    remaining: user?.subscription === "premium" ? Infinity : Math.max(0, 1 - (user?.dailyQuestionCounts?.speaking || 0)),
+    hasReachedLimit: user?.subscription !== "premium" && (user?.dailyQuestionCounts?.speaking || 0) >= 1
+  };
   
   if (!user) {
     return null;
@@ -52,11 +80,11 @@ const UsageLimits: React.FC<UsageLimitsProps> = ({ showUpgradeButton = true }) =
   }
   
   const hasReachedAnyLimit = 
-    flashcardLimit.usedQuestions >= 1 || 
-    multipleChoiceLimit.usedQuestions >= 1 || 
-    listeningLimit.usedQuestions >= 1 ||
-    writingLimit.usedQuestions >= 1 ||
-    speakingLimit.usedQuestions >= 1;
+    flashcardLimit.usedToday >= 1 || 
+    multipleChoiceLimit.usedToday >= 1 || 
+    listeningLimit.usedToday >= 1 ||
+    writingLimit.usedToday >= 1 ||
+    speakingLimit.usedToday >= 1;
   
   return (
     <>
@@ -72,51 +100,51 @@ const UsageLimits: React.FC<UsageLimitsProps> = ({ showUpgradeButton = true }) =
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Flashcards</span>
-              <Badge variant={flashcardLimit.usedQuestions >= 1 ? "destructive" : "outline"}>
-                {flashcardLimit.usedQuestions}/1
+              <Badge variant={flashcardLimit.usedToday >= 1 ? "destructive" : "outline"}>
+                {flashcardLimit.usedToday}/1
               </Badge>
             </div>
-            <Progress value={flashcardLimit.usedQuestions * 100} className="h-1" />
+            <Progress value={flashcardLimit.usedToday * 100} className="h-1" />
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Multiple Choice</span>
-              <Badge variant={multipleChoiceLimit.usedQuestions >= 1 ? "destructive" : "outline"}>
-                {multipleChoiceLimit.usedQuestions}/1
+              <Badge variant={multipleChoiceLimit.usedToday >= 1 ? "destructive" : "outline"}>
+                {multipleChoiceLimit.usedToday}/1
               </Badge>
             </div>
-            <Progress value={multipleChoiceLimit.usedQuestions * 100} className="h-1" />
+            <Progress value={multipleChoiceLimit.usedToday * 100} className="h-1" />
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Listening</span>
-              <Badge variant={listeningLimit.usedQuestions >= 1 ? "destructive" : "outline"}>
-                {listeningLimit.usedQuestions}/1
+              <Badge variant={listeningLimit.usedToday >= 1 ? "destructive" : "outline"}>
+                {listeningLimit.usedToday}/1
               </Badge>
             </div>
-            <Progress value={listeningLimit.usedQuestions * 100} className="h-1" />
+            <Progress value={listeningLimit.usedToday * 100} className="h-1" />
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Writing</span>
-              <Badge variant={writingLimit.usedQuestions >= 1 ? "destructive" : "outline"}>
-                {writingLimit.usedQuestions}/1
+              <Badge variant={writingLimit.usedToday >= 1 ? "destructive" : "outline"}>
+                {writingLimit.usedToday}/1
               </Badge>
             </div>
-            <Progress value={writingLimit.usedQuestions * 100} className="h-1" />
+            <Progress value={writingLimit.usedToday * 100} className="h-1" />
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Speaking</span>
-              <Badge variant={speakingLimit.usedQuestions >= 1 ? "destructive" : "outline"}>
-                {speakingLimit.usedQuestions}/1
+              <Badge variant={speakingLimit.usedToday >= 1 ? "destructive" : "outline"}>
+                {speakingLimit.usedToday}/1
               </Badge>
             </div>
-            <Progress value={speakingLimit.usedQuestions * 100} className="h-1" />
+            <Progress value={speakingLimit.usedToday * 100} className="h-1" />
           </div>
           
           {hasReachedAnyLimit && (

@@ -11,8 +11,9 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { Check, Globe, Search, Share2, BarChart2, TrendingUp, FileText, RefreshCw, ArrowUpRight, Tag, Edit, Trash } from 'lucide-react';
+import { Globe, Search, Share2, BarChart2, TrendingUp, FileText, RefreshCw, ArrowUpRight, Tag, Edit, Trash, CheckCircle as CheckCircle2, AlertCircle } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { ExtendedAlertVariant } from '@/types/variant-fixes';
 
 /**
  * SEO Manager Component
@@ -95,7 +96,7 @@ const SEOManager = () => {
       toast({
         title: "SEO settings saved",
         description: "Your metadata changes have been applied successfully.",
-        variant: "success",
+        variant: "success" as ExtendedAlertVariant,
       });
     }, 1000);
   };
@@ -115,7 +116,7 @@ const SEOManager = () => {
       toast({
         title: "Sitemap updated",
         description: "Your sitemap has been regenerated and submitted to search engines.",
-        variant: "success",
+        variant: "success" as ExtendedAlertVariant,
       });
     }, 1500);
   };
@@ -130,7 +131,7 @@ const SEOManager = () => {
       toast({
         title: "Analytics connections updated",
         description: "Your tracking codes have been updated successfully.",
-        variant: "success",
+        variant: "success" as ExtendedAlertVariant,
       });
     }, 1000);
   };
@@ -145,7 +146,7 @@ const SEOManager = () => {
       toast({
         title: "Performance settings saved",
         description: "Your performance optimizations have been applied.",
-        variant: "success",
+        variant: "success" as ExtendedAlertVariant,
       });
     }, 1200);
   };
@@ -165,7 +166,7 @@ const SEOManager = () => {
       toast({
         title: "Sitemap generated",
         description: "New sitemap has been created and deployed to the server.",
-        variant: "success",
+        variant: "success" as ExtendedAlertVariant,
       });
     }, 2000);
   };
@@ -178,7 +179,7 @@ const SEOManager = () => {
     toast({
       title: "Issue fixed",
       description: "The SEO issue has been resolved successfully.",
-      variant: "success",
+      variant: "success" as ExtendedAlertVariant,
     });
   };
   
@@ -416,7 +417,7 @@ const SEOManager = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <CheckCircle className="h-12 w-12 text-green-500 mb-2" />
+                    <CheckCircle2 className="h-12 w-12 text-green-500 mb-2" />
                     <h3 className="text-xl font-medium">No SEO Issues Found</h3>
                     <p className="text-muted-foreground mt-1">
                       All your pages comply with SEO best practices

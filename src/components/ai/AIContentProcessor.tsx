@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -47,14 +46,17 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
 
     setIsLoading(true);
     try {
-      // Convert content type if needed - we now handle this properly with type safety
-      let contentTypeForAPI: ContentType = contentType;
+      // Convert content type if needed
+      const contentTypeForAPI: ContentType = contentType;
 
+      // Updated to only use three arguments instead of four
       const generatedQuestions = await generateQuestions(
         editableContent,
         contentTypeForAPI,
-        questionCount,
-        difficulty
+        { 
+          count: questionCount, 
+          difficulty: difficulty 
+        }
       );
 
       onQuestionsGenerated(generatedQuestions);
