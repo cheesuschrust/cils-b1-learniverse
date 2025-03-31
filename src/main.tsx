@@ -21,6 +21,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Create a context for React Helmet Async
+const helmetContext = {};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <EnhancedErrorBoundary
@@ -42,7 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       showDetails={true}
       reportErrors={true}
     >
-      <HelmetProvider>
+      <HelmetProvider context={helmetContext}>
         <ThemeProvider defaultTheme="system" storageKey="cils-theme">
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} />

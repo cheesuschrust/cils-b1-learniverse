@@ -9,6 +9,7 @@ export default function Progress() {
     <>
       <Helmet>
         <title>Learning Progress | CILS B1 Cittadinanza</title>
+        <meta name="description" content="Track your Italian language learning progress" />
       </Helmet>
       <div className="container mx-auto p-4 md:p-6">
         <div className="mb-6">

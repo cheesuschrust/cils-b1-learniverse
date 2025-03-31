@@ -8,6 +8,7 @@ const Calendar = () => {
     <>
       <Helmet>
         <title>Learning Calendar | Language Learning Platform</title>
+        <meta name="description" content="Track your learning schedule and stay organized with our calendar" />
       </Helmet>
       <div className="container mx-auto py-8">
         <h1 className="text-2xl font-bold mb-6">Your Learning Calendar</h1>
