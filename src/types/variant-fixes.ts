@@ -1,5 +1,4 @@
 
-
 // Adding missing button variant types
 export type ExtendedButtonVariant = 
   | 'default'
@@ -17,7 +16,8 @@ export type ExtendedAlertVariant =
   | 'destructive'
   | 'warning'
   | 'success'
-  | 'outline';
+  | 'outline'
+  | 'secondary'; // Added 'secondary' variant
 
 // Adding extended confidence types
 export type ContentType = 
@@ -34,4 +34,3 @@ export interface ConfidenceIndicatorProps {
   contentType?: ContentType;
   score: number; // Add a default score value for speaking and listening
 }
-

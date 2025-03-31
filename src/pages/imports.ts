@@ -1,5 +1,4 @@
 
-
 // Import all pages to be used in the app  
 import Home from './Home';  
 import Dashboard from './Dashboard';  
@@ -17,7 +16,7 @@ import Achievements from './Achievements';
 import NotFound from './NotFound';  
 import Analytics from './Analytics';  
 import VocabularyLists from './VocabularyLists';  
-import Progress from './progress'; // Fix the casing to match the actual file name
+import Progress from './progress'; // Correcting import to match actual file name
 import EmailVerification from './EmailVerification';  
 import ResetPassword from './ResetPassword';  
 import AIAssistant from './AIAssistant';  
@@ -71,5 +70,4 @@ export {
   EmailSettings,  
   AppStoreListing,  
   SEOManager  
-};  
-
+};
