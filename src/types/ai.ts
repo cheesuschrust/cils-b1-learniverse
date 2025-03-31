@@ -18,6 +18,12 @@ export type AIModel =
 // AI provider types
 export type AIProvider = 'openai' | 'anthropic' | 'mistral' | 'local';
 
+// AI model size for internal usage
+export type AIModelSize = 'small' | 'medium' | 'large';
+
+// AI status for monitoring
+export type AIStatus = 'idle' | 'processing' | 'success' | 'error';
+
 // AI Settings interface
 export interface AISettings {
   model: string;
@@ -67,10 +73,38 @@ export interface AIServiceOptions {
 // AI Preference interface
 export interface AIPreference {
   enabled: boolean;
-  modelSize: 'small' | 'medium' | 'large';
+  modelSize: AIModelSize;
   contentSafety: boolean;
   dataUsage: 'minimal' | 'standard' | 'full';
 }
 
+// AI Feedback Settings
+export interface AIFeedbackSettings {
+  detailedFeedback: boolean;
+  includeExamples: boolean;
+  suggestCorrections: boolean;
+  language: 'english' | 'italian' | 'both';
+  feedbackLevel: 'beginner' | 'intermediate' | 'advanced';
+}
+
+// Interface for AI service
+export interface AIServiceInterface {
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  generateQuestions: (content: string, count: number, type: string) => Promise<any[]>;
+  abortAllRequests: () => void;
+  classifyText: (text: string) => Promise<Array<{label: string, score: number}>>;
+  getConfidenceScore: (contentType: string) => number;
+}
+
+// Return type for useAI hook
+export interface UseAIReturn {
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  getConfidenceScore: (text: string, contentType: string) => Promise<number>;
+  isLoading: boolean;
+  error: Error | null;
+  abort: () => void;
+}
+
 // Content types that can be processed by AI
 export type ContentType = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary' | 'culture';
+

@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { serviceFactory } from '@/services/ServiceFactory';
-import { AIOptions, UseAIReturn } from '@/types/ai';
+import { AIServiceOptions, UseAIReturn } from '@/types/ai';
 import { errorMonitoring } from '@/utils/errorMonitoring';
 
 const useAISimplified = (): UseAIReturn => {
@@ -18,7 +18,7 @@ const useAISimplified = (): UseAIReturn => {
     }
   }, []);
   
-  const generateText = useCallback(async (prompt: string, options?: AIOptions): Promise<string> => {
+  const generateText = useCallback(async (prompt: string, options?: AIServiceOptions): Promise<string> => {
     setIsLoading(true);
     setError(null);
     

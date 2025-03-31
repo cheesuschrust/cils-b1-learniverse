@@ -1,54 +1,59 @@
 
-// Voice and speech related types
+export interface VoicePreference {
+  englishVoiceURI: string;
+  italianVoiceURI: string;
+  voiceRate: number;
+  voicePitch: number;
+}
 
-/**
- * Voice preferences for text-to-speech
- */
-export type VoicePreference = 'default' | 'male' | 'female' | 'natural' | 'robotic';
-
-/**
- * Text-to-speech configuration options
- */
 export interface TextToSpeechOptions {
-  voice: VoicePreference;
-  pitch?: number;
+  voice?: SpeechSynthesisVoice;
   rate?: number;
+  pitch?: number;
   volume?: number;
-  language?: 'en' | 'it';
+  language?: string;
 }
 
-/**
- * Voice component options
- */
 export interface VoiceOptions {
-  autoPlay?: boolean;
-  includePronunciation?: boolean;
-  repeatEnabled?: boolean;
-  maxRepeatCount?: number;
+  enableAutoSpeech: boolean;
+  enablePlaybackControls: boolean;
+  preferredVoice: {
+    italian: string;
+    english: string;
+  };
+  playbackSpeed: number;
+  pitch: number;
+  volume: number;
+  usePremiumVoices: boolean;
 }
 
-/**
- * Speech recognition state
- */
 export interface SpeechState {
+  isSpeaking: boolean;
   isListening: boolean;
+  isProcessing: boolean;
+  error: string | null;
   transcript: string;
   confidence: number;
-  error?: string;
-  supported: boolean;
+  finalTranscript: boolean;
 }
 
-/**
- * Utility function to check if a value is a valid date
- */
-export const isValidDate = (date: any): boolean => {
-  if (!date) return false;
-  if (date instanceof Date) {
-    return !isNaN(date.getTime());
-  }
-  return false;
-};
+// Utility function to check if a date is valid
+export function isValidDate(date: any): date is Date {
+  return date instanceof Date && !isNaN(date.getTime());
+}
 
-export default {
-  isValidDate
+// Utility function to get available voices by language
+export function getVoicesByLanguage(prefix: string): SpeechSynthesisVoice[] {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return [];
+  
+  const voices = window.speechSynthesis.getVoices();
+  return voices.filter(voice => voice.lang.startsWith(prefix));
+}
+
+// Default voice preferences
+export const defaultVoicePreferences: VoicePreference = {
+  englishVoiceURI: '',
+  italianVoiceURI: '',
+  voiceRate: 1.0,
+  voicePitch: 1.0
 };

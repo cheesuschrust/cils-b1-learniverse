@@ -1,10 +1,12 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import AIService from '@/services/AIService';
 import { ContentType, AISettings } from '@/types';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { AIUtilsContextType } from '@/types/app-types';
+import { AIUtilsContextType, QuestionGenerationParams, AIGenerationResult } from '@/types/app-types';
+import { mapToItalianTypes } from '@/types/italian-types';
 
 // Default AI settings
 const DEFAULT_AI_SETTINGS: AISettings = {
@@ -255,7 +257,7 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
   
   // Generate questions based on parameters
-  const generateQuestions = async (params: any): Promise<any> => {
+  const generateQuestions = async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
     try {
       setIsGenerating(true);
       
@@ -269,11 +271,14 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
         return { questions: [], error: "Usage limit reached" };
       }
       
+      // Convert params to Italian format if needed
+      const italianParams = mapToItalianTypes(params);
+      
       // For this implementation, we'll use the AIService to generate questions
       const questions = await AIService.generateQuestions(
-        params.content || "", 
+        params.contentTypes?.[0] || "", 
         params.count || 5, 
-        params.type || "multiple_choice"
+        params.difficulty || "intermediate"
       );
       
       // Deduct credits
@@ -320,38 +325,6 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [preferences?.aiEnabled]);
   
-  // Analyze content to determine type and confidence
-  const analyzeContent = async (text: string, contentType?: ContentType) => {
-    try {
-      const result = await AIService.classifyText(text);
-      
-      // Get the top classification
-      const topClassification = result[0] || { label: 'unknown', score: 0.5 };
-      
-      // Determine language
-      const hasItalian = /\b(ciao|buongiorno|arrivederci|grazie)\b/i.test(text);
-      const hasEnglish = /\b(hello|good|thanks|welcome|the)\b/i.test(text);
-      
-      let language = 'unknown';
-      if (hasItalian && !hasEnglish) language = 'italian';
-      else if (hasEnglish && !hasItalian) language = 'english';
-      else if (hasItalian && hasEnglish) language = 'both';
-      
-      return {
-        type: contentType || topClassification.label,
-        confidence: topClassification.score,
-        language
-      };
-    } catch (error) {
-      console.error("Error analyzing content:", error);
-      return {
-        type: contentType || 'unknown',
-        confidence: 0.5,
-        language: 'unknown'
-      };
-    }
-  };
-  
   // Speech recognition functionality
   const recognizeSpeech = async (audioBlob: Blob): Promise<string> => {
     try {
@@ -374,11 +347,10 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   // Expose speech directly for convenience
   const speak = async (text: string, language?: string): Promise<void> => {
-    if (speakText) {
-      await new Promise<void>((resolve) => {
-        speakText(text, language, resolve);
-      });
-    }
+    if (!text) return;
+    await new Promise<void>((resolve) => {
+      speakText(text, language, resolve);
+    });
   };
   
   // Context value
@@ -412,8 +384,5 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
     </AIUtilsContext.Provider>
   );
 };
-
-// Export for proper usage in other files
-export { useAIUtils } from "@/hooks/useAIUtils";
 
 export default AIUtilsContext;

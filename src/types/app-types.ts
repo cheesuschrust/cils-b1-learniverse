@@ -24,13 +24,31 @@ export interface EnhancedErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  errorMonitoringService?: any;
+  additionalInfo?: Record<string, any>;
+  severity?: string;
+  category?: string;
+  showDetails?: boolean;
+  reportErrors?: boolean;
 }
 
 // AI Content processor props
 export interface AIContentProcessorProps {
-  content: string;
-  contentType: ContentType;
-  onQuestionsGenerated: (questions: any[]) => void;
+  content?: string;
+  contentType?: ContentType;
+  onQuestionsGenerated?: (questions: any[]) => void;
+  settings?: AIContentSettings;
+  onContentGenerated?: (content: any) => void;
+  onError?: (error: string) => void;
+}
+
+// AI Content settings
+export interface AIContentSettings {
+  language: string;
+  difficulty: string;
+  contentTypes: string[];
+  focusAreas?: string[];
+  count?: number;
 }
 
 // Process content options
@@ -46,6 +64,7 @@ export interface ProcessContentOptions {
 // Confidence indicator props
 export interface ConfidenceIndicatorProps {
   score: number;
+  value?: number;  // For backward compatibility
   contentType?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -56,6 +75,7 @@ export interface ConfidenceIndicatorProps {
 export interface LevelBadgeProps {
   level: string;
   showInfo?: boolean;
+  size?: string;
 }
 
 // Question generation params
@@ -68,6 +88,7 @@ export interface QuestionGenerationParams {
   topics?: string[];
   count?: number;
   isCitizenshipFocused?: boolean;
+  language?: string;
 }
 
 // AI generation result
@@ -104,6 +125,53 @@ export interface UserProfile {
   };
 }
 
+// AI Settings Props
+export interface AISettingsProps {
+  settings: AISettings;
+  onSettingsChange: (settings: AISettings) => void;
+  availableModels: string[];
+  isLoading?: boolean;
+}
+
+// Citizenship Readiness Props
+export interface CitizenshipReadinessProps {
+  level: string;
+  readinessScore: number;
+  assessmentAvailable: boolean;
+  onStartAssessment: () => void;
+  lastAssessmentDate?: Date;
+}
+
+// Analytics Report Props
+export interface AnalyticsReportProps {
+  data: {
+    userActivity: {
+      totalSessions: number;
+      averageSessionLength: number;
+      averageQuestionsPerSession: number;
+      averageScorePercentage: number;
+      optimalTimeOfDay: string;
+      completionRate: number;
+      timePerQuestion: number;
+    };
+    progressBySection: Record<string, {
+      attempts: number;
+      correctAnswers: number;
+      percentageCorrect: number;
+      timeSpent: number;
+    }>;
+    weeklyProgress: {
+      labels: string[];
+      datasets: {
+        label: string;
+        data: number[];
+      }[];
+    };
+  };
+  period: 'week' | 'month' | 'year';
+  onPeriodChange: (period: 'week' | 'month' | 'year') => void;
+}
+
 // AI Utils Context Type
 export interface AIUtilsContextType {
   processContent: (prompt: string, options?: any) => Promise<string>;
@@ -128,3 +196,4 @@ export interface AIUtilsContextType {
   isProcessing: boolean;
   isAIEnabled: boolean;
 }
+

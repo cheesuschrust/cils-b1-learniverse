@@ -1,187 +1,150 @@
 
-import { ReactNode } from 'react';
+// Common interface definitions and fixes for type compatibility issues
 
-/**
- * Flashcard model for the application
- * This interface standardizes how flashcards are structured
- */
-export interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  italian: string;
-  english: string;
-  explanation?: string;
-  level: number;
-  difficulty: number;
-  mastered: boolean;
-  tags: string[];
-  examples?: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  nextReview: Date;
-  lastReviewed: Date | null;
-}
-
-/**
- * Props for the FlashcardComponent
- */
-export interface FlashcardComponentProps {
-  card: Flashcard;
-  onRating?: (rating: number) => void;
-  onSkip?: () => void;
-  flipped?: boolean;
-  onFlip?: () => void;
-  showPronunciation?: boolean;
-  showActions?: boolean;
-  className?: string;
-  showHints?: boolean;
-  onUnknown?: () => void;
-}
-
-/**
- * SpeakableWord props
- */
 export interface SpeakableWordProps {
   word: string;
-  language?: 'italian' | 'english';
-  autoPlay?: boolean;
-  iconSize?: 'sm' | 'md' | 'lg';
-  showText?: boolean;
+  language?: string;
   className?: string;
-  onSpeak?: () => void;
-  onSpeakComplete?: () => void;
+  showTooltip?: boolean;
+  tooltipContent?: string;
+  onPlayComplete?: () => void;
+  autoPlay?: boolean;
+  size?: string;
+  onClick?: () => void;
+  iconOnly?: boolean;
 }
 
-/**
- * Review schedule data structure
- */
-export interface ReviewSchedule {
-  interval: number;
-  dueDate: Date;
+export interface Flashcard {  
+  id: string;  
+  front: string;  
+  back: string;  
+  italian?: string;  
+  english?: string;  
+  difficulty: number;  
+  tags: string[];  
+  lastReviewed: Date | null;  
+  nextReview: Date | null;  
+  createdAt: Date;  
+  updatedAt?: Date;  
+  reviewHistory?: any[];  
+}  
+
+export interface FlashcardComponentProps {  
+  card: Flashcard;  
+  onUpdate?: (card: Flashcard) => void;  
+  onDelete?: (id: string) => void;  
+  showActions?: boolean;  
+}  
+
+export interface ReviewSchedule {  
+  interval: number;  
+  dueDate: Date;  
   difficulty: number;
-  overdue: boolean;
+  overdue?: boolean;
+}  
+
+export interface ReviewPerformance {  
+  score: number;  
+  time: number;  
+  date: Date;  
+}  
+
+export interface User {  
+  id: string;  
+  email: string;  
+  firstName?: string;  
+  lastName?: string;  
+  isPremiumUser?: boolean;  
+}  
+
+export interface AISettings {  
+  model: string;  
+  temperature: number;  
+  maxTokens: number;  
+  topP: number;  
+  frequencyPenalty: number;  
+  presencePenalty: number;  
+  showFeedback?: boolean;  
+}
+
+export interface ImportFormat {
+  type: 'csv' | 'json' | 'txt' | 'xlsx';
+  delimiter?: string;
+  hasHeader?: boolean;
+  encoding?: string;
+}
+
+export interface FlashcardStats {
+  totalCards: number;
+  masteredCards: number;
   dueToday: number;
-  dueThisWeek: number;
-  dueNextWeek: number;
-  dueByDate: Record<string, number>;
+  accuracy: number;
+  streak: number;
 }
 
-/**
- * Review performance data structure
- */
-export interface ReviewPerformance {
-  score: number;
-  time: number;
-  date: Date;
-  totalReviews: number;
-  correctReviews: number;
-  efficiency: number;
-  streakDays: number;
-  reviewsByCategory: Record<string, number>;
-}
-
-/**
- * User model
- */
-export interface User {
+export interface FlashcardSet {
   id: string;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
-  profileImage?: string;
+  name: string;
+  description: string;
+  cards: Flashcard[];
+  creator: string;
+  category?: string;
+  tags: string[];
+  isPublic: boolean;
+  isFavorite: boolean;
   createdAt: Date;
-  lastLogin?: Date;
-  role: 'user' | 'admin' | 'teacher';
-  isActive: boolean;
-  isEmailVerified: boolean;
-  preferences?: any;
-  subscription?: string;
+  updatedAt?: Date;
 }
 
-/**
- * AI Settings
- */
-export interface AISettings {
-  model: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  defaultModelSize: string;
-  features: {
-    contentGeneration: boolean;
-    contentAnalysis: boolean;
-    errorCorrection: boolean;
-    personalization: boolean;
-    pronunciationHelp: boolean;
-    conversationalLearning: boolean;
-    progressTracking: boolean;
-    difficultyAdjustment: boolean;
-    languageTranslation: boolean;
-    flashcards: boolean;
-    questions: boolean;
-    listening: boolean;
-    speaking: boolean;
-    writing: boolean;
-    translation: boolean;
-    explanation: boolean;
-    correction: boolean;
-    simplified?: boolean;
-  };
-  italianVoiceURI?: string;
-  englishVoiceURI?: string;
-  voiceRate?: number;
-  voicePitch?: number;
-  assistantName?: string;
+export interface SupportTicketExtension {
+  attachments?: string[];
+  priority: 'low' | 'medium' | 'high';
+  department: string;
+  assignedAgent?: string;
 }
 
-/**
- * Helper function to normalize flashcards with all required properties
- */
+export interface SupportTicketProps {
+  id: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  createdAt: Date;
+  updatedAt?: Date;
+  userId: string;
+  assignedTo?: string;
+}
+
+export interface SupportTicketUserProps {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin' | 'support';
+}
+
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ErrorCategory = 'ui' | 'data' | 'auth' | 'network' | 'unknown';
+
+export interface ErrorMonitoringService {
+  captureError: (error: Error, context?: any) => void;
+  getErrorCount: () => number;
+  clearErrors: () => void;
+}
+
 export function normalizeFlashcard(card: any): Flashcard {
-  // Ensure all required properties exist
   return {
-    id: card.id || '',
+    ...card,
+    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
+    lastReviewed: card.lastReviewed || null,
+    nextReview: card.nextReview || null,
     front: card.front || card.italian || '',
     back: card.back || card.english || '',
-    italian: card.italian || card.front || '',
-    english: card.english || card.back || '',
-    explanation: card.explanation || '',
-    level: card.level || 1,
-    difficulty: card.difficulty || 0,
-    mastered: Boolean(card.mastered),
-    tags: Array.isArray(card.tags) ? card.tags : [],
-    examples: Array.isArray(card.examples) ? card.examples : [],
-    createdAt: card.createdAt instanceof Date ? card.createdAt : new Date(),
-    updatedAt: card.updatedAt instanceof Date ? card.updatedAt : new Date(),
-    nextReview: card.nextReview instanceof Date ? card.nextReview : new Date(),
-    lastReviewed: card.lastReviewed instanceof Date ? card.lastReviewed : null,
   };
 }
 
-/**
- * Calculate review performance metrics
- */
-export function calculateReviewPerformance(
-  totalCards: number, 
-  correctCards: number,
-  reviewTime: number
-): ReviewPerformance {
-  const efficiency = totalCards > 0 ? correctCards / totalCards : 0;
-  const averageTime = totalCards > 0 ? reviewTime / totalCards : 0;
-  
+export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
   return {
-    score: efficiency * 100,
-    time: averageTime,
+    score: answers.filter(a => a.isCorrect).length / answers.length * 100,
+    time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
     date: new Date(),
-    totalReviews: totalCards,
-    correctReviews: correctCards,
-    efficiency: efficiency,
-    streakDays: 1, // Default value
-    reviewsByCategory: {} // Default empty record
   };
 }

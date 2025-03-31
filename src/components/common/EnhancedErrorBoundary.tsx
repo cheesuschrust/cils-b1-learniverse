@@ -1,161 +1,134 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { ErrorSeverity, ErrorCategory, ErrorMonitoringService, ErrorBoundaryProps } from '@/types/type-definitions';
+import { AlertTriangle, RefreshCw, Bug } from 'lucide-react';
+import { 
+  ErrorSeverity, 
+  ErrorCategory, 
+  ErrorMonitoringService,
+  EnhancedErrorBoundaryProps
+} from '@/types/interface-fixes';
 
-// Default error monitoring service implementation
-class DefaultErrorMonitoringService implements ErrorMonitoringService {
-  reportError(errorData: {
-    error: Error;
-    errorInfo: ErrorInfo;
-    category: ErrorCategory;
-    severity: ErrorSeverity;
-    boundary?: string;
-    additionalInfo?: Record<string, any>;
-  }): void {
-    console.error('Error reported:', errorData);
-    // In a real implementation, this would send errors to a monitoring system
-  }
-}
-
-// State for the EnhancedErrorBoundary component
-interface EnhancedErrorBoundaryState {
+interface ErrorState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
-  timestamp: Date | null;
-  retry: number;
-}
-
-// Props for the EnhancedErrorBoundary component
-interface EnhancedErrorBoundaryProps extends ErrorBoundaryProps {
-  errorMonitoringService?: ErrorMonitoringService;
-  category?: ErrorCategory;
-  severity?: ErrorSeverity;
-  showDetails?: boolean;
-  showReset?: boolean;
-  resetLabel?: string;
-  boundary?: string;
-  additionalInfo?: Record<string, any>;
-  reportErrors?: boolean;
 }
 
 /**
- * EnhancedErrorBoundary component that captures React errors,
- * displays a fallback UI, and optionally reports errors to a monitoring service.
+ * Enhanced error boundary component with configurable fallback UI and error reporting
  */
-class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, EnhancedErrorBoundaryState> {
-  private errorMonitoringService: ErrorMonitoringService;
-
-  static defaultProps = {
-    showDetails: false,
-    showReset: true,
-    resetLabel: 'Retry',
-    category: ErrorCategory.UNKNOWN,
-    severity: ErrorSeverity.MEDIUM,
-    boundary: 'Component',
-    reportErrors: true,
-  };
-
+class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, ErrorState> {
   constructor(props: EnhancedErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null,
-      timestamp: null,
-      retry: 0,
+      errorInfo: null
     };
-
-    // Initialize error monitoring service if provided
-    this.errorMonitoringService = props.errorMonitoringService || new DefaultErrorMonitoringService();
   }
 
-  static getDerivedStateFromError(error: Error): Partial<EnhancedErrorBoundaryState> {
-    return { hasError: true, error, timestamp: new Date() };
+  static defaultProps = {
+    showDetails: false,
+    reportErrors: true,
+    severity: 'medium' as ErrorSeverity,
+    category: 'ui' as ErrorCategory,
+    additionalInfo: {},
+  };
+
+  static getDerivedStateFromError(error: Error): ErrorState {
+    // Update state so the next render will show the fallback UI
+    return {
+      hasError: true,
+      error,
+      errorInfo: null
+    };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Update state with error information
-    this.setState({ errorInfo });
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log the error to console
+    console.error('Error caught by EnhancedErrorBoundary:', error, errorInfo);
+    
+    // Update state with error info
+    this.setState({
+      error,
+      errorInfo
+    });
 
-    // Call onError callback if provided
+    // If error reporting is enabled, report to monitoring service
+    if (this.props.reportErrors && this.props.errorMonitoringService) {
+      try {
+        this.props.errorMonitoringService.captureError(error, {
+          errorInfo,
+          component: this.constructor.name,
+          severity: this.props.severity,
+          category: this.props.category,
+          ...this.props.additionalInfo
+        });
+      } catch (reportingError) {
+        console.error('Error while reporting to monitoring service:', reportingError);
+      }
+    }
+    
+    // Call user-provided error handler if available
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-
-    // Report error to monitoring service if enabled
-    if (this.props.reportErrors) {
-      const { category, severity, boundary, additionalInfo } = this.props;
-
-      this.errorMonitoringService.reportError({
-        error,
-        errorInfo,
-        category: category || ErrorCategory.UNKNOWN,
-        severity: severity || ErrorSeverity.MEDIUM,
-        boundary,
-        additionalInfo: {
-          ...additionalInfo,
-          retryCount: this.state.retry,
-          component: boundary,
-        },
-      });
-    }
-
-    // Log error to console
-    console.error('Error caught by EnhancedErrorBoundary:', error, errorInfo);
   }
 
-  handleReset = (): void => {
-    this.setState(prevState => ({
+  handleReset = () => {
+    this.setState({
       hasError: false,
       error: null,
-      errorInfo: null,
-      timestamp: null,
-      retry: prevState.retry + 1,
-    }));
+      errorInfo: null
+    });
   };
 
-  render(): ReactNode {
-    const { children, fallback, showDetails, showReset, resetLabel } = this.props;
-    const { hasError, error, timestamp } = this.state;
-
-    if (hasError && error) {
-      if (fallback) {
-        return fallback;
+  render() {
+    if (this.state.hasError) {
+      // If a custom fallback is provided, use it
+      if (this.props.fallback) {
+        return this.props.fallback;
       }
 
-      // Default fallback UI
+      // Otherwise use default fallback UI
       return (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Something went wrong</AlertTitle>
-          <AlertDescription>
-            <p>An error occurred in this component.</p>
-            
-            {showDetails && (
-              <div className="mt-2 text-sm bg-destructive/10 p-2 rounded overflow-auto max-h-40">
-                <p><strong>Error:</strong> {error.message}</p>
-                {timestamp && (
-                  <p><strong>Time:</strong> {timestamp.toLocaleString()}</p>
-                )}
+        <div className="p-4 rounded shadow">
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription>
+              We encountered an error while rendering this component.
+            </AlertDescription>
+          </Alert>
+          
+          {this.props.showDetails && this.state.error && (
+            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded overflow-x-auto text-sm">
+              <div className="font-medium mb-2 flex items-center">
+                <Bug className="h-4 w-4 mr-1" />
+                Error details:
               </div>
-            )}
-            
-            {showReset && (
-              <Button onClick={this.handleReset} size="sm" className="mt-2">
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                {resetLabel}
-              </Button>
-            )}
-          </AlertDescription>
-        </Alert>
+              <pre className="whitespace-pre-wrap break-all">
+                {this.state.error.toString()}
+                {this.state.errorInfo?.componentStack}
+              </pre>
+            </div>
+          )}
+          
+          <Button 
+            onClick={this.handleReset}
+            variant="outline" 
+            className="mt-4"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try again
+          </Button>
+        </div>
       );
     }
 
-    return children;
+    // If there's no error, render children normally
+    return this.props.children;
   }
 }
 

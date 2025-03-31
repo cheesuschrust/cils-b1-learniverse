@@ -5,17 +5,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   AIGenerationResult, 
   QuestionGenerationParams,
+  AIUtilsContextType
+} from '@/types/app-types';
+
+import {
   AIGeneratedQuestion,
   ItalianLevel,
   ItalianTestSection,
-  AIUtilsContextType
-} from '@/types';
+  mapToItalianTypes
+} from '@/types/italian-types';
 
 /**
  * Custom hook to access AI utility functions from AIUtilsContext
  * This provides type-safe access to all AI-related functionality
  */
-export const useAIUtils = () => {
+export const useAIUtils = (): AIUtilsContextType => {
   const context = useContext(AIUtilsContext);
   
   if (!context) {
@@ -23,35 +27,24 @@ export const useAIUtils = () => {
   }
   
   // Add adapter function to handle Italian-specific question generation
-  const generateQuestions = async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
+  const originalGenerateQuestions = context.generateQuestions;
+  
+  const adaptedGenerateQuestions = async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
     try {
-      // Convert Italian types to app-types for compatibility
-      const adaptedParams = {
-        language: 'italian',
-        difficulty: params.italianLevel || params.difficulty,
-        contentTypes: params.contentTypes || [params.testSection],
-        focusAreas: params.topics || params.focusAreas || [],
-        count: params.count || 5,
-        isCitizenshipFocused: params.isCitizenshipFocused,
-        italianLevel: params.italianLevel,
-        testSection: params.testSection
-      };
+      // Convert types for compatibility
+      const result = await originalGenerateQuestions(params);
       
-      // Call the original function with converted parameters
-      const result = await context.generateQuestions(adaptedParams);
+      // Ensure consistent id and types
+      const adaptedQuestions = result.questions.map(q => ({
+        ...q,
+        id: q.id || uuidv4(),
+        type: (q.type || params.testSection || params.contentTypes?.[0] || 'grammar') as ItalianTestSection,
+        difficulty: (q.difficulty || params.difficulty || params.italianLevel || 'intermediate') as ItalianLevel,
+        isCitizenshipRelevant: q.isCitizenshipRelevant || params.isCitizenshipFocused || false
+      }));
       
-      // Convert back to Italian-specific types
       return {
-        questions: result.questions.map(q => ({
-          id: q.id || uuidv4(),
-          text: q.text,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          type: q.type as ItalianTestSection,
-          difficulty: q.difficulty as ItalianLevel,
-          isCitizenshipRelevant: q.isCitizenshipRelevant || false
-        })) as AIGeneratedQuestion[],
+        questions: adaptedQuestions as AIGeneratedQuestion[],
         error: result.error
       };
     } catch (error) {
@@ -63,15 +56,10 @@ export const useAIUtils = () => {
     }
   };
   
+  // Return the context with the adapted function
   return {
     ...context,
-    generateQuestions,
-    speak: context.speak,
-    recognizeSpeech: context.recognizeSpeech,
-    compareTexts: context.compareTexts,
-    processContent: context.processContent,
-    isProcessing: context.isProcessing,
-    isAIEnabled: context.isAIEnabled
+    generateQuestions: adaptedGenerateQuestions
   };
 };
 

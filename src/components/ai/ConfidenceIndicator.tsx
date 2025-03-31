@@ -83,7 +83,8 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
       <Progress 
         value={clampedScore}
         className={cn("w-full", sizeClass)}
-        indicatorClassName={cn(colorClass, indicatorClassName)}
+        // Use className for styling instead of indicatorClassName
+        className={cn(colorClass, "transition-all", indicatorClassName)}
       />
     </div>
   );

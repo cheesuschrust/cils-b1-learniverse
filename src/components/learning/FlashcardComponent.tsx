@@ -64,7 +64,7 @@ const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
             
             <SpeakableWord 
               word={isFlipped ? card.back : card.front}
-              language={isFlipped ? 'en' : 'it'}
+              language={isFlipped ? 'english' : 'italian'}
               showTooltip={true}
               tooltipContent={`Listen to ${isFlipped ? 'English' : 'Italian'} pronunciation`}
             />

@@ -1,166 +1,86 @@
 
-import React, { useEffect, useState } from 'react';  
-import { CitizenshipReadinessProps, ContentType } from '../types/app-types';  
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { CitizenshipReadinessProps } from '@/types/app-types';
+import { CalendarClock, Award } from 'lucide-react';
+import { format } from 'date-fns';
 
-const CitizenshipReadinessComponent: React.FC<CitizenshipReadinessProps> = ({  
-  userId,  
-  onStatusChange  
-}) => {  
-  const [readiness, setReadiness] = useState<number>(0);  
-  const [sectionScores, setSectionScores] = useState<Record<ContentType, number>>({  
-    listening: 0,  
-    reading: 0,  
-    writing: 0,  
-    speaking: 0,  
-    grammar: 0,  
-    vocabulary: 0,  
-    culture: 0  
-  });  
-  const [loading, setLoading] = useState<boolean>(true);  
-  const [error, setError] = useState<string | null>(null);  
+const CitizenshipReadinessComponent: React.FC<CitizenshipReadinessProps> = ({
+  level,
+  readinessScore,
+  assessmentAvailable,
+  onStartAssessment,
+  lastAssessmentDate
+}) => {
+  // Determine score label
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return { label: 'Excellent', color: 'text-green-600' };
+    if (score >= 60) return { label: 'Good', color: 'text-blue-600' };
+    if (score >= 40) return { label: 'Fair', color: 'text-yellow-600' };
+    return { label: 'Needs Work', color: 'text-red-600' };
+  };
+  
+  const { label, color } = getScoreLabel(readinessScore);
+  
+  // Determine progress color
+  const getProgressColor = (score: number) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-blue-500';
+    if (score >= 40) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
 
-  useEffect(() => {  
-    loadReadinessData();  
-  }, [userId]);  
-
-  const loadReadinessData = async () => {  
-    setLoading(true);  
-    try {  
-      const response = await fetch(`/api/citizenship-readiness?userId=${userId}`);  
+  return (
+    <div className="border rounded-lg p-6 shadow-sm bg-white dark:bg-gray-800">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Citizenship Test Readiness</h3>
+        <div className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">
+          Level: {level}
+        </div>
+      </div>
       
-      if (!response.ok) {  
-        throw new Error('Failed to load citizenship readiness data');  
-      }  
-      
-      const data = await response.json();  
-      setReadiness(data.overallReadiness);  
-      setSectionScores(data.sectionScores);  
-      
-      if (onStatusChange) {  
-        onStatusChange(data.overallReadiness);  
-      }  
-    } catch (error) {  
-      console.error('Error loading citizenship readiness:', error);  
-      setError('Failed to load your readiness data. Please try again.');  
-    } finally {  
-      setLoading(false);  
-    }  
-  };  
-
-  const getReadinessLabel = (score: number): string => {  
-    if (score >= 90) return 'Eccellente';  
-    if (score >= 75) return 'Molto Buono';  
-    if (score >= 60) return 'Buono';  
-    if (score >= 45) return 'Sufficiente';  
-    if (score >= 30) return 'Necessita Pratica';  
-    return 'Inizio';  
-  };  
-
-  const getReadinessColor = (score: number): string => {  
-    if (score >= 90) return '#4CAF50';  
-    if (score >= 75) return '#8BC34A';  
-    if (score >= 60) return '#CDDC39';  
-    if (score >= 45) return '#FFC107';  
-    if (score >= 30) return '#FF9800';  
-    return '#F44336';  
-  };  
-
-  if (loading) {  
-    return <div className="loading">Caricamento stato preparazione...</div>;  
-  }  
-
-  if (error) {  
-    return <div className="error-message">{error}</div>;  
-  }  
-
-  return (  
-    <div className="citizenship-readiness">  
-      <h2>Preparazione per l'Esame di Cittadinanza</h2>  
-      
-      <div className="overall-readiness">  
-        <div className="readiness-gauge">  
-          <svg viewBox="0 0 120 120" className="gauge">  
-            <circle cx="60" cy="60" r="54" fill="none" stroke="#e6e6e6" strokeWidth="12" />  
-            <circle   
-              cx="60"   
-              cy="60"   
-              r="54"   
-              fill="none"   
-              stroke={getReadinessColor(readiness)}   
-              strokeWidth="12"  
-              strokeDasharray={`${readiness * 3.39} 339`}  
-              strokeLinecap="round"  
-              transform="rotate(-90 60 60)"  
-            />  
-            <text x="60" y="60" textAnchor="middle" dominantBaseline="middle" fontSize="24" fontWeight="bold">  
-              {Math.round(readiness)}%  
-            </text>  
-          </svg>  
-          <p className="readiness-label">{getReadinessLabel(readiness)}</p>  
-        </div>  
-      </div>  
-      
-      <div className="section-scores">  
-        <h3>Punteggi per Sezione</h3>  
-        <div className="score-bars">  
-          {(Object.entries(sectionScores) as [ContentType, number][]).map(([section, score]) => (  
-            <div key={section} className="score-bar-item">  
-              <div className="section-label">  
-                {section.charAt(0).toUpperCase() + section.slice(1)}  
-              </div>  
-              <div className="score-bar-container">  
-                <div   
-                  className="score-bar-fill"   
-                  style={{   
-                    width: `${score}%`,  
-                    backgroundColor: getReadinessColor(score)  
-                  }}   
-                />  
-              </div>  
-              <div className="section-score">{Math.round(score)}%</div>  
-            </div>  
-          ))}  
-        </div>  
-      </div>  
-      
-      <div className="readiness-suggestions">  
-        <h3>Suggerimenti per il Miglioramento</h3>  
-        <ul className="suggestion-list">  
-          {readiness < 60 && (  
-            <li>  
-              <strong>Necessaria maggiore pratica:</strong> Il tuo punteggio di preparazione è sotto il 60%,   
-              ti consigliamo di concentrarti sulle sezioni con i punteggi più bassi.  
-            </li>  
-          )}  
-          {sectionScores.culture < 50 && (  
-            <li>  
-              <strong>Cultura e storia italiana:</strong> Dedica più tempo allo studio della cultura   
-              e storia italiana, elementi essenziali per il test di cittadinanza.  
-            </li>  
-          )}  
-          {sectionScores.listening < 50 && (  
-            <li>  
-              <strong>Comprensione orale:</strong> Migliora la tua capacità di comprensione ascoltando   
-              regolarmente podcast o guardando video in italiano.  
-            </li>  
-          )}  
-          {readiness >= 75 && (  
-            <li>  
-              <strong>Ottimo lavoro!</strong> Sei sulla buona strada per superare l'esame.   
-              Continua a praticare per mantenere il tuo livello di preparazione.  
-            </li>  
-          )}  
-        </ul>  
-      </div>  
-      
-      <button   
-        onClick={loadReadinessData}  
-        className="refresh-button"  
-      >  
-        Aggiorna Dati  
-      </button>  
-    </div>  
-  );  
-}  
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">Readiness Score</span>
+            <span className={`text-sm font-bold ${color}`}>
+              {readinessScore}% - {label}
+            </span>
+          </div>
+          <Progress 
+            value={readinessScore} 
+            className="h-2"
+            className={getProgressColor(readinessScore)}
+          />
+        </div>
+        
+        {lastAssessmentDate && (
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <CalendarClock className="w-4 h-4 mr-1" />
+            Last assessment: {format(new Date(lastAssessmentDate), 'PPP')}
+          </div>
+        )}
+        
+        <div className="pt-2">
+          <Button 
+            onClick={onStartAssessment}
+            disabled={!assessmentAvailable}
+            className="w-full"
+          >
+            <Award className="w-4 h-4 mr-2" />
+            {assessmentAvailable ? 'Start Readiness Assessment' : 'Assessment Unavailable'}
+          </Button>
+          
+          {!assessmentAvailable && (
+            <p className="text-xs text-center mt-2 text-gray-500">
+              You can take the assessment again in 24 hours
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default CitizenshipReadinessComponent;

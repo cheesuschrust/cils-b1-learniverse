@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Flashcard, FlashcardComponentProps } from '@/types';
+import { Flashcard } from '@/types';
 import { normalizeFlashcard } from '@/types/interface-fixes';
+import FlashcardComponent from '../learning/FlashcardComponent';
 
 interface FlashcardAdapterProps {
   flashcard: any;
@@ -14,6 +15,8 @@ interface FlashcardAdapterProps {
   className?: string;
   showHints?: boolean;
   onUnknown?: () => void;
+  onUpdate?: (card: Flashcard) => void;
+  onDelete?: (id: string) => void;
 }
 
 /**
@@ -22,23 +25,22 @@ interface FlashcardAdapterProps {
  */
 export function FlashcardComponentAdapter({
   flashcard,
+  onUpdate,
+  onDelete,
+  showActions,
   ...otherProps
 }: FlashcardAdapterProps) {
   // Normalize the flashcard to ensure it has all required properties
   const normalizedCard = normalizeFlashcard(flashcard);
   
-  // Convert to expected FlashcardComponentProps format
-  const adaptedProps: FlashcardComponentProps = {
-    card: normalizedCard,
-    ...otherProps
-  };
-  
-  // Import the actual FlashcardComponent dynamically to avoid circular dependencies
-  const FlashcardComponent = React.lazy(() => import('./FlashcardComponent'));
-  
   return (
-    <React.Suspense fallback={<div>Loading...</div>}>
-      <FlashcardComponent {...adaptedProps} />
-    </React.Suspense>
+    <FlashcardComponent 
+      card={normalizedCard}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+      showActions={showActions}
+    />
   );
 }
+
+export default FlashcardComponentAdapter;

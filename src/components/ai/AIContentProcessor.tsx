@@ -9,18 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Brain, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAIUtils } from '@/hooks/useAIUtils';
-import { AIContentProcessorProps, ContentType } from '@/types';
+import { AIContentProcessorProps, AIContentSettings, ContentType } from '@/types';
 
 const AIContentProcessor: React.FC<AIContentProcessorProps> = ({ 
   content = "", 
   contentType = "reading", 
   onQuestionsGenerated = () => {},
-  settings,
+  settings = {
+    language: "italian",
+    difficulty: "intermediate",
+    contentTypes: ["grammar"],
+    focusAreas: []
+  },
   onContentGenerated,
   onError
 }) => {
   const [questionCount, setQuestionCount] = useState<number>(5);
-  const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
+  const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [editableContent, setEditableContent] = useState<string>(content);
   
@@ -46,11 +51,12 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
     try {
       // Generate questions with the correct parameters
       const params = {
-        italianLevel: difficulty.toLowerCase(),
+        italianLevel: difficulty,
         testSection: contentType as any,
-        topics: [],
+        topics: settings.focusAreas || [],
         count: questionCount,
-        isCitizenshipFocused: false
+        isCitizenshipFocused: false,
+        contentTypes: [contentType] as any[]
       };
       
       const result = await generateQuestions(params);
@@ -91,7 +97,7 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [editableContent, contentType, questionCount, difficulty, generateQuestions, onQuestionsGenerated, toast, onContentGenerated, onError]);
+  }, [editableContent, contentType, questionCount, difficulty, generateQuestions, onQuestionsGenerated, toast, onContentGenerated, onError, settings]);
 
   return (
     <Card className="w-full">
@@ -137,15 +143,15 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
             <Label htmlFor="difficulty">Difficulty Level</Label>
             <Select 
               value={difficulty} 
-              onValueChange={(value: "Beginner" | "Intermediate" | "Advanced") => setDifficulty(value)}
+              onValueChange={(value: "beginner" | "intermediate" | "advanced") => setDifficulty(value)}
             >
               <SelectTrigger id="difficulty">
                 <SelectValue placeholder="Select difficulty" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Beginner">Beginner</SelectItem>
-                <SelectItem value="Intermediate">Intermediate</SelectItem>
-                <SelectItem value="Advanced">Advanced</SelectItem>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

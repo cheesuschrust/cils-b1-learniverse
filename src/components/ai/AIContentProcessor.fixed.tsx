@@ -2,17 +2,26 @@
 import React, { useState } from 'react';  
 import { useAIUtils } from '../../hooks/useAIUtils';  
 import { 
-  AIContentProcessorProps
+  AIContentProcessorProps,
+  AIContentSettings
 } from '../../types/app-types';  
 import { 
   AIGeneratedQuestion,
-  QuestionGenerationParams as ItalianQuestionParams
+  ItalianTestSection
 } from '../../types/italian-types';
 
 export function AIContentProcessor({  
-  settings,  
+  content = "",
+  contentType = "reading",
+  settings = {
+    language: "italian",
+    difficulty: "intermediate",
+    contentTypes: ["grammar"],
+    focusAreas: []
+  },
   onContentGenerated,  
-  onError  
+  onError,
+  onQuestionsGenerated = () => {}
 }: AIContentProcessorProps) {  
   const { generateQuestions, isGenerating } = useAIUtils();  
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);  
@@ -22,14 +31,13 @@ export function AIContentProcessor({
     setError(null);  
     
     // Create properly typed params object by adapting to Italian types  
-    const params: ItalianQuestionParams = {  
+    const params = {  
       italianLevel: settings.difficulty as any,
-      testSection: settings.contentTypes[0] as any,
+      testSection: settings.contentTypes[0] as ItalianTestSection,
       isCitizenshipFocused: false,
       topics: settings.focusAreas,
       count: 5, // Default to 5 questions
-      language: settings.language,
-      contentTypes: settings.contentTypes as any[]
+      contentTypes: settings.contentTypes as ItalianTestSection[]
     };  
     
     try {
@@ -41,10 +49,14 @@ export function AIContentProcessor({
           onError(result.error);  
         }  
       } else {  
-        setQuestions(result.questions);  
+        const typedQuestions = result.questions as unknown as AIGeneratedQuestion[];
+        setQuestions(typedQuestions);
         if (onContentGenerated) {  
-          onContentGenerated(result.questions);  
-        }  
+          onContentGenerated(typedQuestions);  
+        }
+        if (onQuestionsGenerated) {
+          onQuestionsGenerated(typedQuestions);
+        }
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error';

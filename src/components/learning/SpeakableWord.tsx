@@ -31,7 +31,10 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
         onClick();
       }
       
-      await speak(word, language);
+      // Map language codes to proper values
+      const languageValue = language === 'it' ? 'italian' : 'english';
+      
+      await speak(word, languageValue);
       if (onPlayComplete) {
         onPlayComplete();
       }

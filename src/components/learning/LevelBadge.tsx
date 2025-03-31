@@ -1,70 +1,106 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { LevelBadgeProps } from '@/types';
 
-const LevelBadge: React.FC<LevelBadgeProps> = ({
-  level,
+/**
+ * A badge component that displays Italian language level with optional info tooltip
+ */
+const LevelBadge: React.FC<LevelBadgeProps> = ({ 
+  level, 
   showInfo = true,
-  size = 'md',
+  size = 'md'
 }) => {
-  const getLevelName = (level: number): string => {
-    switch (level) {
-      case 0: return 'Beginner';
-      case 1: return 'Elementary';
-      case 2: return 'Pre-Intermediate';
-      case 3: return 'Intermediate';
-      case 4: return 'Upper-Intermediate';
-      case 5: return 'Advanced';
-      default: return `Level ${level}`;
+  // Get variant based on level
+  const getVariant = (level: string) => {
+    const normalizedLevel = level.toLowerCase();
+    
+    if (normalizedLevel.includes('a1') || normalizedLevel.includes('beginner')) {
+      return 'default';
+    } else if (normalizedLevel.includes('a2') || normalizedLevel.includes('elementary')) {
+      return 'secondary';
+    } else if (normalizedLevel.includes('b1') || normalizedLevel.includes('intermediate')) {
+      return 'outline'; 
+    } else if (normalizedLevel.includes('b2') || normalizedLevel.includes('upper')) {
+      return 'destructive';
+    } else if (normalizedLevel.includes('c1') || normalizedLevel.includes('advanced')) {
+      return 'success';
+    } else if (normalizedLevel.includes('c2') || normalizedLevel.includes('proficient')) {
+      return 'warning';
+    } else if (normalizedLevel.includes('native') || normalizedLevel.includes('fluent')) {
+      return 'default';
     }
+    
+    return 'secondary';
   };
   
-  const getLevelVariant = (level: number): 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive' => {
-    switch (level) {
-      case 0: return 'outline';
-      case 1: return 'secondary';
-      case 2: return 'default';
-      case 3: return 'info';
-      case 4: return 'warning';
-      case 5: return 'success';
-      default: return 'outline';
+  // Get tooltip description based on level
+  const getDescription = (level: string) => {
+    const normalizedLevel = level.toLowerCase();
+    
+    if (normalizedLevel.includes('a1') || normalizedLevel.includes('beginner')) {
+      return 'Beginner level - Can understand basic phrases and expressions';
+    } else if (normalizedLevel.includes('a2') || normalizedLevel.includes('elementary')) {
+      return 'Elementary level - Can communicate in simple routine tasks';
+    } else if (normalizedLevel.includes('b1') || normalizedLevel.includes('intermediate')) {
+      return 'Intermediate level - Can deal with most situations while traveling';
+    } else if (normalizedLevel.includes('b2') || normalizedLevel.includes('upper')) {
+      return 'Upper Intermediate level - Can interact with fluency and spontaneity';
+    } else if (normalizedLevel.includes('c1') || normalizedLevel.includes('advanced')) {
+      return 'Advanced level - Can express ideas fluently and precisely';
+    } else if (normalizedLevel.includes('c2') || normalizedLevel.includes('proficient')) {
+      return 'Proficient level - Can understand with ease virtually everything heard or read';
+    } else if (normalizedLevel.includes('native') || normalizedLevel.includes('fluent')) {
+      return 'Native or Fluent level - Full mastery of the language';
     }
+    
+    return 'Level description not available';
   };
   
-  const getLevelDescription = (level: number): string => {
-    switch (level) {
-      case 0: return 'Basic vocabulary and simple phrases. A1 level.';
-      case 1: return 'Elementary grammar and everyday expressions. A2 level.';
-      case 2: return 'Basic conversation on familiar topics. B1 level.';
-      case 3: return 'Clear expression on a wide range of subjects. B2 level.';
-      case 4: return 'Effective language use for social and professional purposes. C1 level.';
-      case 5: return 'Near-native proficiency. C2 level.';
-      default: return 'Custom difficulty level';
+  // Get CEFR score based on level
+  const getCefrScore = (level: string): number => {
+    const normalizedLevel = level.toLowerCase();
+    
+    if (normalizedLevel.includes('a1') || normalizedLevel.includes('beginner')) return 1;
+    if (normalizedLevel.includes('a2') || normalizedLevel.includes('elementary')) return 2;
+    if (normalizedLevel.includes('b1') || normalizedLevel.includes('intermediate')) return 3;
+    if (normalizedLevel.includes('b2') || normalizedLevel.includes('upper')) return 4;
+    if (normalizedLevel.includes('c1') || normalizedLevel.includes('advanced')) return 5;
+    if (normalizedLevel.includes('c2') || normalizedLevel.includes('proficient')) return 6;
+    if (normalizedLevel.includes('native') || normalizedLevel.includes('fluent')) return 7;
+    
+    // Try to parse a number if the level is just a numeric value
+    const numberMatch = level.match(/\d+/);
+    if (numberMatch) {
+      return parseInt(numberMatch[0], 10);
     }
+    
+    return 0;
   };
   
-  const getSizeClass = (): string => {
+  // Get size class based on the size prop
+  const getSizeClass = (size: string): string => {
     switch (size) {
       case 'sm': return 'text-xs px-2 py-0.5';
-      case 'lg': return 'text-sm px-3 py-1';
+      case 'lg': return 'text-base px-4 py-1.5';
       case 'md':
-      default: return 'text-xs px-2.5 py-0.5';
+      default:
+        return 'text-sm px-3 py-1';
     }
   };
   
   const badge = (
-    <Badge
-      variant={getLevelVariant(level)}
-      className={`${getSizeClass()} font-medium`}
+    <Badge 
+      variant={getVariant(level)}
+      className={getSizeClass(size)}
     >
-      {getLevelName(level)}
+      {level}
     </Badge>
   );
   
@@ -75,8 +111,9 @@ const LevelBadge: React.FC<LevelBadgeProps> = ({
           <TooltipTrigger asChild>
             {badge}
           </TooltipTrigger>
-          <TooltipContent>
-            <p>{getLevelDescription(level)}</p>
+          <TooltipContent className="max-w-xs text-sm">
+            <p>{getDescription(level)}</p>
+            <p className="mt-1 text-xs opacity-80">CEFR Score: {getCefrScore(level)}/7</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
