@@ -2,10 +2,12 @@
 import React, { useState } from 'react';  
 import { useAIUtils } from '../../hooks/useAIUtils';  
 import {   
-  AIContentProcessorProps,  
-  AIQuestion,  
-  QuestionGenerationParams  
+  AIContentProcessorProps  
 } from '../../types/app-types';  
+import { 
+  AIGeneratedQuestion,
+  QuestionGenerationParams as ItalianQuestionParams
+} from '../../types/italian-types';
 
 export function AIContentProcessor({  
   settings,  
@@ -13,19 +15,21 @@ export function AIContentProcessor({
   onError  
 }: AIContentProcessorProps) {  
   const { generateQuestions, isGenerating } = useAIUtils();  
-  const [questions, setQuestions] = useState<AIQuestion[]>([]);  
+  const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);  
   const [error, setError] = useState<string | null>(null);  
 
   const handleGenerate = async () => {  
     setError(null);  
     
-    // Create properly typed params object  
-    const params: QuestionGenerationParams = {  
-      language: settings.language,  
-      difficulty: settings.difficulty,  
-      contentTypes: settings.contentTypes,  
-      focusAreas: settings.focusAreas || [],  
-      count: 5 // Default to 5 questions  
+    // Create properly typed params object by adapting to Italian types  
+    const params: ItalianQuestionParams = {  
+      italianLevel: settings.difficulty,
+      testSection: settings.contentTypes[0],
+      isCitizenshipFocused: false,
+      topics: settings.focusAreas,
+      count: 5, // Default to 5 questions
+      language: settings.language,
+      contentTypes: settings.contentTypes
     };  
     
     const result = await generateQuestions(params);  
@@ -38,7 +42,7 @@ export function AIContentProcessor({
     } else {  
       setQuestions(result.questions);  
       if (onContentGenerated) {  
-        onContentGenerated(result.questions);  
+        onContentGenerated(result.questions as any);  
       }  
     }  
   };  

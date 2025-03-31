@@ -11,6 +11,11 @@ export interface QuestionGenerationParams {
   isCitizenshipFocused: boolean;
   topics?: string[];
   count?: number;
+  language?: string;
+  difficulty?: ItalianLevel;
+  contentTypes?: ItalianTestSection[];
+  focusAreas?: string[];
+  context?: string;
 }
 
 export interface AIGeneratedQuestion {

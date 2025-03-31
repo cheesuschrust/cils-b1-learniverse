@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   AIGenerationResult, 
   QuestionGenerationParams,
-  AIGeneratedQuestion
+  AIGeneratedQuestion,
+  ItalianLevel,
+  ItalianTestSection
 } from '../types/italian-types';
 
 /**
@@ -23,17 +25,17 @@ export const useAIUtils = () => {
   const generateQuestions = async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
     try {
       // Convert Italian types to app-types for compatibility
-      const legacyParams = {
+      const adaptedParams = {
         language: 'italian',
-        difficulty: params.italianLevel,
-        contentTypes: [params.testSection],
-        focusAreas: params.topics || [],
+        difficulty: params.italianLevel || params.difficulty,
+        contentTypes: params.contentTypes || [params.testSection],
+        focusAreas: params.topics || params.focusAreas || [],
         count: params.count || 5,
         isCitizenshipFocused: params.isCitizenshipFocused
       };
       
       // Call the original function with converted parameters
-      const result = await context.generateQuestions(legacyParams);
+      const result = await context.generateQuestions(adaptedParams);
       
       // Convert back to Italian-specific types
       return {
@@ -43,8 +45,8 @@ export const useAIUtils = () => {
           options: q.options,
           correctAnswer: q.correctAnswer,
           explanation: q.explanation,
-          type: q.type as any,
-          difficulty: q.difficulty as any,
+          type: q.type as ItalianTestSection,
+          difficulty: q.difficulty as ItalianLevel,
           isCitizenshipRelevant: q.isCitizenshipRelevant || false
         })) as AIGeneratedQuestion[],
         error: result.error
@@ -61,22 +63,22 @@ export const useAIUtils = () => {
   return {
     ...context,
     generateQuestions,
-    speak: async (text: string, language?: string) => {
+    speak: context.speak || (async (text: string, language?: string) => {
       if (context.speakText) {
         await context.speakText(text, language);
       }
-    },
-    recognizeSpeech: async (audioBlob: Blob) => {
+    }),
+    recognizeSpeech: context.recognizeSpeech || (async (audioBlob: Blob) => {
       return "Simulated speech recognition result";
-    },
-    compareTexts: async (text1: string, text2: string) => {
+    }),
+    compareTexts: context.compareTexts || (async (text1: string, text2: string) => {
       return 0.8; // Simulated similarity score
-    },
+    }),
     processContent: context.processContent || (async (prompt: string) => {
       return "Simulated AI content";
     }),
-    isProcessing: false,
-    isAIEnabled: true
+    isProcessing: context.isProcessing || false,
+    isAIEnabled: context.isAIEnabled || true
   };
 };
 

@@ -13,7 +13,6 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { Check, Globe, Search, Share2, BarChart2, TrendingUp, FileText, RefreshCw, ArrowUpRight, Tag, Edit, Trash } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { ExtendedAlertVariant } from '@/types/variant-fixes';
 
 /**
  * SEO Manager Component
@@ -183,13 +182,13 @@ const SEOManager = () => {
     });
   };
   
-  // Get status variant - fix the type by using the ExtendedAlertVariant
-  const getStatusVariant = (status: string): ExtendedAlertVariant => {
+  // Get status variant - fix the type by mapping the variant correctly
+  const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (status) {
       case 'high':
         return 'destructive';
       case 'medium':
-        return 'warning';
+        return 'secondary';
       default:
         return 'default';
     }
@@ -551,7 +550,7 @@ const SEOManager = () => {
                             <TableCell>
                               <Badge variant={
                                 issue.severity === 'high' ? 'destructive' : 
-                                issue.severity === 'medium' ? 'warning' : 
+                                issue.severity === 'medium' ? 'secondary' : 
                                 'default'
                               }>
                                 {issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)}

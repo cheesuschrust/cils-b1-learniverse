@@ -1,16 +1,61 @@
 
-// Re-export types to fix case sensitivity issues
-export * from './app-types';
-export * from './variant-fixes';
-export * from './type-definitions';
-export * from './italian-types';
-export * from './ai';
-export * from './interface-fixes';
+// Root type index file
+// Re-export all types with namespacing to prevent ambiguities
 
-// Re-export other type files to ensure consistent imports
-export * from './flashcard-types';
-export * from './user-types';
-export * from './notification';
+// Create namespaces for each type module to prevent naming conflicts
+import * as AppTypes from './app-types';
+import * as ItalianTypes from './italian-types';
+import * as VariantTypes from './variant-fixes';
+import * as InterfaceTypes from './interface-fixes';
+import * as TypeDefinitions from './type-definitions';
 
-// Re-export license types to fix case sensitivity issues
-export * from './license';
+// Export all types through namespaces to prevent conflicts
+export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions };
+
+// Export specific commonly used types directly
+// Italian types
+export type { 
+  ItalianLevel, 
+  ItalianTestSection, 
+  QuestionGenerationParams as ItalianQuestionParams,
+  AIGeneratedQuestion,
+  AIGenerationResult as ItalianGenerationResult,
+  CILSExamType,
+  UserProfile as ItalianUserProfile
+} from './italian-types';
+
+// App types
+export type {
+  DifficultyLevel,
+  ContentType,
+  ButtonVariant,
+  QuestionGenerationParams,
+  AIQuestion,
+  AIGenerationResult,
+  UserProfile,
+  AIUtilsContextType,
+  EnhancedErrorBoundaryProps
+} from './app-types';
+
+// Interface fixes
+export type {
+  SpeakableWordProps,
+  Flashcard,
+  FlashcardComponentProps,
+  ReviewSchedule,
+  ReviewPerformance,
+  User,
+  AISettings
+} from './interface-fixes';
+
+// Variant fixes
+export type {
+  ExtendedAlertVariant,
+  ExtendedButtonVariant,
+  ExtendedSelectVariant,
+  ExtendedInputVariant,
+  ExtendedThemeVariant
+} from './variant-fixes';
+
+// Helper functions
+export { normalizeFlashcard, calculateReviewPerformance } from './interface-fixes';
