@@ -24,16 +24,44 @@ export interface Flashcard {
   tags: string[];  
   lastReviewed: Date | null;  
   nextReview: Date | null;  
-  createdAt: Date;  
+  createdAt: Date;
   updatedAt?: Date;  
-  reviewHistory?: any[];  
+  reviewHistory?: any[];
+  level?: number;
+  mastered?: boolean;
+  status?: string;
+  explanation?: string;
+  examples?: string[];
+  imageUrl?: string;
+  audioUrl?: string;
+  metadata?: FlashcardMetadata;
+  category?: string;
 }  
+
+export interface FlashcardMetadata {
+  source?: string;
+  notes?: string;
+  examples?: string[];
+  pronunciation?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  difficulty?: string;
+}
 
 export interface FlashcardComponentProps {  
   card: Flashcard;  
   onUpdate?: (card: Flashcard) => void;  
   onDelete?: (id: string) => void;  
-  showActions?: boolean;  
+  showActions?: boolean;
+  onRating?: (rating: number) => void;
+  onSkip?: () => void;
+  flipped?: boolean;
+  onFlip?: () => void;
+  showPronunciation?: boolean;
+  className?: string;
+  showHints?: boolean;
+  onKnown?: () => void;
+  onUnknown?: () => void;
 }  
 
 export interface ReviewSchedule {  
@@ -54,7 +82,16 @@ export interface User {
   email: string;  
   firstName?: string;  
   lastName?: string;  
-  isPremiumUser?: boolean;  
+  isPremiumUser?: boolean;
+  displayName?: string;
+  photoURL?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  lastLogin?: Date;
+  lastActive?: Date;
+  role?: string;
+  status?: string;
+  preferredLanguage?: string;
 }  
 
 export interface AISettings {  
@@ -64,7 +101,13 @@ export interface AISettings {
   topP: number;  
   frequencyPenalty: number;  
   presencePenalty: number;  
-  showFeedback?: boolean;  
+  showFeedback?: boolean;
+  defaultModelSize?: string;
+  italianVoiceURI?: string;
+  englishVoiceURI?: string;
+  voiceRate?: number;
+  voicePitch?: number;
+  features?: Record<string, boolean>;
 }
 
 export interface ImportFormat {
@@ -131,17 +174,41 @@ export interface ErrorMonitoringService {
 }
 
 export function normalizeFlashcard(card: any): Flashcard {
+  if (!card) {
+    return null as any;
+  }
+  
   return {
-    ...card,
-    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
-    lastReviewed: card.lastReviewed || null,
-    nextReview: card.nextReview || null,
+    id: card.id || '',
     front: card.front || card.italian || '',
     back: card.back || card.english || '',
+    italian: card.italian || card.front || '',
+    english: card.english || card.back || '',
+    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
+    tags: card.tags || [],
+    lastReviewed: card.lastReviewed || null,
+    nextReview: card.nextReview || null,
+    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
+    updatedAt: card.updatedAt ? new Date(card.updatedAt) : undefined,
+    reviewHistory: card.reviewHistory || [],
+    level: card.level || 0,
+    mastered: card.mastered || false,
+    explanation: card.explanation || '',
+    examples: card.examples || [],
+    imageUrl: card.imageUrl || card.metadata?.imageUrl || '',
+    audioUrl: card.audioUrl || card.metadata?.audioUrl || ''
   };
 }
 
 export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
+  if (!answers || answers.length === 0) {
+    return {
+      score: 0,
+      time: 0,
+      date: new Date()
+    };
+  }
+  
   return {
     score: answers.filter(a => a.isCorrect).length / answers.length * 100,
     time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),

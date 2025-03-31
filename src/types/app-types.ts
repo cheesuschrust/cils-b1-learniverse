@@ -1,7 +1,7 @@
 
 // Core application types for consistent usage across the app
 import { ReactNode } from 'react';
-import { AISettings } from './ai';
+import { AISettings } from './interface-fixes';
 
 // Basic UI types
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -17,6 +17,7 @@ export interface AIQuestion {
   explanation?: string;
   type: string;
   difficulty: string | number;
+  isCitizenshipRelevant?: boolean;
 }
 
 // Error boundary props
@@ -185,15 +186,14 @@ export interface AIUtilsContextType {
   isTranscribing: boolean;
   hasActiveMicrophone: boolean;
   checkMicrophoneAccess: () => Promise<boolean>;
-  generateQuestions: (params: any) => Promise<any>;
+  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
   isGenerating: boolean;
   remainingCredits: number;
   usageLimit: number;
-  resetCredits: () => Promise<void>;
+  resetCredits?: () => Promise<void>;
   speak: (text: string, language?: string) => Promise<void>;
   recognizeSpeech: (audioBlob: Blob) => Promise<string>;
   compareTexts: (text1: string, text2: string) => Promise<number>;
   isProcessing: boolean;
   isAIEnabled: boolean;
 }
-

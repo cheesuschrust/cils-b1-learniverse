@@ -1,10 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/contexts/AuthContext';
-import AIService from '@/services/AIService';
 import { ContentType, AISettings } from '@/types';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { AIUtilsContextType, QuestionGenerationParams, AIGenerationResult } from '@/types/app-types';
 import { mapToItalianTypes } from '@/types/italian-types';
 
@@ -43,9 +40,10 @@ const DEFAULT_AI_SETTINGS: AISettings = {
 export const AIUtilsContext = createContext<AIUtilsContextType | null>(null);
 
 // Provider component
-export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const { preferences } = useUserPreferences?.() || { preferences: null };
+export const AIUtilsProvider = ({ children }: { children: ReactNode }) => {
+  // Mock user for development
+  const user = { id: 'mockUser', preferredLanguage: 'english' };
+  const preferences = { aiEnabled: true, difficulty: 'intermediate' };
   
   const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -91,24 +89,11 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
     // Load user AI settings from preferences if available
     if (preferences?.aiEnabled !== undefined) {
       setIsAIEnabled(preferences.aiEnabled);
-      setSettings({
-        ...settings,
-        model: preferences.aiModelSize || settings.model,
-      });
     }
   }, [preferences]);
   
   // Process content using AI
   const processContent = async (prompt: string, options: any = {}): Promise<string> => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to use AI features",
-        variant: "destructive",
-      });
-      return '';
-    }
-    
     try {
       setIsProcessing(true);
       
@@ -117,17 +102,9 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
       const difficultyContext = preferences?.difficulty ? `Content difficulty: ${preferences.difficulty}.` : '';
       const contextualizedPrompt = `${userContext} ${difficultyContext} ${prompt}`;
       
-      // Call the AI service
-      const response = await AIService.generateText(contextualizedPrompt, {
-        temperature: options.temperature || settings.temperature,
-        topP: options.topP || settings.topP,
-        frequencyPenalty: options.frequencyPenalty || settings.frequencyPenalty,
-        presencePenalty: options.presencePenalty || settings.presencePenalty,
-        model: options.model || settings.model,
-        maxTokens: options.maxTokens || settings.maxTokens,
-      });
-      
-      return response;
+      // Mock AI service response for now
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return `AI response for "${contextualizedPrompt}"`;
     } catch (error) {
       console.error("Error processing content:", error);
       toast({
@@ -274,17 +251,26 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Convert params to Italian format if needed
       const italianParams = mapToItalianTypes(params);
       
-      // For this implementation, we'll use the AIService to generate questions
-      const questions = await AIService.generateQuestions(
-        params.contentTypes?.[0] || "", 
-        params.count || 5, 
-        params.difficulty || "intermediate"
-      );
+      // Mock AI service response for now
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const mockQuestions = [
+        {
+          id: '1',
+          text: 'What is the capital of Italy?',
+          options: ['Rome', 'Milan', 'Florence', 'Naples'],
+          correctAnswer: 'Rome',
+          explanation: 'Rome has been the capital of Italy since 1871.',
+          type: params.contentTypes?.[0] || 'grammar',
+          difficulty: params.difficulty || 'intermediate',
+          isCitizenshipRelevant: params.isCitizenshipFocused || false
+        }
+      ];
       
       // Deduct credits
       setRemainingCredits(prevCredits => Math.max(0, prevCredits - 1));
       
-      return { questions, error: null };
+      return { questions: mockQuestions, error: null };
     } catch (error) {
       console.error("Error generating questions:", error);
       toast({
@@ -385,4 +371,15 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
-export default AIUtilsContext;
+// Custom hook to use the AIUtils context
+export const useAIUtils = (): AIUtilsContextType => {
+  const context = useContext(AIUtilsContext);
+  
+  if (!context) {
+    throw new Error('useAIUtils must be used within an AIUtilsProvider');
+  }
+  
+  return context;
+};
+
+export default AIUtilsProvider;

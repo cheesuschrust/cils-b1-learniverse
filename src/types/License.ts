@@ -77,3 +77,44 @@ export interface LicenseInvoice {
     total: number;
   }[];
 }
+
+// Helper functions for license management
+export function normalizeLicense(input: any): License {
+  return {
+    id: input.id || '',
+    name: input.name || '',
+    type: input.type || 'corporate',
+    plan: input.plan || 'basic',
+    seats: input.seats || 0,
+    usedSeats: input.usedSeats || 0,
+    startDate: input.startDate ? new Date(input.startDate) : new Date(),
+    endDate: input.endDate ? new Date(input.endDate) : new Date(),
+    status: input.status || 'pending',
+    contactName: input.contactName || '',
+    contactEmail: input.contactEmail || '',
+    domain: input.domain || '',
+    customization: {
+      logo: input.customization?.logo || '',
+      colors: {
+        primary: input.customization?.colors?.primary || '#000000',
+        secondary: input.customization?.colors?.secondary || '#ffffff'
+      },
+      domain: input.customization?.domain || input.domain || ''
+    },
+    value: input.value || 0,
+    renewalStatus: input.renewalStatus || 'not-started',
+    features: input.features || [],
+    createdAt: input.createdAt ? new Date(input.createdAt) : new Date(),
+    updatedAt: input.updatedAt ? new Date(input.updatedAt) : undefined
+  };
+}
+
+export function convertToStringDates(license: License): any {
+  return {
+    ...license,
+    startDate: license.startDate.toISOString(),
+    endDate: license.endDate.toISOString(),
+    createdAt: license.createdAt?.toISOString() || new Date().toISOString(),
+    updatedAt: license.updatedAt?.toISOString()
+  };
+}

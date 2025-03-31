@@ -21,32 +21,11 @@ export interface User {
   createdAt: Date;
   updatedAt?: Date;
   lastLogin?: Date;
+  lastActive?: Date;
   preferredLanguage?: string;
   isPremiumUser?: boolean;
   role?: 'user' | 'admin' | 'moderator' | 'teacher';
   status?: 'active' | 'inactive' | 'suspended';
-}
-
-// Flashcard types
-export interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  italian?: string;
-  english?: string;
-  difficulty: number;
-  tags: string[];
-  lastReviewed: Date | null;
-  nextReview: Date | null;
-  createdAt: Date;
-  updatedAt?: Date;
-  reviewHistory?: ReviewHistory[];
-}
-
-export interface ReviewHistory {
-  date: Date;
-  performance: number;
-  timeSpent: number;
 }
 
 // AI Content types
@@ -75,21 +54,8 @@ export interface VoicePreference {
   voicePitch: number;
 }
 
-export interface SpeakableWordProps {
-  word: string;
-  language?: string;
-  className?: string;
-  showTooltip?: boolean;
-  tooltipContent?: string;
-  onPlayComplete?: () => void;
-  autoPlay?: boolean;
-  size?: string;
-  onClick?: () => void;
-  iconOnly?: boolean;
-}
-
 // These helper functions ensure consistent handling of types
-export function normalizeFlashcard(card: any): Flashcard {
+export function normalizeFlashcard(card: any): import('./interface-fixes').Flashcard {
   return {
     id: card.id || '',
     front: card.front || card.italian || '',
@@ -103,6 +69,8 @@ export function normalizeFlashcard(card: any): Flashcard {
     reviewHistory: card.reviewHistory || [],
     italian: card.italian || card.front,
     english: card.english || card.back,
+    level: card.level || 0,
+    mastered: card.mastered || false
   };
 }
 
@@ -116,4 +84,31 @@ export function calculateReviewPerformance(answers: any[]): {
     time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
     date: new Date(),
   };
+}
+
+// Utility function to check if a date is valid
+export function isValidDate(date: any): date is Date {
+  return date instanceof Date && !isNaN(date.getTime());
+}
+
+// Utility function to normalize string fields
+export function normalizeFields<T extends Record<string, any>>(data: T): T {
+  const mappings = {
+    photo_url: 'photoURL',
+    display_name: 'displayName',
+    first_name: 'firstName',
+    last_name: 'lastName',
+    is_verified: 'isVerified',
+    created_at: 'createdAt',
+    updated_at: 'updatedAt',
+    last_login: 'lastLogin',
+    last_active: 'lastActive',
+    phone_number: 'phoneNumber',
+    preferred_language: 'preferredLanguage'
+  };
+
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const newKey = mappings[key as keyof typeof mappings] || key;
+    return { ...acc, [newKey]: value };
+  }, {} as T);
 }

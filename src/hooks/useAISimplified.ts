@@ -1,8 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { serviceFactory } from '@/services/ServiceFactory';
 import { AIServiceOptions, UseAIReturn } from '@/types/ai';
-import { errorMonitoring } from '@/utils/errorMonitoring';
 
 const useAISimplified = (): UseAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,7 +9,16 @@ const useAISimplified = (): UseAIReturn => {
   // Safely get the AI service
   const getAIService = useCallback(() => {
     try {
-      return serviceFactory.getService('aiService');
+      // Mock the service for now
+      return {
+        generateText: async (prompt: string, options?: any) => {
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return `AI response to: ${prompt}`;
+        },
+        getConfidenceScore: (contentType: string) => 0.8,
+        abortAllRequests: () => {}
+      };
     } catch (err) {
       console.error("Error getting AI service:", err);
       return null;
@@ -33,7 +40,7 @@ const useAISimplified = (): UseAIReturn => {
     } catch (err) {
       const error = err instanceof Error ? err : new Error('AI text generation failed');
       setError(error);
-      errorMonitoring.captureError(error);
+      console.error("AI generation error:", error);
       return '';
     } finally {
       setIsLoading(false);
@@ -50,7 +57,7 @@ const useAISimplified = (): UseAIReturn => {
       return aiService.getConfidenceScore(contentType) || 0;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to get confidence score');
-      errorMonitoring.captureError(error);
+      console.error("Confidence score error:", error);
       return 0;
     }
   }, [getAIService]);

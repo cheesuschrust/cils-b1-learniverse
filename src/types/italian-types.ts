@@ -2,7 +2,7 @@
 // Italian-specific type definitions
 import { AIQuestion } from './app-types';
 
-export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export type ItalianTestSection = 
   | 'grammar'
@@ -75,4 +75,35 @@ export function mapToItalianTypes(appParams: any): ItalianQuestionGenerationPara
     language: appParams.language,
     contentTypes: appParams.contentTypes
   };
+}
+
+// Utilities for converting between CILS exam types and Italian levels
+export function cilsToLevel(cilsLevel: CILSExamType): ItalianLevel {
+  const mapping: Record<CILSExamType, ItalianLevel> = {
+    'A1': 'beginner',
+    'A2': 'beginner',
+    'B1': 'intermediate',
+    'B2': 'intermediate',
+    'C1': 'advanced',
+    'C2': 'advanced'
+  };
+  
+  return mapping[cilsLevel] || 'intermediate';
+}
+
+export function levelToCils(level: ItalianLevel): CILSExamType[] {
+  switch(level) {
+    case 'beginner':
+      return ['A1', 'A2'];
+    case 'intermediate':
+      return ['B1', 'B2'];
+    case 'advanced':
+      return ['C1', 'C2'];
+    default:
+      // If the level is already a CILS level
+      if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(level)) {
+        return [level as CILSExamType];
+      }
+      return ['B1'];
+  }
 }

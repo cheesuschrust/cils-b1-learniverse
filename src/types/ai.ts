@@ -1,102 +1,57 @@
 
-/**
- * Core AI types for the application
- */
+// AI-related type definitions
 
-// AI model types
+export type AIProvider = 'openai' | 'anthropic' | 'cohere' | 'huggingface' | 'local';
+
 export type AIModel = 
+  | 'gpt-4o-mini' 
   | 'gpt-4o'
-  | 'gpt-4o-mini'
-  | 'gpt-4'
-  | 'gpt-3.5-turbo'
-  | 'claude-instant'
-  | 'claude-2'
-  | 'mistral-small'
-  | 'mistral-medium'
-  | 'mistral-large';
+  | 'gpt-4-turbo' 
+  | 'claude-instant' 
+  | 'claude-2' 
+  | 'command' 
+  | 'small' 
+  | 'medium' 
+  | 'large';
 
-// AI provider types
-export type AIProvider = 'openai' | 'anthropic' | 'mistral' | 'local';
+export type AIStatus = 'idle' | 'loading' | 'generating' | 'error' | 'success';
 
-// AI model size for internal usage
-export type AIModelSize = 'small' | 'medium' | 'large';
-
-// AI status for monitoring
-export type AIStatus = 'idle' | 'processing' | 'success' | 'error';
-
-// AI Settings interface
-export interface AISettings {
-  model: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  defaultModelSize: string;
-  features: {
-    contentGeneration: boolean;
-    contentAnalysis: boolean;
-    errorCorrection: boolean;
-    personalization: boolean;
-    pronunciationHelp: boolean;
-    conversationalLearning: boolean;
-    progressTracking: boolean;
-    difficultyAdjustment: boolean;
-    languageTranslation: boolean;
-    flashcards: boolean;
-    questions: boolean;
-    listening: boolean;
-    speaking: boolean;
-    writing: boolean;
-    translation: boolean;
-    explanation: boolean;
-    correction: boolean;
-    simplified?: boolean;
-  };
-  italianVoiceURI?: string;
-  englishVoiceURI?: string;
-  voiceRate?: number;
-  voicePitch?: number;
-  assistantName?: string;
-}
-
-// AI Service options
 export interface AIServiceOptions {
   temperature?: number;
+  maxTokens?: number;
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
   model?: string;
-  maxTokens?: number;
 }
 
-// AI Preference interface
 export interface AIPreference {
-  enabled: boolean;
-  modelSize: AIModelSize;
-  contentSafety: boolean;
-  dataUsage: 'minimal' | 'standard' | 'full';
+  preferredModel: AIModel;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt?: string;
+  autoComplete?: boolean;
+  showFeedback?: boolean;
 }
 
-// AI Feedback Settings
+export interface AIOptions {
+  model: string;
+  prompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+}
+
 export interface AIFeedbackSettings {
-  detailedFeedback: boolean;
-  includeExamples: boolean;
-  suggestCorrections: boolean;
-  language: 'english' | 'italian' | 'both';
-  feedbackLevel: 'beginner' | 'intermediate' | 'advanced';
+  showConfidence: boolean;
+  showTokenCount: boolean;
+  showModelInfo: boolean;
+  allowFeedback: boolean;
+  autoImprove: boolean;
 }
 
-// Interface for AI service
-export interface AIServiceInterface {
-  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
-  generateQuestions: (content: string, count: number, type: string) => Promise<any[]>;
-  abortAllRequests: () => void;
-  classifyText: (text: string) => Promise<Array<{label: string, score: number}>>;
-  getConfidenceScore: (contentType: string) => number;
-}
-
-// Return type for useAI hook
 export interface UseAIReturn {
   generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
   getConfidenceScore: (text: string, contentType: string) => Promise<number>;
@@ -105,6 +60,29 @@ export interface UseAIReturn {
   abort: () => void;
 }
 
-// Content types that can be processed by AI
-export type ContentType = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary' | 'culture';
+export interface AIService {
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  getConfidenceScore: (contentType: string) => number;
+  abortAllRequests: () => void;
+  generateQuestions?: (contentType: string, count: number, difficulty: string) => Promise<any[]>;
+}
 
+// Utility to normalize AI model names across providers
+export const normalizeAIModel = (modelName: string): AIModel => {
+  const lowerModel = modelName.toLowerCase();
+  
+  if (lowerModel.includes('gpt-4o-mini')) return 'gpt-4o-mini';
+  if (lowerModel.includes('gpt-4o')) return 'gpt-4o';
+  if (lowerModel.includes('gpt-4')) return 'gpt-4-turbo';
+  if (lowerModel.includes('claude-instant')) return 'claude-instant';
+  if (lowerModel.includes('claude')) return 'claude-2';
+  if (lowerModel.includes('command')) return 'command';
+  
+  // Size-based fallbacks
+  if (lowerModel.includes('small')) return 'small';
+  if (lowerModel.includes('medium')) return 'medium';
+  if (lowerModel.includes('large')) return 'large';
+  
+  // Default
+  return 'medium';
+};

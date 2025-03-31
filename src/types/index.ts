@@ -8,18 +8,19 @@ import * as VariantTypes from './variant-fixes';
 import * as InterfaceTypes from './interface-fixes';
 import * as TypeDefinitions from './type-definitions';
 import * as CoreTypes from './core-types';
+import * as AITypes from './ai';
 
 // Export all types through namespaces to prevent conflicts
-export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions, CoreTypes };
+export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions, CoreTypes, AITypes };
 
 // Export specific commonly used types directly
 // Italian types
 export type { 
   ItalianLevel, 
   ItalianTestSection, 
-  QuestionGenerationParams as ItalianQuestionParams,
+  ItalianQuestionGenerationParams,
   AIGeneratedQuestion,
-  AIGenerationResult as ItalianGenerationResult,
+  AIGenerationResult,
   CILSExamType,
   UserProfile as ItalianUserProfile
 } from './italian-types';
@@ -35,13 +36,10 @@ export type {
   ProcessContentOptions,
   ConfidenceIndicatorProps,
   LevelBadgeProps,
-  AIUtilsContextType
-} from './app-types';
-
-export type {
+  AIUtilsContextType,
   QuestionGenerationParams,
-  AIGenerationResult,
-  UserProfile,
+  AIGenerationResult as AppAIGenerationResult,
+  UserProfile
 } from './app-types';
 
 // Interface fixes
@@ -69,6 +67,8 @@ export type {
 export {
   normalizeFlashcard,
   calculateReviewPerformance,
+  isValidDate,
+  normalizeFields
 } from './core-types';
 
 // AI types
@@ -76,5 +76,21 @@ export type {
   AIModel,
   AIProvider,
   AIServiceOptions,
-  AIPreference
+  AIPreference,
+  UseAIReturn,
+  AIService,
+  AIStatus,
+  AIOptions,
+  AIFeedbackSettings
 } from './ai';
+
+// License types
+export type {
+  License,
+  LicenseType,
+  LicenseStatus,
+  RenewalStatus,
+  LicenseUserAssignment,
+  LicenseFeature,
+  LicenseInvoice
+} from './License';
