@@ -6,7 +6,7 @@ import {
   ItalianTestSection,
   AIGeneratedQuestion,
   QuestionGenerationParams
-} from '../types/italian-types';
+} from '../types';
 
 // Properly structured props interface
 export interface CitizenshipContentProps {  

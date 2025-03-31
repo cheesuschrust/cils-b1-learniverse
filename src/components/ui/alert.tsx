@@ -5,17 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
+  "relative w-full rounded-lg border p-4 [&:has(svg)]:pl-11 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
   {
     variants: {
       variant: {
         default: "bg-background text-foreground",
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        warning:
-          "border-amber-500/50 text-amber-700 dark:border-amber-600 [&>svg]:text-amber-600",
-        success:
-          "border-green-500/50 text-green-700 dark:border-green-600 [&>svg]:text-green-600",
+        outline: "border-input bg-background",
+        secondary: "border-secondary bg-secondary",
+        warning: "border-yellow-500/50 text-yellow-700 dark:border-yellow-500 [&>svg]:text-yellow-600",
+        success: "border-green-500/50 text-green-700 dark:border-green-500 [&>svg]:text-green-600",
+        primary: "border-primary/50 text-primary dark:border-primary [&>svg]:text-primary",
+        info: "border-blue-500/50 text-blue-700 dark:border-blue-500 [&>svg]:text-blue-600",
       },
     },
     defaultVariants: {
@@ -26,7 +28,8 @@ const alertVariants = cva(
 
 const Alert = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
+  React.HTMLAttributes<HTMLDivElement> &
+    VariantProps<typeof alertVariants>
 >(({ className, variant, ...props }, ref) => (
   <div
     ref={ref}

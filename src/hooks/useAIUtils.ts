@@ -8,7 +8,7 @@ import {
   AIGeneratedQuestion,
   ItalianLevel,
   ItalianTestSection
-} from '../types/italian-types';
+} from '@/types';
 
 /**
  * Custom hook to access AI utility functions from AIUtilsContext
@@ -31,7 +31,9 @@ export const useAIUtils = () => {
         contentTypes: params.contentTypes || [params.testSection],
         focusAreas: params.topics || params.focusAreas || [],
         count: params.count || 5,
-        isCitizenshipFocused: params.isCitizenshipFocused
+        isCitizenshipFocused: params.isCitizenshipFocused,
+        italianLevel: params.italianLevel,
+        testSection: params.testSection
       };
       
       // Call the original function with converted parameters

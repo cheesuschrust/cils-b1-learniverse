@@ -1,193 +1,176 @@
 
-import React, { useState } from 'react';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Volume2, Mic, MicOff, Check, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Mic, Play, Square, Volume2 } from 'lucide-react';
+import { useAIUtils } from '@/hooks/useAIUtils';
 
 interface FlashcardPronunciationProps {
-  italian: string;
-  showScore?: boolean;
+  text: string;
+  language?: string;
+  onScoreUpdate?: (score: number) => void;
 }
 
-const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({
-  italian,
-  showScore = true
-}) => {
+const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, language = 'italian', onScoreUpdate }) => {
   const { speak, recognizeSpeech, compareTexts } = useAIUtils();
-  
   const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [userRecording, setUserRecording] = useState<string | null>(null);
   const [similarityScore, setSimilarityScore] = useState<number | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [recordingProgress, setRecordingProgress] = useState(0);
-  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
-  const MAX_RECORDING_SECONDS = 5;
-  
-  const playWord = async () => {
-    await speak(italian, 'it');
-  };
-  
-  const startRecording = async () => {
+  // Play the correct pronunciation
+  const handlePlay = async () => {
+    if (isPlaying || !speak) return;
+    
+    setIsPlaying(true);
     try {
-      // Reset state
-      setSimilarityScore(null);
-      setRecordingProgress(0);
-      
-      // Get microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Create media recorder
-      const recorder = new MediaRecorder(stream);
-      setMediaRecorder(recorder);
-      
-      const audioChunks: BlobPart[] = [];
-      
-      // Save audio chunks
-      recorder.addEventListener('dataavailable', (event) => {
-        audioChunks.push(event.data);
-      });
-      
-      // When recording stops
-      recorder.addEventListener('stop', async () => {
-        setIsRecording(false);
-        setProcessing(true);
-        
-        // Create audio blob
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        
-        try {
-          // Convert speech to text
-          const transcription = await recognizeSpeech(audioBlob);
-          
-          // Compare transcription with expected text
-          const similarity = await compareTexts(italian.toLowerCase(), transcription.toLowerCase());
-          setSimilarityScore(similarity);
-        } catch (error) {
-          console.error('Error processing speech:', error);
-        } finally {
-          setProcessing(false);
-          
-          // Stop all tracks
-          stream.getTracks().forEach(track => track.stop());
-        }
-      });
-      
-      // Start recording
-      recorder.start();
-      setIsRecording(true);
-      
-      // Setup timer for progress bar
-      let elapsed = 0;
-      const timer = setInterval(() => {
-        elapsed += 0.1;
-        const progress = (elapsed / MAX_RECORDING_SECONDS) * 100;
-        setRecordingProgress(progress);
-        
-        if (elapsed >= MAX_RECORDING_SECONDS) {
-          clearInterval(timer);
-          if (recorder.state === 'recording') {
-            recorder.stop();
-          }
-        }
-      }, 100);
-      
-      setRecordingTimer(timer);
-      
-      // Auto-stop after max duration
-      setTimeout(() => {
-        if (recorder.state === 'recording') {
-          recorder.stop();
-        }
-      }, MAX_RECORDING_SECONDS * 1000);
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
+      await speak(text, language);
+    } finally {
+      setIsPlaying(false);
     }
   };
   
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
+  // Start recording user's pronunciation
+  const handleStartRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert('Your browser does not support audio recording');
+      return;
     }
     
-    if (recordingTimer) {
-      clearInterval(recordingTimer);
-      setRecordingTimer(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      // Listen for data available event
+      mediaRecorder.addEventListener('dataavailable', (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      });
+      
+      // Listen for stop event to process recording
+      mediaRecorder.addEventListener('stop', async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        if (recognizeSpeech) {
+          try {
+            const transcribedText = await recognizeSpeech(audioBlob);
+            setUserRecording(transcribedText);
+            
+            // Compare with original text if compareTexts is available
+            if (compareTexts) {
+              const similarity = await compareTexts(text.toLowerCase(), transcribedText.toLowerCase());
+              setSimilarityScore(similarity * 100);
+              
+              if (onScoreUpdate) {
+                onScoreUpdate(similarity * 100);
+              }
+            }
+          } catch (error) {
+            console.error('Error processing recording:', error);
+            alert('Error processing your recording. Please try again.');
+          }
+        }
+      });
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Error accessing microphone. Please check permissions and try again.');
     }
   };
   
-  const getSimilarityLabel = (score: number): string => {
-    if (score >= 0.9) return 'Excellent!';
-    if (score >= 0.8) return 'Very good';
-    if (score >= 0.7) return 'Good';
-    if (score >= 0.6) return 'Fair';
-    if (score >= 0.5) return 'Needs practice';
-    return 'Keep trying';
-  };
-  
-  const getSimilarityColor = (score: number): string => {
-    if (score >= 0.9) return 'text-green-600';
-    if (score >= 0.8) return 'text-green-500';
-    if (score >= 0.7) return 'text-yellow-500';
-    if (score >= 0.6) return 'text-orange-500';
-    return 'text-red-500';
+  // Stop recording
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      
+      // Stop all tracks in the stream
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      
+      setIsRecording(false);
+    }
   };
   
   return (
-    <div className="flex flex-col space-y-2">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={playWord}
-          className="flex-none"
-        >
-          <Volume2 className="h-4 w-4 mr-1" />
-          Listen
-        </Button>
+    <div className="flashcard-pronunciation p-4 border rounded-lg shadow-sm">
+      <h4 className="font-medium mb-4">Practice Pronunciation</h4>
+      
+      <div className="flex flex-col gap-4">
+        {/* Original pronunciation */}
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={handlePlay} 
+            disabled={isPlaying}
+            variant="outline"
+            size="sm"
+          >
+            {isPlaying ? 'Playing...' : 'Listen'} <Volume2 className="ml-2 h-4 w-4" />
+          </Button>
+          <span className="text-sm text-gray-500">Listen to correct pronunciation</span>
+        </div>
         
-        <Button
-          variant={isRecording ? "destructive" : "outline"}
-          size="sm"
-          onClick={isRecording ? stopRecording : startRecording}
-          disabled={processing}
-          className="flex-none"
-        >
-          {isRecording ? (
-            <>
-              <MicOff className="h-4 w-4 mr-1" />
-              Stop
-            </>
+        {/* Recording controls */}
+        <div className="flex items-center gap-2">
+          {!isRecording ? (
+            <Button
+              onClick={handleStartRecording}
+              variant="outline"
+              size="sm"
+              className="bg-red-50 hover:bg-red-100"
+            >
+              Record <Mic className="ml-2 h-4 w-4" />
+            </Button>
           ) : (
-            <>
-              <Mic className="h-4 w-4 mr-1" />
-              Record
-            </>
+            <Button
+              onClick={handleStopRecording}
+              variant="outline"
+              size="sm"
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Stop <Square className="ml-2 h-4 w-4" />
+            </Button>
           )}
-        </Button>
+          <span className="text-sm text-gray-500">
+            {isRecording ? 'Recording in progress...' : 'Record your pronunciation'}
+          </span>
+        </div>
         
-        {(isRecording || processing) && (
-          <div className="flex-1">
-            <Progress value={recordingProgress} className="h-2" />
+        {/* Results */}
+        {userRecording && (
+          <div className="mt-4">
+            <div className="text-sm font-medium mb-2">Your pronunciation:</div>
+            <div className="p-3 bg-gray-50 rounded text-sm italic">"{userRecording}"</div>
+            
+            {similarityScore !== null && (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span>Accuracy</span>
+                  <span>{Math.round(similarityScore)}%</span>
+                </div>
+                <Progress value={similarityScore} className="h-2" />
+                
+                <div className="mt-3 text-sm">
+                  {similarityScore >= 80 ? (
+                    <span className="text-green-600">Excellent pronunciation!</span>
+                  ) : similarityScore >= 60 ? (
+                    <span className="text-yellow-600">Good pronunciation. Keep practicing!</span>
+                  ) : (
+                    <span className="text-red-600">Try again to improve your pronunciation.</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
-      
-      {showScore && similarityScore !== null && (
-        <div className="flex items-center gap-2 text-sm">
-          <div className="font-medium">Pronunciation:</div>
-          <div className={`flex items-center ${getSimilarityColor(similarityScore)}`}>
-            {similarityScore >= 0.7 ? 
-              <Check className="h-4 w-4 mr-1" /> : 
-              <X className="h-4 w-4 mr-1" />
-            }
-            {getSimilarityLabel(similarityScore)} 
-            ({Math.round(similarityScore * 100)}%)
-          </div>
-        </div>
-      )}
     </div>
   );
 };

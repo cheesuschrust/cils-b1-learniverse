@@ -3,30 +3,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import AIService from '@/services/AIService';
-import { ContentType, AISettings } from '@/types/type-definitions';
+import { ContentType, AISettings } from '@/types';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-
-export interface AIUtilsContextType {
-  processContent: (prompt: string, options?: any) => Promise<string>;
-  settings: AISettings;
-  updateSettings: (settings: AISettings) => void;
-  generateContent?: (prompt: string, options?: any) => Promise<string>;
-  speakText?: (text: string, language?: string, onComplete?: () => void) => void;
-  isSpeaking?: boolean;
-  processAudioStream?: (stream: MediaStream) => Promise<string>;
-  stopAudioProcessing?: () => void;
-  isTranscribing?: boolean;
-  hasActiveMicrophone?: boolean;
-  checkMicrophoneAccess?: () => Promise<boolean>;
-  generateQuestions?: (params: any) => Promise<any>;
-  isGenerating?: boolean;
-  remainingCredits?: number;
-  usageLimit?: number;
-  resetCredits?: () => Promise<void>;
-}
-
-// Create the AIUtils context
-const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
+import { AIUtilsContextType } from '@/types/app-types';
 
 // Default AI settings
 const DEFAULT_AI_SETTINGS: AISettings = {
@@ -72,6 +51,7 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [hasActiveMicrophone, setHasActiveMicrophone] = useState<boolean>(false);
   const [remainingCredits, setRemainingCredits] = useState<number>(100);
   const [usageLimit] = useState<number>(100);
+  const [isAIEnabled, setIsAIEnabled] = useState<boolean>(true);
   
   const { toast } = useToast();
   
@@ -106,10 +86,11 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     // Load user AI settings from preferences if available
     if (preferences?.aiEnabled !== undefined) {
-      setSettings(prevSettings => ({
-        ...prevSettings,
-        model: preferences.aiModelSize || prevSettings.model,
-      }));
+      setIsAIEnabled(preferences.aiEnabled);
+      setSettings({
+        ...settings,
+        model: preferences.aiModelSize || settings.model,
+      });
     }
   }, [preferences]);
   
@@ -158,10 +139,10 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   // Update AI settings
   const updateSettings = (newSettings: AISettings): void => {
-    setSettings(prevSettings => ({
-      ...prevSettings,
+    setSettings({
+      ...settings,
       ...newSettings
-    }));
+    });
   };
   
   // Generate content (alias for processContent for backward compatibility)
@@ -325,12 +306,15 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     if (preferences?.aiEnabled === false) {
       // Disable AI features if the user has turned them off
-      setSettings(prevSettings => ({
-        ...prevSettings,
+      setIsAIEnabled(false);
+      setSettings({
+        ...settings,
         defaultModelSize: 'small', // Use smallest model to save resources
         temperature: 0.5,
         maxTokens: 500
-      }));
+      });
+    } else if (preferences?.aiEnabled === true) {
+      setIsAIEnabled(true);
     }
   }, [preferences?.aiEnabled]);
   
@@ -366,6 +350,35 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
   
+  // Speech recognition functionality
+  const recognizeSpeech = async (audioBlob: Blob): Promise<string> => {
+    try {
+      // In a real implementation, this would call a speech-to-text API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return "Simulated speech recognition result.";
+    } catch (error) {
+      console.error("Speech recognition error:", error);
+      return "";
+    }
+  };
+  
+  // Text comparison (e.g., for pronunciation accuracy)
+  const compareTexts = async (text1: string, text2: string): Promise<number> => {
+    // In a real implementation, this would use a text comparison algorithm or API
+    // For now, we'll use a simple implementation
+    const similarity = 0.8; // Simulated similarity score between 0 and 1
+    return similarity;
+  };
+  
+  // Expose speech directly for convenience
+  const speak = async (text: string, language?: string): Promise<void> => {
+    if (speakText) {
+      await new Promise<void>((resolve) => {
+        speakText(text, language, resolve);
+      });
+    }
+  };
+  
   // Context value
   const value: AIUtilsContextType = {
     processContent,
@@ -383,7 +396,12 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
     isGenerating,
     remainingCredits,
     usageLimit,
-    resetCredits
+    resetCredits,
+    speak,
+    recognizeSpeech,
+    compareTexts,
+    isProcessing,
+    isAIEnabled
   };
   
   return (

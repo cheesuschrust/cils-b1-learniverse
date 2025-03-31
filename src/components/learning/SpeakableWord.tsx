@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { useAIUtils } from '@/hooks/useAIUtils';
 import { Button } from '@/components/ui/button';
 import { Volume2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { SpeakableWordProps } from '@/types/type-definitions';
+import { SpeakableWordProps } from '@/types/interface-fixes';
 
 const SpeakableWord: React.FC<SpeakableWordProps> = ({
   word,
@@ -16,7 +16,8 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   onPlayComplete,
   autoPlay = false,
   size = 'sm',
-  onClick
+  onClick,
+  iconOnly = false
 }) => {
   const { speakText } = useAIUtils();
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -72,9 +73,9 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
       {isSpeaking ? (
         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
       ) : (
-        <Volume2 className={`h-4 w-4 mr-1 ${isSpeaking ? 'animate-pulse' : ''}`} />
+        <Volume2 className={`h-4 w-4 ${!iconOnly ? 'mr-1' : ''} ${isSpeaking ? 'animate-pulse' : ''}`} />
       )}
-      {word}
+      {!iconOnly && word}
     </Button>
   );
   

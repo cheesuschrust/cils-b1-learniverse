@@ -1,16 +1,16 @@
 
-export interface SpeakableWordProps {
-  word: string;
-  language?: string;
-  className?: string;
-  showTooltip?: boolean;
-  tooltipContent?: string;
-  onPlayComplete?: () => void;
-  autoPlay?: boolean;
-  size?: string;
-  onClick?: () => void;
+export interface SpeakableWordProps {  
+  word: string;  
+  language?: string;  
+  className?: string;  
+  showTooltip?: boolean;  
+  tooltipContent?: string;  
+  onPlayComplete?: () => void;  
+  autoPlay?: boolean;  
+  size?: string;  
+  onClick?: () => void;  
   iconOnly?: boolean;
-}
+}  
 
 export interface Flashcard {  
   id: string;  
@@ -25,25 +25,59 @@ export interface Flashcard {
   createdAt: Date;  
   updatedAt?: Date;  
   reviewHistory?: any[];  
+  level?: number;
+  mastered?: boolean;
+  examples?: string[];
+  explanation?: string;
+  category?: string;
+  status?: string;
+  audioUrl?: string;
+  imageUrl?: string;
 }  
 
 export interface FlashcardComponentProps {  
   card: Flashcard;  
   onUpdate?: (card: Flashcard) => void;  
   onDelete?: (id: string) => void;  
-  showActions?: boolean;  
+  showActions?: boolean;
+  onRating?: (rating: number) => void;
+  onSkip?: () => void;
+  flipped?: boolean;
+  onFlip?: () => void;
+  showPronunciation?: boolean;
+  className?: string;
+  showHints?: boolean;
+  onUnknown?: () => void;
 }  
 
 export interface ReviewSchedule {  
   interval: number;  
   dueDate: Date;  
-  difficulty: number;  
+  difficulty: number;
+  overdue: number;
+  upcoming: number;
+  totalDue: number;
+  nextWeekCount: number;
+  dueToday: number;
+  dueThisWeek: number;
+  dueNextWeek: number;
+  dueByDate: Record<string, number>;
 }  
 
 export interface ReviewPerformance {  
   score: number;  
   time: number;  
   date: Date;  
+  totalReviews?: number;  
+  correctReviews?: number;  
+  efficiency?: number;  
+  streakDays?: number;  
+  reviewsByCategory?: Record<string, number>;
+  accuracy?: number;
+  speed?: number;
+  consistency?: number;
+  retention?: number;
+  overall?: number;
 }  
 
 export interface User {  
@@ -51,7 +85,29 @@ export interface User {
   email: string;  
   firstName?: string;  
   lastName?: string;  
-  isPremiumUser: boolean;  
+  isPremiumUser: boolean;
+  role?: string;
+  isVerified?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  lastLogin?: Date;
+  lastActive?: Date;
+  status?: string;
+  subscription?: string;
+  phoneNumber?: string;
+  address?: string;
+  preferredLanguage?: string;
+  isAdmin?: boolean;
+  isPremium?: boolean;
+  hasCompletedOnboarding?: boolean;
+  preferences?: any;
+  metrics?: any;
+  dailyQuestionCounts?: Record<string, number>;
+  usageMetrics?: {
+    usedQuestions: number;
+    totalQuestions: number;
+    completedLessons: number;
+  };
 }  
 
 export interface AISettings {  
@@ -61,7 +117,35 @@ export interface AISettings {
   topP: number;  
   frequencyPenalty: number;  
   presencePenalty: number;  
+  stop?: string[];
   showFeedback?: boolean;  
+  defaultModelSize?: string;
+  voiceRate?: number;
+  voicePitch?: number;
+  englishVoiceURI?: string;
+  italianVoiceURI?: string;
+  assistantName?: string;
+  enabled?: boolean;
+  features?: {
+    contentGeneration: boolean;
+    contentAnalysis: boolean;
+    errorCorrection: boolean;
+    personalization: boolean;
+    pronunciationHelp: boolean;
+    conversationalLearning: boolean;
+    progressTracking: boolean;
+    difficultyAdjustment: boolean;
+    languageTranslation: boolean;
+    flashcards?: boolean;
+    questions?: boolean;
+    listening?: boolean;
+    speaking?: boolean;
+    writing?: boolean;
+    translation?: boolean;
+    explanation?: boolean;
+    correction?: boolean;
+    simplified?: boolean;
+  };
 }
 
 export function normalizeFlashcard(card: any): Flashcard {

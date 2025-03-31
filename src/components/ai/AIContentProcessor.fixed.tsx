@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';  
 import { useAIUtils } from '../../hooks/useAIUtils';  
-import {   
-  AIContentProcessorProps  
+import { 
+  AIContentProcessorProps
 } from '../../types/app-types';  
 import { 
   AIGeneratedQuestion,
@@ -23,27 +23,35 @@ export function AIContentProcessor({
     
     // Create properly typed params object by adapting to Italian types  
     const params: ItalianQuestionParams = {  
-      italianLevel: settings.difficulty,
-      testSection: settings.contentTypes[0],
+      italianLevel: settings.difficulty as any,
+      testSection: settings.contentTypes[0] as any,
       isCitizenshipFocused: false,
       topics: settings.focusAreas,
       count: 5, // Default to 5 questions
       language: settings.language,
-      contentTypes: settings.contentTypes
+      contentTypes: settings.contentTypes as any[]
     };  
     
-    const result = await generateQuestions(params);  
+    try {
+      const result = await generateQuestions(params);  
 
-    if (result.error) {  
-      setError(result.error);  
-      if (onError) {  
-        onError(result.error);  
-      }  
-    } else {  
-      setQuestions(result.questions);  
-      if (onContentGenerated) {  
-        onContentGenerated(result.questions as any);  
-      }  
+      if (result.error) {  
+        setError(result.error);  
+        if (onError) {  
+          onError(result.error);  
+        }  
+      } else {  
+        setQuestions(result.questions);  
+        if (onContentGenerated) {  
+          onContentGenerated(result.questions);  
+        }  
+      }
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      setError(errorMessage);
+      if (onError) {
+        onError(errorMessage);
+      }
     }  
   };  
 

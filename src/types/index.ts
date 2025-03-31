@@ -2,7 +2,6 @@
 // Root type index file
 // Re-export all types with namespacing to prevent ambiguities
 
-// Create namespaces for each type module to prevent naming conflicts
 import * as AppTypes from './app-types';
 import * as ItalianTypes from './italian-types';
 import * as VariantTypes from './variant-fixes';
@@ -29,12 +28,19 @@ export type {
   DifficultyLevel,
   ContentType,
   ButtonVariant,
-  QuestionGenerationParams,
   AIQuestion,
+  EnhancedErrorBoundaryProps,
+  AIContentProcessorProps,
+  ProcessContentOptions,
+  ConfidenceIndicatorProps,
+  LevelBadgeProps
+} from './app-types';
+
+export type {
+  QuestionGenerationParams,
   AIGenerationResult,
   UserProfile,
-  AIUtilsContextType,
-  EnhancedErrorBoundaryProps
+  AIUtilsContextType
 } from './app-types';
 
 // Interface fixes
