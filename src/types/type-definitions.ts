@@ -17,7 +17,7 @@ export interface UserPreferences {
   language: string;
   notifications: boolean;
   onboardingCompleted: boolean;
-  emailNotifications?: boolean;
+  emailNotifications: boolean;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   fontSize?: number;
   notificationsEnabled?: boolean;
@@ -80,6 +80,9 @@ export interface User {
     totalQuestions: number;
     completedLessons: number;
   };
+  
+  // Add missing properties to fix errors
+  hasCompletedOnboarding?: boolean;
 }
 
 // Content Types
@@ -90,7 +93,8 @@ export type ContentType =
   | 'writing'
   | 'speaking'
   | 'pdf'
-  | 'unknown';
+  | 'unknown'
+  | 'json'; // Added json type to fix issues with variant-fixes.ts
 
 export interface Flashcard {
   id: string;
@@ -243,12 +247,13 @@ export interface SpeakableWordProps {
   tooltipContent?: string;
   onClick?: () => void;
   onPlayComplete?: () => void;
-  autoPlay?: boolean;
+  autoPlay?: boolean; // Added to fix errors
 }
 
 export interface LevelBadgeProps {
   level: number;
   showInfo?: boolean;
+  size?: string; // Added to fix errors
 }
 
 // Context Types
@@ -264,6 +269,11 @@ export interface AIUtilsContextType {
   isTranscribing?: boolean;
   hasActiveMicrophone?: boolean;
   checkMicrophoneAccess?: () => Promise<boolean>;
+  generateQuestions?: (params: any) => Promise<any>; // Added to fix AIUtils context issues
+  isGenerating?: boolean;
+  remainingCredits?: number;
+  usageLimit?: number;
+  resetCredits?: () => Promise<void>;
 }
 
 // Error and Monitoring Types
