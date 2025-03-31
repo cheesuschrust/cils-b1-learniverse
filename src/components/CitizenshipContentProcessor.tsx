@@ -1,140 +1,146 @@
 
-import React, { useState } from 'react';
-import { useAIUtils } from '../hooks/useAIUtils';
-import {
-  ItalianLevel,
-  ItalianTestSection,
-  AIGeneratedQuestion,
-  QuestionGenerationParams
-} from '../types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, ListPlus } from 'lucide-react';
+import { useAIUtils } from '@/hooks/useAIUtils';
+import { AIGeneratedQuestion } from '@/types/italian-types';
+import { mapToItalianTypes } from '@/types/italian-types';
 
-// Properly structured props interface
-export interface CitizenshipContentProps {  
-  settings: {  
-    italianLevel: ItalianLevel;  
-    testSection: ItalianTestSection;  
-    isCitizenshipFocused: boolean;  
-    topics: string[];  
-  };  
-  onContentGenerated?: (content: AIGeneratedQuestion[]) => void;  
-  onError?: (error: string) => void;  
-}  
+interface CitizenshipContentProcessorProps {
+  onQuestionsGenerated?: (questions: AIGeneratedQuestion[]) => void;
+  defaultContent?: string;
+}
 
-// Named export function
-export function CitizenshipContentProcessor({  
-  settings,  
-  onContentGenerated,  
-  onError  
-}: CitizenshipContentProps) {  
-  const { generateQuestions, isGenerating } = useAIUtils();  
-  const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);  
-  const [error, setError] = useState<string | null>(null);  
-
-  const handleGenerate = async () => {  
-    setError(null);  
+const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
+  onQuestionsGenerated,
+  defaultContent = ""
+}) => {
+  const [content, setContent] = useState(defaultContent);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);
+  const { toast } = useToast();
+  const { generateQuestions } = useAIUtils();
+  
+  useEffect(() => {
+    if (defaultContent) {
+      setContent(defaultContent);
+    }
+  }, [defaultContent]);
+  
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+  };
+  
+  const handleGenerateQuestions = async () => {
+    if (!content.trim()) {
+      toast({
+        title: "Content Required",
+        description: "Please enter or paste Italian text to generate questions.",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    // Create properly typed params for Italian citizenship content  
-    const params: QuestionGenerationParams = {  
-      italianLevel: settings.italianLevel,  
-      testSection: settings.testSection,  
-      isCitizenshipFocused: settings.isCitizenshipFocused,  
-      topics: settings.topics,  
-      count: 5 // Default to 5 questions  
-    };  
+    setIsProcessing(true);
     
     try {
-      const result = await generateQuestions(params);  
-
-      if (result.error) {  
-        setError(result.error);  
-        if (onError) {  
-          onError(result.error);  
-        }  
-      } else {  
-        setQuestions(result.questions);  
-        if (onContentGenerated) {  
-          onContentGenerated(result.questions);  
-        }  
+      const result = await generateQuestions({
+        contentTypes: ['culture', 'vocabulary', 'grammar'],
+        difficulty: 'intermediate',
+        count: 5,
+        isCitizenshipFocused: true,
+        language: 'italian'
+      });
+      
+      const generatedQuestions = result.questions.map(q => ({
+        ...q,
+        type: mapToItalianTypes(q.type)
+      })) as AIGeneratedQuestion[];
+      
+      setQuestions(generatedQuestions);
+      
+      if (onQuestionsGenerated) {
+        onQuestionsGenerated(generatedQuestions);
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-      setError(errorMessage);
-      if (onError) {
-        onError(errorMessage);
-      }
-    }  
-  };  
-
-  return (  
-    <Card className="citizenship-content-processor">  
+      
+      toast({
+        title: "Questions Generated",
+        description: `Successfully created ${generatedQuestions.length} citizenship practice questions.`,
+      });
+      
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      toast({
+        title: "Generation Error",
+        description: "Failed to generate citizenship questions. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  return (
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Italian Citizenship Test Question Generator</CardTitle>
-        <CardDescription>Generate practice questions for Italian citizenship test preparation</CardDescription>
+        <CardTitle className="text-xl flex items-center gap-2">
+          <ListPlus className="h-5 w-5" />
+          Italian Citizenship Question Generator
+        </CardTitle>
+        <CardDescription>
+          Paste Italian text to generate citizenship test practice questions
+        </CardDescription>
       </CardHeader>
       
-      <CardContent>
-        <div className="settings-summary space-y-2 mb-4">  
-          <p><strong>Level:</strong> {settings.italianLevel}</p>  
-          <p><strong>Section:</strong> {settings.testSection}</p>  
-          <p><strong>Citizenship Focus:</strong> {settings.isCitizenshipFocused ? 'Yes' : 'No'}</p>  
-          <p><strong>Topics:</strong> {settings.topics.join(', ') || 'All topics'}</p>  
-        </div>  
+      <CardContent className="space-y-4">
+        <Textarea 
+          value={content}
+          onChange={handleContentChange}
+          placeholder="Paste Italian text here (articles about Italian history, culture, or civics work best)..."
+          className="min-h-[150px] font-mono text-sm"
+          disabled={isProcessing}
+        />
         
-        <Button   
-          onClick={handleGenerate}   
-          disabled={isGenerating}  
-          className="w-full"  
-        >  
-          {isGenerating ? (
+        {questions.length > 0 && (
+          <div className="border rounded-md p-3 bg-muted/30">
+            <h3 className="font-medium mb-2">Preview ({questions.length} questions generated)</h3>
+            <ul className="space-y-2 list-disc pl-5">
+              {questions.slice(0, 3).map((q, index) => (
+                <li key={index} className="text-sm">
+                  <span className="font-medium">{q.text.substring(0, 60)}...</span>
+                </li>
+              ))}
+              {questions.length > 3 && (
+                <li className="text-sm text-muted-foreground">
+                  + {questions.length - 3} more questions
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+      
+      <CardFooter>
+        <Button
+          onClick={handleGenerateQuestions}
+          disabled={isProcessing || !content.trim()}
+          className="w-full"
+        >
+          {isProcessing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generando...
+              Generating Questions...
             </>
-          ) : 'Genera Domande'}  
-        </Button>  
-        
-        {error && (  
-          <div className="error-message mt-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">  
-            Errore: {error}  
-          </div>  
-        )}  
-        
-        {questions.length > 0 && (  
-          <div className="generated-questions mt-6">  
-            <h3 className="text-lg font-medium mb-4">Domande Generate</h3>  
-            <ul className="question-list space-y-6">  
-              {questions.map(question => (  
-                <li key={question.id} className="question-item p-4 border rounded-md">  
-                  <p className="question-text font-medium mb-3">{question.text}</p>  
-                  {question.options && (  
-                    <ul className="question-options space-y-2 mb-4">  
-                      {question.options.map((option, index) => (  
-                        <li key={index} className="option-item p-2 bg-gray-50 rounded">  
-                          {String.fromCharCode(65 + index)}. {option}  
-                        </li>  
-                      ))}  
-                    </ul>  
-                  )}  
-                  <p className="correct-answer text-green-600 font-medium">Risposta Corretta: {question.correctAnswer}</p>  
-                  {question.explanation && (  
-                    <p className="explanation mt-2 text-gray-600 text-sm">{question.explanation}</p>  
-                  )}  
-                  {question.isCitizenshipRelevant && (  
-                    <div className="citizenship-badge mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">  
-                      Pertinente per il test di cittadinanza  
-                    </div>  
-                  )}  
-                </li>  
-              ))}  
-            </ul>  
-          </div>  
-        )}  
-      </CardContent>
+          ) : (
+            'Generate Citizenship Questions'
+          )}
+        </Button>
+      </CardFooter>
     </Card>
-  );  
-}  
+  );
+};
 
 export default CitizenshipContentProcessor;

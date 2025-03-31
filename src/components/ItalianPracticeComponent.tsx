@@ -1,248 +1,178 @@
-import React, { useState, useEffect } from 'react';
-import { useAIUtils } from '@/hooks/useAIUtils';
-import {
-  ItalianLevel,
-  ItalianTestSection,
-  AIGeneratedQuestion,
-  QuestionGenerationParams
-} from '@/types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 
-export interface ItalianPracticeProps {
-  testSection: ItalianTestSection;
-  level: ItalianLevel;
-  isCitizenshipMode: boolean;
-  onComplete?: (results: {score: number; time: number}) => void;
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  AIGeneratedQuestion, 
+  ItalianLevel, 
+  ItalianTestSection 
+} from '@/types/italian-types';
+import { useAIUtils } from '@/hooks/useAIUtils';
+import QuestionAnsweringComponent from './learning/QuestionAnsweringComponent';
+import { Loader2, BookOpen, Mic, FileText, PenTool, Languages } from 'lucide-react';
+
+interface ItalianPracticeComponentProps {
+  initialSection?: ItalianTestSection;
+  level?: ItalianLevel;
+  onComplete?: (score: number, section: ItalianTestSection) => void;
+  userId?: string;
 }
 
-// Named export function
-export function ItalianPracticeComponent({
-  testSection,
-  level,
-  isCitizenshipMode,
-  onComplete
-}: ItalianPracticeProps) {
-  const { generateQuestions } = useAIUtils();
+const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
+  initialSection = 'grammar',
+  level = 'intermediate',
+  onComplete,
+  userId
+}) => {
+  const [activeTab, setActiveTab] = useState<ItalianTestSection>(initialSection);
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [showFeedback, setShowFeedback] = useState<boolean>(false);
-  const [timeSpent, setTimeSpent] = useState<number>(0);
-  const [timer, setTimer] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [completedSections, setCompletedSections] = useState<Record<ItalianTestSection, number>>({
+    grammar: 0,
+    vocabulary: 0,
+    culture: 0,
+    listening: 0,
+    reading: 0,
+    writing: 0,
+    speaking: 0,
+    citizenship: 0
+  });
   
-  // Load questions on component mount
+  const { generateQuestions } = useAIUtils();
+  
+  // Load questions when section changes
   useEffect(() => {
-    loadQuestions();
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [testSection, level]);
+    loadQuestionsForSection(activeTab);
+  }, [activeTab]);
   
-  // Start timer when questions are loaded
-  useEffect(() => {
-    if (questions.length > 0 && !timer) {
-      const intervalId = window.setInterval(() => {
-        setTimeSpent(prev => prev + 1);
-      }, 1000);
-      setTimer(intervalId);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [questions]);
-  
-  const loadQuestions = async () => {
-    setLoading(true);
+  // Function to load questions for a specific section
+  const loadQuestionsForSection = async (section: ItalianTestSection) => {
+    setIsLoading(true);
     try {
-      const params: QuestionGenerationParams = {
+      const result = await generateQuestions({
+        testSection: section,
         italianLevel: level,
-        testSection: testSection,
-        isCitizenshipFocused: isCitizenshipMode,
-        count: 5
-      };
-      
-      const result = await generateQuestions(params);
-      
-      if (!result.error && result.questions.length > 0) {
-        setQuestions(result.questions);
-        setCurrentIndex(0);
-        setAnswers({});
-        setShowFeedback(false);
-        setTimeSpent(0);
-      }
-    } catch (error) {
-      console.error('Error loading questions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleSelect = (option: string) => {
-    setSelectedOption(option);
-  };
-  
-  const handleNextQuestion = () => {
-    const currentQuestion = questions[currentIndex];
-    
-    // Save answer
-    if (selectedOption) {
-      setAnswers(prev => ({
-        ...prev,
-        [currentQuestion.id]: selectedOption
-      }));
-    }
-    
-    // Move to next question or complete
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setSelectedOption(null);
-      setShowFeedback(false);
-    } else {
-      completeExercise();
-    }
-  };
-  
-  const handleCheckAnswer = () => {
-    setShowFeedback(true);
-  };
-  
-  const completeExercise = () => {
-    // Stop the timer
-    if (timer) {
-      clearInterval(timer);
-      setTimer(null);
-    }
-    
-    // Calculate score
-    const totalQuestions = questions.length;
-    const correctAnswers = questions.filter(q => 
-      answers[q.id] === q.correctAnswer
-    ).length;
-    
-    const score = (correctAnswers / totalQuestions) * 100;
-    
-    // Notify parent component
-    if (onComplete) {
-      onComplete({
-        score,
-        time: timeSpent
+        count: 5,
+        language: 'italian'
       });
+      
+      const generatedQuestions = result.questions as AIGeneratedQuestion[];
+      setQuestions(generatedQuestions);
+    } catch (error) {
+      console.error(`Error loading ${section} questions:`, error);
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  // Current question
-  const currentQuestion = questions[currentIndex];
+  // Handle section completion
+  const handleSectionComplete = (score: number) => {
+    setCompletedSections(prev => ({
+      ...prev,
+      [activeTab]: score
+    }));
+    
+    if (onComplete) {
+      onComplete(score, activeTab);
+    }
+  };
   
-  // If there's no current question, show loading or empty state
-  if (!currentQuestion) {
-    return (
-      <Card className="italian-practice">
-        {loading ? (
-          <CardContent className="p-6 flex justify-center items-center">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span>Loading questions...</span>
-          </CardContent>
-        ) : (
-          <CardContent className="p-6">
-            <div className="text-center">
-              <p className="mb-4">No questions available. Please try again.</p>
-              <Button onClick={loadQuestions}>Load Questions</Button>
-            </div>
-          </CardContent>
-        )}
-      </Card>
-    );
-  }
-  
-  const isCorrect = selectedOption === currentQuestion.correctAnswer;
+  // Get section icon
+  const getSectionIcon = (section: ItalianTestSection) => {
+    switch (section) {
+      case 'grammar': return <BookOpen className="h-4 w-4" />;
+      case 'vocabulary': return <Languages className="h-4 w-4" />;
+      case 'listening': return <Mic className="h-4 w-4" />;
+      case 'reading': return <FileText className="h-4 w-4" />;
+      case 'writing': return <PenTool className="h-4 w-4" />;
+      default: return <BookOpen className="h-4 w-4" />;
+    }
+  };
   
   return (
-    <Card className="italian-practice">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Italian Practice Exercise</CardTitle>
-        <div className="flex justify-between items-center">
-          <div className="flex-1 bg-gray-200 h-2 rounded-full mt-2">
-            <div 
-              className="bg-blue-500 h-2 rounded-full"
-              style={{width: `${((currentIndex + 1) / questions.length) * 100}%`}}
-            ></div>
-          </div>
-          <span className="ml-3 text-sm font-medium">
-            {currentIndex + 1} / {questions.length}
-          </span>
-        </div>
+        <CardTitle className="text-xl">Italian Practice - {level}</CardTitle>
+        <CardDescription>
+          Practice different aspects of Italian language
+        </CardDescription>
       </CardHeader>
       
       <CardContent>
-        <div className="question-container">
-          <h3 className="text-xl font-semibold mb-4">{currentQuestion.text}</h3>
-          
-          <div className="options-list space-y-2">
-            {currentQuestion.options?.map((option, index) => (
-              <div 
-                key={index} 
-                className={`option p-3 border rounded cursor-pointer ${
-                  selectedOption === option
-                    ? showFeedback
-                      ? isCorrect
-                        ? 'bg-green-100 border-green-500'
-                        : 'bg-red-100 border-red-500'
-                      : 'bg-blue-100 border-blue-500'
-                    : ''
-                } ${
-                  showFeedback && option === currentQuestion.correctAnswer
-                    ? 'bg-green-100 border-green-500'
-                    : ''
-                }`}
-                onClick={() => !showFeedback && handleSelect(option)}
-              >
-                {option}
-              </div>
-            ))}
-          </div>
-          
-          {showFeedback && (
-            <div className="feedback mt-4 p-3 rounded">
-              <p className={isCorrect ? 'text-green-600' : 'text-red-600'}>
-                {isCorrect ? 'Correct!' : 'Incorrect. The correct answer is:'} 
-                {' '}<strong>{currentQuestion.correctAnswer}</strong>
-              </p>
-              {currentQuestion.explanation && (
-                <p className="explanation mt-2">{currentQuestion.explanation}</p>
-              )}
-            </div>
-          )}
-          
-          <div className="actions mt-6 flex justify-between">
-            {!showFeedback ? (
-              <Button 
-                onClick={handleCheckAnswer} 
-                disabled={!selectedOption}
-                variant={!selectedOption ? "outline" : "default"}
-              >
-                Check Answer
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleNextQuestion}
-                variant="default"
-              >
-                {currentIndex < questions.length - 1 ? 'Next Question' : 'Complete Exercise'}
-              </Button>
-            )}
+        <Tabs 
+          defaultValue={initialSection} 
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as ItalianTestSection)}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 w-full">
+            <TabsTrigger value="grammar" className="text-xs md:text-sm flex items-center gap-1">
+              <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Grammar</span>
+            </TabsTrigger>
             
-            <div className="timer text-sm font-medium flex items-center">
-              Time: {Math.floor(timeSpent / 60)}:{String(timeSpent % 60).padStart(2, '0')}
-            </div>
+            <TabsTrigger value="vocabulary" className="text-xs md:text-sm flex items-center gap-1">
+              <Languages className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Vocabulary</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="listening" className="text-xs md:text-sm flex items-center gap-1">
+              <Mic className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Listening</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="reading" className="text-xs md:text-sm flex items-center gap-1">
+              <FileText className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Reading</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="writing" className="text-xs md:text-sm flex items-center gap-1">
+              <PenTool className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Writing</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="speaking" className="text-xs md:text-sm flex items-center gap-1">
+              <Mic className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Speaking</span>
+            </TabsTrigger>
+            
+            <TabsTrigger value="culture" className="text-xs md:text-sm flex items-center gap-1">
+              <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Culture</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="mt-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-10">
+                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
+                <p>Loading {activeTab} practice questions...</p>
+              </div>
+            ) : (
+              Object.keys(completedSections).map(section => (
+                <TabsContent key={section} value={section} className="mt-0">
+                  <QuestionAnsweringComponent 
+                    questions={questions}
+                    contentType={section as ItalianTestSection}
+                    onComplete={handleSectionComplete}
+                    difficultyLevel={level}
+                    userId={userId}
+                  />
+                </TabsContent>
+              ))
+            )}
           </div>
-        </div>
+        </Tabs>
       </CardContent>
+      
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={() => loadQuestionsForSection(activeTab)}>
+          Refresh Questions
+        </Button>
+      </CardFooter>
     </Card>
   );
-}
+};
 
 export default ItalianPracticeComponent;

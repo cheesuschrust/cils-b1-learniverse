@@ -1,345 +1,234 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { ContentType, AISettings } from '@/types';
-import { AIUtilsContextType, QuestionGenerationParams, AIGenerationResult } from '@/types/app-types';
-import { mapToItalianTypes } from '@/types/italian-types';
+import React, { createContext, useState, useCallback, useContext } from 'react';
+import { 
+  AIUtilsContextType,
+  AISettings,
+  QuestionGenerationParams,
+  AIGenerationResult
+} from '@/types/core-types';
+import { useAI } from '@/hooks/useAI';
+import { useToast } from '@/hooks/use-toast';
+
+// Create the context with a defined type
+export const AIUtilsContext = createContext<AIUtilsContextType | null>(null);
 
 // Default AI settings
-const DEFAULT_AI_SETTINGS: AISettings = {
+const defaultAISettings: AISettings = {
   model: 'gpt-4o-mini',
   temperature: 0.7,
   maxTokens: 1000,
-  topP: 0.9,
+  topP: 1,
   frequencyPenalty: 0,
   presencePenalty: 0,
+  showFeedback: true,
   defaultModelSize: 'medium',
+  italianVoiceURI: '',
+  englishVoiceURI: '',
+  voiceRate: 1.0,
+  voicePitch: 1.0,
   features: {
     contentGeneration: true,
     contentAnalysis: true,
     errorCorrection: true,
     personalization: true,
     pronunciationHelp: true,
-    conversationalLearning: true, 
+    conversationalLearning: true,
     progressTracking: true,
-    difficultyAdjustment: true,
-    languageTranslation: true,
-    flashcards: true,
-    questions: true,
-    listening: true,
-    speaking: true,
-    writing: true,
-    translation: true,
-    explanation: true,
-    correction: true,
-    simplified: true,
+    autoTranslation: true
   }
 };
 
-// Create the context with a default value
-export const AIUtilsContext = createContext<AIUtilsContextType | null>(null);
-
 // Provider component
-export const AIUtilsProvider = ({ children }: { children: ReactNode }) => {
-  // Mock user for development
-  const user = { id: 'mockUser', preferredLanguage: 'english' };
-  const preferences = { aiEnabled: true, difficulty: 'intermediate' };
-  
-  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [hasActiveMicrophone, setHasActiveMicrophone] = useState<boolean>(false);
-  const [remainingCredits, setRemainingCredits] = useState<number>(100);
-  const [usageLimit] = useState<number>(100);
-  const [isAIEnabled, setIsAIEnabled] = useState<boolean>(true);
-  
+export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [settings, setSettings] = useState<AISettings>(defaultAISettings);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
   const { toast } = useToast();
-  
-  // Initialize TTS synthesis
-  const [synth, setSynth] = useState<SpeechSynthesis | null>(null);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      setSynth(window.speechSynthesis);
-      
-      // Get available voices
-      const updateVoices = () => {
-        setVoices(window.speechSynthesis.getVoices());
-      };
-      
-      updateVoices();
-      
-      // Chrome loads voices asynchronously
-      window.speechSynthesis.onvoiceschanged = updateVoices;
-      
-      // Clean up
-      return () => {
-        if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.cancel();
-        }
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    }
+  const { generateText, getConfidenceScore, error, isLoading, abort } = useAI();
+
+  const updateSettings = useCallback((newSettings: AISettings) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
   }, []);
-  
-  useEffect(() => {
-    // Load user AI settings from preferences if available
-    if (preferences?.aiEnabled !== undefined) {
-      setIsAIEnabled(preferences.aiEnabled);
-    }
-  }, [preferences]);
-  
-  // Process content using AI
-  const processContent = async (prompt: string, options: any = {}): Promise<string> => {
+
+  const processContent = useCallback(async (prompt: string, options?: any) => {
+    setIsProcessing(true);
     try {
-      setIsProcessing(true);
-      
-      // Add user context to the prompt if needed
-      const userContext = user.preferredLanguage ? `User preferred language: ${user.preferredLanguage}.` : '';
-      const difficultyContext = preferences?.difficulty ? `Content difficulty: ${preferences.difficulty}.` : '';
-      const contextualizedPrompt = `${userContext} ${difficultyContext} ${prompt}`;
-      
-      // Mock AI service response for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return `AI response for "${contextualizedPrompt}"`;
-    } catch (error) {
-      console.error("Error processing content:", error);
-      toast({
-        title: "Processing Error",
-        description: "Failed to generate content. Please try again.",
-        variant: "destructive",
+      const result = await generateText(prompt, {
+        model: settings.model,
+        temperature: options?.temperature || settings.temperature,
+        maxTokens: options?.maxTokens || settings.maxTokens,
+        topP: options?.topP || settings.topP,
+        frequencyPenalty: options?.frequencyPenalty || settings.frequencyPenalty,
+        presencePenalty: options?.presencePenalty || settings.presencePenalty
       });
-      return '';
+      return result;
+    } catch (err) {
+      console.error('Error processing content:', err);
+      throw err;
     } finally {
       setIsProcessing(false);
     }
-  };
-  
-  // Update AI settings
-  const updateSettings = (newSettings: AISettings): void => {
-    setSettings({
-      ...settings,
-      ...newSettings
-    });
-  };
-  
-  // Generate content (alias for processContent for backward compatibility)
-  const generateContent = async (prompt: string, options: any = {}): Promise<string> => {
+  }, [generateText, settings]);
+
+  const generateContent = useCallback(async (prompt: string, options?: any) => {
     return processContent(prompt, options);
-  };
-  
-  // Text-to-speech functionality
-  const speakText = (text: string, language = 'english', onComplete?: () => void): void => {
-    if (!synth) {
-      console.error("Speech synthesis not supported");
-      return;
-    }
+  }, [processContent]);
+
+  const speak = useCallback(async (text: string, language?: string): Promise<void> => {
+    if (!text) return;
     
-    // Cancel any ongoing speech
-    if (synth.speaking) {
-      synth.cancel();
-    }
-    
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Set voice based on language
-    let voice: SpeechSynthesisVoice | null = null;
-    
-    if (language === 'italian') {
-      // Try to find an Italian voice
-      voice = voices.find(v => v.lang.startsWith('it')) || null;
-      // Use the configured Italian voice if available
-      if (settings.italianVoiceURI) {
-        voice = voices.find(v => v.voiceURI === settings.italianVoiceURI) || voice;
-      }
-    } else {
-      // Default to English
-      voice = voices.find(v => v.lang.startsWith('en')) || null;
-      // Use the configured English voice if available
-      if (settings.englishVoiceURI) {
-        voice = voices.find(v => v.voiceURI === settings.englishVoiceURI) || voice;
-      }
-    }
-    
-    if (voice) {
-      utterance.voice = voice;
-    }
-    
-    // Set rate and pitch if configured
-    if (settings.voiceRate) utterance.rate = settings.voiceRate;
-    if (settings.voicePitch) utterance.pitch = settings.voicePitch;
-    
-    // Event handlers
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      if (onComplete) onComplete();
-    };
-    utterance.onerror = (event) => {
-      console.error("Speech error:", event);
-      setIsSpeaking(false);
-    };
-    
-    // Speak
-    synth.speak(utterance);
-  };
-  
-  // Process audio stream (for speech recognition)
-  const processAudioStream = async (stream: MediaStream): Promise<string> => {
+    setIsSpeaking(true);
     try {
-      setIsTranscribing(true);
+      const utterance = new SpeechSynthesisUtterance(text);
       
-      // Simulate processing audio (in a real app, this would use a speech-to-text API)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Set language preference based on the argument or settings
+      if (language === 'italian') {
+        utterance.voice = speechSynthesis.getVoices().find(
+          voice => voice.voiceURI === settings.italianVoiceURI
+        ) || null;
+        utterance.lang = 'it-IT';
+      } else {
+        utterance.voice = speechSynthesis.getVoices().find(
+          voice => voice.voiceURI === settings.englishVoiceURI
+        ) || null;
+        utterance.lang = 'en-US';
+      }
       
-      return "This is a simulated transcription.";
-    } catch (error) {
-      console.error("Audio processing error:", error);
-      toast({
-        title: "Transcription Error",
-        description: "Failed to process audio. Please try again.",
-        variant: "destructive",
+      // Apply rate and pitch settings
+      utterance.rate = settings.voiceRate || 1;
+      utterance.pitch = settings.voicePitch || 1;
+      
+      // Return a promise that resolves when speech is complete
+      return new Promise((resolve, reject) => {
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          resolve();
+        };
+        utterance.onerror = (event) => {
+          setIsSpeaking(false);
+          reject(new Error(`Speech synthesis error: ${event.error}`));
+        };
+        speechSynthesis.speak(utterance);
       });
-      return '';
+    } catch (err) {
+      setIsSpeaking(false);
+      console.error('Speech synthesis error:', err);
+      throw err;
+    }
+  }, [settings]);
+
+  const speakText = useCallback((text: string, language?: string, onComplete?: () => void) => {
+    speak(text, language)
+      .then(() => {
+        if (onComplete) onComplete();
+      })
+      .catch(err => {
+        console.error('Error in speakText:', err);
+        if (onComplete) onComplete();
+      });
+  }, [speak]);
+
+  const processAudioStream = useCallback(async (stream: MediaStream): Promise<string> => {
+    setIsTranscribing(true);
+    try {
+      // Placeholder implementation - in a real app this would connect to a speech recognition service
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return "Speech transcription result";
+    } catch (err) {
+      console.error('Audio processing error:', err);
+      throw err;
     } finally {
       setIsTranscribing(false);
     }
-  };
-  
-  // Stop audio processing
-  const stopAudioProcessing = (): void => {
-    // Implementation would depend on the specific audio processing being used
+  }, []);
+
+  const stopAudioProcessing = useCallback(() => {
+    // Implementation depends on how audio processing was started
     setIsTranscribing(false);
-  };
-  
-  // Check for microphone access
-  const checkMicrophoneAccess = async (): Promise<boolean> => {
+  }, []);
+
+  const checkMicrophoneAccess = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Stop all tracks
       stream.getTracks().forEach(track => track.stop());
-      
       setHasActiveMicrophone(true);
       return true;
-    } catch (error) {
-      console.error("Microphone access error:", error);
+    } catch (err) {
+      console.error('Microphone access error:', err);
       setHasActiveMicrophone(false);
       return false;
     }
-  };
-  
-  // Generate questions based on parameters
-  const generateQuestions = async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
+  }, []);
+
+  const recognizeSpeech = useCallback(async (audioBlob: Blob): Promise<string> => {
     try {
-      setIsGenerating(true);
+      setIsTranscribing(true);
+      // Placeholder for speech recognition API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return "Speech recognition result";
+    } catch (err) {
+      console.error('Speech recognition error:', err);
+      throw err;
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, []);
+
+  const compareTexts = useCallback(async (text1: string, text2: string): Promise<number> => {
+    // Calculate similarity score (0-100)
+    return 85; // Placeholder value
+  }, []);
+
+  // Function to generate questions based on parameters
+  const generateQuestions = useCallback(async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
+    setIsGenerating(true);
+    try {
+      // In a real application, this would call an actual API
+      // For now, return mock data with the appropriate structure
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Check if user has remaining credits
-      if (remainingCredits <= 0) {
-        toast({
-          title: "Usage Limit Reached",
-          description: "You've reached your AI usage limit. Please upgrade to continue.",
-          variant: "warning",
-        });
-        return { questions: [], error: "Usage limit reached" };
-      }
-      
-      // Convert params to Italian format if needed
-      const italianParams = mapToItalianTypes(params);
-      
-      // Mock AI service response for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockQuestions = [
-        {
-          id: '1',
-          text: 'What is the capital of Italy?',
-          options: ['Rome', 'Milan', 'Florence', 'Naples'],
-          correctAnswer: 'Rome',
-          explanation: 'Rome has been the capital of Italy since 1871.',
+      return {
+        questions: Array(params.count || 3).fill(null).map((_, i) => ({
+          id: `question-${i}`,
+          text: `Generated question ${i + 1} for ${params.contentTypes?.[0] || 'general'} at ${params.difficulty || 'intermediate'} level.`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: "Option A",
+          explanation: "This is the explanation for the correct answer.",
           type: params.contentTypes?.[0] || 'grammar',
-          difficulty: params.difficulty || 'intermediate',
+          difficulty: params.difficulty || params.italianLevel || 'intermediate',
           isCitizenshipRelevant: params.isCitizenshipFocused || false
-        }
-      ];
-      
-      // Deduct credits
-      setRemainingCredits(prevCredits => Math.max(0, prevCredits - 1));
-      
-      return { questions: mockQuestions, error: null };
-    } catch (error) {
-      console.error("Error generating questions:", error);
-      toast({
-        title: "Question Generation Error",
-        description: "Failed to generate questions. Please try again.",
-        variant: "destructive",
-      });
-      return { questions: [], error: "Failed to generate questions" };
+        }))
+      };
+    } catch (err) {
+      console.error('Error generating questions:', err);
+      return {
+        questions: [],
+        error: err instanceof Error ? err.message : 'An unknown error occurred'
+      };
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, []);
+
+  // Premium limits
+  const remainingCredits = 100;
+  const usageLimit = 1000;
   
-  // Reset usage credits (e.g., at the start of a new billing period)
-  const resetCredits = async (): Promise<void> => {
-    // In a real app, this would check with a backend service
-    setRemainingCredits(usageLimit);
+  const resetCredits = useCallback(async () => {
     toast({
       title: "Credits Reset",
       description: "Your AI usage credits have been reset.",
-      variant: "default",
+      variant: "default"
     });
-  };
-  
-  // Make features conditional on user settings
-  useEffect(() => {
-    if (preferences?.aiEnabled === false) {
-      // Disable AI features if the user has turned them off
-      setIsAIEnabled(false);
-      setSettings({
-        ...settings,
-        defaultModelSize: 'small', // Use smallest model to save resources
-        temperature: 0.5,
-        maxTokens: 500
-      });
-    } else if (preferences?.aiEnabled === true) {
-      setIsAIEnabled(true);
-    }
-  }, [preferences?.aiEnabled]);
-  
-  // Speech recognition functionality
-  const recognizeSpeech = async (audioBlob: Blob): Promise<string> => {
-    try {
-      // In a real implementation, this would call a speech-to-text API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      return "Simulated speech recognition result.";
-    } catch (error) {
-      console.error("Speech recognition error:", error);
-      return "";
-    }
-  };
-  
-  // Text comparison (e.g., for pronunciation accuracy)
-  const compareTexts = async (text1: string, text2: string): Promise<number> => {
-    // In a real implementation, this would use a text comparison algorithm or API
-    // For now, we'll use a simple implementation
-    const similarity = 0.8; // Simulated similarity score between 0 and 1
-    return similarity;
-  };
-  
-  // Expose speech directly for convenience
-  const speak = async (text: string, language?: string): Promise<void> => {
-    if (!text) return;
-    await new Promise<void>((resolve) => {
-      speakText(text, language, resolve);
-    });
-  };
-  
-  // Context value
+    return Promise.resolve();
+  }, [toast]);
+
+  // Check if AI features are enabled
+  const isAIEnabled = settings.enabled !== false;
+
   const value: AIUtilsContextType = {
     processContent,
     settings,
@@ -363,7 +252,7 @@ export const AIUtilsProvider = ({ children }: { children: ReactNode }) => {
     isProcessing,
     isAIEnabled
   };
-  
+
   return (
     <AIUtilsContext.Provider value={value}>
       {children}
@@ -371,15 +260,13 @@ export const AIUtilsProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook to use the AIUtils context
+// Custom hook for using the context
 export const useAIUtils = (): AIUtilsContextType => {
   const context = useContext(AIUtilsContext);
-  
   if (!context) {
     throw new Error('useAIUtils must be used within an AIUtilsProvider');
   }
-  
   return context;
 };
 
-export default AIUtilsProvider;
+export default AIUtilsContext;

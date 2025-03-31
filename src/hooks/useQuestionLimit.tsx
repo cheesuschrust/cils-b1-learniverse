@@ -1,146 +1,119 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
 
-/**
- * Hook to manage and enforce daily question limits based on subscription
- */
-export const useQuestionLimit = () => {
+interface QuestionLimitReturn {
+  dailyLimit: number;
+  usedToday: number;
+  remaining: number;
+  isPremium: boolean;
+  hasReachedLimit: boolean;
+  isLoading: boolean;
+  lastUpdated: Date;
+  useQuestion: () => Promise<boolean>;
+  canUseQuestion: () => boolean;
+  loadUsageData: () => Promise<{ used: number, limit: number }>;
+  canAccessContent: boolean;
+  remainingQuestions: number | "unlimited";
+  trackQuestionUsage: () => Promise<boolean>;
+}
+
+export function useQuestionLimit(contentType?: string): QuestionLimitReturn {
   const { user } = useAuth();
-  const { preferences } = useUserPreferences();
-  const { toast } = useToast();
+  const isPremium = user?.isPremiumUser || false;
   
-  // State to manage limits and usage
-  const [dailyLimit, setDailyLimit] = useState(10); // Default limit for free users
+  // Default limits based on user type
+  const dailyLimit = isPremium ? 1000 : 20;
+  
   const [usedToday, setUsedToday] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
   
-  // Check if current user is premium
-  const isPremium = !!user?.isPremiumUser;
+  // Calculate remaining
+  const remaining = Math.max(dailyLimit - usedToday, 0);
+  const hasReachedLimit = remaining <= 0 && !isPremium;
   
-  // Determine if user has reached their limit
-  const hasReachedLimit = usedToday >= dailyLimit && !isPremium;
+  // Aliases for compatibility with existing code
+  const canAccessContent = isPremium || !hasReachedLimit;
+  const remainingQuestions = isPremium ? "unlimited" : remaining;
   
-  /**
-   * Get the question count for today from user data
-   */
+  // Load usage data from local storage or API
   const loadUsageData = useCallback(async () => {
-    setIsLoading(true);
     try {
-      // Set appropriate limit based on user type
-      if (isPremium) {
-        setDailyLimit(50); // Premium users get higher limits
-      } else if (user?.role === 'teacher') {
-        setDailyLimit(25); // Teachers get higher limits than students
-      } else {
-        setDailyLimit(10); // Default limit for free users
-      }
+      setIsLoading(true);
       
-      // Get today's date as YYYY-MM-DD
+      // Get today's date string for storage key
       const today = new Date().toISOString().split('T')[0];
+      const storageKey = `questionUsage_${today}_${contentType || 'general'}_${user?.id || 'anonymous'}`;
       
-      // Check if we have a count for today
-      const dailyCount = user?.dailyQuestionCounts ? 
-        Object.values(user.dailyQuestionCounts).reduce((acc, curr) => acc + curr, 0) : 0;
-      setUsedToday(dailyCount);
-      setLastUpdated(new Date());
+      // Load from local storage
+      const stored = localStorage.getItem(storageKey);
+      const usedCount = stored ? parseInt(stored, 10) : 0;
       
+      setUsedToday(usedCount);
+      return { used: usedCount, limit: dailyLimit };
     } catch (error) {
-      console.error('Error loading question limit data:', error);
+      console.error('Error loading question usage data:', error);
+      return { used: 0, limit: dailyLimit };
     } finally {
       setIsLoading(false);
     }
-  }, [isPremium, user]);
+  }, [contentType, dailyLimit, user?.id]);
   
-  /**
-   * Increment the question count when a question is used
-   */
-  const incrementQuestionCount = useCallback(async () => {
-    if (!user) return false;
-    
+  // Update usage count in storage
+  const updateUsageCount = useCallback(async (newCount: number) => {
     try {
-      // Get today's date as YYYY-MM-DD
       const today = new Date().toISOString().split('T')[0];
+      const storageKey = `questionUsage_${today}_${contentType || 'general'}_${user?.id || 'anonymous'}`;
       
-      // Update local state immediately
-      setUsedToday(prev => prev + 1);
-      
-      // In a real implementation, this would update the database
-      console.log(`Incrementing question count for user ${user.id} on ${today}`);
-      
-      return true;
+      localStorage.setItem(storageKey, newCount.toString());
+      setUsedToday(newCount);
+      setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error updating question count:', error);
-      return false;
+      console.error('Error updating question usage data:', error);
     }
-  }, [user]);
+  }, [contentType, user?.id]);
   
-  /**
-   * Check if user can use another question
-   */
-  const canUseQuestion = useCallback((): boolean => {
-    // Premium users have unlimited questions
-    if (isPremium) return true;
-    
-    // Check if user has reached their daily limit
-    return usedToday < dailyLimit;
-  }, [isPremium, usedToday, dailyLimit]);
+  // Check if user can use a question
+  const canUseQuestion = useCallback(() => {
+    return isPremium || remaining > 0;
+  }, [isPremium, remaining]);
   
-  /**
-   * Use a question and check if it's allowed
-   */
-  const useQuestion = useCallback(async (): Promise<boolean> => {
-    // Check if user can use a question
+  // Use a question and update the count
+  const useQuestion = useCallback(async () => {
     if (!canUseQuestion()) {
-      toast({
-        variant: "destructive",
-        title: "Daily limit reached",
-        description: "You've reached your daily question limit. Upgrade to premium for unlimited questions.",
-      });
       return false;
     }
     
-    // Increment the question count
-    const success = await incrementQuestionCount();
-    
-    if (!success) {
-      return false;
-    }
-    
-    // Check if user has now reached their limit after increment
-    if (usedToday + 1 >= dailyLimit && !isPremium) {
-      toast({
-        variant: "warning",
-        title: "Approaching limit",
-        description: "You've used your last free question for today. Upgrade to premium for unlimited questions.",
-      });
-    }
-    
+    await updateUsageCount(usedToday + 1);
     return true;
-  }, [canUseQuestion, incrementQuestionCount, toast, usedToday, dailyLimit, isPremium]);
+  }, [canUseQuestion, updateUsageCount, usedToday]);
   
-  // Load usage data when component mounts or user changes
+  // Alias for trackQuestionUsage for compatibility with existing code
+  const trackQuestionUsage = useCallback(async () => {
+    return await useQuestion();
+  }, [useQuestion]);
+  
+  // Load initial data
   useEffect(() => {
-    if (user) {
-      loadUsageData();
-    }
-  }, [user, loadUsageData]);
+    loadUsageData();
+  }, [loadUsageData]);
   
   return {
     dailyLimit,
     usedToday,
-    remaining: Math.max(0, dailyLimit - usedToday),
+    remaining,
     isPremium,
     hasReachedLimit,
     isLoading,
     lastUpdated,
     useQuestion,
     canUseQuestion,
-    loadUsageData
+    loadUsageData,
+    canAccessContent,
+    remainingQuestions,
+    trackQuestionUsage
   };
-};
+}
 
 export default useQuestionLimit;

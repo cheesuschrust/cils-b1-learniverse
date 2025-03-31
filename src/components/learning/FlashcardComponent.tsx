@@ -174,7 +174,7 @@ const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
       {showActions && (
         <div className="mt-4 flex justify-between items-center">
           <Button variant="outline" size="sm" onClick={handleUnknown}>
-            Don&apos;t Know
+            Don't Know
           </Button>
 
           <div className="flex space-x-1">
@@ -194,7 +194,30 @@ const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
             ))}
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleKnown}>
+          <Button variant="outline" size="sm" onClick={handleSkip}>
+            Skip
+          </Button>
+        </div>
+      )}
+      
+      {showActions && (onUpdate || onDelete) && (
+        <div className="mt-2 flex justify-end space-x-2">
+          {onUpdate && (
+            <Button variant="ghost" size="sm" onClick={handleEdit}>
+              Edit
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
+        </div>
+      )}
+      
+      {showActions && onKnown && (
+        <div className="mt-2 flex justify-center">
+          <Button variant="default" size="sm" onClick={handleKnown}>
             Know
           </Button>
         </div>

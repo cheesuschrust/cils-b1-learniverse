@@ -69,12 +69,26 @@ export interface ReviewSchedule {
   dueDate: Date;  
   difficulty: number;
   overdue?: boolean;
+  dueToday?: number;
+  dueThisWeek?: number;
+  dueNextWeek?: number;
+  dueByDate?: Record<string, number>;
 }  
 
 export interface ReviewPerformance {  
   score: number;  
   time: number;  
-  date: Date;  
+  date: Date;
+  accuracy?: number;
+  speed?: number;
+  consistency?: number;
+  retention?: number;
+  overall?: number;
+  totalReviews?: number;
+  correctReviews?: number;
+  efficiency?: number;
+  streakDays?: number;
+  reviewsByCategory?: Record<string, number>;
 }  
 
 export interface User {  
@@ -92,6 +106,7 @@ export interface User {
   role?: string;
   status?: string;
   preferredLanguage?: string;
+  hasCompletedOnboarding?: boolean;
 }  
 
 export interface AISettings {  
@@ -108,6 +123,8 @@ export interface AISettings {
   voiceRate?: number;
   voicePitch?: number;
   features?: Record<string, boolean>;
+  assistantName?: string;
+  enabled?: boolean;
 }
 
 export interface ImportFormat {
@@ -115,6 +132,8 @@ export interface ImportFormat {
   delimiter?: string;
   hasHeader?: boolean;
   encoding?: string;
+  format?: string;
+  fieldMap?: Record<string, string>;
 }
 
 export interface FlashcardStats {
@@ -123,6 +142,7 @@ export interface FlashcardStats {
   dueToday: number;
   accuracy: number;
   streak: number;
+  total?: number;
 }
 
 export interface FlashcardSet {
@@ -137,42 +157,53 @@ export interface FlashcardSet {
   isFavorite: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  totalCards?: number;
+  masteredCards?: number;
+  difficulty?: string;
 }
 
-export interface SupportTicketExtension {
-  attachments?: string[];
-  priority: 'low' | 'medium' | 'high';
-  department: string;
-  assignedAgent?: string;
+export interface EnhancedErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  errorMonitoringService?: any;
+  additionalInfo?: Record<string, any>;
+  severity?: string;
+  category?: string;
+  showDetails?: boolean;
+  reportErrors?: boolean;
 }
 
-export interface SupportTicketProps {
-  id: string;
-  title: string;
-  description: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  createdAt: Date;
-  updatedAt?: Date;
-  userId: string;
-  assignedTo?: string;
+export interface AnalyticsReportProps {
+  data: {
+    userActivity: {
+      totalSessions: number;
+      averageSessionLength: number;
+      averageQuestionsPerSession: number;
+      averageScorePercentage: number;
+      optimalTimeOfDay: string;
+      completionRate: number;
+      timePerQuestion: number;
+    };
+    progressBySection: Record<string, {
+      attempts: number;
+      correctAnswers: number;
+      percentageCorrect: number;
+      timeSpent: number;
+    }>;
+    weeklyProgress: {
+      labels: string[];
+      datasets: {
+        label: string;
+        data: number[];
+      }[];
+    };
+  };
+  period: 'week' | 'month' | 'year';
+  onPeriodChange: (period: 'week' | 'month' | 'year') => void;
 }
 
-export interface SupportTicketUserProps {
-  userId: string;
-  name: string;
-  email: string;
-  role: 'user' | 'admin' | 'support';
-}
-
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
-export type ErrorCategory = 'ui' | 'data' | 'auth' | 'network' | 'unknown';
-
-export interface ErrorMonitoringService {
-  captureError: (error: Error, context?: any) => void;
-  getErrorCount: () => number;
-  clearErrors: () => void;
-}
-
+// Export common utility functions
 export function normalizeFlashcard(card: any): Flashcard {
   if (!card) {
     return null as any;

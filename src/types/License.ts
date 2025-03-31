@@ -118,3 +118,24 @@ export function convertToStringDates(license: License): any {
     updatedAt: license.updatedAt?.toISOString()
   };
 }
+
+// Add a function to convert between Date and string formats
+export function convertDateFields(license: any, toType: 'date' | 'string'): any {
+  if (toType === 'date') {
+    return {
+      ...license,
+      startDate: license.startDate instanceof Date ? license.startDate : new Date(license.startDate),
+      endDate: license.endDate instanceof Date ? license.endDate : new Date(license.endDate),
+      createdAt: license.createdAt instanceof Date ? license.createdAt : new Date(license.createdAt || Date.now()),
+      updatedAt: license.updatedAt instanceof Date ? license.updatedAt : license.updatedAt ? new Date(license.updatedAt) : undefined
+    };
+  } else {
+    return {
+      ...license,
+      startDate: license.startDate instanceof Date ? license.startDate.toISOString() : license.startDate,
+      endDate: license.endDate instanceof Date ? license.endDate.toISOString() : license.endDate,
+      createdAt: license.createdAt instanceof Date ? license.createdAt.toISOString() : license.createdAt || new Date().toISOString(),
+      updatedAt: license.updatedAt instanceof Date ? license.updatedAt.toISOString() : license.updatedAt
+    };
+  }
+}

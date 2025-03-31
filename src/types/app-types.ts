@@ -76,7 +76,6 @@ export interface ConfidenceIndicatorProps {
 export interface LevelBadgeProps {
   level: string;
   showInfo?: boolean;
-  size?: string;
 }
 
 // Question generation params

@@ -12,7 +12,7 @@ describe('FlashcardComponent', () => {
     italian: 'Ciao',
     english: 'Hello',
     level: 1,
-    difficulty: 2.5, // Added difficulty
+    difficulty: 2.5,
     mastered: false,
     tags: ['greeting'],
     createdAt: new Date(),
@@ -29,7 +29,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -48,7 +48,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={true}
@@ -67,7 +67,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -86,7 +86,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -107,7 +107,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -130,7 +130,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -154,7 +154,7 @@ describe('FlashcardComponent', () => {
 
     const { container } = render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}
@@ -173,7 +173,7 @@ describe('FlashcardComponent', () => {
 
     render(
       <FlashcardComponent
-        flashcard={mockCard}
+        card={mockCard}
         onRating={mockRating}
         onSkip={mockSkip}
         flipped={false}

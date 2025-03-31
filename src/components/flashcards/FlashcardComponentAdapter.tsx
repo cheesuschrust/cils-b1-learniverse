@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Flashcard } from '@/types/interface-fixes';
-import { normalizeFlashcard } from '@/types/interface-fixes';
+import { normalizeFlashcard } from '@/types/core-types';
 import FlashcardComponent from '../learning/FlashcardComponent';
 
 interface FlashcardAdapterProps {

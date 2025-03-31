@@ -1,109 +1,87 @@
 
-// Italian-specific type definitions
-import { AIQuestion } from './app-types';
+// Define Italian-specific types
 
-export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianTestSection = 'grammar' | 'vocabulary' | 'culture' | 'listening' | 'reading' | 'writing' | 'speaking' | 'citizenship';
 
-export type ItalianTestSection = 
-  | 'grammar'
-  | 'vocabulary'
-  | 'reading'
-  | 'listening'
-  | 'writing'
-  | 'speaking'
-  | 'citizenship'
-  | 'culture';
-
+// CILS exam types
 export type CILSExamType = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
+// Question generation parameters
 export interface ItalianQuestionGenerationParams {
-  italianLevel: ItalianLevel;
-  testSection: ItalianTestSection;
-  isCitizenshipFocused: boolean;
-  topics?: string[];
-  count?: number;
-  language?: string;
-  contentTypes?: ItalianTestSection[];
+  italianLevel?: ItalianLevel;
+  testSection?: ItalianTestSection;
+  isCitizenshipFocused?: boolean;
+  includeListening?: boolean;
+  includeWriting?: boolean;
+  includeReading?: boolean;
+  includeSpeaking?: boolean;
+  examType?: CILSExamType;
 }
 
+// AI-generated questions format
+export interface AIGeneratedQuestion {
+  id: string;
+  text: string;
+  options?: string[];
+  correctAnswer?: string;
+  explanation?: string;
+  type: ItalianTestSection;
+  difficulty: ItalianLevel;
+  isCitizenshipRelevant?: boolean;
+}
+
+// AI generation result
 export interface AIGenerationResult {
   questions: AIGeneratedQuestion[];
   error?: string;
 }
 
-export interface AIGeneratedQuestion extends AIQuestion {
-  type: ItalianTestSection;
-  difficulty: ItalianLevel;
-  isCitizenshipRelevant: boolean;
-}
-
+// User profile for Italian learning
 export interface UserProfile {
   id: string;
-  name: string;
+  username: string;
   email: string;
-  level: ItalianLevel;
-  interests: string[];
-  goals: string[];
-  certifications: CILSExamType[];
-  isItalianCitizen: boolean;
-  hasCompletedOnboarding: boolean;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  profileImage?: string;
+  bio?: string;
+  learningLevel?: ItalianLevel;
+  goals?: string[];
+  interests?: string[];
   createdAt: Date;
-  lastActive?: Date;
+  lastLogin?: Date;
+  preferredLanguage?: string;
+  completedLessons?: string[];
+  testScores?: Record<ItalianTestSection, number>;
+  certificateProgress?: Record<CILSExamType, number>;
 }
 
-// Type mapping utilities for converting between Italian types and app types
-export function mapToAppTypes(italianParams: ItalianQuestionGenerationParams) {
-  return {
-    difficulty: italianParams.italianLevel,
-    contentTypes: italianParams.contentTypes || [italianParams.testSection],
-    focusAreas: italianParams.topics,
-    count: italianParams.count || 5,
-    isCitizenshipFocused: italianParams.isCitizenshipFocused,
-    language: italianParams.language || 'italian',
-    italianLevel: italianParams.italianLevel,
-    testSection: italianParams.testSection
+// Citizenship test profile
+export interface CitizenshipProfile {
+  userId: string;
+  readinessScore: number;
+  lastAssessmentDate?: Date;
+  requiredScore: number;
+  sectionScores: Record<ItalianTestSection, number>;
+  passedSections: ItalianTestSection[];
+  completedSections: ItalianTestSection[];
+  isEligible: boolean;
+}
+
+// Helper function to map app types to Italian types
+export function mapToItalianTypes(type: string): ItalianTestSection {
+  const mapping: Record<string, ItalianTestSection> = {
+    'grammar': 'grammar',
+    'vocabulary': 'vocabulary',
+    'culture': 'culture',
+    'listening': 'listening',
+    'reading': 'reading',
+    'writing': 'writing',
+    'speaking': 'speaking',
+    'citizenship': 'citizenship'
   };
-}
 
-export function mapToItalianTypes(appParams: any): ItalianQuestionGenerationParams {
-  return {
-    italianLevel: appParams.italianLevel || appParams.difficulty || 'intermediate',
-    testSection: appParams.testSection || (appParams.contentTypes && appParams.contentTypes[0]) || 'grammar',
-    isCitizenshipFocused: appParams.isCitizenshipFocused || false,
-    topics: appParams.topics || appParams.focusAreas,
-    count: appParams.count || 5,
-    language: appParams.language,
-    contentTypes: appParams.contentTypes
-  };
-}
-
-// Utilities for converting between CILS exam types and Italian levels
-export function cilsToLevel(cilsLevel: CILSExamType): ItalianLevel {
-  const mapping: Record<CILSExamType, ItalianLevel> = {
-    'A1': 'beginner',
-    'A2': 'beginner',
-    'B1': 'intermediate',
-    'B2': 'intermediate',
-    'C1': 'advanced',
-    'C2': 'advanced'
-  };
-  
-  return mapping[cilsLevel] || 'intermediate';
-}
-
-export function levelToCils(level: ItalianLevel): CILSExamType[] {
-  switch(level) {
-    case 'beginner':
-      return ['A1', 'A2'];
-    case 'intermediate':
-      return ['B1', 'B2'];
-    case 'advanced':
-      return ['C1', 'C2'];
-    default:
-      // If the level is already a CILS level
-      if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(level)) {
-        return [level as CILSExamType];
-      }
-      return ['B1'];
-  }
+  return mapping[type.toLowerCase()] || 'grammar';
 }
