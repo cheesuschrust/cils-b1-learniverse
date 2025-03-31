@@ -1,17 +1,31 @@
 
 import React, { useState } from 'react';  
-import { useAIUtils } from '../hooks/useAIUtils';  
+import { useAIUtils } from '../hooks/useAIUtils';
 import {
-  CitizenshipContentProps,
+  ItalianLevel,
+  ItalianTestSection,
   AIGeneratedQuestion,
   QuestionGenerationParams
-} from '../types/app-types';  
+} from '../types/italian-types';
 
-const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({  
+// Properly structured props interface
+export interface CitizenshipContentProps {  
+  settings: {  
+    italianLevel: ItalianLevel;  
+    testSection: ItalianTestSection;  
+    isCitizenshipFocused: boolean;  
+    topics: string[];  
+  };  
+  onContentGenerated?: (content: AIGeneratedQuestion[]) => void;  
+  onError?: (error: string) => void;  
+}  
+
+// CRITICAL: Named export function
+export function CitizenshipContentProcessor({  
   settings,  
   onContentGenerated,  
   onError  
-}) => {  
+}: CitizenshipContentProps) {  
   const { generateQuestions, isGenerating } = useAIUtils();  
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);  
   const [error, setError] = useState<string | null>(null);  
@@ -21,26 +35,33 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({
     
     // Create properly typed params for Italian citizenship content  
     const params: QuestionGenerationParams = {  
-      language: 'italian',
-      difficulty: settings.italianLevel,  
-      contentTypes: [settings.testSection],  
-      focusAreas: settings.topics,  
-      count: 5, // Default to 5 questions  
-      isCitizenshipFocused: settings.isCitizenshipFocused
+      italianLevel: settings.italianLevel,  
+      testSection: settings.testSection,  
+      isCitizenshipFocused: settings.isCitizenshipFocused,  
+      topics: settings.topics,  
+      count: 5 // Default to 5 questions  
     };  
     
-    const result = await generateQuestions(params);  
+    try {
+      const result = await generateQuestions(params);  
 
-    if (result.error) {  
-      setError(result.error);  
-      if (onError) {  
-        onError(result.error);  
-      }  
-    } else {  
-      setQuestions(result.questions as AIGeneratedQuestion[]);  
-      if (onContentGenerated) {  
-        onContentGenerated(result.questions as AIGeneratedQuestion[]);  
-      }  
+      if (result.error) {  
+        setError(result.error);  
+        if (onError) {  
+          onError(result.error);  
+        }  
+      } else {  
+        setQuestions(result.questions);  
+        if (onContentGenerated) {  
+          onContentGenerated(result.questions);  
+        }  
+      }
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      setError(errorMessage);
+      if (onError) {
+        onError(errorMessage);
+      }
     }  
   };  
 
@@ -88,12 +109,12 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({
                 <p className="correct-answer">Risposta Corretta: {question.correctAnswer}</p>  
                 {question.explanation && (  
                   <p className="explanation">Spiegazione: {question.explanation}</p>  
-                )}
+                )}  
                 {question.isCitizenshipRelevant && (  
                   <div className="citizenship-badge">  
                     Pertinente per il test di cittadinanza  
                   </div>  
-                )}
+                )}  
               </li>  
             ))}  
           </ul>  
@@ -102,5 +123,3 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProps> = ({
     </div>  
   );  
 }  
-
-export default CitizenshipContentProcessor;
