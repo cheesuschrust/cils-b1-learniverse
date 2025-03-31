@@ -39,6 +39,9 @@ import {
   SystemSettings
 } from "./pages/imports";
 
+// Import Italian citizenship test page
+import ItalianCitizenshipTest from "./pages/ItalianCitizenshipTest";
+
 // Import auth components
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
@@ -148,6 +151,10 @@ const router = createBrowserRouter([
           {
             path: "ai-assistant",
             element: <AIAssistant />,
+          },
+          {
+            path: "italian-citizenship-test",
+            element: <ItalianCitizenshipTest />,
           },
         ],
       },

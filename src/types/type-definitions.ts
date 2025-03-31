@@ -1,10 +1,20 @@
-
 /**
  * Core TypeScript Type Definitions
  * 
  * This file consolidates and documents key type definitions used across the application.
  * Import types from this file to ensure consistency.
  */
+
+import { Session, User } from '@supabase/supabase-js';
+import { 
+  ItalianLevel, 
+  ItalianTestSection, 
+  CILSExamType,
+  UserProfile as ItalianUserProfile,
+  AIGeneratedQuestion,
+  QuestionGenerationParams,
+  AIGenerationResult
+} from './italian-types';
 
 // User Types
 export type UserRole = 'user' | 'admin' | 'teacher' | 'moderator' | 'editor';
@@ -81,7 +91,7 @@ export interface User {
     completedLessons: number;
   };
   
-  // Add missing properties to fix errors
+  // Properties needed for fixes
   hasCompletedOnboarding?: boolean;
 }
 
@@ -216,6 +226,17 @@ export interface AISettings {
   };
 }
 
+// Italian AI Context Type
+export interface ItalianAIUtilsContextType {
+  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
+  generateItalianExplanation: (italianText: string, level: ItalianLevel) => Promise<string>;
+  translateToEnglish: (italianText: string) => Promise<string>;
+  evaluateWrittenResponse: (response: string, prompt: string, level: ItalianLevel) => Promise<{score: number; feedback: string}>;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
+}
+
 // Component Props Types
 export interface ProcessContentOptions {
   maxLength?: number;
@@ -241,19 +262,30 @@ export interface ErrorBoundaryProps {
 export interface SpeakableWordProps {
   word: string;
   language?: string;
-  size?: string;
   className?: string;
   showTooltip?: boolean;
   tooltipContent?: string;
-  onClick?: () => void;
   onPlayComplete?: () => void;
-  autoPlay?: boolean; // Added to fix errors
+  autoPlay?: boolean;
+  size?: string;
+  onClick?: () => void;
+}
+
+export interface EnhancedErrorBoundaryProps {
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  children: React.ReactNode;
+}
+
+export interface UserManagementProps {
+  initialProfile?: ItalianUserProfile;
+  onProfileUpdate?: (profile: ItalianUserProfile) => void;
 }
 
 export interface LevelBadgeProps {
   level: number;
   showInfo?: boolean;
-  size?: string; // Added to fix errors
+  size?: string;
 }
 
 // Context Types
@@ -271,9 +303,13 @@ export interface AIUtilsContextType {
   checkMicrophoneAccess?: () => Promise<boolean>;
   generateQuestions?: (params: any) => Promise<any>; // Added to fix AIUtils context issues
   isGenerating?: boolean;
+  isAIEnabled?: boolean;
   remainingCredits?: number;
   usageLimit?: number;
   resetCredits?: () => Promise<void>;
+  speak?: (text: string, language?: string) => Promise<void>;
+  recognizeSpeech?: (audioBlob: Blob) => Promise<string>;
+  compareTexts?: (text1: string, text2: string) => Promise<number>;
 }
 
 // Error and Monitoring Types
@@ -350,7 +386,8 @@ export function normalizeContentType(type: string): ContentType {
       normalized === 'listening' || 
       normalized === 'writing' || 
       normalized === 'speaking' || 
-      normalized === 'pdf') {
+      normalized === 'pdf' ||
+      normalized === 'json') {
     return normalized as ContentType;
   }
   

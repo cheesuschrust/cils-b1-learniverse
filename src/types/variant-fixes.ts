@@ -9,3 +9,14 @@ export type ContentType =
   | 'pdf'
   | 'unknown'
   | 'json';  // Added json type
+
+// UI Extensions
+export type ExtendedAlertVariant =
+  | 'default'
+  | 'destructive'
+  | 'outline'
+  | 'secondary'
+  | 'warning'
+  | 'success'
+  | 'primary'
+  | 'info';
