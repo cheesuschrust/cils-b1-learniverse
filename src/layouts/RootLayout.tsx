@@ -7,9 +7,9 @@ import Footer from '@/components/layout/Footer';
 import { Loader2 } from 'lucide-react';
 
 const RootLayout: React.FC = () => {
-  const { isLoading } = useAuth();
+  const { loading } = useAuth();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

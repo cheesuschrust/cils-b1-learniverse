@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
@@ -44,10 +43,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     >
       <ThemeProvider defaultTheme="system" storageKey="cils-theme">
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <RouterProvider router={router} />
-            <Toaster />
-          </AuthProvider>
+          <RouterProvider router={router} />
+          <Toaster />
         </QueryClientProvider>
       </ThemeProvider>
     </EnhancedErrorBoundary>

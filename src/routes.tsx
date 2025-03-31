@@ -6,8 +6,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
-
-// Import pages
+import { AuthProvider } from "@/contexts/AuthContext";
 import { 
   Home,
   Dashboard,
@@ -44,11 +43,16 @@ import {
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 
+// Wrap each route element with AuthProvider
+const withAuth = (element: React.ReactNode) => (
+  <AuthProvider>{element}</AuthProvider>
+);
+
 // Create router
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootLayout />,
+    element: withAuth(<RootLayout />),
     children: [
       {
         index: true,

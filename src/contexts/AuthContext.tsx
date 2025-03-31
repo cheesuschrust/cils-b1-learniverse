@@ -2,13 +2,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { User, UserPreferences } from '@/types/user';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { DEFAULT_USER_PREFERENCES, normalizeUserPreferences } from '@/types/userPreferences';
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
@@ -18,7 +17,7 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
+  login: async () => false,
   loginWithGoogle: async () => {},
   logout: async () => {},
   signUp: async () => {},
@@ -36,7 +35,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -175,6 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) throw error;
+      return true;
     } catch (error: any) {
       setError(error.message || 'An error occurred during login');
       toast({
@@ -182,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         title: "Login Failed",
         description: error.message || "Invalid email or password",
       });
-      throw error;
+      return false;
     } finally {
       setLoading(false);
     }
@@ -274,9 +273,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           title: "Account created",
           description: "Please verify your email to complete registration",
         });
-
-        // Navigate to verification page
-        navigate('/email-verification');
       }
     } catch (error: any) {
       setError(error.message || 'An error occurred during registration');
@@ -298,7 +294,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
-      navigate('/');
     } catch (error: any) {
       setError(error.message || 'An error occurred during logout');
       toast({
