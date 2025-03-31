@@ -56,9 +56,10 @@ export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> =
     setIsLoading(true);
     try {
       const result = await generateQuestions({
-        testSection: section,
-        italianLevel: level,
+        contentTypes: [section],
+        difficulty: level,
         count: 5,
+        isCitizenshipFocused: isCitizenshipMode,
         language: 'italian'
       });
       
