@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   AIGeneratedQuestion, 
   ItalianLevel, 
-  ItalianTestSection 
+  ItalianTestSection,
+  AnswerResults 
 } from '@/types/italian-types';
 import { useAIUtils } from '@/hooks/useAIUtils';
 import QuestionAnsweringComponent from './learning/QuestionAnsweringComponent';
@@ -17,7 +18,7 @@ interface ItalianPracticeComponentProps {
   level?: ItalianLevel;
   testSection?: ItalianTestSection;
   isCitizenshipMode?: boolean;
-  onComplete?: (results: {score: number; time: number}) => void;
+  onComplete?: (results: AnswerResults) => void;
   userId?: string;
 }
 

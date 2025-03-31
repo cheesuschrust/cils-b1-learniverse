@@ -3,7 +3,7 @@
 export { default as AIContentProcessor } from './ai/AIContentProcessor';
 export { EnhancedErrorBoundary } from './EnhancedErrorBoundary';
 
-// Re-export the fixed components with both default and named exports
+// Re-export components with both default and named exports
 export { CitizenshipContentProcessor } from './CitizenshipContentProcessor';
 export { default as CitizenshipContentProcessor } from './CitizenshipContentProcessor';
 export { ItalianPracticeComponent } from './ItalianPracticeComponent';

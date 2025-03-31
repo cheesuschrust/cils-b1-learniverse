@@ -9,6 +9,8 @@ export type CILSExamType = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 // Question generation parameters
 export interface ItalianQuestionGenerationParams {
+  contentTypes?: ItalianTestSection[];
+  difficulty?: ItalianLevel;
   italianLevel?: ItalianLevel;
   testSection?: ItalianTestSection;
   isCitizenshipFocused?: boolean;
@@ -17,6 +19,8 @@ export interface ItalianQuestionGenerationParams {
   includeReading?: boolean;
   includeSpeaking?: boolean;
   examType?: CILSExamType;
+  count?: number;
+  language?: string;
 }
 
 // AI-generated questions format
@@ -29,6 +33,8 @@ export interface AIGeneratedQuestion {
   type: ItalianTestSection;
   difficulty: ItalianLevel;
   isCitizenshipRelevant?: boolean;
+  question?: string;
+  questionType?: string;
 }
 
 // AI generation result
@@ -68,6 +74,12 @@ export interface CitizenshipProfile {
   passedSections: ItalianTestSection[];
   completedSections: ItalianTestSection[];
   isEligible: boolean;
+}
+
+// Answer results type for question answering
+export interface AnswerResults {
+  score: number;
+  time: number;
 }
 
 // Helper function to map app types to Italian types
