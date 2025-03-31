@@ -82,12 +82,8 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
       
       <Progress 
         value={clampedScore}
-        className={cn("w-full progress-bar", sizeClass)}
-        fill={cn("progress-bar-fill", colorClass, indicatorClassName)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={clampedScore}
-        role="progressbar"
+        className={cn("w-full", sizeClass)}
+        indicatorClassName={cn(colorClass, indicatorClassName)}
       />
     </div>
   );

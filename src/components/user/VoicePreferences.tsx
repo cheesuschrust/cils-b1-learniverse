@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,14 +5,8 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Volume2, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-// Define VoicePreference interface
-export interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
-}
+import { useAIUtils } from '@/hooks/useAIUtils';
+import { VoicePreference } from '@/types/core-types';
 
 // Helper function to get available voices
 const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
@@ -25,35 +18,6 @@ const getAvailableVoices = async (): Promise<SpeechSynthesisVoice[]> => {
       window.speechSynthesis.onvoiceschanged = () => {
         resolve(window.speechSynthesis.getVoices());
       };
-    }
-  });
-};
-
-// Helper function for text-to-speech
-const speak = async (text: string, language: 'en' | 'it', preferences: VoicePreference): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      utterance.lang = language === 'en' ? 'en-US' : 'it-IT';
-      
-      const voices = window.speechSynthesis.getVoices();
-      const voiceURI = language === 'en' ? preferences.englishVoiceURI : preferences.italianVoiceURI;
-      const voice = voices.find(v => v.voiceURI === voiceURI);
-      
-      if (voice) {
-        utterance.voice = voice;
-      }
-      
-      utterance.rate = preferences.voiceRate;
-      utterance.pitch = preferences.voicePitch;
-      
-      utterance.onend = () => resolve();
-      utterance.onerror = (error) => reject(error);
-      
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      reject(error);
     }
   });
 };
@@ -73,6 +37,7 @@ const useUserPreferences = () => {
 const VoicePreferences = () => {
   const { voicePreference, setVoicePreference } = useUserPreferences();
   const { toast } = useToast();
+  const { speak } = useAIUtils();
   
   const [englishVoices, setEnglishVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [italianVoices, setItalianVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -125,16 +90,8 @@ const VoicePreferences = () => {
       : "Questo è un'anteprima della voce italiana.";
     
     try {
-      await speak(
-        sampleText, 
-        language,
-        {
-          englishVoiceURI: selectedEnglishVoiceURI,
-          italianVoiceURI: selectedItalianVoiceURI,
-          voiceRate,
-          voicePitch
-        }
-      );
+      await speak(sampleText, language);
+      
     } catch (error) {
       console.error("Error playing voice preview:", error);
       toast({

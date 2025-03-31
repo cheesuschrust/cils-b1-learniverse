@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
@@ -414,13 +413,7 @@ export const AIUtilsProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
-// Custom hook for using the AI utils context
-export function useAIUtils(): AIUtilsContextType {
-  const context = useContext(AIUtilsContext);
-  
-  if (!context) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
-  }
-  
-  return context;
-}
+// Export for proper usage in other files
+export { useAIUtils } from "@/hooks/useAIUtils";
+
+export default AIUtilsContext;

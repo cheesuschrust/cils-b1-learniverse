@@ -7,14 +7,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Brain, FileText, Loader2 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { useAI } from '@/hooks/useAI';
-import { AIContentProcessorProps } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { useAIUtils } from '@/hooks/useAIUtils';
+import { AIContentProcessorProps, ContentType } from '@/types';
 
 const AIContentProcessor: React.FC<AIContentProcessorProps> = ({ 
-  content, 
-  contentType, 
-  onQuestionsGenerated 
+  content = "", 
+  contentType = "reading", 
+  onQuestionsGenerated = () => {},
+  settings,
+  onContentGenerated,
+  onError
 }) => {
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [difficulty, setDifficulty] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
@@ -22,7 +25,7 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
   const [editableContent, setEditableContent] = useState<string>(content);
   
   const { toast } = useToast();
-  const { generateQuestions } = useAI();
+  const { generateQuestions, processContent } = useAIUtils();
 
   // Update editable content when props content changes
   React.useEffect(() => {
@@ -42,28 +45,53 @@ const AIContentProcessor: React.FC<AIContentProcessorProps> = ({
     setIsLoading(true);
     try {
       // Generate questions with the correct parameters
-      const generatedQuestions = await generateQuestions(
-        editableContent,
-        contentType,
-        questionCount,
-        difficulty.toLowerCase()
-      );
-
-      onQuestionsGenerated(generatedQuestions);
-      toast({
-        title: "Questions Generated",
-        description: `Successfully generated ${questionCount} questions.`,
-      });
+      const params = {
+        italianLevel: difficulty.toLowerCase(),
+        testSection: contentType as any,
+        topics: [],
+        count: questionCount,
+        isCitizenshipFocused: false
+      };
+      
+      const result = await generateQuestions(params);
+      
+      if (result.error) {
+        if (onError) {
+          onError(result.error);
+        }
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        onQuestionsGenerated(result.questions);
+        
+        if (onContentGenerated) {
+          onContentGenerated(result.questions);
+        }
+        
+        toast({
+          title: "Questions Generated",
+          description: `Successfully generated ${result.questions.length} questions.`,
+        });
+      }
     } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (onError) {
+        onError(errorMessage);
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to generate questions.",
+        description: errorMessage || "Failed to generate questions.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  }, [editableContent, contentType, questionCount, difficulty, generateQuestions, onQuestionsGenerated, toast]);
+  }, [editableContent, contentType, questionCount, difficulty, generateQuestions, onQuestionsGenerated, toast, onContentGenerated, onError]);
 
   return (
     <Card className="w-full">

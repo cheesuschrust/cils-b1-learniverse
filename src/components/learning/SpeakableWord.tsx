@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAIUtils } from '@/hooks/useAIUtils';
 import { Button } from '@/components/ui/button';
 import { Volume2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { SpeakableWordProps } from '@/types/interface-fixes';
+import { SpeakableWordProps } from '@/types';
 
 const SpeakableWord: React.FC<SpeakableWordProps> = ({
   word,
@@ -19,11 +19,11 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   onClick,
   iconOnly = false
 }) => {
-  const { speakText } = useAIUtils();
+  const { speak } = useAIUtils();
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   const handleSpeak = async () => {
-    if (isSpeaking || !speakText) return;
+    if (isSpeaking || !speak) return;
     
     setIsSpeaking(true);
     try {
@@ -31,11 +31,10 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
         onClick();
       }
       
-      await speakText(word, language, () => {
-        if (onPlayComplete) {
-          onPlayComplete();
-        }
-      });
+      await speak(word, language);
+      if (onPlayComplete) {
+        onPlayComplete();
+      }
     } catch (error) {
       console.error('Error speaking word:', error);
     } finally {
@@ -44,7 +43,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   };
 
   // Trigger autoplay if enabled
-  React.useEffect(() => {
+  useEffect(() => {
     if (autoPlay) {
       handleSpeak();
     }

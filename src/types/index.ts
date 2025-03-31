@@ -1,5 +1,5 @@
 
-// Root type index file
+// Core type index file
 // Re-export all types with namespacing to prevent ambiguities
 
 import * as AppTypes from './app-types';
@@ -7,9 +7,10 @@ import * as ItalianTypes from './italian-types';
 import * as VariantTypes from './variant-fixes';
 import * as InterfaceTypes from './interface-fixes';
 import * as TypeDefinitions from './type-definitions';
+import * as CoreTypes from './core-types';
 
 // Export all types through namespaces to prevent conflicts
-export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions };
+export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions, CoreTypes };
 
 // Export specific commonly used types directly
 // Italian types
@@ -33,14 +34,14 @@ export type {
   AIContentProcessorProps,
   ProcessContentOptions,
   ConfidenceIndicatorProps,
-  LevelBadgeProps
+  LevelBadgeProps,
+  AIUtilsContextType
 } from './app-types';
 
 export type {
   QuestionGenerationParams,
   AIGenerationResult,
   UserProfile,
-  AIUtilsContextType
 } from './app-types';
 
 // Interface fixes
@@ -64,5 +65,16 @@ export type {
   ContentType as VariantContentType
 } from './variant-fixes';
 
-// Helper functions
-export { normalizeFlashcard, calculateReviewPerformance } from './interface-fixes';
+// Core types from unified module
+export {
+  normalizeFlashcard,
+  calculateReviewPerformance,
+} from './core-types';
+
+// AI types
+export type {
+  AIModel,
+  AIProvider,
+  AIServiceOptions,
+  AIPreference
+} from './ai';

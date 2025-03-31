@@ -7,6 +7,9 @@ import {
   AIGeneratedQuestion,
   QuestionGenerationParams
 } from '../types';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 // Properly structured props interface
 export interface CitizenshipContentProps {  
@@ -20,7 +23,7 @@ export interface CitizenshipContentProps {
   onError?: (error: string) => void;  
 }  
 
-// CRITICAL: Named export function
+// Named export function
 export function CitizenshipContentProcessor({  
   settings,  
   onContentGenerated,  
@@ -66,60 +69,72 @@ export function CitizenshipContentProcessor({
   };  
 
   return (  
-    <div className="citizenship-content-processor">  
-      <h2>Italian Citizenship Test Question Generator</h2>  
+    <Card className="citizenship-content-processor">  
+      <CardHeader>
+        <CardTitle>Italian Citizenship Test Question Generator</CardTitle>
+        <CardDescription>Generate practice questions for Italian citizenship test preparation</CardDescription>
+      </CardHeader>
       
-      <div className="settings-summary">  
-        <p>Level: {settings.italianLevel}</p>  
-        <p>Section: {settings.testSection}</p>  
-        <p>Citizenship Focus: {settings.isCitizenshipFocused ? 'Yes' : 'No'}</p>  
-        <p>Topics: {settings.topics.join(', ') || 'All topics'}</p>  
-      </div>  
-      
-      <button   
-        onClick={handleGenerate}   
-        disabled={isGenerating}  
-        className="generate-button"  
-      >  
-        {isGenerating ? 'Generando...' : 'Genera Domande'}  
-      </button>  
-      
-      {error && (  
-        <div className="error-message">  
-          Errore: {error}  
+      <CardContent>
+        <div className="settings-summary space-y-2 mb-4">  
+          <p><strong>Level:</strong> {settings.italianLevel}</p>  
+          <p><strong>Section:</strong> {settings.testSection}</p>  
+          <p><strong>Citizenship Focus:</strong> {settings.isCitizenshipFocused ? 'Yes' : 'No'}</p>  
+          <p><strong>Topics:</strong> {settings.topics.join(', ') || 'All topics'}</p>  
         </div>  
-      )}  
-      
-      {questions.length > 0 && (  
-        <div className="generated-questions">  
-          <h3>Domande Generate</h3>  
-          <ul className="question-list">  
-            {questions.map(question => (  
-              <li key={question.id} className="question-item">  
-                <p className="question-text"><strong>{question.text}</strong></p>  
-                {question.options && (  
-                  <ul className="question-options">  
-                    {question.options.map((option, index) => (  
-                      <li key={index} className="option-item">  
-                        {String.fromCharCode(65 + index)}. {option}  
-                      </li>  
-                    ))}  
-                  </ul>  
-                )}  
-                <p className="correct-answer">Risposta Corretta: {question.correctAnswer}</p>  
-                {question.explanation && (  
-                  <p className="explanation">Spiegazione: {question.explanation}</p>  
-                )}  
-                {question.isCitizenshipRelevant && (  
-                  <div className="citizenship-badge">  
-                    Pertinente per il test di cittadinanza  
-                  </div>  
-                )}  
-              </li>  
-            ))}  
-          </ul>  
-        </div>  
-      )}  
-    </div>  
+        
+        <Button   
+          onClick={handleGenerate}   
+          disabled={isGenerating}  
+          className="w-full"  
+        >  
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generando...
+            </>
+          ) : 'Genera Domande'}  
+        </Button>  
+        
+        {error && (  
+          <div className="error-message mt-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">  
+            Errore: {error}  
+          </div>  
+        )}  
+        
+        {questions.length > 0 && (  
+          <div className="generated-questions mt-6">  
+            <h3 className="text-lg font-medium mb-4">Domande Generate</h3>  
+            <ul className="question-list space-y-6">  
+              {questions.map(question => (  
+                <li key={question.id} className="question-item p-4 border rounded-md">  
+                  <p className="question-text font-medium mb-3">{question.text}</p>  
+                  {question.options && (  
+                    <ul className="question-options space-y-2 mb-4">  
+                      {question.options.map((option, index) => (  
+                        <li key={index} className="option-item p-2 bg-gray-50 rounded">  
+                          {String.fromCharCode(65 + index)}. {option}  
+                        </li>  
+                      ))}  
+                    </ul>  
+                  )}  
+                  <p className="correct-answer text-green-600 font-medium">Risposta Corretta: {question.correctAnswer}</p>  
+                  {question.explanation && (  
+                    <p className="explanation mt-2 text-gray-600 text-sm">{question.explanation}</p>  
+                  )}  
+                  {question.isCitizenshipRelevant && (  
+                    <div className="citizenship-badge mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">  
+                      Pertinente per il test di cittadinanza  
+                    </div>  
+                  )}  
+                </li>  
+              ))}  
+            </ul>  
+          </div>  
+        )}  
+      </CardContent>
+    </Card>
   );  
 }  
+
+export default CitizenshipContentProcessor;
