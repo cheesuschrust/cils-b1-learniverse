@@ -1,15 +1,19 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+import type { Database } from '@/types/supabase';
 
-// Browser-safe environment variable handling
-// Note: In a real Next.js app, we would use server-side environment variables,
-// but for this client-side app we'll use placeholder values that should be replaced
-const supabaseUrl = 'https://placeholder-supabase-project.supabase.co';
-const supabaseAnonKey = 'placeholder-anon-key';
+// Use the consistent Supabase URL and key from the integrations folder
+const SUPABASE_URL = "https://nxmbadblisjgqdmhwrmz.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54bWJhZGJsaXNqZ3FkbWh3cm16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDc5NjAsImV4cCI6MjA1ODkyMzk2MH0.JduQeJZkPiLUYb0Oy8wK4Ky4dUaZ9K_JoRZNKB2LoaM";
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 // Helper functions for commonly used Supabase operations
 export async function fetchUserProfile(userId: string) {

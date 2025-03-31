@@ -1,15 +1,10 @@
 
 import { Provider } from '@supabase/supabase-js';  
-import { createClient } from '@supabase/supabase-js';  
+import { supabase } from './supabase-client';  
 
-// Browser-safe environment variable handling  
-const supabaseUrl = 'https://mock.supabase.co';  
-const supabaseKey = 'mock-key-for-development';  
+console.log('Using configured Supabase credentials.');
 
-console.log('Using placeholder Supabase credentials. Authentication features will be simulated but not functional.');
-
-// Create supabase client  
-export const supabase = createClient(supabaseUrl, supabaseKey);  
+export { supabase };
 
 export async function signInWithOAuth(provider: Provider, options: any = {}) {  
   return await supabase.auth.signInWithOAuth({  
@@ -19,47 +14,31 @@ export async function signInWithOAuth(provider: Provider, options: any = {}) {
 }  
 
 export async function signInWithEmail(email: string, password: string) {  
-  // Mock successful response for development
-  return {
-    data: { 
-      user: { 
-        id: 'mock-user-id', 
-        email, 
-        user_metadata: { 
-          first_name: 'Demo', 
-          last_name: 'User' 
-        } 
-      },
-      session: { access_token: 'mock-token' }
-    },
-    error: null
-  };
+  // Attempt actual sign in with Supabase
+  return await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
 }  
 
 export async function signUp(email: string, password: string) {
-  // Mock successful response for development
-  return {
-    data: { 
-      user: { 
-        id: 'new-mock-user-id', 
-        email,
-        user_metadata: {} 
-      } 
-    },
-    error: null
-  };
+  // Attempt actual sign up with Supabase
+  return await supabase.auth.signUp({
+    email,
+    password
+  });
 }
 
 export async function resetPassword(email: string) {
-  // Mock for development
-  console.log(`Password reset requested for ${email}`);
-  return { error: null };
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
 }
 
 export async function updatePassword(newPassword: string) {
-  // Mock for development
-  console.log('Password updated');
-  return { error: null };
+  return await supabase.auth.updateUser({ 
+    password: newPassword 
+  });
 }
 
 export async function signOut() {  
@@ -67,28 +46,21 @@ export async function signOut() {
 }  
 
 export async function getSession() {
-  // Mock successful session for development
-  return { 
-    data: { 
-      session: { 
-        user: { 
-          id: 'mock-user-id', 
-          email: 'user@example.com' 
-        } 
-      } 
-    },
-    error: null
-  };
+  return await supabase.auth.getSession();
 }
 
 export function getCurrentUser() {  
-  // Mock user data for development
-  return Promise.resolve({
-    id: 'mock-user-id',
-    email: 'user@example.com',
-    firstName: 'Demo',
-    lastName: 'User',
-    isPremiumUser: true
+  return supabase.auth.getUser().then(({ data }) => {
+    if (data?.user) {
+      return {
+        id: data.user.id,
+        email: data.user.email,
+        firstName: data.user.user_metadata?.first_name || '',
+        lastName: data.user.user_metadata?.last_name || '',
+        isPremiumUser: data.user.user_metadata?.is_premium_user || false
+      };
+    }
+    return null;
   });
 }  
 
@@ -102,9 +74,11 @@ export function hasReachedDailyLimit(user: any): boolean {
 
 export async function trackQuestionUsage(userId: string, questionType: string): Promise<void> {
   console.log(`Tracking question usage for user ${userId}, type: ${questionType}`);
+  // In a real implementation, this would update a usage_tracking table
 }
 
 export async function updateUserSubscription(userId: string, subscriptionType: string): Promise<boolean> {
   console.log(`Updating subscription for user ${userId} to ${subscriptionType}`);
+  // In a real implementation, this would update the user's subscription
   return true;
 }
