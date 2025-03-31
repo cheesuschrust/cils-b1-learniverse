@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { User, UserPreferences } from '@/types/user';
@@ -13,6 +14,7 @@ export interface AuthContextType {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  updateProfile: (updates: Partial<User>) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   error: null,
   isAuthenticated: false,
+  updateProfile: async () => null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -304,6 +307,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateProfile = async (updates: Partial<User>): Promise<User | null> => {
+    try {
+      if (!user) return null;
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          first_name: updates.firstName,
+          last_name: updates.lastName,
+          preferred_language: updates.preferredLanguage,
+        })
+        .eq('id', user.id);
+        
+      if (updateError) throw updateError;
+      
+      if (updates.preferences) {
+        const { error: prefError } = await supabase
+          .from('user_preferences')
+          .update({
+            theme: updates.preferences.theme,
+            email_notifications: updates.preferences.emailNotifications,
+            language: updates.preferences.language,
+            difficulty: updates.preferences.difficulty,
+            notifications_enabled: updates.preferences.notifications,
+            onboarding_completed: updates.preferences.onboardingCompleted,
+          })
+          .eq('user_id', user.id);
+          
+        if (prefError) throw prefError;
+      }
+      
+      // Update local user state
+      const updatedUser = {
+        ...user,
+        ...updates,
+      };
+      
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "Could not update your profile",
+      });
+      return null;
+    }
+  };
+
   const value = {
     user,
     login,
@@ -313,6 +366,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     error,
     isAuthenticated: !!user,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

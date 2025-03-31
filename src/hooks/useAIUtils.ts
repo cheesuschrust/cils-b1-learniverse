@@ -1,7 +1,6 @@
 
 import { useContext } from 'react';
-import { AIUtilsContext } from '@/contexts/AIUtilsContext';
-import { AIUtilsContextType } from '@/types/type-definitions';
+import { AIUtilsContext, AIUtilsContextType } from '@/contexts/AIUtilsContext';
 
 /**
  * Custom hook to access AI utility functions from AIUtilsContext
