@@ -176,3 +176,4 @@ const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
 };
 
 export default ItalianPracticeComponent;
+export { ItalianPracticeComponent };
