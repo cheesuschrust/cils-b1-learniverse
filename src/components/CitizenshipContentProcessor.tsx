@@ -12,11 +12,15 @@ import { mapToItalianTypes } from '@/types/italian-types';
 interface CitizenshipContentProcessorProps {
   onQuestionsGenerated?: (questions: AIGeneratedQuestion[]) => void;
   defaultContent?: string;
+  settings?: any; // Add settings prop
+  onContentGenerated?: (questions: AIGeneratedQuestion[]) => void; // Add alias for onQuestionsGenerated
 }
 
 const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
   onQuestionsGenerated,
-  defaultContent = ""
+  defaultContent = "",
+  settings,
+  onContentGenerated
 }) => {
   const [content, setContent] = useState(defaultContent);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,7 +56,8 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = 
         difficulty: 'intermediate',
         count: 5,
         isCitizenshipFocused: true,
-        language: 'italian'
+        language: 'italian',
+        ...(settings || {}) // Merge any provided settings
       });
       
       const generatedQuestions = result.questions.map(q => ({
@@ -62,8 +67,13 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = 
       
       setQuestions(generatedQuestions);
       
+      // Handle both callback props for compatibility
       if (onQuestionsGenerated) {
         onQuestionsGenerated(generatedQuestions);
+      }
+      
+      if (onContentGenerated) {
+        onContentGenerated(generatedQuestions);
       }
       
       toast({
@@ -143,4 +153,6 @@ const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = 
   );
 };
 
+// Fix: Export the component both as default and as a named export
 export default CitizenshipContentProcessor;
+export { CitizenshipContentProcessor };
