@@ -1,15 +1,15 @@
 
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';
-import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';
-import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';
-import { useAuth } from '@/hooks/useAuth';
-import { ArrowRight, Award, BookOpen, CheckCircle, Circle, Dices } from 'lucide-react';
+import React, { useState } from 'react';  
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';  
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';  
+import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';  
+import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';  
+import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';  
+import { useAuth } from '@/hooks/useAuth';  
+import { ArrowRight, Award, BookOpen, CheckCircle, Circle, Dices } from 'lucide-react';  
+import { Button } from '@/components/ui/button';  
+import { Progress } from '@/components/ui/progress';  
 import { ItalianTestSection, ItalianLevel } from '@/types/italian-types';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 
 export default function ItalianCitizenshipTest() {
   const { user } = useAuth();
