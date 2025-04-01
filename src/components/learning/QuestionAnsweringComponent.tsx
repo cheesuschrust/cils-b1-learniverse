@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Radio, RadioGroup } from '@/components/ui/radio-group';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -182,7 +182,7 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
               >
                 {currentQuestion?.options?.map((option, index) => (
                   <div key={index} className="flex items-center space-x-2">
-                    <Radio
+                    <RadioGroupItem
                       value={option}
                       id={`option-${index}`}
                       disabled={isAnswerSubmitted}
