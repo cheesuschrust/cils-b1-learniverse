@@ -1,99 +1,83 @@
 
-// Define Italian-specific types
+// Italian types definition file
 
 export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ItalianTestSection = 'grammar' | 'vocabulary' | 'culture' | 'listening' | 'reading' | 'writing' | 'speaking' | 'citizenship';
 
-// CILS exam types
-export type CILSExamType = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+export type ItalianTestSection = 
+  | 'grammar' 
+  | 'vocabulary' 
+  | 'culture' 
+  | 'listening' 
+  | 'reading' 
+  | 'writing' 
+  | 'speaking'
+  | 'citizenship';
 
-// Question generation parameters
-export interface ItalianQuestionGenerationParams {
-  contentTypes?: ItalianTestSection[];
-  difficulty?: ItalianLevel;
-  italianLevel?: ItalianLevel;
-  testSection?: ItalianTestSection;
-  isCitizenshipFocused?: boolean;
-  includeListening?: boolean;
-  includeWriting?: boolean;
-  includeReading?: boolean;
-  includeSpeaking?: boolean;
-  examType?: CILSExamType;
-  count?: number;
-  language?: string;
-}
-
-// AI-generated questions format
 export interface AIGeneratedQuestion {
   id: string;
-  text: string;
+  text?: string;
   options?: string[];
-  correctAnswer?: string;
+  correctAnswer: string;
   explanation?: string;
   type: ItalianTestSection;
   difficulty: ItalianLevel;
   isCitizenshipRelevant?: boolean;
   question?: string;
-  questionType?: string;
+  questionType: 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
 }
 
-// AI generation result
+export interface ItalianQuestionGenerationParams {
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count?: number;
+  isCitizenshipFocused?: boolean;
+  language?: 'english' | 'italian' | 'both';
+}
+
 export interface AIGenerationResult {
   questions: AIGeneratedQuestion[];
   error?: string;
 }
 
-// User profile for Italian learning
-export interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
-  profileImage?: string;
-  bio?: string;
-  learningLevel?: ItalianLevel;
-  goals?: string[];
-  interests?: string[];
-  createdAt: Date;
-  lastLogin?: Date;
-  preferredLanguage?: string;
-  completedLessons?: string[];
-  testScores?: Record<ItalianTestSection, number>;
-  certificateProgress?: Record<CILSExamType, number>;
-}
-
-// Citizenship test profile
-export interface CitizenshipProfile {
-  userId: string;
-  readinessScore: number;
-  lastAssessmentDate?: Date;
-  requiredScore: number;
-  sectionScores: Record<ItalianTestSection, number>;
-  passedSections: ItalianTestSection[];
-  completedSections: ItalianTestSection[];
-  isEligible: boolean;
-}
-
-// Answer results type for question answering
 export interface AnswerResults {
   score: number;
   time: number;
 }
 
-// Helper function to map app types to Italian types
-export function mapToItalianTypes(type: string): ItalianTestSection {
-  const mapping: Record<string, ItalianTestSection> = {
-    'grammar': 'grammar',
-    'vocabulary': 'vocabulary',
-    'culture': 'culture',
-    'listening': 'listening',
-    'reading': 'reading',
-    'writing': 'writing',
-    'speaking': 'speaking',
-    'citizenship': 'citizenship'
-  };
+export interface CitizenshipQuestionSet {
+  id: string;
+  title: string;
+  description: string;
+  questions: AIGeneratedQuestion[];
+  difficulty: ItalianLevel;
+  createdAt: Date;
+  updatedAt: Date;
+  category: string;
+}
 
-  return mapping[type.toLowerCase()] || 'grammar';
+export interface ItalianPracticeResult {
+  section: ItalianTestSection;
+  score: number;
+  timeSpent: number;
+  date: Date;
+  questionsAnswered: number;
+  correctAnswers: number;
+}
+
+export interface CitizenshipReadinessScore {
+  overall: number;
+  sections: Record<ItalianTestSection, number>;
+  lastUpdated: Date;
+  recommendations: string[];
+}
+
+export interface ItalianProgressMetrics {
+  totalExercises: number;
+  totalTime: number;
+  averageScore: number;
+  sectionalScores: Record<ItalianTestSection, number>;
+  strengths: ItalianTestSection[];
+  weaknesses: ItalianTestSection[];
+  streak: number;
+  lastActivity: Date;
 }

@@ -3,16 +3,10 @@ import { useState } from 'react';
 import { 
   AIGenerationResult, 
   AIGeneratedQuestion,
-  ItalianQuestionGenerationParams 
-} from '@/types/italian-types';
+  ItalianQuestionGenerationParams,
+  UseAIReturn
+} from '@/types/core-types';
 import AIService from '@/services/AIService';
-
-export interface UseAIReturn {
-  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGenerationResult>;
-  isGenerating: boolean;
-  remainingCredits: number;
-  usageLimit: number;
-}
 
 export const useAIUtils = (): UseAIReturn => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -23,10 +17,7 @@ export const useAIUtils = (): UseAIReturn => {
     setIsGenerating(true);
     
     try {
-      // Here we would normally make an API call, but for now we'll generate mock data
-      // This simulates what would happen in a real application
-      
-      // Simulate API latency
+      // This would normally make an API call, but we'll generate mock data for now
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Generate mock questions based on requested parameters
@@ -60,10 +51,56 @@ export const useAIUtils = (): UseAIReturn => {
     }
   };
 
+  // Mock implementation for loadModel
+  const loadModel = async (modelName: string): Promise<boolean> => {
+    console.log(`Loading model: ${modelName}`);
+    return true;
+  };
+
+  // Mock implementation for text-to-speech functionality
+  const speak = async (text: string, language: string = 'italian'): Promise<void> => {
+    console.log(`Speaking text in ${language}: ${text}`);
+  };
+
+  // Mock implementation for speech recognition
+  const recognizeSpeech = async (audio: Blob): Promise<string> => {
+    console.log(`Processing speech audio of size ${audio.size}`);
+    return "This is a mock transcription of the audio";
+  };
+
+  // Mock implementation for text comparison
+  const compareTexts = async (text1: string, text2: string): Promise<number> => {
+    console.log(`Comparing texts: "${text1}" and "${text2}"`);
+    return 0.85; // Mock similarity score
+  };
+
+  // Mock content processing
+  const processContent = async (content: string, options?: any): Promise<any> => {
+    console.log(`Processing content with options:`, options);
+    return {
+      processed: content,
+      analysis: {
+        language: 'italian',
+        confidence: 0.87,
+        suggestions: []
+      }
+    };
+  };
+
   return {
     generateQuestions,
     isGenerating,
     remainingCredits,
-    usageLimit
+    usageLimit,
+    loadModel,
+    speak,
+    recognizeSpeech, 
+    compareTexts,
+    processContent,
+    isAIEnabled: true,
+    status: 'ready',
+    isModelLoaded: true
   };
 };
+
+export default useAIUtils;

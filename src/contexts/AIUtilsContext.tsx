@@ -1,256 +1,254 @@
 
-import React, { createContext, useState, useCallback, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { 
-  AIUtilsContextType,
-  AISettings,
-  QuestionGenerationParams,
-  AIGenerationResult
+  AIUtilsContextType, 
+  AISettings, 
+  AIGenerationResult,
+  QuestionGenerationParams
 } from '@/types/core-types';
-import { useAI } from '@/hooks/useAI';
-import { useToast } from '@/hooks/use-toast';
+import { useAIUtils } from '@/hooks/useAIUtils';
 
-// Create the context with a defined type
-export const AIUtilsContext = createContext<AIUtilsContextType | null>(null);
+// Create context with default undefined value
+const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
 
 // Default AI settings
 const defaultAISettings: AISettings = {
   model: 'gpt-4o-mini',
   temperature: 0.7,
   maxTokens: 1000,
-  topP: 1,
-  frequencyPenalty: 0,
-  presencePenalty: 0,
-  showFeedback: true,
-  defaultModelSize: 'medium',
-  italianVoiceURI: '',
-  englishVoiceURI: '',
-  voiceRate: 1.0,
-  voicePitch: 1.0,
-  features: {
-    contentGeneration: true,
-    contentAnalysis: true,
-    errorCorrection: true,
-    personalization: true,
-    pronunciationHelp: true,
-    conversationalLearning: true,
-    progressTracking: true,
-    autoTranslation: true
-  }
+  topP: 0.9,
+  frequencyPenalty: 0.5,
+  presencePenalty: 0.5,
+  contentFiltering: true
 };
 
 // Provider component
 export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AISettings>(defaultAISettings);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
-  const { toast } = useToast();
-  const { generateText, getConfidenceScore, error, isLoading, abort } = useAI();
+  const [error, setError] = useState<Error | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const updateSettings = useCallback((newSettings: AISettings) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  }, []);
-
-  const processContent = useCallback(async (prompt: string, options?: any) => {
-    setIsProcessing(true);
-    try {
-      const result = await generateText(prompt, {
-        model: settings.model,
-        temperature: options?.temperature || settings.temperature,
-        maxTokens: options?.maxTokens || settings.maxTokens,
-        topP: options?.topP || settings.topP,
-        frequencyPenalty: options?.frequencyPenalty || settings.frequencyPenalty,
-        presencePenalty: options?.presencePenalty || settings.presencePenalty
-      });
-      return result;
-    } catch (err) {
-      console.error('Error processing content:', err);
-      throw err;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [generateText, settings]);
-
-  const generateContent = useCallback(async (prompt: string, options?: any) => {
-    return processContent(prompt, options);
-  }, [processContent]);
-
-  const speak = useCallback(async (text: string, language?: string): Promise<void> => {
-    if (!text) return;
-    
-    setIsSpeaking(true);
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language preference based on the argument or settings
-      if (language === 'italian') {
-        utterance.voice = speechSynthesis.getVoices().find(
-          voice => voice.voiceURI === settings.italianVoiceURI
-        ) || null;
-        utterance.lang = 'it-IT';
-      } else {
-        utterance.voice = speechSynthesis.getVoices().find(
-          voice => voice.voiceURI === settings.englishVoiceURI
-        ) || null;
-        utterance.lang = 'en-US';
-      }
-      
-      // Apply rate and pitch settings
-      utterance.rate = settings.voiceRate || 1;
-      utterance.pitch = settings.voicePitch || 1;
-      
-      // Return a promise that resolves when speech is complete
-      return new Promise((resolve, reject) => {
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          resolve();
-        };
-        utterance.onerror = (event) => {
-          setIsSpeaking(false);
-          reject(new Error(`Speech synthesis error: ${event.error}`));
-        };
-        speechSynthesis.speak(utterance);
-      });
-    } catch (err) {
-      setIsSpeaking(false);
-      console.error('Speech synthesis error:', err);
-      throw err;
-    }
-  }, [settings]);
-
-  const speakText = useCallback((text: string, language?: string, onComplete?: () => void) => {
-    speak(text, language)
-      .then(() => {
-        if (onComplete) onComplete();
-      })
-      .catch(err => {
-        console.error('Error in speakText:', err);
-        if (onComplete) onComplete();
-      });
-  }, [speak]);
-
-  const processAudioStream = useCallback(async (stream: MediaStream): Promise<string> => {
-    setIsTranscribing(true);
-    try {
-      // Placeholder implementation - in a real app this would connect to a speech recognition service
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return "Speech transcription result";
-    } catch (err) {
-      console.error('Audio processing error:', err);
-      throw err;
-    } finally {
-      setIsTranscribing(false);
-    }
-  }, []);
-
-  const stopAudioProcessing = useCallback(() => {
-    // Implementation depends on how audio processing was started
-    setIsTranscribing(false);
-  }, []);
-
-  const checkMicrophoneAccess = useCallback(async (): Promise<boolean> => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      setHasActiveMicrophone(true);
-      return true;
-    } catch (err) {
-      console.error('Microphone access error:', err);
-      setHasActiveMicrophone(false);
-      return false;
-    }
-  }, []);
-
-  const recognizeSpeech = useCallback(async (audioBlob: Blob): Promise<string> => {
-    try {
-      setIsTranscribing(true);
-      // Placeholder for speech recognition API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return "Speech recognition result";
-    } catch (err) {
-      console.error('Speech recognition error:', err);
-      throw err;
-    } finally {
-      setIsTranscribing(false);
-    }
-  }, []);
-
-  const compareTexts = useCallback(async (text1: string, text2: string): Promise<number> => {
-    // Calculate similarity score (0-100)
-    return 85; // Placeholder value
-  }, []);
-
-  // Function to generate questions based on parameters
-  const generateQuestions = useCallback(async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
-    setIsGenerating(true);
-    try {
-      // In a real application, this would call an actual API
-      // For now, return mock data with the appropriate structure
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return {
-        questions: Array(params.count || 3).fill(null).map((_, i) => ({
-          id: `question-${i}`,
-          text: `Generated question ${i + 1} for ${params.contentTypes?.[0] || 'general'} at ${params.difficulty || 'intermediate'} level.`,
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          correctAnswer: "Option A",
-          explanation: "This is the explanation for the correct answer.",
-          type: params.contentTypes?.[0] || 'grammar',
-          difficulty: params.difficulty || params.italianLevel || 'intermediate',
-          isCitizenshipRelevant: params.isCitizenshipFocused || false
-        }))
-      };
-    } catch (err) {
-      console.error('Error generating questions:', err);
-      return {
-        questions: [],
-        error: err instanceof Error ? err.message : 'An unknown error occurred'
-      };
-    } finally {
-      setIsGenerating(false);
-    }
-  }, []);
-
-  // Premium limits
-  const remainingCredits = 100;
-  const usageLimit = 1000;
-  
-  const resetCredits = useCallback(async () => {
-    toast({
-      title: "Credits Reset",
-      description: "Your AI usage credits have been reset.",
-      variant: "default"
-    });
-    return Promise.resolve();
-  }, [toast]);
-
-  // Check if AI features are enabled
-  const isAIEnabled = settings.enabled !== false;
-
-  const value: AIUtilsContextType = {
-    processContent,
-    settings,
-    updateSettings,
-    generateContent,
-    speakText,
-    isSpeaking,
-    processAudioStream,
-    stopAudioProcessing,
-    isTranscribing,
-    hasActiveMicrophone,
-    checkMicrophoneAccess,
+  // Get base AI utils
+  const {
     generateQuestions,
     isGenerating,
     remainingCredits,
     usageLimit,
-    resetCredits,
+    loadModel,
     speak,
     recognizeSpeech,
     compareTexts,
+    processContent,
+    isAIEnabled,
+    status,
+    isModelLoaded
+  } = useAIUtils();
+
+  // Update AI settings
+  const updateSettings = (newSettings: Partial<AISettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  // Generate content based on prompt
+  const generateContent = async (prompt: string, options?: any): Promise<string> => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = `Generated content based on prompt: ${prompt.substring(0, 20)}...`;
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Process audio stream
+  const processAudioStream = async (stream: MediaStream): Promise<string> => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = "This is a mock audio transcription";
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Get available speech synthesis voices
+  const getVoices = (): SpeechSynthesisVoice[] => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      return window.speechSynthesis.getVoices();
+    }
+    return [];
+  };
+
+  // Stop speech synthesis
+  const stopSpeaking = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // Detect language of text
+  const detectLanguage = async (text: string): Promise<string> => {
+    // Mock implementation
+    if (text.match(/[àèéìíòóùú]/)) return 'italian';
+    return 'english';
+  };
+
+  // Get confidence level for content type
+  const getConfidenceLevel = async (text: string, type: string): Promise<number> => {
+    // Mock implementation
+    return 0.85;
+  };
+
+  // Create text embeddings
+  const createEmbeddings = async (text: string): Promise<number[]> => {
+    // Mock implementation
+    return Array(128).fill(0).map(() => Math.random());
+  };
+
+  // Compare similarity between texts
+  const compareSimilarity = async (text1: string, text2: string): Promise<number> => {
+    // Mock implementation
+    return 0.7 + Math.random() * 0.3;
+  };
+
+  // Classify text
+  const classifyText = async (text: string): Promise<any> => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = [
+        { label: 'Grammar', score: 0.85 },
+        { label: 'Vocabulary', score: 0.76 },
+        { label: 'Fluency', score: 0.92 }
+      ];
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Generate flashcards
+  const generateFlashcards = async (topic: string, count: number = 5, difficulty: string = 'intermediate') => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const cards = Array(count).fill(null).map((_, i) => ({
+        id: `flashcard-${i}`,
+        front: `Italian term ${i + 1} for ${topic}`,
+        back: `English definition ${i + 1} for ${topic}`,
+        italian: `Italian term ${i + 1} for ${topic}`,
+        english: `English definition ${i + 1} for ${topic}`,
+        difficulty: 1,
+        level: 1,
+        mastered: false,
+        tags: [topic, difficulty],
+        nextReview: new Date(),
+        lastReviewed: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+      
+      setIsProcessing(false);
+      return cards;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Text translation
+  const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = `Translated text (to ${targetLanguage}): ${text.substring(0, 20)}...`;
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Analyze grammar
+  const analyzeGrammar = async (text: string, language: string): Promise<any> => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = {
+        correctness: 0.85,
+        errors: [],
+        suggestions: []
+      };
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsProcessing(false);
+      throw err;
+    }
+  };
+
+  // Abort ongoing operations
+  const abort = () => {
+    console.log('Aborting ongoing AI operations');
+    setIsProcessing(false);
+    setIsSpeaking(false);
+  };
+
+  const value: AIUtilsContextType = {
+    generateQuestions,
+    isGenerating,
+    remainingCredits,
+    usageLimit,
+    loadModel,
+    speak,
+    recognizeSpeech,
+    compareTexts,
+    processContent,
+    isAIEnabled,
+    status,
+    isModelLoaded,
+    settings,
+    updateSettings,
+    generateContent,
+    isSpeaking,
+    processAudioStream,
+    translateText,
+    analyzeGrammar,
+    getVoices,
+    stopSpeaking,
+    detectLanguage,
+    getConfidenceLevel,
+    createEmbeddings,
+    compareSimilarity,
     isProcessing,
-    isAIEnabled
+    error,
+    abort,
+    classifyText,
+    generateFlashcards
   };
 
   return (
@@ -260,13 +258,13 @@ export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-// Custom hook for using the context
-export const useAIUtils = (): AIUtilsContextType => {
+// Hook for using AI utils
+export const useAIUtilsContext = (): AIUtilsContextType => {
   const context = useContext(AIUtilsContext);
+  
   if (!context) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
+    throw new Error('useAIUtilsContext must be used within an AIUtilsProvider');
   }
+  
   return context;
 };
-
-export default AIUtilsContext;

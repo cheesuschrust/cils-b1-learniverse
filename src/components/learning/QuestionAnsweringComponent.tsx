@@ -1,17 +1,18 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Radio, RadioGroup } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { AIGeneratedQuestion, ItalianLevel, ItalianTestSection } from '@/types/italian-types';
-import { AlertCircle, CheckCircle, ChevronRight, Medal } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { AIGeneratedQuestion, ItalianTestSection, ItalianLevel } from '@/types/core-types';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 interface QuestionAnsweringComponentProps {
   questions: AIGeneratedQuestion[];
   contentType: ItalianTestSection;
-  onComplete: (score: number) => void;
+  onComplete?: (score: number) => void;
   difficultyLevel: ItalianLevel;
   userId?: string;
 }
@@ -23,187 +24,217 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
   difficultyLevel,
   userId
 }) => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [startTime] = useState<Date>(new Date());
+  const [answers, setAnswers] = useState<Array<{
+    questionId: string;
+    selectedAnswer: string | null;
+    isCorrect: boolean;
+  }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  if (questions.length === 0) {
-    return (
-      <div className="text-center p-8">
-        <p>No questions available for this section. Try refreshing.</p>
-      </div>
-    );
-  }
+  const currentQuestion = questions[currentQuestionIndex];
+  const questionsCount = questions.length;
+  const progress = ((currentQuestionIndex + 1) / questionsCount) * 100;
 
-  const question = questions[currentQuestion];
-
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswers(prev => ({
-      ...prev,
-      [currentQuestion]: answer
-    }));
+  // Function to handle submitting an answer
+  const handleSubmitAnswer = () => {
+    if (!selectedAnswer && contentType !== 'writing' && contentType !== 'speaking') return;
+    
+    setIsLoading(true);
+    
+    setTimeout(() => {
+      const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
+      
+      if (isCorrect) {
+        setScore(prev => prev + 1);
+      }
+      
+      setAnswers(prev => [
+        ...prev,
+        {
+          questionId: currentQuestion?.id || '',
+          selectedAnswer,
+          isCorrect: isCorrect
+        }
+      ]);
+      
+      setIsAnswerSubmitted(true);
+      setIsLoading(false);
+    }, 500);
   };
 
-  const handleSubmit = () => {
-    if (!selectedAnswers[currentQuestion]) return;
-
-    setIsSubmitted(true);
+  // Function to move to the next question
+  const handleNextQuestion = () => {
+    setSelectedAnswer(null);
+    setIsAnswerSubmitted(false);
     
-    // Calculate if answer is correct for the current question
-    const currentScore = selectedAnswers[currentQuestion] === question.correctAnswer ? 1 : 0;
-    
-    // Update the overall score
-    setScore(prev => prev + currentScore);
-  };
-
-  const handleNext = () => {
-    setIsSubmitted(false);
-    
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
+    if (currentQuestionIndex < questionsCount - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // Calculate final score as percentage
-      const finalScore = (score / questions.length) * 100;
-      setIsCompleted(true);
-      onComplete(finalScore);
+      // Calculate final score
+      const finalScore = Math.round((score / questionsCount) * 100);
+      
+      // Call onComplete callback if provided
+      if (onComplete) {
+        onComplete(finalScore);
+      }
     }
   };
 
-  const isCurrentAnswerCorrect = selectedAnswers[currentQuestion] === question.correctAnswer;
+  // Handle completion of the exercise
+  useEffect(() => {
+    if (currentQuestionIndex === questionsCount && onComplete) {
+      const finalScore = Math.round((score / questionsCount) * 100);
+      onComplete(finalScore);
+    }
+  }, [currentQuestionIndex, questionsCount, score, onComplete]);
+
+  // If no questions are available, show a message
+  if (!questions || questions.length === 0) {
+    return (
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-10">
+            <p>No questions available for this section.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // When all questions are answered, show the summary
+  if (currentQuestionIndex >= questionsCount) {
+    const finalScore = Math.round((score / questionsCount) * 100);
+    const timeSpent = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+    
+    return (
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-10 space-y-4">
+            <h2 className="text-2xl font-bold">Exercise Completed!</h2>
+            <p className="text-lg">
+              Your score: <span className="font-bold">{finalScore}%</span>
+            </p>
+            <p>
+              Time spent: {Math.floor(timeSpent / 60)}m {timeSpent % 60}s
+            </p>
+            <p>
+              Correct answers: {score} out of {questionsCount}
+            </p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {!isCompleted ? (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-xl">
-                Question {currentQuestion + 1} of {questions.length}
-              </CardTitle>
-              <span className="text-muted-foreground text-sm">
-                {contentType} • {difficultyLevel}
-              </span>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4">{question.text || question.question}</h3>
-              
-              <RadioGroup 
-                value={selectedAnswers[currentQuestion]} 
-                onValueChange={handleAnswerSelect}
-                disabled={isSubmitted}
-              >
-                <div className="space-y-3">
-                  {question.options?.map((option, i) => (
-                    <div key={i} className="flex items-center space-x-2">
-                      <RadioGroupItem 
-                        value={option} 
-                        id={`option-${i}`}
-                        disabled={isSubmitted}
-                        className={isSubmitted ? 
-                          (option === question.correctAnswer ? "text-primary border-primary" : 
-                           (selectedAnswers[currentQuestion] === option ? "text-destructive border-destructive" : ""))
-                          : ""
-                        }
-                      />
-                      <Label 
-                        htmlFor={`option-${i}`}
-                        className={isSubmitted ? 
-                          (option === question.correctAnswer ? "text-primary" : 
-                           (selectedAnswers[currentQuestion] === option && option !== question.correctAnswer ? "text-destructive" : ""))
-                          : ""
-                        }
-                      >
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+    <Card className="w-full">
+      <CardContent className="pt-6">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm">
+            Question {currentQuestionIndex + 1} of {questionsCount}
+          </div>
+          <div className="text-sm">
+            Score: {score} / {currentQuestionIndex}
+          </div>
+        </div>
+        
+        <Progress value={progress} className="mb-4" />
+        
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">
+              {currentQuestion?.question || currentQuestion?.text}
+            </h3>
             
-            {isSubmitted && (
-              <div className={`p-4 rounded-md ${isCurrentAnswerCorrect ? 'bg-primary/10' : 'bg-destructive/10'}`}>
-                <div className="flex gap-2 items-center mb-2">
-                  {isCurrentAnswerCorrect ? (
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                  )}
-                  <h4 className="font-medium">
-                    {isCurrentAnswerCorrect ? 'Correct!' : 'Incorrect'}
-                  </h4>
-                </div>
-                <p className="text-sm">
-                  {question.explanation || `The correct answer is: ${question.correctAnswer}`}
-                </p>
+            {contentType === 'writing' ? (
+              <div className="space-y-2">
+                <Textarea 
+                  placeholder="Write your answer here..." 
+                  rows={6}
+                  value={selectedAnswer || ''}
+                  onChange={(e) => setSelectedAnswer(e.target.value)}
+                />
               </div>
-            )}
-          </CardContent>
-          
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-muted-foreground">
-              {Object.keys(selectedAnswers).length}/{questions.length} answered
-            </div>
-            
-            <div className="space-x-2">
-              {!isSubmitted ? (
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={!selectedAnswers[currentQuestion]}
+            ) : contentType === 'speaking' ? (
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full h-24"
+                  onClick={() => setSelectedAnswer('Recording submitted')}
                 >
-                  Submit Answer
+                  Click to Record
                 </Button>
-              ) : (
-                <Button onClick={handleNext}>
-                  {currentQuestion < questions.length - 1 ? (
-                    <>Next Question <ChevronRight className="ml-2 h-4 w-4" /></>
-                  ) : (
-                    'Complete Quiz'
-                  )}
-                </Button>
-              )}
-            </div>
-          </CardFooter>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Medal className="h-5 w-5" /> Quiz Completed
-            </CardTitle>
-          </CardHeader>
+                {selectedAnswer && (
+                  <p className="text-center text-sm text-green-600">Recording submitted</p>
+                )}
+              </div>
+            ) : (
+              <RadioGroup
+                value={selectedAnswer || ''}
+                onValueChange={setSelectedAnswer}
+                className="space-y-2"
+              >
+                {currentQuestion?.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <Radio
+                      value={option}
+                      id={`option-${index}`}
+                      disabled={isAnswerSubmitted}
+                    />
+                    <Label htmlFor={`option-${index}`} className="cursor-pointer">
+                      {option}
+                    </Label>
+                    
+                    {isAnswerSubmitted && option === currentQuestion.correctAnswer && (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    )}
+                    
+                    {isAnswerSubmitted && selectedAnswer === option && option !== currentQuestion.correctAnswer && (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+          </div>
           
-          <CardContent className="space-y-6">
-            <div className="text-center py-6">
-              <p className="text-3xl font-bold">{Math.round((score / questions.length) * 100)}%</p>
-              <p className="text-muted-foreground">
-                You got {score} out of {questions.length} questions correct
-              </p>
+          {isAnswerSubmitted && currentQuestion.explanation && (
+            <div className="bg-green-50 p-4 rounded-md border border-green-200">
+              <h4 className="text-sm font-medium text-green-800 mb-1">Explanation:</h4>
+              <p className="text-sm text-green-700">{currentQuestion.explanation}</p>
             </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="font-medium mb-2">Progress Summary</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {score >= (questions.length * 0.7) 
-                  ? "Great job! You've mastered this section." 
-                  : "Keep practicing to improve your score."}
-              </p>
-              
-              <Button className="w-full" onClick={() => window.location.reload()}>
-                Practice Again
+          )}
+          
+          <div className="flex justify-end space-x-2">
+            {!isAnswerSubmitted ? (
+              <Button
+                onClick={handleSubmitAnswer}
+                disabled={isLoading || (!selectedAnswer && contentType !== 'writing' && contentType !== 'speaking')}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  'Submit Answer'
+                )}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            ) : (
+              <Button onClick={handleNextQuestion}>
+                {currentQuestionIndex < questionsCount - 1 ? 'Next Question' : 'Finish'}
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

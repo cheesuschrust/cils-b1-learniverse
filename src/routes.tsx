@@ -1,207 +1,211 @@
 
-import React from "react";
-import { createBrowserRouter } from "react-router-dom";
-import RootLayout from "./layouts/RootLayout";
-import DashboardLayout from "./layouts/DashboardLayout";
-import AdminLayout from "./layouts/AdminLayout";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import Layout from "./components/layout/Layout";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { 
-  Home,
-  Dashboard,
-  Login,
-  Signup,
-  Profile,
-  Flashcards,
-  MultipleChoice,
-  Writing,
-  Listening,
-  Speaking,
-  Settings,
-  Support,
-  Achievements,
-  NotFound,
-  Analytics,
-  VocabularyLists,
-  Progress,
-  EmailVerification,
-  ResetPassword,
-  AIAssistant,
-  // Admin pages
-  AdminDashboard,
-  UserManagement,
-  ContentUploader,
-  ContentAnalysis,
-  AIManagement,
-  SystemLogs,
-  SystemTests,
-  SystemSettings
-} from "./pages/imports";
+import React, { Suspense } from 'react';
+import { Routes as RouterRoutes, Route, Navigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
-// Import Italian citizenship test page
-import ItalianCitizenshipTest from "./pages/ItalianCitizenshipTest";
+// Import pages
+import HomePage from './pages/index';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import NotFound from './pages/NotFound';
 
-// Import auth components
-import LoginForm from "./components/auth/LoginForm";
-import RegisterForm from "./components/auth/RegisterForm";
+// Lazy load other pages for better performance
+const Flashcards = React.lazy(() => import('./pages/Flashcards'));
+const MultipleChoice = React.lazy(() => import('./pages/MultipleChoice'));
+const Writing = React.lazy(() => import('./pages/Writing'));
+const Speaking = React.lazy(() => import('./pages/Speaking'));
+const ItalianPractice = React.lazy(() => import('./pages/ItalianPractice'));
+const CitizenshipTest = React.lazy(() => import('./pages/CitizenshipTest'));
+const UserProfile = React.lazy(() => import('./pages/UserProfile'));
+const Analytics = React.lazy(() => import('./pages/Analytics'));
+const Support = React.lazy(() => import('./pages/Support'));
 
-// Import the Calendar page
-import Calendar from "./pages/Calendar";
+// Layout components
+import MainLayout from './layouts/MainLayout';
+import AuthLayout from './layouts/AuthLayout';
 
-// Wrap each route element with AuthProvider
-const withAuth = (element: React.ReactNode) => (
-  <AuthProvider>{element}</AuthProvider>
+// Loading component to show while lazy-loaded components are being fetched
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center gap-2">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
 );
 
-// Create router
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: withAuth(<RootLayout />),
-    children: [
-      {
-        index: true,
-        element: <Layout><Home /></Layout>,
-      },
-      {
-        path: "login",
-        element: <Layout><LoginForm /></Layout>,
-      },
-      {
-        path: "signup",
-        element: <Layout><RegisterForm /></Layout>,
-      },
-      {
-        path: "reset-password",
-        element: <Layout><ResetPassword /></Layout>,
-      },
-      {
-        path: "email-verification",
-        element: <Layout><EmailVerification /></Layout>,
-      },
-      {
-        path: "dashboard",
-        element: <ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>,
-      },
-      {
-        path: "calendar",
-        element: <ProtectedRoute><DashboardLayout><Calendar /></DashboardLayout></ProtectedRoute>,
-      },
-      {
-        path: "app",
-        element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
-        children: [
-          {
-            path: "dashboard",
-            element: <Dashboard />,
-          },
-          {
-            path: "calendar",
-            element: <Calendar />,
-          },
-          {
-            path: "flashcards",
-            element: <Flashcards />,
-          },
-          {
-            path: "multiple-choice",
-            element: <MultipleChoice />,
-          },
-          {
-            path: "writing",
-            element: <Writing />,
-          },
-          {
-            path: "listening",
-            element: <Listening />,
-          },
-          {
-            path: "speaking",
-            element: <Speaking />,
-          },
-          {
-            path: "analytics",
-            element: <Analytics />,
-          },
-          {
-            path: "vocabulary-lists",
-            element: <VocabularyLists />,
-          },
-          {
-            path: "achievements",
-            element: <Achievements />,
-          },
-          {
-            path: "progress",
-            element: <Progress />,
-          },
-          {
-            path: "profile",
-            element: <Profile />,
-          },
-          {
-            path: "settings",
-            element: <Settings />,
-          },
-          {
-            path: "support",
-            element: <Support />,
-          },
-          {
-            path: "ai-assistant",
-            element: <AIAssistant />,
-          },
-          {
-            path: "italian-citizenship-test",
-            element: <ItalianCitizenshipTest />,
-          },
-        ],
-      },
-      {
-        path: "admin",
-        element: <ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>,
-        children: [
-          {
-            index: true,
-            element: <AdminDashboard />,
-          },
-          {
-            path: "user-management",
-            element: <UserManagement />,
-          },
-          {
-            path: "content-uploader",
-            element: <ContentUploader />,
-          },
-          {
-            path: "content-analysis",
-            element: <ContentAnalysis />,
-          },
-          {
-            path: "ai-management",
-            element: <AIManagement />,
-          },
-          {
-            path: "system-logs",
-            element: <SystemLogs />,
-          },
-          {
-            path: "system-tests",
-            element: <SystemTests />,
-          },
-          {
-            path: "system-settings",
-            element: <SystemSettings />,
-          },
-        ],
-      },
-      {
-        path: "*",
-        element: <NotFound />,
-      },
-    ],
-  },
-]);
+// Auth guard for protected routes
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
 
-export default router;
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Guest route - redirects to dashboard if already authenticated
+interface GuestRouteProps {
+  children: React.ReactNode;
+}
+
+const GuestRoute: React.FC<GuestRouteProps> = ({ children }) => {
+  const { user } = useAuth();
+  
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const Routes = () => {
+  return (
+    <RouterRoutes>
+      {/* Public routes */}
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<HomePage />} />
+        
+        {/* Auth routes */}
+        <Route element={<AuthLayout />}>
+          <Route 
+            path="login" 
+            element={
+              <GuestRoute>
+                <Login />
+              </GuestRoute>
+            } 
+          />
+          <Route 
+            path="signup" 
+            element={
+              <GuestRoute>
+                <Signup />
+              </GuestRoute>
+            } 
+          />
+        </Route>
+        
+        {/* Protected routes */}
+        <Route 
+          path="dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="flashcards" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Flashcards />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="multiple-choice" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <MultipleChoice />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="writing" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Writing />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="speaking" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Speaking />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="italian-practice" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <ItalianPractice />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="citizenship-test" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <CitizenshipTest />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="profile" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <UserProfile />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="analytics" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Analytics />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="support" 
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Support />
+              </Suspense>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </RouterRoutes>
+  );
+};
+
+export default Routes;

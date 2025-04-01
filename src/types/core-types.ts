@@ -1,251 +1,263 @@
 
-/**
- * Core type definitions for the application
- * This file consolidates types from various modules for consistency
- */
+// Core types for the CILS Italian Citizenship Question of the Day platform
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
-// Re-export specific types from modules to prevent naming conflicts
-import { 
-  DifficultyLevel,
-  ContentType,
-  ButtonVariant,
-  AIQuestion,
-  EnhancedErrorBoundaryProps,
-  AIContentProcessorProps,
-  ProcessContentOptions,
-  ConfidenceIndicatorProps,
-  LevelBadgeProps,
-  AIUtilsContextType,
-  QuestionGenerationParams as AppQuestionGenerationParams,
-} from './app-types';
+// User Types
+export type UserRole = 'user' | 'admin' | 'teacher' | 'moderator';
 
-import {
-  ItalianLevel,
-  ItalianTestSection,
-  ItalianQuestionGenerationParams,
-  AIGeneratedQuestion as ItalianAIGeneratedQuestion,
-  AIGenerationResult as ItalianAIGenerationResult,
-  CILSExamType,
-  UserProfile as ItalianUserProfile
-} from './italian-types';
-
-import {
-  AIModel,
-  AIProvider,
-  AIServiceOptions,
-  AIPreference,
-  UseAIReturn,
-  AIService,
-  AIStatus,
-  AIOptions,
-  AIFeedbackSettings
-} from './ai';
-
-import {
-  SpeakableWordProps,
-  Flashcard,
-  FlashcardComponentProps,
-  ReviewSchedule,
-  ReviewPerformance,
-  User,
-  AISettings,
-  FlashcardSet,
-  FlashcardStats,
-  ImportFormat
-} from './interface-fixes';
-
-import {
-  LicenseType,
-  LicenseStatus,
-  RenewalStatus,
-  License,
-  LicenseUserAssignment,
-  LicenseFeature,
-  LicenseInvoice
-} from './License';
-
-// Voice and Speech types
-export interface VoicePreference {
-  englishVoiceURI: string;
-  italianVoiceURI: string;
-  voiceRate: number;
-  voicePitch: number;
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  photoURL?: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+  preferences?: UserPreferences;
+  dailyQuestionCounts?: {
+    flashcards: number;
+    multipleChoice: number;
+    speaking: number;
+    writing: number;
+    listening: number;
+  };
+  lastActive?: Date;
+  subscription: 'free' | 'premium' | 'enterprise';
+  status: 'active' | 'inactive' | 'suspended';
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+  };
+  preferredLanguage?: 'english' | 'italian';
+  isPremiumUser?: boolean;
 }
 
-export interface TextToSpeechOptions {
-  voice?: string;
-  rate?: number;
-  pitch?: number;
-  volume?: number;
-  language?: string;
-}
-
-export interface VoiceOptions extends TextToSpeechOptions {
-  onStart?: () => void;
-  onEnd?: () => void;
-  onError?: (error: any) => void;
-}
-
-export interface SpeechState {
-  isReady: boolean;
-  isSpeaking: boolean;
-  isPaused: boolean;
-  voices: SpeechSynthesisVoice[];
-  currentVoice: SpeechSynthesisVoice | null;
-}
-
-// User Management Types
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'system';
   notifications: boolean;
   emailNotifications: boolean;
   language: string;
-  difficulty: DifficultyLevel;
-  fontSize?: number;
-  notificationsEnabled?: boolean;
-  animationsEnabled?: boolean;
-  preferredLanguage?: string;
-  voiceSpeed?: number;
-  autoPlayAudio?: boolean;
-  showProgressMetrics?: boolean;
-  aiEnabled?: boolean;
-  aiModelSize?: string;
-  aiProcessingOnDevice?: boolean;
-  confidenceScoreVisible?: boolean;
-  bio?: string;
-  onboardingCompleted?: boolean;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'adaptive';
+  onboardingCompleted: boolean;
 }
 
-// These helper functions ensure consistent handling of types
-export function normalizeFlashcard(card: any): Flashcard {
-  if (!card) {
-    return null as any;
-  }
-  
-  return {
-    id: card.id || '',
-    front: card.front || card.italian || '',
-    back: card.back || card.english || '',
-    italian: card.italian || card.front || '',
-    english: card.english || card.back || '',
-    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
-    tags: card.tags || [],
-    lastReviewed: card.lastReviewed || null,
-    nextReview: card.nextReview || null,
-    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
-    updatedAt: card.updatedAt ? new Date(card.updatedAt) : undefined,
-    reviewHistory: card.reviewHistory || [],
-    level: card.level || 0,
-    mastered: card.mastered || false,
-    explanation: card.explanation || '',
-    examples: card.examples || [],
-    imageUrl: card.imageUrl || card.metadata?.imageUrl || '',
-    audioUrl: card.audioUrl || card.metadata?.audioUrl || ''
-  };
+// Italian Learning Types
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export type ItalianTestSection = 
+  | 'grammar' 
+  | 'vocabulary' 
+  | 'culture' 
+  | 'listening' 
+  | 'reading' 
+  | 'writing' 
+  | 'speaking'
+  | 'citizenship';
+
+export interface AIGeneratedQuestion {
+  id: string;
+  text?: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+  type: ItalianTestSection;
+  difficulty: ItalianLevel;
+  isCitizenshipRelevant?: boolean;
+  question?: string;
+  questionType: 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
 }
 
-export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
-  if (!answers || answers.length === 0) {
-    return {
-      score: 0,
-      time: 0,
-      date: new Date()
-    };
-  }
-  
-  return {
-    score: answers.filter(a => a.isCorrect).length / answers.length * 100,
-    time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
-    date: new Date(),
-  };
+export interface ItalianQuestionGenerationParams {
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count?: number;
+  isCitizenshipFocused?: boolean;
+  language?: 'english' | 'italian' | 'both';
 }
 
-// Utility function to check if a date is valid
-export function isValidDate(date: any): date is Date {
-  return date instanceof Date && !isNaN(date.getTime());
+export interface AIGenerationResult {
+  questions: AIGeneratedQuestion[];
+  error?: string;
 }
 
-// Utility function to normalize string fields
-export function normalizeFields<T extends object>(data: T): T {
-  if (!data) return data;
-  
-  const mappings: Record<string, string> = {
-    photo_url: 'photoURL',
-    display_name: 'displayName',
-    first_name: 'firstName',
-    last_name: 'lastName',
-    is_verified: 'isVerified',
-    created_at: 'createdAt',
-    updated_at: 'updatedAt',
-    last_login: 'lastLogin',
-    last_active: 'lastActive',
-    phone_number: 'phoneNumber',
-    preferred_language: 'preferredLanguage'
-  };
-
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    const newKey = mappings[key] || key;
-    return { ...acc, [newKey]: value };
-  }, {} as T);
+export interface AnswerResults {
+  score: number;
+  time: number;
 }
 
-// Re-export key types
-export type { 
-  DifficultyLevel,
-  ContentType,
-  ButtonVariant,
-  AIQuestion,
-  EnhancedErrorBoundaryProps,
-  AIContentProcessorProps,
-  ProcessContentOptions,
-  ConfidenceIndicatorProps,
-  LevelBadgeProps,
-  AIUtilsContextType,
+// Flashcard Types
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+  italian: string;
+  english: string;
+  difficulty: number | ItalianLevel;
+  level: number;
+  mastered: boolean;
+  tags: string[];
+  nextReview: Date;
+  lastReviewed?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  explanation?: string;
+}
+
+export interface FlashcardSet {
+  id: string;
+  name: string;
+  description?: string;
+  difficulty: ItalianLevel;
+  tags: string[];
+  cards: Flashcard[];
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  isPublic: boolean;
+  category?: string;
+  totalCards?: number;
+}
+
+// AI Types
+export type AIModel = 
+  | 'gpt-4o-mini'
+  | 'gpt-4o' 
+  | 'gpt-4-turbo' 
+  | 'claude-instant' 
+  | 'claude-2';
+
+export interface AISettings {
+  model: AIModel;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+  contentFiltering: boolean;
+}
+
+export interface AIServiceOptions {
+  temperature?: number;
+  maxLength?: number;
+  model?: AIModel;
+}
+
+export interface AIServiceInterface {
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  classifyText: (text: string) => Promise<Array<{ label: string; score: number }>>;
+  getConfidenceScore: (contentType: string) => number;
+  addTrainingExamples: (contentType: string, examples: any[]) => number;
+  generateFlashcards: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
+  generateQuestions: (content: string, count?: number, type?: string) => Promise<any[]>;
+  abortRequest: (requestId: string) => void;
+  abortAllRequests: () => void;
+}
+
+export interface ContentType {
+  type: string;
+  confidence: number;
+  features: ContentFeatures;
+}
+
+export interface ContentFeatures {
+  wordCount: number;
+  sentenceCount: number;
+  paragraphCount?: number;
+  questionMarks?: number;
+  language?: 'english' | 'italian' | 'mixed' | 'unknown';
+}
+
+// Hook return types
+export interface UseAIReturn {
+  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGenerationResult>;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
   
-  // Italian-specific types
-  ItalianLevel,
-  ItalianTestSection,
-  ItalianQuestionGenerationParams,
-  
-  // AI types
-  AIModel,
-  AIProvider,
-  AIServiceOptions,
-  AIPreference,
-  UseAIReturn,
-  AIService,
-  AIStatus,
-  AIOptions,
-  AIFeedbackSettings,
-  AISettings,
-  
-  // Interface fixes
-  SpeakableWordProps,
-  Flashcard,
-  FlashcardComponentProps,
-  ReviewSchedule,
-  ReviewPerformance,
-  User,
-  FlashcardSet,
-  FlashcardStats,
-  ImportFormat,
-  
-  // License types
-  LicenseType,
-  LicenseStatus,
-  RenewalStatus,
-  License,
-  LicenseUserAssignment,
-  LicenseFeature,
-  LicenseInvoice
+  // Additional AI utilities that might be referenced in components
+  loadModel?: (modelName: string) => Promise<boolean>;
+  speak?: (text: string, language?: string) => Promise<void>;
+  recognizeSpeech?: (audio: Blob) => Promise<string>;
+  compareTexts?: (text1: string, text2: string) => Promise<number>;
+  isAIEnabled?: boolean;
+  status?: string;
+  isModelLoaded?: boolean;
+  processContent?: (content: string, options?: any) => Promise<any>;
+}
+
+export type AIUtilsContextType = UseAIReturn & {
+  processContent: (content: string, options?: any) => Promise<any>;
+  settings: AISettings;
+  updateSettings: (settings: Partial<AISettings>) => void;
+  generateContent: (prompt: string, options?: any) => Promise<string>;
+  isSpeaking: boolean;
+  processAudioStream: (stream: MediaStream) => Promise<string>;
+  translateText: (text: string, targetLanguage: string) => Promise<string>;
+  analyzeGrammar: (text: string, language: string) => Promise<any>;
+  getVoices: () => SpeechSynthesisVoice[];
+  stopSpeaking: () => void;
+  detectLanguage: (text: string) => Promise<string>;
+  getConfidenceLevel: (text: string, type: string) => Promise<number>;
+  createEmbeddings: (text: string) => Promise<number[]>;
+  compareSimilarity: (text1: string, text2: string) => Promise<number>;
+  isProcessing: boolean;
+  error: Error | null;
+  abort: () => void;
+  classifyText: (text: string) => Promise<any>;
+  generateFlashcards: (topic: string, count?: number, difficulty?: string) => Promise<any[]>;
 };
 
-// Define unified types to handle the different versions
-export type QuestionGenerationParams = AppQuestionGenerationParams & ItalianQuestionGenerationParams;
+// Question Types
+export interface Question {
+  id: string;
+  text: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+  category: string;
+  difficulty: ItalianLevel;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  points: number;
+}
 
-// Export consistently named types to prevent ambiguity
-export { 
-  ItalianAIGeneratedQuestion as AIGeneratedQuestion,
-  ItalianAIGenerationResult as AIGenerationResult,
-  ItalianUserProfile as UserProfile
-};
+export interface QuestionSet {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: ItalianLevel;
+  questions: Question[];
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  isPublic: boolean;
+  completionCount: number;
+  averageScore: number;
+}
+
+export interface MultipleChoiceQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  category: string;
+  difficulty: ItalianLevel;
+  tags?: string[];
+}
+
+export interface QuestionGenerationParams {
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count?: number;
+  isCitizenshipFocused?: boolean;
+  language?: 'english' | 'italian' | 'both';
+}
+
+export * from './italian-types';
+export type { User, UserPreferences, UserRole };
