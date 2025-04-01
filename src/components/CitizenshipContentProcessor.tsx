@@ -1,155 +1,132 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, ListPlus } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAIUtils } from '@/hooks/useAIUtils';
-import { AIGeneratedQuestion } from '@/types/italian-types';
-import { mapToItalianTypes } from '@/types/italian-types';
+import { 
+  AIGeneratedQuestion, 
+  ItalianLevel 
+} from '@/types/italian-types';
+import { Loader2 } from 'lucide-react';
 
 interface CitizenshipContentProcessorProps {
-  onQuestionsGenerated?: (questions: AIGeneratedQuestion[]) => void;
-  defaultContent?: string;
-  settings?: any; // Add settings prop
-  onContentGenerated?: (questions: AIGeneratedQuestion[]) => void; // Add alias for onQuestionsGenerated
+  initialContent?: string;
+  level?: ItalianLevel;
 }
 
-// Export as named export
 export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorProps> = ({ 
-  onQuestionsGenerated,
-  defaultContent = "",
-  settings,
-  onContentGenerated
+  initialContent = '', 
+  level = 'intermediate' 
 }) => {
-  const [content, setContent] = useState(defaultContent);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [content, setContent] = useState<string>(initialContent);
+  const [selectedLevel, setSelectedLevel] = useState<ItalianLevel>(level);
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);
-  const { toast } = useToast();
-  const { generateQuestions } = useAIUtils();
-  
-  useEffect(() => {
-    if (defaultContent) {
-      setContent(defaultContent);
-    }
-  }, [defaultContent]);
-  
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-  };
-  
+  const { generateQuestions, isGenerating } = useAIUtils();
+
   const handleGenerateQuestions = async () => {
-    if (!content.trim()) {
-      toast({
-        title: "Content Required",
-        description: "Please enter or paste Italian text to generate questions.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
+    if (!content.trim()) return;
     
     try {
       const result = await generateQuestions({
-        contentTypes: ['culture', 'vocabulary', 'grammar'],
-        difficulty: 'intermediate',
+        contentTypes: ['culture'],
+        difficulty: selectedLevel,
         count: 5,
         isCitizenshipFocused: true,
-        language: 'italian',
-        ...(settings || {}) // Merge any provided settings
+        language: 'italian'
       });
       
-      const generatedQuestions = result.questions.map(q => ({
-        ...q,
-        type: mapToItalianTypes(q.type)
-      })) as AIGeneratedQuestion[];
-      
-      setQuestions(generatedQuestions);
-      
-      // Handle both callback props for compatibility
-      if (onQuestionsGenerated) {
-        onQuestionsGenerated(generatedQuestions);
+      if (result && result.questions) {
+        setQuestions(result.questions);
       }
-      
-      if (onContentGenerated) {
-        onContentGenerated(generatedQuestions);
-      }
-      
-      toast({
-        title: "Questions Generated",
-        description: `Successfully created ${generatedQuestions.length} citizenship practice questions.`,
-      });
-      
     } catch (error) {
-      console.error("Error generating questions:", error);
-      toast({
-        title: "Generation Error",
-        description: "Failed to generate citizenship questions. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
+      console.error('Error generating citizenship questions:', error);
     }
   };
-  
+
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <ListPlus className="h-5 w-5" />
-          Italian Citizenship Question Generator
-        </CardTitle>
-        <CardDescription>
-          Paste Italian text to generate citizenship test practice questions
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <Textarea 
-          value={content}
-          onChange={handleContentChange}
-          placeholder="Paste Italian text here (articles about Italian history, culture, or civics work best)..."
-          className="min-h-[150px] font-mono text-sm"
-          disabled={isProcessing}
-        />
+      <CardContent className="pt-6 space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="italian-content">Paste Italian text related to citizenship</Label>
+          <Textarea 
+            id="italian-content"
+            placeholder="Paste Italian content here to generate practice questions..." 
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={8}
+            className="resize-none"
+          />
+        </div>
         
-        {questions.length > 0 && (
-          <div className="border rounded-md p-3 bg-muted/30">
-            <h3 className="font-medium mb-2">Preview ({questions.length} questions generated)</h3>
-            <ul className="space-y-2 list-disc pl-5">
-              {questions.slice(0, 3).map((q, index) => (
-                <li key={index} className="text-sm">
-                  <span className="font-medium">{q.text.substring(0, 60)}...</span>
-                </li>
-              ))}
-              {questions.length > 3 && (
-                <li className="text-sm text-muted-foreground">
-                  + {questions.length - 3} more questions
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter>
-        <Button
+        <div className="space-y-2">
+          <Label>Difficulty Level</Label>
+          <RadioGroup 
+            value={selectedLevel} 
+            onValueChange={(value) => setSelectedLevel(value as ItalianLevel)}
+            className="flex space-x-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="beginner" id="level-beginner" />
+              <Label htmlFor="level-beginner">Beginner</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="intermediate" id="level-intermediate" />
+              <Label htmlFor="level-intermediate">Intermediate</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="advanced" id="level-advanced" />
+              <Label htmlFor="level-advanced">Advanced</Label>
+            </div>
+          </RadioGroup>
+        </div>
+        
+        <Button 
           onClick={handleGenerateQuestions}
-          disabled={isProcessing || !content.trim()}
+          disabled={isGenerating || !content.trim()}
           className="w-full"
         >
-          {isProcessing ? (
+          {isGenerating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating Questions...
+              Generating...
             </>
           ) : (
             'Generate Citizenship Questions'
           )}
         </Button>
-      </CardFooter>
+        
+        {questions.length > 0 && (
+          <div className="space-y-4 pt-4">
+            <h3 className="text-lg font-medium">Generated Questions</h3>
+            
+            {questions.map((question, index) => (
+              <div key={question.id} className="border rounded-lg p-4">
+                <p className="font-medium mb-2">Question {index + 1}:</p>
+                <p className="mb-4">{question.text || question.question}</p>
+                
+                <div className="space-y-2">
+                  {question.options?.map((option, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <div className={`w-4 h-4 rounded-full border ${option === question.correctAnswer ? 'bg-primary border-primary' : 'border-gray-300'}`} />
+                      <span className={option === question.correctAnswer ? 'font-medium' : ''}>{option}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {question.explanation && (
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    <p className="font-medium">Explanation:</p>
+                    <p>{question.explanation}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 };

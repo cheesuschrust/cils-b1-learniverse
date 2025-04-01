@@ -64,8 +64,9 @@ export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> =
         language: 'italian'
       });
       
-      const generatedQuestions = result.questions as AIGeneratedQuestion[];
-      setQuestions(generatedQuestions);
+      if (result && result.questions) {
+        setQuestions(result.questions);
+      }
     } catch (error) {
       console.error(`Error loading ${section} questions:`, error);
     } finally {

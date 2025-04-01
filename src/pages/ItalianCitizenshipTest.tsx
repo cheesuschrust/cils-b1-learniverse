@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';  
 import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';  
 import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';  
-import { useAuth } from '@/hooks/useAuth';  
+import { useAuth } from '@/contexts/AuthContext';  
 import { ArrowRight, Award, BookOpen, CheckCircle, Circle, Dices } from 'lucide-react';  
 import { Button } from '@/components/ui/button';  
 import { Progress } from '@/components/ui/progress';  

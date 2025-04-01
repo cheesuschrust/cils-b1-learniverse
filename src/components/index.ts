@@ -5,7 +5,7 @@ export { EnhancedErrorBoundary } from './EnhancedErrorBoundary';
 
 // Re-export components with both default and named exports
 export { CitizenshipContentProcessor } from './CitizenshipContentProcessor';
-export { default as CitizenshipContentProcessor } from './CitizenshipContentProcessor';
+export { default as CitizenshipContentProcessorDefault } from './CitizenshipContentProcessor';
 export { ItalianPracticeComponent } from './ItalianPracticeComponent';
-export { default as ItalianPracticeComponent } from './ItalianPracticeComponent';
+export { default as ItalianPracticeComponentDefault } from './ItalianPracticeComponent';
 export { default as CitizenshipReadinessComponent } from './CitizenshipReadinessComponent';
