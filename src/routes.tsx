@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Writing from './pages/Writing';
 import Speaking from './pages/Speaking';
 import Listening from './pages/Listening';
+import Reading from './pages/Reading';
 import Flashcards from './pages/Flashcards';
 import MultipleChoice from './pages/MultipleChoice';
 import NotFound from './pages/NotFound';
@@ -35,6 +36,10 @@ const routes = [
   {
     path: '/listening',
     element: <Listening />
+  },
+  {
+    path: '/reading',
+    element: <Reading />
   },
   {
     path: '/flashcards',
