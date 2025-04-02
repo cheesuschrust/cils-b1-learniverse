@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { HelmetProvider } from 'react-helmet-async';
 import EnhancedErrorBoundary from '@/components/common/EnhancedErrorBoundary';
+import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
 import App from './App';
 import './index.css';
 
@@ -48,7 +49,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider defaultTheme="system" storageKey="cils-theme">
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-              <App />
+              <AIUtilsProvider>
+                <App />
+              </AIUtilsProvider>
             </BrowserRouter>
           </QueryClientProvider>
         </ThemeProvider>
