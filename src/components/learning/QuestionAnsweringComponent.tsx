@@ -1,13 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { AIGeneratedQuestion, ItalianTestSection, ItalianLevel } from '@/types/core-types';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { AIGeneratedQuestion, ItalianLevel, ItalianTestSection } from '@/types/italian-types';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 interface QuestionAnsweringComponentProps {
   questions: AIGeneratedQuestion[];
@@ -27,213 +25,142 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState(0);
-  const [startTime] = useState<Date>(new Date());
-  const [answers, setAnswers] = useState<Array<{
-    questionId: string;
-    selectedAnswer: string | null;
-    isCorrect: boolean;
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [timeStarted] = useState<Date>(new Date());
 
   const currentQuestion = questions[currentQuestionIndex];
-  const questionsCount = questions.length;
-  const progress = ((currentQuestionIndex + 1) / questionsCount) * 100;
-
-  // Function to handle submitting an answer
-  const handleSubmitAnswer = () => {
-    if (!selectedAnswer && contentType !== 'writing' && contentType !== 'speaking') return;
-    
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
-      
-      if (isCorrect) {
-        setScore(prev => prev + 1);
-      }
-      
-      setAnswers(prev => [
-        ...prev,
-        {
-          questionId: currentQuestion?.id || '',
-          selectedAnswer,
-          isCorrect: isCorrect
-        }
-      ]);
-      
-      setIsAnswerSubmitted(true);
-      setIsLoading(false);
-    }, 500);
-  };
-
-  // Function to move to the next question
-  const handleNextQuestion = () => {
+  const totalQuestions = questions.length;
+  
+  // Reset state when questions change
+  useEffect(() => {
+    setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setIsAnswerSubmitted(false);
+    setScore(0);
+  }, [questions]);
+  
+  const handleAnswerSelect = (value: string) => {
+    if (!isAnswerSubmitted) {
+      setSelectedAnswer(value);
+    }
+  };
+  
+  const handleSubmitAnswer = () => {
+    if (!selectedAnswer || isAnswerSubmitted) return;
     
-    if (currentQuestionIndex < questionsCount - 1) {
+    const isAnswerCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    setIsCorrect(isAnswerCorrect);
+    setIsAnswerSubmitted(true);
+    
+    if (isAnswerCorrect) {
+      setScore(prevScore => prevScore + 1);
+    }
+  };
+  
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswer(null);
+      setIsAnswerSubmitted(false);
     } else {
-      // Calculate final score
-      const finalScore = Math.round((score / questionsCount) * 100);
+      // All questions completed
+      const finalScore = score + (isCorrect ? 1 : 0);
+      const percentageScore = (finalScore / totalQuestions) * 100;
       
-      // Call onComplete callback if provided
       if (onComplete) {
-        onComplete(finalScore);
+        onComplete(percentageScore);
       }
     }
   };
-
-  // Handle completion of the exercise
-  useEffect(() => {
-    if (currentQuestionIndex === questionsCount && onComplete) {
-      const finalScore = Math.round((score / questionsCount) * 100);
-      onComplete(finalScore);
-    }
-  }, [currentQuestionIndex, questionsCount, score, onComplete]);
-
-  // If no questions are available, show a message
-  if (!questions || questions.length === 0) {
+  
+  if (questions.length === 0) {
     return (
-      <Card className="w-full">
+      <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center py-10">
-            <p>No questions available for this section.</p>
-          </div>
+          <p className="text-center text-muted-foreground">No questions available. Try refreshing or selecting a different category.</p>
         </CardContent>
       </Card>
     );
   }
-
-  // When all questions are answered, show the summary
-  if (currentQuestionIndex >= questionsCount) {
-    const finalScore = Math.round((score / questionsCount) * 100);
-    const timeSpent = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-    
-    return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold">Exercise Completed!</h2>
-            <p className="text-lg">
-              Your score: <span className="font-bold">{finalScore}%</span>
-            </p>
-            <p>
-              Time spent: {Math.floor(timeSpent / 60)}m {timeSpent % 60}s
-            </p>
-            <p>
-              Correct answers: {score} out of {questionsCount}
-            </p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
+  const progress = ((currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)) / totalQuestions) * 100;
+  
   return (
     <Card className="w-full">
-      <CardContent className="pt-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-sm">
-            Question {currentQuestionIndex + 1} of {questionsCount}
-          </div>
-          <div className="text-sm">
-            Score: {score} / {currentQuestionIndex}
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl">
+            {contentType.charAt(0).toUpperCase() + contentType.slice(1)} Practice
+          </CardTitle>
+          <div className="text-sm font-medium">
+            Question {currentQuestionIndex + 1} of {totalQuestions}
           </div>
         </div>
-        
-        <Progress value={progress} className="mb-4" />
-        
+        <Progress value={progress} className="h-2" />
+      </CardHeader>
+      
+      <CardContent className="py-4">
         <div className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">
-              {currentQuestion?.question || currentQuestion?.text}
-            </h3>
-            
-            {contentType === 'writing' ? (
-              <div className="space-y-2">
-                <Textarea 
-                  placeholder="Write your answer here..." 
-                  rows={6}
-                  value={selectedAnswer || ''}
-                  onChange={(e) => setSelectedAnswer(e.target.value)}
-                />
-              </div>
-            ) : contentType === 'speaking' ? (
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full h-24"
-                  onClick={() => setSelectedAnswer('Recording submitted')}
-                >
-                  Click to Record
-                </Button>
-                {selectedAnswer && (
-                  <p className="text-center text-sm text-green-600">Recording submitted</p>
-                )}
-              </div>
-            ) : (
-              <RadioGroup
-                value={selectedAnswer || ''}
-                onValueChange={setSelectedAnswer}
-                className="space-y-2"
-              >
-                {currentQuestion?.options?.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value={option}
-                      id={`option-${index}`}
-                      disabled={isAnswerSubmitted}
-                    />
-                    <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                      {option}
-                    </Label>
-                    
-                    {isAnswerSubmitted && option === currentQuestion.correctAnswer && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
-                    
-                    {isAnswerSubmitted && selectedAnswer === option && option !== currentQuestion.correctAnswer && (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
+          <div className="text-lg font-medium">
+            {currentQuestion.question || currentQuestion.text}
           </div>
           
-          {isAnswerSubmitted && currentQuestion.explanation && (
-            <div className="bg-green-50 p-4 rounded-md border border-green-200">
-              <h4 className="text-sm font-medium text-green-800 mb-1">Explanation:</h4>
-              <p className="text-sm text-green-700">{currentQuestion.explanation}</p>
-            </div>
+          {currentQuestion.options && (
+            <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect}>
+              {currentQuestion.options.map((option, index) => (
+                <div key={index} className="flex items-center space-x-2 border p-3 rounded-md">
+                  <RadioGroupItem value={option} id={`option-${index}`} disabled={isAnswerSubmitted} />
+                  <label htmlFor={`option-${index}`} className="flex-grow cursor-pointer">
+                    {option}
+                  </label>
+                  {isAnswerSubmitted && option === currentQuestion.correctAnswer && (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  )}
+                  {isAnswerSubmitted && option === selectedAnswer && option !== currentQuestion.correctAnswer && (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+              ))}
+            </RadioGroup>
           )}
           
-          <div className="flex justify-end space-x-2">
-            {!isAnswerSubmitted ? (
-              <Button
-                onClick={handleSubmitAnswer}
-                disabled={isLoading || (!selectedAnswer && contentType !== 'writing' && contentType !== 'speaking')}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Checking...
-                  </>
-                ) : (
-                  'Submit Answer'
-                )}
-              </Button>
-            ) : (
-              <Button onClick={handleNextQuestion}>
-                {currentQuestionIndex < questionsCount - 1 ? 'Next Question' : 'Finish'}
-              </Button>
-            )}
-          </div>
+          {isAnswerSubmitted && (
+            <div className={`p-4 rounded-md ${isCorrect ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <p className="font-medium mb-2">
+                {isCorrect ? 'Correct!' : 'Incorrect'}
+              </p>
+              {currentQuestion.explanation && (
+                <p className="text-sm">
+                  <span className="font-medium">Explanation:</span> {currentQuestion.explanation}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
+      
+      <CardFooter className="flex justify-between border-t p-4">
+        <div className="text-sm">
+          Score: {score}/{currentQuestionIndex + (isAnswerSubmitted ? 1 : 0)}
+        </div>
+        <div className="space-x-2">
+          {!isAnswerSubmitted ? (
+            <Button 
+              onClick={handleSubmitAnswer} 
+              disabled={!selectedAnswer}
+            >
+              Submit Answer
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleNextQuestion}
+            >
+              {currentQuestionIndex < totalQuestions - 1 ? 'Next Question' : 'Complete'}
+            </Button>
+          )}
+        </div>
+      </CardFooter>
     </Card>
   );
 };
