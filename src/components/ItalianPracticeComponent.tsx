@@ -9,7 +9,7 @@ import {
   ItalianTestSection,
   AnswerResults 
 } from '@/types/italian-types';
-import { useAIUtils } from '@/hooks/useAIUtils';
+import { useAuth } from '@/contexts/AuthContext';
 import QuestionAnsweringComponent from './learning/QuestionAnsweringComponent';
 import { Loader2, BookOpen, Mic, FileText, PenTool, Languages } from 'lucide-react';
 
@@ -45,7 +45,35 @@ export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> =
     citizenship: 0
   });
   
-  const { generateQuestions } = useAIUtils();
+  const { user } = useAuth();
+  
+  // Mock function for generating questions - in a real app, this would call an API
+  const generateQuestions = async (params: {
+    contentTypes: ItalianTestSection[];
+    difficulty: ItalianLevel;
+    count: number;
+    isCitizenshipFocused: boolean;
+    language?: string;
+  }) => {
+    // Simulate API call with a delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock questions based on the selected section
+    const mockQuestions: AIGeneratedQuestion[] = Array(params.count).fill(null).map((_, index) => ({
+      id: `question-${index}`,
+      text: `Sample ${params.contentTypes[0]} question ${index + 1}?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correctAnswer: 'Option A',
+      explanation: `This is an explanation for question ${index + 1}`,
+      type: params.contentTypes[0],
+      difficulty: params.difficulty,
+      questionType: 'multipleChoice',
+      isCitizenshipRelevant: params.isCitizenshipFocused,
+      question: `Sample ${params.contentTypes[0]} question ${index + 1}?`
+    }));
+    
+    return { questions: mockQuestions };
+  };
   
   // Load questions when section changes
   useEffect(() => {
@@ -165,7 +193,7 @@ export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> =
                     contentType={section as ItalianTestSection}
                     onComplete={handleSectionComplete}
                     difficultyLevel={level}
-                    userId={userId}
+                    userId={userId || user?.id}
                   />
                 </TabsContent>
               ))

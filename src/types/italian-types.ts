@@ -1,6 +1,6 @@
 
 // Italian language proficiency levels
-export type ItalianLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'beginner' | 'intermediate' | 'advanced';
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 // Italian test sections
 export type ItalianTestSection = 
@@ -26,6 +26,7 @@ export interface ItalianQuestionGenerationParams {
   isCitizenshipFocused?: boolean;
   count?: number;
   topics?: string[];
+  language?: 'english' | 'italian' | 'both';
 }
 
 // Generated question structure
@@ -37,14 +38,21 @@ export interface AIGeneratedQuestion {
   explanation?: string;
   type: ItalianTestSection;
   difficulty: ItalianLevel;
-  questionType: QuestionType;
+  questionType: QuestionType | 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
   isCitizenshipRelevant: boolean;
+  question?: string;
 }
 
 // Result of AI generation
 export interface AIGenerationResult {
   questions: AIGeneratedQuestion[];
   error?: string;
+}
+
+// Answer results
+export interface AnswerResults {
+  score: number;
+  time: number;
 }
 
 // User profile with Italian-specific fields

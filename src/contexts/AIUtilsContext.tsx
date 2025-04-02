@@ -1,79 +1,82 @@
 
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { 
   AIGeneratedQuestion, 
-  AIGenerationResult,
-  ItalianQuestionGenerationParams 
+  ItalianQuestionGenerationParams, 
+  AIGenerationResult 
 } from '@/types/italian-types';
+import { v4 as uuidv4 } from 'uuid';
 
-interface AIUtilsContextType {
+export interface AIUtilsContextType {
   generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGenerationResult>;
   isGenerating: boolean;
   remainingCredits: number;
   usageLimit: number;
 }
 
-const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);
+// Create the initial context
+const AIUtilsContext = createContext<AIUtilsContextType>({
+  generateQuestions: async () => ({ questions: [] }),
+  isGenerating: false,
+  remainingCredits: 0,
+  usageLimit: 0
+});
 
-export const AIUtilsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Export the hook for using the context
+export const useAIUtils = () => useContext(AIUtilsContext);
+
+export interface AIUtilsProviderProps {
+  children: ReactNode;
+}
+
+export const AIUtilsProvider: React.FC<AIUtilsProviderProps> = ({ children }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [remainingCredits, setRemainingCredits] = useState(10); // Default 10 credits for free users
-  const [usageLimit] = useState(10); // Default limit for free users
+  const [remainingCredits, setRemainingCredits] = useState(100);
+  const [usageLimit, setUsageLimit] = useState(500);
 
+  // Mock function to generate questions
   const generateQuestions = async (params: ItalianQuestionGenerationParams): Promise<AIGenerationResult> => {
     setIsGenerating(true);
+    
     try {
-      // Simulate API call for question generation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Generate mock questions based on params
-      const mockQuestions: AIGeneratedQuestion[] = Array(params.count || 5).fill(0).map((_, index) => ({
-        id: `question-${index}-${Date.now()}`,
-        question: `Sample ${params.contentTypes[0]} question ${index + 1}?`,
+      // Create mock questions based on params
+      const mockQuestions: AIGeneratedQuestion[] = Array(params.count || 5).fill(null).map((_, idx) => ({
+        id: uuidv4(),
+        text: `Sample question ${idx + 1} for ${params.contentTypes[0]}?`,
         options: ['Option A', 'Option B', 'Option C', 'Option D'],
         correctAnswer: 'Option A',
-        explanation: `This is an explanation for the sample ${params.contentTypes[0]} question.`,
+        explanation: `This is an explanation for ${params.contentTypes[0]} question ${idx + 1}`,
         type: params.contentTypes[0],
         difficulty: params.difficulty,
         questionType: 'multipleChoice',
-        isCitizenshipRelevant: params.isCitizenshipFocused || false,
+        isCitizenshipRelevant: params.isCitizenshipFocused || false
       }));
       
-      // Decrease remaining credits
-      setRemainingCredits(prev => Math.max(0, prev - 1));
+      // Deduct credits
+      setRemainingCredits(prev => Math.max(0, prev - 5));
       
       return { questions: mockQuestions };
     } catch (error) {
-      console.error('Error generating questions:', error);
-      return { 
-        questions: [], 
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+      console.error("Error generating questions:", error);
+      return { questions: [], error: "Failed to generate questions" };
     } finally {
       setIsGenerating(false);
     }
   };
 
+  const value: AIUtilsContextType = {
+    generateQuestions,
+    isGenerating,
+    remainingCredits,
+    usageLimit
+  };
+
   return (
-    <AIUtilsContext.Provider
-      value={{
-        generateQuestions,
-        isGenerating,
-        remainingCredits,
-        usageLimit
-      }}
-    >
+    <AIUtilsContext.Provider value={value}>
       {children}
     </AIUtilsContext.Provider>
   );
-};
-
-export const useAIUtils = (): AIUtilsContextType => {
-  const context = useContext(AIUtilsContext);
-  
-  if (context === undefined) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
-  }
-  
-  return context;
 };

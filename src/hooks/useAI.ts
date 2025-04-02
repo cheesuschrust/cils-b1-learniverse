@@ -1,87 +1,61 @@
 
-import { useState, useCallback } from 'react';
-import { AIServiceOptions, UseAIReturn } from '@/types/core-types';
+import { useState } from 'react';
+import { useAIUtils } from '@/contexts/AIUtilsContext';
+import { ItalianQuestionGenerationParams } from '@/types/italian-types';
+import { v4 as uuidv4 } from 'uuid';
 
-const useAI = (): UseAIReturn => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+interface UseAIReturn {
+  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<any>;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
   
-  // Safely get the AI service
-  const getAIService = useCallback(() => {
-    try {
-      // Mock the service for now
-      return {
-        generateText: async (prompt: string, options?: any) => {
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return `AI response to: ${prompt}`;
-        },
-        getConfidenceScore: (contentType: string) => 0.8,
-        abortAllRequests: () => {}
-      };
-    } catch (err) {
-      console.error("Error getting AI service:", err);
-      return null;
-    }
-  }, []);
+  // Mock implementations for functions referenced in components
+  classifyText: (text: string) => Promise<Array<{ label: string; score: number }>>;
+  isProcessing: boolean;
+  generateText: (prompt: string) => Promise<string>;
+}
+
+export const useAI = (): UseAIReturn => {
+  const aiUtils = useAIUtils();
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  const generateText = useCallback(async (prompt: string, options?: AIServiceOptions): Promise<string> => {
-    setIsLoading(true);
-    setError(null);
-    
+  const classifyText = async (text: string) => {
+    setIsProcessing(true);
     try {
-      const aiService = getAIService();
-      if (!aiService) {
-        throw new Error("AI service not available");
-      }
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const response = await aiService.generateText(prompt, options);
-      return response;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('AI text generation failed');
-      setError(error);
-      console.error("AI generation error:", error);
-      return '';
+      // Return mock classification
+      return [
+        { label: 'Italian B1', score: 0.85 },
+        { label: 'Grammar', score: 0.75 },
+        { label: 'Citizenship', score: 0.60 }
+      ];
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
-  }, [getAIService]);
+  };
   
-  const getConfidenceScore = useCallback(async (text: string, contentType: string): Promise<number> => {
+  const generateText = async (prompt: string) => {
+    setIsProcessing(true);
     try {
-      const aiService = getAIService();
-      if (!aiService) {
-        return 0;
-      }
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      return aiService.getConfidenceScore(contentType) || 0;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to get confidence score');
-      console.error("Confidence score error:", error);
-      return 0;
+      // Return mock generated text
+      return `Generated response for: "${prompt}"\n\nThis is a mock AI response that would analyze the provided Italian text, identify grammatical structures, vocabulary usage, and provide suggestions for improvement.`;
+    } finally {
+      setIsProcessing(false);
     }
-  }, [getAIService]);
-  
-  const abort = useCallback(() => {
-    try {
-      const aiService = getAIService();
-      if (aiService) {
-        aiService.abortAllRequests();
-      }
-    } catch (error) {
-      console.error('Failed to abort AI requests:', error);
-    }
-  }, [getAIService]);
+  };
   
   return {
-    generateText,
-    getConfidenceScore,
-    isLoading,
-    error,
-    abort
+    ...aiUtils,
+    classifyText,
+    isProcessing,
+    generateText
   };
 };
 
 export default useAI;
-export { useAI };
-export type { AIServiceOptions, UseAIReturn };
