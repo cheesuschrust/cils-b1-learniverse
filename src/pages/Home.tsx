@@ -1,146 +1,209 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import DailyQuestionComponent from '@/components/daily/DailyQuestionComponent';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, CheckCircle, Sparkles, MessageCircle, Award, ArrowRight } from 'lucide-react';
+import { 
+  BookOpen, Headphones, Edit, MessageSquare, Award, 
+  Clock, GraduationCap, Users, Lightbulb
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Home = () => {
   const { user } = useAuth();
   
   return (
-    <>
+    <div className="container max-w-7xl mx-auto px-4 py-8">
       <Helmet>
-        <title>CILS B1 Learniverse - Italian Language Exam Preparation</title>
+        <title>CILS Italian Citizenship - Question of the Day</title>
       </Helmet>
       
-      {/* Hero Section */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter mb-6">
-            Master the CILS B1 Exam with <span className="text-primary">Confidence</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Complete preparation platform for the CILS B1 Italian language certification with AI-powered practice, personalized feedback, and comprehensive resources.
+      <section className="mb-12">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold mb-4">CILS Italian Citizenship Exam Preparation</h1>
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            Prepare for your Italian citizenship test with daily questions and comprehensive learning resources tailored to CILS B1 requirements.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            {user ? (
-              <Button asChild size="lg">
-                <Link to="/app/dashboard">
-                  Continue Learning
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button asChild size="lg">
-                  <Link to="/signup">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+        </div>
+        
+        <DailyQuestionComponent userId={user?.id} />
+      </section>
+      
+      <section className="mb-12">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Learning Areas</h2>
+          <Button variant="outline" asChild>
+            <Link to="/learning-paths">View All</Link>
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <BookOpen className="h-5 w-5 mr-2" />
+                Vocabulary & Reading
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Build essential Italian vocabulary and reading comprehension skills required for the CILS B1 test.
+              </p>
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">B1 Level</Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/flashcards">Start Learning</Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link to="/login">
-                    Login
-                  </Link>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <Headphones className="h-5 w-5 mr-2" />
+                Listening & Speaking
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Improve your Italian listening comprehension and speaking abilities with interactive exercises.
+              </p>
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">B1 Level</Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/listening">Start Learning</Link>
                 </Button>
-              </>
-            )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <Edit className="h-5 w-5 mr-2" />
+                Grammar & Writing
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Master Italian grammar rules and develop writing skills with guided practice and feedback.
+              </p>
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">B1 Level</Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/writing">Start Learning</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <Award className="h-5 w-5 mr-2" />
+                Citizenship Knowledge
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Learn about Italian culture, history, and civic knowledge essential for citizenship.
+              </p>
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">CILS B1</Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/citizenship">Start Learning</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+      
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">Why Choose Our Platform?</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <Lightbulb className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">AI-Powered Learning</h3>
+            <p className="text-sm text-muted-foreground">
+              Our platform uses advanced AI to generate personalized questions and exercises tailored to the CILS B1 citizenship requirements.
+            </p>
+          </div>
+          
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <Clock className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Daily Practice</h3>
+            <p className="text-sm text-muted-foreground">
+              Consistent daily practice with our Question of the Day feature ensures steady progress and retention of material.
+            </p>
+          </div>
+          
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <GraduationCap className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">CILS B1 Alignment</h3>
+            <p className="text-sm text-muted-foreground">
+              All content is specifically designed to align with the CILS B1 certification requirements for Italian citizenship.
+            </p>
+          </div>
+          
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Community Learning</h3>
+            <p className="text-sm text-muted-foreground">
+              Join a community of Italian language learners preparing for the citizenship exam, share resources and tips.
+            </p>
+          </div>
+          
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <MessageSquare className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Pronunciation Feedback</h3>
+            <p className="text-sm text-muted-foreground">
+              Record your speaking exercises and receive instant AI-powered feedback on your Italian pronunciation.
+            </p>
+          </div>
+          
+          <div className="bg-muted/50 p-6 rounded-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <Award className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Pass Guarantee</h3>
+            <p className="text-sm text-muted-foreground">
+              Our comprehensive curriculum and practice materials are designed to maximize your chances of passing the CILS B1 citizenship exam.
+            </p>
           </div>
         </div>
       </section>
       
-      {/* Features Section */}
-      <section className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Comprehensive CILS B1 Preparation
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <BookOpen className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">Complete Study Materials</h3>
-              <p className="text-muted-foreground">
-                Access comprehensive resources covering reading, writing, listening and speaking sections of the CILS B1 exam.
-              </p>
-            </div>
-            
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <CheckCircle className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">Practice Exams</h3>
-              <p className="text-muted-foreground">
-                Test your readiness with full-length practice exams that simulate the actual CILS B1 certification test.
-              </p>
-            </div>
-            
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">AI-Powered Learning</h3>
-              <p className="text-muted-foreground">
-                Get personalized feedback on writing and speaking exercises with advanced AI that helps improve your Italian skills.
-              </p>
-            </div>
-            
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <MessageCircle className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">Interactive Exercises</h3>
-              <p className="text-muted-foreground">
-                Engage with thousands of interactive exercises designed specifically for the B1 level Italian learners.
-              </p>
-            </div>
-            
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <Award className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">Track Your Progress</h3>
-              <p className="text-muted-foreground">
-                Monitor your improvement over time with detailed analytics and progress tracking tools.
-              </p>
-            </div>
-            
-            <div className="bg-card shadow-sm rounded-lg p-6">
-              <div className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"></path>
-                  <path d="m12 11 3 3"></path>
-                  <path d="M11 7v5h5"></path>
-                </svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Study on Your Schedule</h3>
-              <p className="text-muted-foreground">
-                Access your materials anytime, anywhere, with a flexible platform designed for busy language learners.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* CTA Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Ace Your CILS B1 Exam?</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Join thousands of successful students who have mastered Italian with our comprehensive CILS B1 preparation platform.
-          </p>
-          <Button asChild size="lg">
-            <Link to={user ? "/app/dashboard" : "/signup"}>
-              {user ? "Go to Dashboard" : "Start Learning Today"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+      <section className="py-10 px-6 bg-muted/50 rounded-xl text-center">
+        <h2 className="text-3xl font-bold mb-4">Start Your Citizenship Journey Today</h2>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-6">
+          Access daily questions, comprehensive learning materials, and AI-powered practice tools to help you prepare for your Italian citizenship test.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button size="lg" asChild>
+            <Link to="/register">Sign Up Free</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link to="/premium">View Premium Plans</Link>
           </Button>
         </div>
       </section>
-    </>
+    </div>
   );
 };
 
