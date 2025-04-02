@@ -51,7 +51,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <BrowserRouter>
               <App />
             </BrowserRouter>
-            <Toaster />
           </QueryClientProvider>
         </ThemeProvider>
       </HelmetProvider>
