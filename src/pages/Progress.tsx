@@ -1,592 +1,505 @@
 
-import React from 'react';
-import { Helmet } from "react-helmet-async";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress as ProgressBar } from "@/components/ui/progress";
-import { BarChart, Calendar, CheckCircle2, ListChecks, Activity, BookOpen, Headphones, Edit, MessageSquare } from "lucide-react";
-import UserProgressDashboard from '@/components/dashboard/UserProgressDashboard';
+import React, { useEffect, useState } from 'react';
+import { Layout } from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
 import ProgressChart from '@/components/progress/ProgressChart';
 import ProgressSummary from '@/components/progress/ProgressSummary';
-import SkillBreakdown from '@/components/progress/SkillBreakdown';
+import ProgressCard from '@/components/ui/ProgressCard';
+import { Headphones, BookOpen, Pen, Mic, Award, BookMarked } from 'lucide-react';
+import { supabase } from '@/lib/supabase-client';
+import { ItalianTestSection, ItalianLevel } from '@/types/italian-types';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { Button } from '@/components/ui/button';
 
-export default function Progress() {
+export default function ProgressPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [progressData, setProgressData] = useState<any>(null);
   
-  // Mock data representing user's test progress aligned with CILS B1 requirements
-  const testProgress = {
-    sections: {
-      listening: { 
-        score: 72, 
-        total: 100,
-        timeSpent: 180, // minutes
-        completedExercises: 24,
-        totalExercises: 30
-      },
-      reading: { 
-        score: 65, 
-        total: 100,
-        timeSpent: 210, 
-        completedExercises: 18,
-        totalExercises: 25
-      },
-      writing: { 
-        score: 58, 
-        total: 100,
-        timeSpent: 120,
-        completedExercises: 12,
-        totalExercises: 20
-      },
-      speaking: { 
-        score: 62, 
-        total: 100,
-        timeSpent: 90,
-        completedExercises: 15,
-        totalExercises: 22
-      }
+  const targetScore = 70; // CILS B1 typically requires 70% or higher to pass
+  
+  // Sample progress data format - this would be fetched from the database
+  const [chartData, setChartData] = useState([
+    {
+      date: '2023-10-01',
+      listening: 65,
+      reading: 70,
+      writing: 60,
+      speaking: 55,
+      overall: 62
     },
-    overall: {
-      score: 65,
-      requiredScore: 80,
-      estimatedReadiness: 75,
-      daysStudied: 28,
-      totalDays: 45,
-      longestStreak: 14
+    {
+      date: '2023-10-08',
+      listening: 68,
+      reading: 75,
+      writing: 63,
+      speaking: 60,
+      overall: 66
     },
-    cilsInfo: {
-      examDate: "Not scheduled",
-      passingScore: 80,
-      timePerSection: {
-        listening: "30 minutes",
-        reading: "40 minutes",
-        writing: "60 minutes",
-        speaking: "10 minutes"
+    {
+      date: '2023-10-15',
+      listening: 72,
+      reading: 78,
+      writing: 67,
+      speaking: 64,
+      overall: 70
+    },
+    {
+      date: '2023-10-22',
+      listening: 75,
+      reading: 80,
+      writing: 70,
+      speaking: 68,
+      overall: 73
+    }
+  ]);
+  
+  // CILS B1 exam structure
+  const examSections = [
+    {
+      name: 'Listening Comprehension',
+      score: chartData[chartData.length - 1]?.listening || 0,
+      icon: <Headphones className="h-4 w-4 text-primary" />,
+      description: 'Understanding spoken Italian in everyday situations',
+      timeAllowed: 30, // minutes
+      passingScore: 70,
+      items: 30
+    },
+    {
+      name: 'Reading Comprehension',
+      score: chartData[chartData.length - 1]?.reading || 0,
+      icon: <BookOpen className="h-4 w-4 text-primary" />,
+      description: 'Understanding written Italian in everyday situations',
+      timeAllowed: 50, // minutes
+      passingScore: 70,
+      items: 35
+    },
+    {
+      name: 'Writing Production',
+      score: chartData[chartData.length - 1]?.writing || 0,
+      icon: <Pen className="h-4 w-4 text-primary" />,
+      description: 'Producing written Italian for everyday communication',
+      timeAllowed: 60, // minutes
+      passingScore: 70,
+      items: 2
+    },
+    {
+      name: 'Speaking Production',
+      score: chartData[chartData.length - 1]?.speaking || 0,
+      icon: <Mic className="h-4 w-4 text-primary" />,
+      description: 'Communicating orally in Italian in everyday situations',
+      timeAllowed: 10, // minutes
+      passingScore: 70,
+      items: 3
+    }
+  ];
+  
+  // Function to fetch user progress data
+  const fetchProgressData = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      // Fetch user progress data from Supabase
+      const { data: progressData, error } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Process the data for our charts
+      if (progressData && progressData.length > 0) {
+        // Process the raw data into chart format
+        const processedChartData = processProgressData(progressData);
+        setChartData(processedChartData);
       }
+      
+      setProgressData(progressData);
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+      toast({
+        title: "Error fetching progress data",
+        description: "Could not load your progress data. Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Historical progress data for charts
-  const historicalData = [
-    { date: '2023-01-01', listening: 45, reading: 40, writing: 30, speaking: 35, overall: 38 },
-    { date: '2023-01-08', listening: 50, reading: 42, writing: 35, speaking: 40, overall: 42 },
-    { date: '2023-01-15', listening: 55, reading: 48, writing: 40, speaking: 42, overall: 46 },
-    { date: '2023-01-22', listening: 62, reading: 54, writing: 45, speaking: 47, overall: 52 },
-    { date: '2023-01-29', listening: 65, reading: 60, writing: 50, speaking: 55, overall: 58 },
-    { date: '2023-02-05', listening: 70, reading: 62, writing: 55, speaking: 60, overall: 62 },
-    { date: '2023-02-12', listening: 72, reading: 65, writing: 58, speaking: 62, overall: 65 }
-  ];
-
-  // Handle assessment request
-  const handleAssessmentRequest = () => {
-    toast({
-      title: "Assessment Scheduled",
-      description: "Your CILS readiness assessment will be available tomorrow."
-    });
+  
+  // Process raw progress data into chart format
+  const processProgressData = (data: any[]): any[] => {
+    // Group by date (day)
+    const groupedByDate = data.reduce((acc: any, session: any) => {
+      const date = new Date(session.created_at).toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = {
+          sessions: [],
+          scores: {
+            listening: [],
+            reading: [],
+            writing: [],
+            speaking: [],
+          }
+        };
+      }
+      
+      // Add score to the appropriate category
+      if (session.content_type && session.score !== null) {
+        if (acc[date].scores[session.content_type]) {
+          acc[date].scores[session.content_type].push(session.score);
+        }
+      }
+      
+      acc[date].sessions.push(session);
+      return acc;
+    }, {});
+    
+    // Calculate averages for each date and type
+    return Object.keys(groupedByDate).map(date => {
+      const dayData = groupedByDate[date];
+      
+      // Calculate average score for each content type
+      const listening = calculateAverage(dayData.scores.listening);
+      const reading = calculateAverage(dayData.scores.reading);
+      const writing = calculateAverage(dayData.scores.writing);
+      const speaking = calculateAverage(dayData.scores.speaking);
+      
+      // Calculate overall score
+      const allScores = [
+        ...dayData.scores.listening,
+        ...dayData.scores.reading,
+        ...dayData.scores.writing,
+        ...dayData.scores.speaking
+      ];
+      const overall = calculateAverage(allScores);
+      
+      return {
+        date,
+        listening,
+        reading,
+        writing,
+        speaking,
+        overall
+      };
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
-
+  
+  const calculateAverage = (scores: number[]): number => {
+    if (!scores || scores.length === 0) return 0;
+    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+  };
+  
+  // Calculate current overall score
+  const currentOverallScore = chartData.length > 0 
+    ? chartData[chartData.length - 1].overall 
+    : 0;
+  
+  useEffect(() => {
+    fetchProgressData();
+  }, [user]);
+  
   return (
-    <>
-      <Helmet>
-        <title>Learning Progress | CILS B1 Cittadinanza</title>
-        <meta name="description" content="Track your Italian language learning progress for the CILS B1 Citizenship exam" />
-      </Helmet>
-      <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">Learning Progress</h1>
-          <p className="text-muted-foreground mt-2">
-            Track your preparation for the CILS B1 Citizenship exam
+    <Layout>
+      <div className="container py-6 space-y-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Your Progress</h1>
+          <p className="text-muted-foreground">
+            Track your progress towards CILS B1 Citizenship exam readiness
           </p>
         </div>
         
-        <div className="grid gap-6 grid-cols-1">
-          {/* User Progress Summary */}
-          <UserProgressDashboard 
-            userName="User" 
-            streak={testProgress.overall.longestStreak}
-            lastActive={new Date()}
-            isItalianLevel="B1 Intermediate"
-            progressData={{
-              vocabulary: 65,
-              grammar: 45,
-              reading: testProgress.sections.reading.score,
-              writing: testProgress.sections.writing.score,
-              listening: testProgress.sections.listening.score,
-              speaking: testProgress.sections.speaking.score,
-              culture: 60,
-              citizenship: 40
-            }}
-          />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="details">Detailed Progress</TabsTrigger>
+            <TabsTrigger value="exam-info">CILS B1 Requirements</TabsTrigger>
+          </TabsList>
           
-          {/* Progress Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>CILS B1 Exam Readiness</CardTitle>
-              <CardDescription>
-                Your estimated readiness for each section of the CILS B1 Citizenship exam
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <ProgressSummary 
-                  overall={testProgress.overall.estimatedReadiness} 
-                  targetScore={testProgress.cilsInfo.passingScore}
-                  sections={[
-                    { name: 'Listening', score: testProgress.sections.listening.score, icon: <Headphones className="h-4 w-4" /> },
-                    { name: 'Reading', score: testProgress.sections.reading.score, icon: <BookOpen className="h-4 w-4" /> },
-                    { name: 'Writing', score: testProgress.sections.writing.score, icon: <Edit className="h-4 w-4" /> },
-                    { name: 'Speaking', score: testProgress.sections.speaking.score, icon: <MessageSquare className="h-4 w-4" /> }
-                  ]}
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Overall Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-[250px] w-full" />
+                    </div>
+                  ) : (
+                    <div className="h-[250px]">
+                      <ProgressSummary 
+                        overall={currentOverallScore} 
+                        targetScore={targetScore}
+                        sections={examSections}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-[60px] w-full" />
+                      <Skeleton className="h-[60px] w-full" />
+                      <Skeleton className="h-[60px] w-full" />
+                    </div>
+                  ) : progressData && progressData.length > 0 ? (
+                    <div className="space-y-3">
+                      {progressData.slice(0, 3).map((session: any) => (
+                        <div key={session.id} className="flex items-center justify-between border-b pb-2">
+                          <div>
+                            <p className="font-medium capitalize">{session.content_type}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(session.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{session.score}%</p>
+                            <p className="text-sm text-muted-foreground">
+                              {session.time_spent} min
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <p>No activity recorded yet.</p>
+                      <p className="text-sm mt-1">Complete practice exercises to see your progress.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Progress Over Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  <div className="h-[300px]">
+                    <ProgressChart data={chartData} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {examSections.map((section) => (
+                <ProgressCard
+                  key={section.name}
+                  title={section.name}
+                  value={section.score}
+                  maxValue={100}
+                  icon={section.icon}
+                  color={section.score >= targetScore ? "bg-green-500" : "bg-amber-500"}
                 />
-                
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm font-medium">Next scheduled CILS B1 exam: {testProgress.cilsInfo.examDate}</p>
-                    <p className="text-xs text-muted-foreground">Required passing score: {testProgress.cilsInfo.passingScore}%</p>
-                  </div>
-                  <Button onClick={handleAssessmentRequest}>
-                    Take Readiness Assessment
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </TabsContent>
           
-          {/* Charts and Details Tabs */}
-          <Tabs defaultValue="progress-over-time" className="w-full">
-            <TabsList className="grid grid-cols-3 md:grid-cols-5 w-full">
-              <TabsTrigger value="progress-over-time">Progress Over Time</TabsTrigger>
-              <TabsTrigger value="skill-breakdown">Skill Breakdown</TabsTrigger>
-              <TabsTrigger value="study-time">Study Time</TabsTrigger>
-              <TabsTrigger value="test-performance" className="hidden md:block">Test Performance</TabsTrigger>
-              <TabsTrigger value="cils-requirements" className="hidden md:block">CILS Requirements</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="progress-over-time">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Activity className="h-5 w-5 mr-2" />
-                    Progress Over Time
-                  </CardTitle>
-                  <CardDescription>
-                    Track how your scores have improved across all CILS B1 exam sections
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ProgressChart data={historicalData} />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="skill-breakdown">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Skill Breakdown
-                  </CardTitle>
-                  <CardDescription>
-                    Detailed analysis of your performance in each skill category
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <SkillBreakdown sections={[
-                      {
-                        name: 'Listening',
-                        icon: <Headphones className="h-5 w-5 text-blue-500" />,
-                        skills: [
-                          { name: 'Comprehension', score: 75 },
-                          { name: 'Note-taking', score: 65 },
-                          { name: 'Detail recognition', score: 70 },
-                          { name: 'Main idea identification', score: 80 }
-                        ],
-                        strengths: ['Main idea identification', 'Dialogue comprehension'],
-                        weaknesses: ['Fast speech comprehension', 'Regional accents']
-                      },
-                      {
-                        name: 'Reading',
-                        icon: <BookOpen className="h-5 w-5 text-green-500" />,
-                        skills: [
-                          { name: 'Comprehension', score: 70 },
-                          { name: 'Scanning', score: 75 },
-                          { name: 'Detail analysis', score: 60 },
-                          { name: 'Vocabulary recognition', score: 65 }
-                        ],
-                        strengths: ['Scanning for information', 'Basic comprehension'],
-                        weaknesses: ['Complex text analysis', 'Technical vocabulary']
-                      },
-                      {
-                        name: 'Writing',
-                        icon: <Edit className="h-5 w-5 text-amber-500" />,
-                        skills: [
-                          { name: 'Grammar', score: 60 },
-                          { name: 'Vocabulary', score: 65 },
-                          { name: 'Text structure', score: 55 },
-                          { name: 'Task completion', score: 70 }
-                        ],
-                        strengths: ['Basic sentence construction', 'Task completion'],
-                        weaknesses: ['Complex grammar structures', 'Verb tenses']
-                      },
-                      {
-                        name: 'Speaking',
-                        icon: <MessageSquare className="h-5 w-5 text-purple-500" />,
-                        skills: [
-                          { name: 'Pronunciation', score: 65 },
-                          { name: 'Fluency', score: 60 },
-                          { name: 'Vocabulary range', score: 70 },
-                          { name: 'Interaction', score: 75 }
-                        ],
-                        strengths: ['Basic conversation', 'Question responses'],
-                        weaknesses: ['Extended monologues', 'Complex opinions']
-                      }
-                    ]} />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="study-time">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Study Time Analysis
-                  </CardTitle>
-                  <CardDescription>
-                    Review of your study habits and time spent on each section
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Time Distribution</h3>
-                      <div className="h-64">
-                        {/* Placeholder for time distribution chart - will be implemented */}
-                        <div className="h-full bg-muted/20 rounded-md flex items-center justify-center">
-                          <p className="text-muted-foreground text-sm">Study time distribution chart</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Study Consistency</h3>
-                      <div className="h-64">
-                        {/* Placeholder for study consistency chart - will be implemented */}
-                        <div className="h-full bg-muted/20 rounded-md flex items-center justify-center">
-                          <p className="text-muted-foreground text-sm">Study consistency heatmap</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <h3 className="text-sm font-medium mb-3">Hours Spent vs. CILS Recommendation</h3>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <Headphones className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>Listening</span>
-                            </div>
-                            <span className="font-medium">{testProgress.sections.listening.timeSpent / 60} hrs of 30 hrs recommended</span>
-                          </div>
-                          <ProgressBar value={(testProgress.sections.listening.timeSpent / 60 / 30) * 100} className="h-2 bg-blue-100" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <BookOpen className="h-4 w-4 mr-2 text-green-500" />
-                              <span>Reading</span>
-                            </div>
-                            <span className="font-medium">{testProgress.sections.reading.timeSpent / 60} hrs of 35 hrs recommended</span>
-                          </div>
-                          <ProgressBar value={(testProgress.sections.reading.timeSpent / 60 / 35) * 100} className="h-2 bg-green-100" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <Edit className="h-4 w-4 mr-2 text-amber-500" />
-                              <span>Writing</span>
-                            </div>
-                            <span className="font-medium">{testProgress.sections.writing.timeSpent / 60} hrs of 40 hrs recommended</span>
-                          </div>
-                          <ProgressBar value={(testProgress.sections.writing.timeSpent / 60 / 40) * 100} className="h-2 bg-amber-100" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <MessageSquare className="h-4 w-4 mr-2 text-purple-500" />
-                              <span>Speaking</span>
-                            </div>
-                            <span className="font-medium">{testProgress.sections.speaking.timeSpent / 60} hrs of 25 hrs recommended</span>
-                          </div>
-                          <ProgressBar value={(testProgress.sections.speaking.timeSpent / 60 / 25) * 100} className="h-2 bg-purple-100" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="test-performance">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BarChart className="h-5 w-5 mr-2" />
-                    Test Performance
-                  </CardTitle>
-                  <CardDescription>
-                    Results from your practice tests and assessments
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium">Recent Practice Tests</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2 font-medium">Date</th>
-                              <th className="text-left py-2 font-medium">Type</th>
-                              <th className="text-left py-2 font-medium">Listening</th>
-                              <th className="text-left py-2 font-medium">Reading</th>
-                              <th className="text-left py-2 font-medium">Writing</th>
-                              <th className="text-left py-2 font-medium">Speaking</th>
-                              <th className="text-left py-2 font-medium">Overall</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b">
-                              <td className="py-2">Feb 12, 2023</td>
-                              <td className="py-2">Full Test</td>
-                              <td className="py-2 text-blue-600">72%</td>
-                              <td className="py-2 text-green-600">65%</td>
-                              <td className="py-2 text-amber-600">58%</td>
-                              <td className="py-2 text-purple-600">62%</td>
-                              <td className="py-2 font-medium">65%</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2">Feb 05, 2023</td>
-                              <td className="py-2">Full Test</td>
-                              <td className="py-2 text-blue-600">70%</td>
-                              <td className="py-2 text-green-600">62%</td>
-                              <td className="py-2 text-amber-600">55%</td>
-                              <td className="py-2 text-purple-600">60%</td>
-                              <td className="py-2 font-medium">62%</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2">Jan 29, 2023</td>
-                              <td className="py-2">Full Test</td>
-                              <td className="py-2 text-blue-600">65%</td>
-                              <td className="py-2 text-green-600">60%</td>
-                              <td className="py-2 text-amber-600">50%</td>
-                              <td className="py-2 text-purple-600">55%</td>
-                              <td className="py-2 font-medium">58%</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium">Question Type Performance</h3>
-                        <span className="text-xs text-muted-foreground">Based on last 10 practice sessions</span>
+          <TabsContent value="details" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Detailed Progress Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  {examSections.map((section) => (
+                    <div key={section.name} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {section.icon}
+                        <h3 className="text-lg font-medium">{section.name}</h3>
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Multiple Choice Questions</span>
-                            <span className="font-medium">78%</span>
-                          </div>
-                          <ProgressBar value={78} className="h-2" />
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardHeader className="py-2">
+                            <CardTitle className="text-sm font-medium">Current Score</CardTitle>
+                          </CardHeader>
+                          <CardContent className="py-2">
+                            <div className="text-2xl font-bold">{section.score}%</div>
+                            <p className="text-xs text-muted-foreground">
+                              {section.score >= targetScore ? 'Passing' : 'Need Improvement'}
+                            </p>
+                          </CardContent>
+                        </Card>
                         
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Fill in the Blanks</span>
-                            <span className="font-medium">65%</span>
-                          </div>
-                          <ProgressBar value={65} className="h-2" />
-                        </div>
+                        <Card>
+                          <CardHeader className="py-2">
+                            <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
+                          </CardHeader>
+                          <CardContent className="py-2">
+                            <div className="text-2xl font-bold">
+                              {loading ? 
+                                <Skeleton className="h-7 w-16" /> : 
+                                `${calculateTotalTimeByType(progressData, section.name.toLowerCase().split(' ')[0])} min`
+                              }
+                            </div>
+                            <p className="text-xs text-muted-foreground">Total practice time</p>
+                          </CardContent>
+                        </Card>
                         
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Short Answer Questions</span>
-                            <span className="font-medium">60%</span>
-                          </div>
-                          <ProgressBar value={60} className="h-2" />
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Essay Questions</span>
-                            <span className="font-medium">55%</span>
-                          </div>
-                          <ProgressBar value={55} className="h-2" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="cils-requirements">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ListChecks className="h-5 w-5 mr-2" />
-                    CILS B1 Exam Requirements
-                  </CardTitle>
-                  <CardDescription>
-                    Official requirements and format for the B1 Citizenship language test
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h3 className="text-base font-medium">Listening Test</h3>
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Duration: 30 minutes</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Two recordings played twice each</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Multiple choice and fill-in-the-blank questions</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Topics: everyday conversations, announcements, radio programs</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Passing score: 11/20</span>
-                          </li>
-                        </ul>
-                        
-                        <h3 className="text-base font-medium pt-2">Reading Test</h3>
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Duration: 40 minutes</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Three texts with varying lengths</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Multiple choice, matching, and true/false questions</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Topics: notices, regulations, newspaper articles</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Passing score: 11/20</span>
-                          </li>
-                        </ul>
+                        <Card>
+                          <CardHeader className="py-2">
+                            <CardTitle className="text-sm font-medium">Questions Answered</CardTitle>
+                          </CardHeader>
+                          <CardContent className="py-2">
+                            <div className="text-2xl font-bold">
+                              {loading ? 
+                                <Skeleton className="h-7 w-16" /> : 
+                                calculateTotalQuestionsByType(progressData, section.name.toLowerCase().split(' ')[0])
+                              }
+                            </div>
+                            <p className="text-xs text-muted-foreground">Total practice questions</p>
+                          </CardContent>
+                        </Card>
                       </div>
                       
-                      <div className="space-y-4">
-                        <h3 className="text-base font-medium">Writing Test</h3>
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Duration: 60 minutes</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Two writing tasks: form completion and short composition</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Composition: 80-100 words</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Topics: personal letters, descriptions, simple narratives</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Passing score: 11/20</span>
-                          </li>
-                        </ul>
-                        
-                        <h3 className="text-base font-medium pt-2">Speaking Test</h3>
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Duration: 10 minutes</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Interview with an examiner</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Three parts: personal introduction, guided discussion, role play</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Topics: personal information, daily routines, interests, opinions</span>
-                          </li>
-                          <li className="flex items-start">
-                            <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                            <span>Passing score: 11/20</span>
-                          </li>
-                        </ul>
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium mb-1">Performance Analysis</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {getPerformanceAnalysis(section.score, targetScore, section.name)}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="border-t pt-4">
-                      <h3 className="text-base font-medium mb-3">Overall Requirements</h3>
-                      <ul className="space-y-2 text-sm">
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                          <span>Required for Italian citizenship application: CILS B1 Cittadinanza</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                          <span>Total exam duration: 2 hours 20 minutes</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                          <span>Overall passing score: 11/20 in each section</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                          <span>Certificate validity: Indefinite for citizenship purposes</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5 shrink-0" />
-                          <span>Test locations: Authorized Italian language testing centers</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="exam-info" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>CILS B1 Citizenship Exam Requirements</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <BookMarked className="h-5 w-5 text-primary" />
+                    Exam Overview
+                  </h3>
+                  <p className="mt-2">
+                    The CILS (Certificazione di Italiano come Lingua Straniera) B1 Citizenship exam
+                    is required for obtaining Italian citizenship. It tests your ability to communicate
+                    effectively in everyday situations in Italian.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {examSections.map((section) => (
+                    <Card key={section.name} className="bg-muted/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-md flex items-center gap-2">
+                          {section.icon}
+                          {section.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 pt-0">
+                        <p className="text-sm">{section.description}</p>
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <p className="font-medium">Time</p>
+                            <p className="text-muted-foreground">{section.timeAllowed} min</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Items</p>
+                            <p className="text-muted-foreground">{section.items}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Pass Score</p>
+                            <p className="text-muted-foreground">{section.passingScore}%</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Certification Value
+                  </h3>
+                  <p className="mt-2">
+                    The CILS B1 certificate attests that you can:
+                  </p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Understand the main points of clear standard input on familiar matters</li>
+                    <li>Deal with most situations likely to arise while traveling in Italy</li>
+                    <li>Produce simple connected text on familiar topics</li>
+                    <li>Describe experiences, events, dreams, hopes and ambitions</li>
+                    <li>Briefly give reasons and explanations for opinions and plans</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+    </Layout>
   );
+}
+
+// Helper functions
+function calculateTotalTimeByType(progressData: any[], type: string): number {
+  if (!progressData) return 0;
+  
+  return progressData
+    .filter(session => session.content_type?.toLowerCase().includes(type.toLowerCase()))
+    .reduce((sum, session) => sum + (session.time_spent || 0), 0);
+}
+
+function calculateTotalQuestionsByType(progressData: any[], type: string): number {
+  if (!progressData) return 0;
+  
+  return progressData
+    .filter(session => session.content_type?.toLowerCase().includes(type.toLowerCase()))
+    .reduce((sum, session) => {
+      const totalQuestions = session.answers?.total || 0;
+      return sum + totalQuestions;
+    }, 0);
+}
+
+function getPerformanceAnalysis(score: number, targetScore: number, sectionName: string): string {
+  const section = sectionName.toLowerCase();
+  
+  if (score >= targetScore + 15) {
+    return `Excellent progress in ${sectionName}! Your performance exceeds the requirements for the CILS B1 exam.`;
+  } else if (score >= targetScore) {
+    return `Good progress in ${sectionName}. You are meeting the minimum requirements for the CILS B1 exam, but continue practicing to improve your score.`;
+  } else if (score >= targetScore - 10) {
+    return `You're getting close to the passing threshold for ${sectionName}. Focus on targeted practice to improve in this area.`;
+  } else {
+    let advice = `Additional practice needed in ${sectionName}. `;
+    
+    if (section.includes('listening')) {
+      advice += "Try listening to Italian audio content daily, such as podcasts or news broadcasts.";
+    } else if (section.includes('reading')) {
+      advice += "Practice reading Italian texts regularly, such as news articles or short stories.";
+    } else if (section.includes('writing')) {
+      advice += "Work on writing short essays or journal entries in Italian to improve your skills.";
+    } else if (section.includes('speaking')) {
+      advice += "Practice speaking Italian with native speakers or language exchange partners.";
+    }
+    
+    return advice;
+  }
 }
