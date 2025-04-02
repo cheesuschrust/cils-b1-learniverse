@@ -14,24 +14,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = [],
   requireAdmin = false
 }) => {
-  const { user, loading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
-  if (loading) {
-    // You can render a loading spinner here
-    return <div>Loading...</div>;
+  if (isLoading) {
+    // Show loading spinner while checking authentication
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
   }
 
   // Check if the user has the required role
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
   // Check for admin requirement
-  if (requireAdmin && user.role !== 'admin') {
+  if (requireAdmin && user && user.role !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
   }
 

@@ -1,83 +1,108 @@
 
-// Italian types definition file
+// Italian language proficiency levels
+export type ItalianLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'beginner' | 'intermediate' | 'advanced';
 
-export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
-
+// Italian test sections
 export type ItalianTestSection = 
-  | 'grammar' 
   | 'vocabulary' 
-  | 'culture' 
-  | 'listening' 
+  | 'grammar' 
   | 'reading' 
   | 'writing' 
-  | 'speaking'
+  | 'speaking' 
+  | 'listening' 
+  | 'culture' 
   | 'citizenship';
 
+// Question types for CILS exams
+export type QuestionType = 'multipleChoice' | 'freeText' | 'audio' | 'matching' | 'trueFalse' | 'gap' | 'speaking';
+
+// CILS Exam types
+export type CILSExamType = 'A1' | 'A2' | 'ONE-B1' | 'TWO-B2' | 'THREE-C1' | 'FOUR-C2' | 'B1-Citizenship';
+
+// Parameters for generating Italian questions
+export interface ItalianQuestionGenerationParams {
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  isCitizenshipFocused?: boolean;
+  count?: number;
+  topics?: string[];
+}
+
+// Generated question structure
 export interface AIGeneratedQuestion {
   id: string;
-  text?: string;
+  text: string;
   options?: string[];
   correctAnswer: string;
   explanation?: string;
   type: ItalianTestSection;
   difficulty: ItalianLevel;
-  isCitizenshipRelevant?: boolean;
-  question?: string;
-  questionType: 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
+  questionType: QuestionType;
+  isCitizenshipRelevant: boolean;
 }
 
-export interface ItalianQuestionGenerationParams {
-  contentTypes: ItalianTestSection[];
-  difficulty: ItalianLevel;
-  count?: number;
-  isCitizenshipFocused?: boolean;
-  language?: 'english' | 'italian' | 'both';
-}
-
+// Result of AI generation
 export interface AIGenerationResult {
   questions: AIGeneratedQuestion[];
   error?: string;
 }
 
-export interface AnswerResults {
-  score: number;
-  time: number;
+// User profile with Italian-specific fields
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  italianLevel?: ItalianLevel;
+  learningGoals?: string[];
+  preferredTopics?: string[];
+  focusAreas?: ItalianTestSection[];
+  citizenshipExam?: boolean;
+  examDate?: Date;
+  completedExercises?: {
+    [key in ItalianTestSection]?: number;
+  };
+  studyTime?: number; // in minutes
+  streak?: number;
+  lastActive?: Date;
 }
 
-export interface CitizenshipQuestionSet {
+// Italian language exercises
+export interface ItalianExercise {
   id: string;
-  title: string;
-  description: string;
-  questions: AIGeneratedQuestion[];
+  type: ItalianTestSection;
   difficulty: ItalianLevel;
+  title: string;
+  content: any;
+  citizenshipRelevant: boolean;
+  tags?: string[];
+  estimatedTime?: number; // in minutes
+  aiGenerated?: boolean;
+  aiConfidence?: number; // 0-100
   createdAt: Date;
   updatedAt: Date;
-  category: string;
 }
 
-export interface ItalianPracticeResult {
-  section: ItalianTestSection;
-  score: number;
-  timeSpent: number;
-  date: Date;
-  questionsAnswered: number;
-  correctAnswers: number;
+// Italian vocabulary item
+export interface VocabularyItem {
+  italian: string;
+  english: string;
+  pronunciation?: string;
+  context?: string;
+  examples?: string[];
+  level: ItalianLevel;
+  tags?: string[];
+  citizenshipRelevant?: boolean;
 }
 
-export interface CitizenshipReadinessScore {
-  overall: number;
-  sections: Record<ItalianTestSection, number>;
-  lastUpdated: Date;
-  recommendations: string[];
-}
-
-export interface ItalianProgressMetrics {
-  totalExercises: number;
-  totalTime: number;
-  averageScore: number;
-  sectionalScores: Record<ItalianTestSection, number>;
-  strengths: ItalianTestSection[];
-  weaknesses: ItalianTestSection[];
-  streak: number;
-  lastActivity: Date;
+// Grammar rule
+export interface GrammarRule {
+  id: string;
+  title: string;
+  explanation: string;
+  examples: string[];
+  level: ItalianLevel;
+  relatedRules?: string[];
+  citizenshipRelevant?: boolean;
 }
