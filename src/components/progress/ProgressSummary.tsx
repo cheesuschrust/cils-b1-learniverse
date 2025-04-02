@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { BadgeCheck, AlertTriangle } from "lucide-react";
 
 interface ProgressSummaryProps {
   overall: number;
@@ -18,87 +19,77 @@ const ProgressSummary: React.FC<ProgressSummaryProps> = ({
   targetScore,
   sections 
 }) => {
-  // Determine progress status
-  const getProgressStatus = (score: number) => {
-    if (score >= targetScore) return "success";
-    if (score >= targetScore * 0.75) return "warning";
-    return "danger";
-  };
-  
-  const getProgressColor = (status: string) => {
-    switch (status) {
-      case "success": return "bg-green-500";
-      case "warning": return "bg-amber-500";
-      case "danger": return "bg-red-500";
-      default: return "bg-primary";
-    }
-  };
-  
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "success": return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "warning": return <AlertCircle className="h-5 w-5 text-amber-500" />;
-      case "danger": return <XCircle className="h-5 w-5 text-red-500" />;
-      default: return null;
-    }
-  };
-  
-  const overallStatus = getProgressStatus(overall);
+  const isPassing = overall >= targetScore;
   
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Overall Progress</h3>
-          <div className="flex items-center space-x-2">
-            {getStatusIcon(overallStatus)}
-            <span className={`text-lg font-bold ${
-              overallStatus === "success" ? "text-green-600" : 
-              overallStatus === "warning" ? "text-amber-600" : "text-red-600"
-            }`}>
-              {overall}%
-            </span>
-          </div>
+      <div className="text-center">
+        <div className="flex items-center justify-center mb-2">
+          <span className="text-3xl font-bold">{overall}%</span>
+          <span className="text-muted-foreground ml-2">Overall Score</span>
+          {isPassing ? (
+            <BadgeCheck className="ml-2 h-6 w-6 text-green-500" />
+          ) : (
+            <AlertTriangle className="ml-2 h-6 w-6 text-amber-500" />
+          )}
         </div>
         
-        <Progress 
-          value={overall} 
-          className={`h-2.5 ${getProgressColor(overallStatus)}`} 
+        <Progress
+          value={overall}
+          max={100}
+          className="h-3 w-full"
+          indicatorClassName={isPassing ? "bg-green-500" : "bg-amber-500"}
         />
         
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>0%</span>
-          <span className="font-medium">Target: {targetScore}%</span>
-          <span>100%</span>
+        <div className="mt-2 flex justify-between text-sm">
+          <span className="text-muted-foreground">0%</span>
+          <div className="flex items-center gap-1">
+            <span className={isPassing ? "text-green-500" : "text-amber-500"}>{targetScore}%</span>
+            <span className="text-muted-foreground text-xs">Target</span>
+          </div>
+          <span className="text-muted-foreground">100%</span>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {sections.map((section) => {
-          const status = getProgressStatus(section.score);
-          
+      <div className="grid grid-cols-2 gap-3">
+        {sections.map((section, index) => {
+          const sectionPassing = section.score >= targetScore;
           return (
-            <div key={section.name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {section.icon}
-                  <span className="text-sm font-medium">{section.name}</span>
+            <Card key={index} className={`p-3 border ${sectionPassing ? 'border-green-200' : 'border-amber-200'}`}>
+              <CardContent className="p-0 flex items-center">
+                <div className="mr-3">{section.icon}</div>
+                <div className="flex-grow">
+                  <h4 className="text-sm font-medium">{section.name}</h4>
+                  <Progress
+                    value={section.score}
+                    max={100}
+                    className="h-1.5 mt-1"
+                    indicatorClassName={sectionPassing ? "bg-green-500" : "bg-amber-500"}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs text-muted-foreground">{section.score}%</span>
+                    {sectionPassing ? (
+                      <span className="text-xs text-green-500">Passing</span>
+                    ) : (
+                      <span className="text-xs text-amber-500">Needs Work</span>
+                    )}
+                  </div>
                 </div>
-                <span className={`text-sm font-bold ${
-                  status === "success" ? "text-green-600" : 
-                  status === "warning" ? "text-amber-600" : "text-red-600"
-                }`}>
-                  {section.score}%
-                </span>
-              </div>
-              
-              <Progress 
-                value={section.score} 
-                className={`h-2 ${getProgressColor(status)}`} 
-              />
-            </div>
+              </CardContent>
+            </Card>
           );
         })}
+      </div>
+      
+      <div className="text-center text-sm">
+        <p className={`font-medium ${isPassing ? 'text-green-600' : 'text-amber-600'}`}>
+          {isPassing 
+            ? "You're on track to pass the CILS B1 exam!" 
+            : `You need ${targetScore - overall}% more to reach the passing threshold.`}
+        </p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Continue practicing consistently to maintain and improve your skills.
+        </p>
       </div>
     </div>
   );

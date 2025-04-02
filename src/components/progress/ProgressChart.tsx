@@ -8,7 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine
 } from 'recharts';
 
 interface ProgressChartProps {
@@ -43,6 +44,12 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
           labelFormatter={(label) => `Date: ${label}`} 
         />
         <Legend />
+        <ReferenceLine y={70} stroke="#ff4500" strokeDasharray="3 3" label={{ 
+          value: 'Passing Score (70%)', 
+          position: 'top',
+          fill: '#ff4500',
+          fontSize: 12 
+        }} />
         <Line 
           type="monotone" 
           dataKey="listening" 
