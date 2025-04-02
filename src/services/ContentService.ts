@@ -1,4 +1,3 @@
-
 import { ContentType, ContentFeatures } from '@/types/contentType';
 import AIService from './AIService';
 import { analyzeContent } from '@/utils/AITrainingUtils';
@@ -173,98 +172,156 @@ const parseMultipleChoiceContent = (content: string): any => {
     }
   }
   
+  // Add the last question
   if (currentQuestion) {
     questions.push(currentQuestion);
   }
   
-  return { 
-    questions,
-    count: questions.length
-  };
+  return questions;
 };
 
 // Parse flashcard content
 const parseFlashcardContent = (content: string): any => {
   const lines = content.split('\n').filter(line => line.trim());
-  const cards = [];
+  const flashcards = [];
   
-  // Handle tab/comma-separated format (term\tdefinition)
-  if (content.includes('\t') || (content.includes(',') && !content.includes('\n\n'))) {
-    const separator = content.includes('\t') ? '\t' : ',';
+  // Look for patterns like "term - definition" or "term: definition"
+  for (const line of lines) {
+    const termDefSeparators = [' - ', ':', '=', '\t'];
+    let foundSeparator = false;
     
-    for (const line of lines) {
-      const parts = line.split(separator);
-      if (parts.length >= 2) {
-        cards.push({
-          term: parts[0].trim(),
-          definition: parts[1].trim()
-        });
+    for (const separator of termDefSeparators) {
+      if (line.includes(separator)) {
+        const [term, definition] = line.split(separator).map(s => s.trim());
+        if (term && definition) {
+          flashcards.push({
+            term,
+            definition
+          });
+          foundSeparator = true;
+          break;
+        }
       }
     }
-  } 
-  // Handle block format (term\n\ndefinition\n\nterm\n\ndefinition)
-  else {
-    for (let i = 0; i < lines.length; i += 2) {
-      if (i + 1 < lines.length) {
-        cards.push({
-          term: lines[i].trim(),
-          definition: lines[i + 1].trim()
+    
+    if (!foundSeparator && line.trim()) {
+      // Try to handle cases where each term/definition is on separate lines
+      if (flashcards.length > 0 && !flashcards[flashcards.length - 1].definition) {
+        flashcards[flashcards.length - 1].definition = line.trim();
+      } else {
+        flashcards.push({
+          term: line.trim(),
+          definition: ''
         });
       }
     }
   }
   
-  return {
-    cards,
-    count: cards.length
-  };
+  return flashcards;
 };
 
-// Parse writing content
+// Parse writing prompt content
 const parseWritingContent = (content: string): any => {
-  const paragraphs = content.split(/\n\s*\n/).filter(para => para.trim());
+  const lines = content.split('\n').filter(line => line.trim());
+  const topics = [];
   
-  return {
-    text: content,
-    paragraphs,
-    paragraphCount: paragraphs.length,
-    wordCount: content.split(/\s+/).filter(Boolean).length
-  };
-};
-
-// Parse speaking content
-const parseSpeakingContent = (content: string): any => {
-  // Detect if it's a dialogue
-  const isDialogue = /^[A-Za-z]+\s*:/.test(content) || content.includes(':\n');
-  let speakers = [];
+  let currentTopic: any = null;
   
-  if (isDialogue) {
-    const speakerMatches = content.match(/^([A-Za-z]+)\s*:/gm) || [];
-    speakers = [...new Set(speakerMatches.map(match => match.replace(':', '').trim()))];
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Check if this line looks like a topic or prompt
+    if (trimmedLine.endsWith('?') || /^[0-9]+\./.test(trimmedLine)) {
+      if (currentTopic) {
+        topics.push(currentTopic);
+      }
+      
+      currentTopic = {
+        prompt: trimmedLine,
+        instructions: '',
+        wordLimit: null
+      };
+    }
+    // Check for word limit instructions
+    else if (/word(s)?\s+limit|limit.*word/i.test(trimmedLine) && currentTopic) {
+      const wordLimitMatch = trimmedLine.match(/\d+/);
+      if (wordLimitMatch) {
+        currentTopic.wordLimit = parseInt(wordLimitMatch[0], 10);
+      }
+      currentTopic.instructions += ' ' + trimmedLine;
+    }
+    // Otherwise, treat as part of instructions
+    else if (currentTopic) {
+      currentTopic.instructions += ' ' + trimmedLine;
+    }
+    // If no current topic but line is not empty, start a new topic
+    else if (trimmedLine) {
+      currentTopic = {
+        prompt: trimmedLine,
+        instructions: '',
+        wordLimit: null
+      };
+    }
   }
   
-  return {
-    text: content,
-    isDialogue,
-    speakers,
-    speakerCount: speakers.length,
-    wordCount: content.split(/\s+/).filter(Boolean).length
-  };
+  // Add the last topic
+  if (currentTopic) {
+    topics.push(currentTopic);
+  }
+  
+  return topics.map(topic => ({
+    ...topic,
+    instructions: topic.instructions.trim()
+  }));
+};
+
+// Parse speaking exercise content
+const parseSpeakingContent = (content: string): any => {
+  // Similar structure to writing, but we'll assume these might have dialogue patterns
+  const sections = content.split('\n\n').filter(section => section.trim());
+  const exercises = [];
+  
+  for (const section of sections) {
+    const lines = section.split('\n').filter(line => line.trim());
+    
+    if (lines.length > 0) {
+      const prompt = lines[0].trim();
+      const instructions = lines.slice(1).join(' ').trim();
+      
+      exercises.push({
+        prompt,
+        instructions,
+        type: 'speaking'
+      });
+    }
+  }
+  
+  return exercises;
 };
 
 // Parse listening content
 const parseListeningContent = (content: string): any => {
-  // Detect if it's a script with time codes
-  const hasTimeCodes = /\[\d{2}:\d{2}\]/.test(content);
-  const segments = hasTimeCodes ? content.split(/\[\d{2}:\d{2}\]/).filter(Boolean) : [];
+  // For listening content, we'll split it into sections like a script
+  const sections = content.split('\n\n').filter(section => section.trim());
+  const exercises = [];
   
-  return {
-    text: content,
-    hasTimeCodes,
-    segments: segments.length > 0 ? segments : [content],
-    segmentCount: segments.length > 0 ? segments.length : 1,
-    wordCount: content.split(/\s+/).filter(Boolean).length
-  };
+  for (const section of sections) {
+    const lines = section.split('\n').filter(line => line.trim());
+    const script = lines.join(' ').trim();
+    
+    if (script) {
+      // Try to identify questions in the script
+      const questions = script.match(/\?/g) ? script.split(/\?/).map(q => q.trim() + '?').filter(q => q !== '?') : [];
+      
+      exercises.push({
+        script,
+        questions: questions.length > 0 ? questions : [script + '?'],
+        type: 'listening'
+      });
+    }
+  }
+  
+  return exercises;
 };
 
 // Generate content based on parameters
