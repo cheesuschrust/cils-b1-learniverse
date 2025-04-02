@@ -1,13 +1,13 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { RouterProvider } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { HelmetProvider } from 'react-helmet-async';
 import EnhancedErrorBoundary from '@/components/common/EnhancedErrorBoundary';
-import router from './routes';
+import App from './App';
 import './index.css';
 
 // Create a client for React Query with updated options
@@ -48,7 +48,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <HelmetProvider context={helmetContext}>
         <ThemeProvider defaultTheme="system" storageKey="cils-theme">
           <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
             <Toaster />
           </QueryClientProvider>
         </ThemeProvider>
