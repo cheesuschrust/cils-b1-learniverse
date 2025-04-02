@@ -11,6 +11,7 @@ import Flashcards from './pages/Flashcards';
 import MultipleChoice from './pages/MultipleChoice';
 import NotFound from './pages/NotFound';
 import ItalianCitizenshipTest from './pages/ItalianCitizenshipTest';
+import DailyQuestion from './pages/DailyQuestion';
 
 const routes = [
   {
@@ -55,7 +56,7 @@ const routes = [
   },
   {
     path: '/daily-question',
-    element: <Home />
+    element: <DailyQuestion />
   },
   {
     path: '*',

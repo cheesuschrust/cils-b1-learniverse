@@ -6,9 +6,20 @@ import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 interface ConfidenceIndicatorProps {
   score: number;
+  className?: string;
+  isAdminView?: boolean;
 }
 
-const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({ score }) => {
+const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({ 
+  score, 
+  className = '',
+  isAdminView = false 
+}) => {
+  // Don't render anything if not admin view
+  if (!isAdminView) {
+    return null;
+  }
+
   // Determine confidence level and appearance
   const getConfidenceLevel = (score: number) => {
     if (score >= 85) {
@@ -41,7 +52,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({ score }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className={`${confidenceInfo.color} flex items-center`}>
+          <Badge variant="outline" className={`${confidenceInfo.color} flex items-center ${className}`}>
             {confidenceInfo.icon}
             <span>{score}% Confidence</span>
           </Badge>
