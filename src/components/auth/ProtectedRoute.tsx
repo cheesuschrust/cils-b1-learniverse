@@ -1,43 +1,62 @@
 
-import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { ReactNode, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
-  children?: React.ReactNode;
-  allowedRoles?: string[];
+  children: ReactNode;
   requireAuth?: boolean;
+  requirePremium?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+const ProtectedRoute = ({
   children,
-  allowedRoles = [],
-  requireAuth = true
-}) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  requireAuth = true,
+  requirePremium = false
+}: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading, isPremium } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
-  // Show loading spinner while checking authentication
+  useEffect(() => {
+    if (!isLoading) {
+      if (requireAuth && !isAuthenticated) {
+        // Redirect to login if not authenticated
+        navigate('/auth/login', {
+          state: { from: location.pathname }
+        });
+      } else if (requirePremium && !isPremium) {
+        // Redirect to premium subscription page if premium content is requested
+        navigate('/subscription', {
+          state: { from: location.pathname }
+        });
+      }
+    }
+  }, [isAuthenticated, isLoading, isPremium, navigate, location.pathname, requireAuth, requirePremium]);
+
+  // Show loading screen while checking authentication
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
-  // If auth is required and user is not authenticated, redirect to login
+  // If not authenticated and we require auth, don't render children
   if (requireAuth && !isAuthenticated) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    return null;
   }
 
-  // If specific roles are required, check if the user has one of them
-  if (isAuthenticated && allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  // If not premium and we require premium, don't render children
+  if (requirePremium && !isPremium) {
+    return null;
   }
 
-  // If all checks pass, render the children or outlet
-  return children ? <>{children}</> : <Outlet />;
+  // Render children if all conditions are met
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

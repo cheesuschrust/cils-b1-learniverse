@@ -1,428 +1,446 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/types/user';
-import { useNavigate } from 'react-router-dom';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase, fetchUserProfile, isPremiumUser } from '@/lib/supabase-client';
 import { useToast } from '@/components/ui/use-toast';
+
+interface UserProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  is_premium: boolean;
+  premium_until: string | null;
+  created_at: string;
+  updated_at: string;
+  last_login_at: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
+  profile: UserProfile | null;
+  session: Session | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
+  isPremium: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
+  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  updateProfile: (userData: Partial<User>) => Promise<boolean>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  updateProfile: (userData: Partial<UserProfile>) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
+  updatePassword: (newPassword: string) => Promise<boolean>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendVerificationEmail: (email: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<boolean>;
+  refreshProfile: () => Promise<void>;
 }
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Create a provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check for existing session on mount
+  // Fetch user profile
+  const fetchProfile = async (userId: string) => {
+    try {
+      const profileData = await fetchUserProfile(userId);
+      setProfile(profileData);
+      
+      // Check premium status
+      const premium = await isPremiumUser(userId);
+      setIsPremium(premium);
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  };
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const savedUser = localStorage.getItem('user');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log('Auth state changed:', event, newSession?.user?.id);
+        setSession(newSession);
         
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
+        if (newSession?.user) {
+          setUser(newSession.user);
+          // Use setTimeout to avoid potential recursive locks with Supabase client
+          setTimeout(() => {
+            fetchProfile(newSession.user.id);
+            // Update last login time
+            if (event === 'SIGNED_IN') {
+              supabase
+                .from('user_profiles')
+                .update({ last_login_at: new Date().toISOString() })
+                .eq('id', newSession.user.id)
+                .then(({ error }) => {
+                  if (error) console.error('Error updating last login:', error);
+                });
+            }
+          }, 0);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setIsPremium(false);
         }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-      } finally {
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      
+      if (existingSession?.user) {
+        setUser(existingSession.user);
+        fetchProfile(existingSession.user.id).finally(() => {
+          setIsLoading(false);
+        });
+      } else {
         setIsLoading(false);
       }
-    };
+    });
 
-    checkAuth();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
     try {
-      // In a real app, this would call an API
-      // For now, we'll simulate a successful login with mock data
+      setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
-      // Create a mock user
-      const mockUser: User = {
-        id: 'user-123',
-        email,
-        firstName: 'John',
-        lastName: 'Doe',
-        displayName: 'John Doe',
-        role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        subscription: 'free',
-        status: 'active',
-        isPremiumUser: false,
-        preferences: {
-          theme: 'system',
-          language: 'english',
-          notifications: true,
-          onboardingCompleted: false,
-          difficulty: 'beginner'
-        },
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          speaking: 0,
-          writing: 0,
-          listening: 0
-        }
-      };
-      
-      // Save user to state and localStorage
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back to CILS B1 Cittadinanza Question of the Day!',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('Failed to log in. Please check your credentials and try again.');
-      
-      toast({
-        title: 'Login failed',
-        description: 'Please check your credentials and try again.',
-        variant: 'destructive'
-      });
-      
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Signup function
-  const signup = async (email: string, password: string, firstName: string, lastName: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // In a real app, this would call an API
-      // For now, we'll simulate a successful signup with mock data
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create a mock user
-      const mockUser: User = {
-        id: 'user-' + Math.random().toString(36).substr(2, 9),
-        email,
-        firstName,
-        lastName,
-        displayName: `${firstName} ${lastName}`,
-        role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        subscription: 'free',
-        status: 'active',
-        isPremiumUser: false,
-        preferences: {
-          theme: 'system',
-          language: 'english',
-          notifications: true,
-          onboardingCompleted: false,
-          difficulty: 'beginner'
-        },
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          speaking: 0,
-          writing: 0,
-          listening: 0
-        }
-      };
-      
-      // Save user to state and localStorage
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      
-      toast({
-        title: 'Account created',
-        description: 'Welcome to CILS B1 Cittadinanza Question of the Day!',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Signup error:', error);
-      setError('Failed to sign up. Please try again later.');
-      
-      toast({
-        title: 'Registration failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
-      
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Logout function
-  const logout = async (): Promise<void> => {
-    try {
-      // Clear user from state and localStorage
-      setUser(null);
-      localStorage.removeItem('user');
-      
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
-      });
-      
-      // Redirect to home page
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      setError('Failed to log out. Please try again.');
-      
-      toast({
-        title: 'Logout failed',
-        description: 'Please try again.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Update profile function
-  const updateProfile = async (userData: Partial<User>): Promise<boolean> => {
-    try {
-      if (!user) {
-        throw new Error('No user is logged in');
+      if (error) {
+        throw error;
       }
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update user data
-      const updatedUser = { ...user, ...userData, updatedAt: new Date() };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
       toast({
-        title: 'Profile updated',
-        description: 'Your profile has been successfully updated.',
+        title: "Login successful",
+        description: "Welcome back to CILS Italian Citizenship Test Prep!",
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<boolean> => {
+    try {
+      setError(null);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Google login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const signup = async (email: string, password: string, firstName?: string, lastName?: string): Promise<boolean> => {
+    try {
+      setError(null);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          },
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to verify your account.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const verifyEmail = async (token: string): Promise<boolean> => {
+    try {
+      setError(null);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'email'
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Email verified",
+        description: "Your email has been successfully verified.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Verification failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const resendVerificationEmail = async (email: string): Promise<boolean> => {
+    try {
+      setError(null);
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox for the verification email.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error sending verification email:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Failed to send verification email",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      setError(error.message);
+      
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateProfile = async (userData: Partial<UserProfile>): Promise<boolean> => {
+    try {
+      if (!user) {
+        throw new Error('You must be logged in to update your profile');
+      }
+      
+      // Update user metadata in auth.users
+      if (userData.first_name !== undefined || userData.last_name !== undefined) {
+        const { error: authError } = await supabase.auth.updateUser({
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+          }
+        });
+        
+        if (authError) throw authError;
+      }
+      
+      // Update profile in user_profiles table
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update(userData)
+        .eq('id', user.id);
+      
+      if (profileError) throw profileError;
+      
+      // Refresh profile data
+      await fetchProfile(user.id);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+      
+      return true;
+    } catch (error: any) {
       console.error('Update profile error:', error);
       
       toast({
-        title: 'Profile update failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
+        title: "Profile update failed",
+        description: error.message,
+        variant: "destructive",
       });
       
       return false;
     }
   };
 
-  // Update password function
-  const updatePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Password updated',
-        description: 'Your password has been successfully changed.',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Update password error:', error);
-      
-      toast({
-        title: 'Password update failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
-      
-      return false;
-    }
-  };
-
-  // Reset password function
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
-        title: 'Password reset email sent',
-        description: 'Please check your email for instructions to reset your password.',
+        title: "Password reset email sent",
+        description: "Please check your email for instructions to reset your password.",
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Reset password error:', error);
       
       toast({
-        title: 'Password reset failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
+        title: "Password reset failed",
+        description: error.message,
+        variant: "destructive",
       });
       
       return false;
     }
   };
 
-  // Verify email function
-  const verifyEmail = async (token: string): Promise<boolean> => {
+  const updatePassword = async (newPassword: string): Promise<boolean> => {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
-        title: 'Email verified',
-        description: 'Your email has been successfully verified.',
+        title: "Password updated",
+        description: "Your password has been successfully changed.",
       });
       
       return true;
-    } catch (error) {
-      console.error('Email verification error:', error);
+    } catch (error: any) {
+      console.error('Update password error:', error);
       
       toast({
-        title: 'Email verification failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
+        title: "Password update failed",
+        description: error.message,
+        variant: "destructive",
       });
       
       return false;
     }
   };
 
-  // Resend verification email function
-  const resendVerificationEmail = async (email: string): Promise<boolean> => {
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Verification email sent',
-        description: 'Please check your email for the verification link.',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Resend verification email error:', error);
-      
-      toast({
-        title: 'Failed to send verification email',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
-      
-      return false;
-    }
-  };
-
-  // Login with Google function
-  const loginWithGoogle = async (): Promise<boolean> => {
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create a mock user
-      const mockUser: User = {
-        id: 'google-user-' + Math.random().toString(36).substr(2, 9),
-        email: 'google-user@example.com',
-        firstName: 'Google',
-        lastName: 'User',
-        displayName: 'Google User',
-        role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        subscription: 'free',
-        status: 'active',
-        isPremiumUser: false,
-        preferences: {
-          theme: 'system',
-          language: 'english',
-          notifications: true,
-          onboardingCompleted: false,
-          difficulty: 'beginner'
-        },
-        dailyQuestionCounts: {
-          flashcards: 0,
-          multipleChoice: 0,
-          speaking: 0,
-          writing: 0,
-          listening: 0
-        }
-      };
-      
-      // Save user to state and localStorage
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      
-      toast({
-        title: 'Login successful',
-        description: 'Welcome to CILS B1 Cittadinanza Question of the Day!',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Google login error:', error);
-      
-      toast({
-        title: 'Google login failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
-      
-      return false;
-    }
-  };
-
-  // Create the context value
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    error,
-    login,
-    signup,
-    logout,
-    updateProfile,
-    updatePassword,
-    resetPassword,
-    verifyEmail,
-    resendVerificationEmail,
-    loginWithGoogle
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      session,
+      isLoading,
+      isAuthenticated: !!user,
+      isPremium,
+      error,
+      login,
+      loginWithGoogle,
+      signup,
+      logout,
+      updateProfile,
+      resetPassword,
+      updatePassword,
+      verifyEmail,
+      resendVerificationEmail,
+      refreshProfile
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Create a hook for using the auth context
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   

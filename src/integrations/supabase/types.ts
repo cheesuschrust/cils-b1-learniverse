@@ -63,6 +63,42 @@ export type Database = {
           },
         ]
       }
+      ai_training_data: {
+        Row: {
+          content_type: string
+          created_at: string
+          created_by: string | null
+          difficulty: string
+          expected_output: string
+          id: string
+          input_text: string
+          language: string
+          source: string | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          expected_output: string
+          id?: string
+          input_text: string
+          language?: string
+          source?: string | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          expected_output?: string
+          id?: string
+          input_text?: string
+          language?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       content_categories: {
         Row: {
           created_at: string | null
@@ -116,6 +152,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_questions: {
+        Row: {
+          category: string
+          correct_answer: string
+          created_at: string
+          difficulty: string
+          explanation: string | null
+          id: string
+          is_premium: boolean
+          options: Json
+          question_date: string
+          question_text: string
+        }
+        Insert: {
+          category: string
+          correct_answer: string
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          is_premium?: boolean
+          options: Json
+          question_date: string
+          question_text: string
+        }
+        Update: {
+          category?: string
+          correct_answer?: string
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          is_premium?: boolean
+          options?: Json
+          question_date?: string
+          question_text?: string
+        }
+        Relationships: []
       }
       data_requests: {
         Row: {
@@ -372,6 +447,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achieved_at: string
+          achievement_name: string
+          achievement_type: string
+          description: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          achievement_name: string
+          achievement_type: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          achievement_name?: string
+          achievement_type?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_flashcard_progress: {
         Row: {
           created_at: string | null
@@ -470,6 +575,48 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          first_name: string | null
+          id: string
+          is_premium: boolean
+          last_login_at: string | null
+          last_name: string | null
+          premium_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id: string
+          is_premium?: boolean
+          last_login_at?: string | null
+          last_name?: string | null
+          premium_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          is_premium?: boolean
+          last_login_at?: string | null
+          last_name?: string | null
+          premium_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           answers: Json | null
@@ -526,6 +673,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_stats: {
+        Row: {
+          correct_answers: number
+          id: string
+          last_activity_date: string | null
+          listening_score: number | null
+          questions_answered: number
+          reading_score: number | null
+          speaking_score: number | null
+          streak_days: number
+          updated_at: string
+          user_id: string
+          writing_score: number | null
+        }
+        Insert: {
+          correct_answers?: number
+          id?: string
+          last_activity_date?: string | null
+          listening_score?: number | null
+          questions_answered?: number
+          reading_score?: number | null
+          speaking_score?: number | null
+          streak_days?: number
+          updated_at?: string
+          user_id: string
+          writing_score?: number | null
+        }
+        Update: {
+          correct_answers?: number
+          id?: string
+          last_activity_date?: string | null
+          listening_score?: number | null
+          questions_answered?: number
+          reading_score?: number | null
+          speaking_score?: number | null
+          streak_days?: number
+          updated_at?: string
+          user_id?: string
+          writing_score?: number | null
+        }
+        Relationships: []
       }
       users: {
         Row: {
@@ -603,6 +792,12 @@ export type Database = {
           query_text: string
         }
         Returns: Json
+      }
+      is_premium_user: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

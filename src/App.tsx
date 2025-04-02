@@ -1,144 +1,85 @@
 
-import { Routes, Route } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
-import EnhancedAuthLayout from './layouts/EnhancedAuthLayout';
-import routes from './routes';
-import EnhancedErrorBoundary from './components/common/EnhancedErrorBoundary';
-import FeedbackWidget from './components/feedback/FeedbackWidget';
-import { AIUtilsProvider } from './contexts/AIUtilsContext';
-import { AuthProvider } from './contexts/EnhancedAuthContext';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
 
 // Auth Pages
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import UnauthorizedPage from './pages/auth/UnauthorizedPage';
+import AuthLayout from '@/pages/auth/AuthLayout';
+import LoginPage from '@/pages/auth/LoginPage';
+import SignupPage from '@/pages/auth/SignupPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
+import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 
-// Learning Pages
-import DashboardPage from './pages/dashboard/DashboardPage';
-import FlashcardsPage from './pages/learning/FlashcardsPage';
-import ListeningPage from './pages/learning/ListeningPage';
-import ReadingPage from './pages/learning/ReadingPage';
-import WritingPage from './pages/learning/WritingPage';
-import SpeakingPage from './pages/learning/SpeakingPage';
+// Protected Pages
+import DashboardPage from '@/pages/dashboard/DashboardPage';
+import ReadingPage from '@/pages/learning/ReadingPage';
+import WritingPage from '@/pages/learning/WritingPage';
+import SpeakingPage from '@/pages/learning/SpeakingPage';
+import ListeningPage from '@/pages/learning/ListeningPage';
+import FlashcardsPage from '@/pages/learning/FlashcardsPage';
+import UserProfilePage from '@/pages/profile/UserProfilePage';
+import SubscriptionPage from '@/pages/subscription/SubscriptionPage';
 
-// Import global styles
-import './styles/card-flip.css';
+// Components
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+
+// Layout Components
+import MainLayout from '@/components/layout/MainLayout';
+import LandingPage from '@/pages/LandingPage';
 
 function App() {
-  const handleFeedbackSubmit = (feedback: { type: string; message: string }) => {
-    // In a real app, this would send the feedback to a server
-    console.log('Feedback submitted:', feedback);
-  };
-
   return (
-    <EnhancedErrorBoundary>
+    <Router>
       <AuthProvider>
-        <AIUtilsProvider>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path="/auth" element={<EnhancedAuthLayout />}>
-              <Route path="login" element={<LoginPage />} />
-              <Route path="register" element={<RegisterPage />} />
-              <Route path="forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="reset-password" element={<ResetPasswordPage />} />
-            </Route>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Auth routes */}
+          <Route path="/auth" element={<AuthLayout />}>
+            <Route index element={<Navigate to="/auth/login" replace />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="signup" element={<SignupPage />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="reset-password" element={<ResetPasswordPage />} />
+            <Route path="verify-email" element={<VerifyEmailPage />} />
+          </Route>
+          
+          {/* Protected routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="profile" element={<UserProfilePage />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
             
-            {/* Unauthorized Page */}
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            {/* Learning routes */}
+            <Route path="reading" element={<ReadingPage />} />
+            <Route path="writing" element={<WritingPage />} />
+            <Route path="speaking" element={<SpeakingPage />} />
+            <Route path="listening" element={<ListeningPage />} />
+            <Route path="flashcards" element={<FlashcardsPage />} />
             
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={
-                <MainLayout>
-                  <DashboardPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/flashcards" element={
-                <MainLayout>
-                  <FlashcardsPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/listening" element={
-                <MainLayout>
-                  <ListeningPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/reading" element={
-                <MainLayout>
-                  <ReadingPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/writing" element={
-                <MainLayout>
-                  <WritingPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/speaking" element={
-                <MainLayout>
-                  <SpeakingPage />
-                </MainLayout>
-              } />
-              
-              <Route path="/progress" element={
-                <MainLayout>
-                  <div>Progress Content</div>
-                </MainLayout>
-              } />
-            </Route>
-            
-            {/* Public Routes */}
-            <Route path="/" element={
-              <MainLayout>
-                {routes.find(route => route.path === '/')?.element}
-              </MainLayout>
-            } />
-            
-            <Route path="/about" element={
-              <MainLayout>
-                <div>About Content</div>
-              </MainLayout>
-            } />
-            
-            <Route path="/contact" element={
-              <MainLayout>
-                <div>Contact Content</div>
-              </MainLayout>
-            } />
-            
-            <Route path="/terms" element={
-              <MainLayout>
-                <div>Terms Content</div>
-              </MainLayout>
-            } />
-            
-            <Route path="/privacy" element={
-              <MainLayout>
-                <div>Privacy Content</div>
-              </MainLayout>
-            } />
-            
-            {/* 404 Page */}
-            <Route path="*" element={
-              <MainLayout>
-                <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                  <h1 className="text-4xl font-bold">404 - Page Not Found</h1>
-                  <p className="mt-4 text-muted-foreground">The page you're looking for doesn't exist.</p>
+            {/* Premium routes */}
+            <Route path="premium" element={
+              <ProtectedRoute requirePremium>
+                <div className="container py-8">
+                  <h1 className="text-3xl font-bold">Premium Content</h1>
+                  <p className="mt-4">This is premium content only available to premium subscribers.</p>
                 </div>
-              </MainLayout>
+              </ProtectedRoute>
             } />
-          </Routes>
-          <FeedbackWidget onSubmit={handleFeedbackSubmit} />
-        </AIUtilsProvider>
+          </Route>
+          
+          {/* Catch all - 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Toaster />
       </AuthProvider>
-    </EnhancedErrorBoundary>
+    </Router>
   );
 }
 

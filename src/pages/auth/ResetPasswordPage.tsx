@@ -1,173 +1,202 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Eye, EyeOff, Lock, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const ResetPasswordPage: React.FC = () => {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+const passwordSchema = z.object({
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+const ResetPasswordPage = () => {
+  const { updatePassword } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  
-  const { updatePassword, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  // Check if user is authenticated via the reset link
+  const form = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
+
   useEffect(() => {
-    if (!isAuthenticated) {
-      setFormError('Invalid or expired password reset link. Please try again.');
+    // Check if we have a valid token in the URL
+    const hash = location.hash;
+    if (!hash || !hash.includes('access_token=')) {
+      setError('Invalid or missing reset token. Please request a new password reset link.');
     }
-  }, [isAuthenticated]);
+  }, [location]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    
-    if (!password) {
-      setFormError('Password is required');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setFormError('Passwords do not match');
-      return;
-    }
-    
-    // Password strength check
-    if (password.length < 8) {
-      setFormError('Password must be at least 8 characters long');
-      return;
-    }
-    
+  const onSubmit = async (data: PasswordFormValues) => {
     setIsSubmitting(true);
-    
+    setError(null);
+
     try {
-      const success = await updatePassword(password);
+      const success = await updatePassword(data.password);
+      
       if (success) {
-        setIsSubmitted(true);
-        // Redirect after a delay
+        setSuccess(true);
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/auth/login', { replace: true });
         }, 3000);
+      } else {
+        setError('Failed to reset password. Please try again or request a new link.');
       }
-    } catch (error: any) {
-      setFormError(error.message);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Reset password</CardTitle>
-        <CardDescription>
-          Enter your new password
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent>
-        {isSubmitted ? (
-          <div className="space-y-4">
-            <Alert>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardDescription>
+            Please enter your new password
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {success ? (
+            <Alert className="bg-green-50 border-green-200 text-green-800 mb-4">
               <AlertDescription>
-                Your password has been successfully reset. You will be redirected to the dashboard shortly.
+                Your password has been successfully reset. You will be redirected to the login page.
               </AlertDescription>
             </Alert>
-            <Button className="w-full" onClick={() => navigate('/dashboard')}>
-              Go to dashboard
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {formError && (
-              <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    autoComplete="new-password"
-                    disabled={isSubmitting || !isAuthenticated}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    autoComplete="new-password"
-                    disabled={isSubmitting || !isAuthenticated}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isSubmitting || !isAuthenticated}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Resetting password...
-                  </>
-                ) : (
-                  'Reset password'
-                )}
-              </Button>
-            </form>
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter>
-        <div className="text-sm text-muted-foreground text-center w-full">
-          Need assistance?{" "}
-          <a href="/contact" className="text-primary underline-offset-4 hover:underline">
-            Contact support
-          </a>
-        </div>
-      </CardFooter>
-    </>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center">
+                        <Lock className="mr-2 h-4 w-4" />
+                        New Password
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="••••••••••••"
+                            autoComplete="new-password"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowPassword(!showPassword)}
+                            tabIndex={-1}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center">
+                        <Lock className="mr-2 h-4 w-4" />
+                        Confirm Password
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="••••••••••••"
+                            autoComplete="new-password"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </form>
+            </Form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
