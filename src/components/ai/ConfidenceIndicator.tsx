@@ -6,7 +6,6 @@ export interface ConfidenceIndicatorProps {
   score: number;
   value?: number;
   className?: string;
-  indicatorClassName?: string;
 }
 
 /**
@@ -16,8 +15,7 @@ export interface ConfidenceIndicatorProps {
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
   value = score,
-  className = '',
-  indicatorClassName = ''
+  className = ''
 }) => {
   // Ensure score is between 0 and 1
   const normalizedScore = Math.max(0, Math.min(1, score));
@@ -42,7 +40,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
     <div className={cn("flex items-center space-x-2", className)}>
       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
         <div 
-          className={cn("h-full rounded-full", color, indicatorClassName)}
+          className={cn("h-full rounded-full", color)}
           style={{ width: `${percent}%` }}
           role="progressbar"
           aria-valuenow={percent}

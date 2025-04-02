@@ -40,6 +40,7 @@ export interface AIGeneratedQuestion {
   difficulty: ItalianLevel;
   questionType: QuestionType | 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
   isCitizenshipRelevant: boolean;
+  question?: string; // Added to fix errors with components expecting this property
 }
 
 // Result of AI generation
@@ -112,4 +113,15 @@ export interface GrammarRule {
   level: ItalianLevel;
   relatedRules?: string[];
   citizenshipRelevant?: boolean;
+}
+
+// Daily Question Selection
+export interface DailyQuestionSelection {
+  date: string;
+  userId: string;
+  questionId: string;
+  section: ItalianTestSection;
+  completed: boolean;
+  score?: number;
+  timeSpent?: number;
 }
