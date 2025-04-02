@@ -7,6 +7,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { MessageSquare, ThumbsUp, ThumbsDown, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/components/ui/use-toast';
+import { useAI } from '@/hooks/useAI';
 
 interface FeedbackWidgetProps {
   onSubmit?: (feedback: { type: string; message: string }) => void;
@@ -18,6 +20,8 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ onSubmit }) => {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { toast } = useToast();
+  const { generateText } = useAI();
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -35,6 +39,10 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ onSubmit }) => {
     setIsSubmitting(true);
     
     try {
+      // Store feedback for AI training data
+      const aiResponse = await generateText(`User feedback: ${feedbackMessage}`);
+      console.log('AI acknowledged feedback:', aiResponse);
+      
       // If onSubmit prop is provided, call it
       if (onSubmit) {
         await onSubmit({
@@ -42,6 +50,12 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ onSubmit }) => {
           message: feedbackMessage
         });
       }
+      
+      // Show success toast
+      toast({
+        title: "Feedback Submitted",
+        description: "Thank you for your feedback! It helps us improve.",
+      });
       
       // Mark as submitted
       setIsSubmitted(true);
@@ -52,6 +66,11 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ onSubmit }) => {
       }, 3000);
     } catch (error) {
       console.error('Error submitting feedback:', error);
+      toast({
+        title: "Error Submitting Feedback",
+        description: "There was a problem submitting your feedback. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

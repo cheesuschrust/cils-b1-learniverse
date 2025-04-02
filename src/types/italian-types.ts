@@ -40,7 +40,6 @@ export interface AIGeneratedQuestion {
   difficulty: ItalianLevel;
   questionType: QuestionType | 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
   isCitizenshipRelevant: boolean;
-  question?: string;
 }
 
 // Result of AI generation

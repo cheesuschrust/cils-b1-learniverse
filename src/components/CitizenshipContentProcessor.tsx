@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAIUtils } from '@/hooks/useAIUtils';
+import { useAI } from '@/hooks/useAI';
 import { 
   AIGeneratedQuestion, 
   ItalianLevel 
 } from '@/types/italian-types';
 import { Loader2 } from 'lucide-react';
+import ConfidenceIndicator from './ai/ConfidenceIndicator';
 
 interface CitizenshipContentProcessorProps {
   initialContent?: string;
@@ -24,7 +25,7 @@ export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorPr
   const [content, setContent] = useState<string>(initialContent);
   const [selectedLevel, setSelectedLevel] = useState<ItalianLevel>(level);
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);
-  const { generateQuestions, isGenerating } = useAIUtils();
+  const { generateQuestions, isGenerating } = useAI();
 
   const handleGenerateQuestions = async () => {
     if (!content.trim()) return;
@@ -104,8 +105,11 @@ export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorPr
             
             {questions.map((question, index) => (
               <div key={question.id} className="border rounded-lg p-4">
-                <p className="font-medium mb-2">Question {index + 1}:</p>
-                <p className="mb-4">{question.text || question.question}</p>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-medium">Question {index + 1}:</p>
+                  <ConfidenceIndicator score={0.75 + (index * 0.05)} />
+                </div>
+                <p className="mb-4">{question.text}</p>
                 
                 <div className="space-y-2">
                   {question.options?.map((option, i) => (

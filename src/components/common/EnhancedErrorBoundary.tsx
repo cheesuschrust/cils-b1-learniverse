@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 interface EnhancedErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface EnhancedErrorBoundaryState {
@@ -34,6 +35,11 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
     
     // Log the error to the console
     console.error('Error caught by EnhancedErrorBoundary:', error, errorInfo);
+    
+    // Call the onError prop if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
   }
 
   render() {
@@ -51,6 +57,9 @@ class EnhancedErrorBoundary extends Component<EnhancedErrorBoundaryProps, Enhanc
             <summary className="cursor-pointer text-gray-500 mb-2">Error details</summary>
             <pre className="p-2 bg-gray-100 rounded overflow-x-auto">
               {this.state.error?.toString()}
+            </pre>
+            <pre className="p-2 mt-2 bg-gray-100 rounded overflow-x-auto">
+              {this.state.errorInfo?.componentStack}
             </pre>
           </details>
         </div>

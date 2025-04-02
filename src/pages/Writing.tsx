@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +49,11 @@ const Writing = () => {
       
       toast({
         title: "Analysis Complete",
-        description: `Text analysis completed in ${processingTime.toFixed(2)}ms.`,
+        description: `Text analysis completed in ${(processingTime/1000).toFixed(2)}s.`,
       });
+      
+      // Automatically switch to analysis tab
+      setActiveTab('analysis');
     } catch (error: any) {
       toast({
         title: "Analysis Failed",
@@ -100,6 +104,7 @@ const Writing = () => {
     setAiFeedback('');
     setProcessingTime(0);
     setLastAnalyzedAt(null);
+    setActiveTab('editor');
   };
   
   return (
@@ -198,7 +203,7 @@ const Writing = () => {
                         Processing Time:
                       </span>
                       <span className="font-medium">
-                        {processingTime.toFixed(2)}ms
+                        {(processingTime/1000).toFixed(2)}s
                       </span>
                     </div>
                     
