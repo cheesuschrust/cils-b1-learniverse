@@ -12,6 +12,7 @@ import MultipleChoice from './pages/MultipleChoice';
 import NotFound from './pages/NotFound';
 import ItalianCitizenshipTest from './pages/ItalianCitizenshipTest';
 import DailyQuestion from './pages/DailyQuestion';
+import Progress from './pages/Progress';
 
 const routes = [
   {
@@ -57,6 +58,10 @@ const routes = [
   {
     path: '/daily-question',
     element: <DailyQuestion />
+  },
+  {
+    path: '/progress',
+    element: <Progress />
   },
   {
     path: '*',
