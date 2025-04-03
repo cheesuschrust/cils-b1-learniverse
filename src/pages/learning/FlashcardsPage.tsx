@@ -4,7 +4,7 @@ import FlashcardModule from '@/components/flashcards/FlashcardModule';
 
 const FlashcardsPage: React.FC = () => {
   return (
-    <div>
+    <div className="container mx-auto py-6">
       <FlashcardModule />
     </div>
   );

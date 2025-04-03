@@ -90,3 +90,143 @@ export async function isPremiumUser(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+// Flashcard functions
+export async function fetchFlashcards(userId: string) {
+  const { data, error } = await supabase
+    .from('flashcards')
+    .select('*')
+    .eq('user_id', userId);
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchFlashcardSets(userId: string) {
+  const { data, error } = await supabase
+    .from('flashcard_sets')
+    .select('*')
+    .eq('user_id', userId);
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchPublicFlashcardSets() {
+  const { data, error } = await supabase
+    .from('flashcard_sets')
+    .select('*')
+    .eq('is_public', true);
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchFlashcardsInSet(setId: string) {
+  const { data, error } = await supabase
+    .from('flashcards')
+    .select('*')
+    .eq('set_id', setId);
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function createFlashcardSet(setData: any) {
+  const { data, error } = await supabase
+    .from('flashcard_sets')
+    .insert([setData])
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFlashcardSet(setId: string, updates: any) {
+  const { data, error } = await supabase
+    .from('flashcard_sets')
+    .update(updates)
+    .eq('id', setId)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFlashcardSet(setId: string) {
+  const { error } = await supabase
+    .from('flashcard_sets')
+    .delete()
+    .eq('id', setId);
+  
+  if (error) throw error;
+  return true;
+}
+
+export async function createFlashcard(cardData: any) {
+  const { data, error } = await supabase
+    .from('flashcards')
+    .insert([cardData])
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFlashcard(cardId: string, updates: any) {
+  const { data, error } = await supabase
+    .from('flashcards')
+    .update(updates)
+    .eq('id', cardId)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFlashcard(cardId: string) {
+  const { error } = await supabase
+    .from('flashcards')
+    .delete()
+    .eq('id', cardId);
+  
+  if (error) throw error;
+  return true;
+}
+
+export async function updateFlashcardProgress(progressData: any) {
+  // First check if progress exists
+  const { data: existingProgress } = await supabase
+    .from('user_flashcard_progress')
+    .select('*')
+    .eq('user_id', progressData.user_id)
+    .eq('flashcard_id', progressData.flashcard_id)
+    .maybeSingle();
+  
+  if (existingProgress) {
+    // Update existing progress
+    const { data, error } = await supabase
+      .from('user_flashcard_progress')
+      .update(progressData)
+      .eq('id', existingProgress.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } else {
+    // Insert new progress
+    const { data, error } = await supabase
+      .from('user_flashcard_progress')
+      .insert([progressData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+}

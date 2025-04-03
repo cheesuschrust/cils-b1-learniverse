@@ -1,6 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { FlashcardsProvider } from '@/contexts/FlashcardsContext';
 import { Toaster } from '@/components/ui/toaster';
 
 // Auth Pages
@@ -32,52 +33,54 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<LandingPage />} />
-          
-          {/* Auth routes */}
-          <Route path="/auth" element={<AuthLayout />}>
-            <Route index element={<Navigate to="/auth/login" replace />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="signup" element={<SignupPage />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="verify-email" element={<VerifyEmailPage />} />
-          </Route>
-          
-          {/* Protected routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="profile" element={<UserProfilePage />} />
-            <Route path="subscription" element={<SubscriptionPage />} />
+        <FlashcardsProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             
-            {/* Learning routes */}
-            <Route path="reading" element={<ReadingPage />} />
-            <Route path="writing" element={<WritingPage />} />
-            <Route path="speaking" element={<SpeakingPage />} />
-            <Route path="listening" element={<ListeningPage />} />
-            <Route path="flashcards" element={<FlashcardsPage />} />
+            {/* Auth routes */}
+            <Route path="/auth" element={<AuthLayout />}>
+              <Route index element={<Navigate to="/auth/login" replace />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="signup" element={<SignupPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="reset-password" element={<ResetPasswordPage />} />
+              <Route path="verify-email" element={<VerifyEmailPage />} />
+            </Route>
             
-            {/* Premium routes */}
-            <Route path="premium" element={
-              <ProtectedRoute requirePremium>
-                <div className="container py-8">
-                  <h1 className="text-3xl font-bold">Premium Content</h1>
-                  <p className="mt-4">This is premium content only available to premium subscribers.</p>
-                </div>
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <MainLayout />
               </ProtectedRoute>
-            } />
-          </Route>
-          
-          {/* Catch all - 404 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Toaster />
+            }>
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="profile" element={<UserProfilePage />} />
+              <Route path="subscription" element={<SubscriptionPage />} />
+              
+              {/* Learning routes */}
+              <Route path="reading" element={<ReadingPage />} />
+              <Route path="writing" element={<WritingPage />} />
+              <Route path="speaking" element={<SpeakingPage />} />
+              <Route path="listening" element={<ListeningPage />} />
+              <Route path="flashcards" element={<FlashcardsPage />} />
+              
+              {/* Premium routes */}
+              <Route path="premium" element={
+                <ProtectedRoute requirePremium>
+                  <div className="container py-8">
+                    <h1 className="text-3xl font-bold">Premium Content</h1>
+                    <p className="mt-4">This is premium content only available to premium subscribers.</p>
+                  </div>
+                </ProtectedRoute>
+              } />
+            </Route>
+            
+            {/* Catch all - 404 */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <Toaster />
+        </FlashcardsProvider>
       </AuthProvider>
     </Router>
   );

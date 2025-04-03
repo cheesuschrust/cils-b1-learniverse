@@ -243,6 +243,48 @@ export type Database = {
           },
         ]
       }
+      flashcard_sets: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_favorite: boolean
+          is_public: boolean
+          language: string
+          name: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          language?: string
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          language?: string
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       flashcards: {
         Row: {
           back: string
@@ -254,8 +296,10 @@ export type Database = {
           front: string
           id: string
           italian: string
+          set_id: string | null
           tags: string[] | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           back: string
@@ -267,8 +311,10 @@ export type Database = {
           front: string
           id?: string
           italian: string
+          set_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           back?: string
@@ -280,8 +326,10 @@ export type Database = {
           front?: string
           id?: string
           italian?: string
+          set_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -296,6 +344,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "flashcard_sets"
             referencedColumns: ["id"]
           },
         ]
