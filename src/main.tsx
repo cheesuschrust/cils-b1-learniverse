@@ -2,7 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { EnhancedAuthProvider } from '@/contexts/EnhancedAuthContext';
 import { IntlProvider } from '@/contexts/IntlContext';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { HelmetProvider } from 'react-helmet-async';
@@ -28,7 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <HelmetProvider>
         <ThemeProvider defaultTheme="system" storageKey="ui-theme">
           <BrowserRouter>
-            <AuthProvider>
+            <EnhancedAuthProvider>
               <ServiceProvider>
                 <AIProvider>
                   <IntlProvider>
@@ -45,7 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   </IntlProvider>
                 </AIProvider>
               </ServiceProvider>
-            </AuthProvider>
+            </EnhancedAuthProvider>
           </BrowserRouter>
         </ThemeProvider>
       </HelmetProvider>

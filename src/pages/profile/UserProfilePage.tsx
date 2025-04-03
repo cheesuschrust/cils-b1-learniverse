@@ -1,20 +1,22 @@
 
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/EnhancedAuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Helmet } from "react-helmet-async";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import { Spinner } from "@/components/ui/spinner";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -23,195 +25,156 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  User, 
-  Settings, 
-  BookOpen, 
-  Award, 
-  Loader2,
-  UserCircle,
-  Key,
-  LogOut
-} from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { fetchUserAchievements, fetchUserStats } from '@/lib/supabase-client';
-import { useNavigate } from 'react-router-dom';
+} from "@/components/ui/form";
 
+// Validation schema for profile form
 const profileFormSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional(),
   displayName: z.string().optional(),
-  bio: z.string().max(160).optional(),
-  avatarUrl: z.string().url().optional().or(z.literal('')),
+  bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+// Validation schema for password form
 const passwordFormSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
+  currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  confirmPassword: z.string(),
-}).refine(data => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
-const UserProfilePage = () => {
-  const { user, profile, updateProfile, updatePassword, logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+const UserProfilePage: React.FC = () => {
+  const { user, updateProfile, updatePassword, displayName, isPremium } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
+  // Form initialization
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: profile?.first_name || '',
-      lastName: profile?.last_name || '',
-      displayName: profile?.display_name || '',
-      bio: profile?.bio || '',
-      avatarUrl: profile?.avatar_url || '',
+      firstName: "",
+      lastName: "",
+      displayName: "",
+      bio: "",
     },
   });
   
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
     defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
   
-  React.useEffect(() => {
-    if (profile) {
-      profileForm.reset({
-        firstName: profile.first_name || '',
-        lastName: profile.last_name || '',
-        displayName: profile.display_name || '',
-        bio: profile.bio || '',
-        avatarUrl: profile.avatar_url || '',
-      });
-    }
-  }, [profile, profileForm]);
-  
-  React.useEffect(() => {
-    if (activeTab === 'achievements' && user) {
-      loadUserData();
-    }
-  }, [activeTab, user]);
-  
-  const loadUserData = async () => {
-    if (!user) return;
-    
-    setIsLoadingData(true);
-    try {
-      const achievementsData = await fetchUserAchievements(user.id);
-      const statsData = await fetchUserStats(user.id);
+  // Load user data into form
+  useEffect(() => {
+    if (user) {
+      // This assumes user metadata contains first_name and last_name
+      const firstName = user.user_metadata?.first_name || "";
+      const lastName = user.user_metadata?.last_name || "";
       
-      setAchievements(achievementsData || []);
-      setStats(statsData || null);
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-  
-  const onProfileSubmit = async (data: ProfileFormValues) => {
-    setIsLoading(true);
-    try {
-      await updateProfile({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        display_name: data.displayName || null,
-        bio: data.bio || null,
-        avatar_url: data.avatarUrl || null,
+      profileForm.reset({
+        firstName,
+        lastName,
+        displayName: displayName || firstName,
+        bio: "",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [user, displayName]);
   
-  const onPasswordSubmit = async (data: PasswordFormValues) => {
-    setIsLoading(true);
+  // Handle profile form submission
+  const onProfileSubmit = async (data: ProfileFormValues) => {
     try {
-      // For Supabase, we don't actually need to provide the current password
-      await updatePassword(data.newPassword);
-      passwordForm.reset();
-    } finally {
-      setIsLoading(false);
+      if (!user) return;
+      
+      const success = await updateProfile({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        displayName: data.displayName,
+        bio: data.bio,
+      });
+      
+      if (success) {
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to update profile:", error);
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
     }
   };
   
-  const handleLogout = async () => {
-    await logout();
-    navigate('/auth/login');
+  // Handle password form submission
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    try {
+      const success = await updatePassword(data.newPassword);
+      
+      if (success) {
+        toast({
+          title: "Password updated",
+          description: "Your password has been updated successfully",
+        });
+        passwordForm.reset();
+      }
+    } catch (error: any) {
+      console.error("Failed to update password:", error);
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+    }
   };
   
+  // Generate initials for avatar fallback
   const getInitials = () => {
-    if (!profile) return 'U';
-    
-    const first = profile.first_name?.[0] || '';
-    const last = profile.last_name?.[0] || '';
-    
-    return (first + last).toUpperCase();
+    if (displayName) {
+      return displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    if (user?.user_metadata?.first_name) {
+      const first = user.user_metadata.first_name[0] || '';
+      const last = user.user_metadata.last_name?.[0] || '';
+      return (first + last).toUpperCase();
+    }
+    return user?.email?.[0].toUpperCase() || '?';
   };
-  
-  if (!user || !profile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
   
   return (
-    <div className="container max-w-4xl py-10">
-      <div className="mb-10 flex items-center">
-        <Avatar className="h-16 w-16 mr-4">
-          <AvatarImage src={profile.avatar_url || ''} />
-          <AvatarFallback>{getInitials()}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-3xl font-bold">
-            {profile.display_name || `${profile.first_name} ${profile.last_name}`}
-          </h1>
-          <p className="text-muted-foreground">
-            {profile.is_premium ? 'Premium Member' : 'Free Member'}
-          </p>
-        </div>
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      <Helmet>
+        <title>User Profile - CILS Italian Citizenship</title>
+      </Helmet>
+      
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
+        <p className="text-muted-foreground">
+          Manage your personal information and account settings
+        </p>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            <span className="hidden sm:inline">Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="achievements" className="flex items-center gap-2">
-            <Award className="h-4 w-4" />
-            <span className="hidden sm:inline">Achievements</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </TabsTrigger>
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="grid grid-cols-3 md:w-[400px]">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -222,22 +185,36 @@ const UserProfilePage = () => {
                 Update your personal information and how others see you
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src="/placeholder-avatar.jpg" alt={displayName || "User"} />
+                  <AvatarFallback className="text-lg">{getInitials()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-medium">{displayName || user?.email}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <div className="mt-2">
+                    <Button variant="outline" size="sm" disabled>
+                      Change Avatar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
               <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={profileForm.control}
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First name</FormLabel>
+                          <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Your first name" 
-                              {...field}
-                              disabled={isLoading}
-                            />
+                            <Input placeholder="John" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -249,13 +226,9 @@ const UserProfilePage = () => {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last name</FormLabel>
+                          <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Your last name" 
-                              {...field}
-                              disabled={isLoading}
-                            />
+                            <Input placeholder="Doe" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -268,17 +241,12 @@ const UserProfilePage = () => {
                     name="displayName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Display name</FormLabel>
+                        <FormLabel>Display Name</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="How you want to be called" 
-                            {...field}
-                            value={field.value || ''}
-                            disabled={isLoading}
-                          />
+                          <Input placeholder="How you want your name to appear" {...field} />
                         </FormControl>
                         <FormDescription>
-                          This is the name that will be displayed to others.
+                          This is how your name will appear publicly.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -293,51 +261,31 @@ const UserProfilePage = () => {
                         <FormLabel>Bio</FormLabel>
                         <FormControl>
                           <Textarea 
-                            placeholder="Tell us a little about yourself" 
-                            className="resize-none"
-                            {...field}
-                            value={field.value || ''}
-                            disabled={isLoading}
+                            placeholder="Tell us a bit about yourself..." 
+                            className="min-h-32"
+                            {...field} 
                           />
                         </FormControl>
                         <FormDescription>
-                          Brief description for your profile. Max 160 characters.
+                          Brief description for your profile. Max 500 characters.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
-                  <FormField
-                    control={profileForm.control}
-                    name="avatarUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Profile picture URL</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://example.com/avatar.jpg" 
-                            {...field}
-                            value={field.value || ''}
-                            disabled={isLoading}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Enter a URL for your profile picture.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button 
+                    type="submit" 
+                    disabled={profileForm.formState.isSubmitting}
+                    className="mt-2"
+                  >
+                    {profileForm.formState.isSubmitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Spinner className="mr-2 h-4 w-4" />
                         Saving...
                       </>
                     ) : (
-                      'Save changes'
+                      "Save Changes"
                     )}
                   </Button>
                 </form>
@@ -351,25 +299,20 @@ const UserProfilePage = () => {
             <CardHeader>
               <CardTitle>Security Settings</CardTitle>
               <CardDescription>
-                Update your password and manage your account security
+                Update your password and security preferences
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                   <FormField
                     control={passwordForm.control}
                     name="currentPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Current password</FormLabel>
+                        <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                            disabled={isLoading}
-                          />
+                          <Input type="password" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -381,14 +324,9 @@ const UserProfilePage = () => {
                     name="newPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>New password</FormLabel>
+                        <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                            disabled={isLoading}
-                          />
+                          <Input type="password" {...field} />
                         </FormControl>
                         <FormDescription>
                           Password must be at least 8 characters and include uppercase, lowercase, and numbers.
@@ -403,197 +341,144 @@ const UserProfilePage = () => {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Confirm new password</FormLabel>
+                        <FormLabel>Confirm New Password</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                            disabled={isLoading}
-                          />
+                          <Input type="password" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
-                  <div className="flex flex-col gap-4">
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        'Update password'
-                      )}
-                    </Button>
-                    
-                    <div className="mt-6 pt-6 border-t">
-                      <h3 className="text-lg font-medium mb-4">Account actions</h3>
-                      <Button 
-                        variant="destructive"
-                        type="button"
-                        onClick={handleLogout}
-                        className="flex items-center"
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Sign out of all sessions
-                      </Button>
-                    </div>
-                  </div>
+                  <Button 
+                    type="submit" 
+                    disabled={passwordForm.formState.isSubmitting}
+                    className="mt-2"
+                  >
+                    {passwordForm.formState.isSubmitting ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </Button>
                 </form>
               </Form>
+              
+              <Separator className="my-6" />
+              
+              <div>
+                <h3 className="font-medium mb-2">Email Verification</h3>
+                {user?.email_confirmed_at ? (
+                  <Alert variant="success" className="bg-green-50 text-green-800 border-green-200">
+                    <AlertDescription className="flex items-center">
+                      Your email has been verified
+                      <span className="ml-2 bg-green-100 text-green-800 text-xs rounded-full py-1 px-2">
+                        Verified
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <Alert variant="warning" className="bg-yellow-50 text-yellow-800 border-yellow-200 mb-4">
+                      <AlertDescription>
+                        Please verify your email address to access all features.
+                      </AlertDescription>
+                    </Alert>
+                    <Button variant="outline" onClick={() => /* resendVerificationEmail() */ {}}>
+                      Resend Verification Email
+                    </Button>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="achievements">
+        <TabsContent value="subscription">
           <Card>
             <CardHeader>
-              <CardTitle>Achievements</CardTitle>
+              <CardTitle>Subscription Status</CardTitle>
               <CardDescription>
-                Track your progress and see your achievements
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingData ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-muted-foreground">Questions Answered</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{stats?.questions_answered || 0}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-muted-foreground">Current Streak</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">{stats?.streak_days || 0} days</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-muted-foreground">Accuracy</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold">
-                          {stats?.questions_answered ? 
-                            Math.round((stats.correct_answers / stats.questions_answered) * 100) : 0}%
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  {achievements.length > 0 ? (
-                    <div className="space-y-4">
-                      {achievements.map((achievement) => (
-                        <Card key={achievement.id}>
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center space-x-4">
-                              <div className="bg-primary/10 p-2 rounded-full">
-                                <Award className="h-6 w-6 text-primary" />
-                              </div>
-                              <div>
-                                <CardTitle>{achievement.achievement_name}</CardTitle>
-                                <CardDescription>{achievement.description}</CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm text-muted-foreground">
-                              Achieved on {new Date(achievement.achieved_at).toLocaleDateString()}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <BookOpen className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                      <h3 className="mt-4 text-lg font-medium">No achievements yet</h3>
-                      <p className="mt-2 text-muted-foreground">
-                        Complete challenges and quizzes to earn achievements
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Subscription Management</CardTitle>
-              <CardDescription>
-                Manage your subscription and billing information
+                Manage your subscription and payment settings
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="border rounded-lg p-6">
-                <h3 className="text-lg font-medium mb-2">Current Plan</h3>
-                <p className="text-2xl font-bold mb-2">
-                  {profile.is_premium ? 'Premium' : 'Free'}
-                </p>
-                <p className="text-muted-foreground mb-4">
-                  {profile.is_premium
-                    ? `Premium access until ${new Date(profile.premium_until || '').toLocaleDateString()}`
-                    : 'Limited access to features and content'}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 text-center">
+                <h3 className="font-bold text-xl mb-2">
+                  {isPremium ? "Premium Subscription" : "Free Plan"}
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  {isPremium
+                    ? "You're enjoying all premium features of our platform."
+                    : "Upgrade to premium for full access to all features."}
                 </p>
                 
-                {!profile.is_premium && (
-                  <Button onClick={() => navigate('/subscription')}>
+                {isPremium ? (
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="inline-flex items-center justify-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                      Active
+                    </div>
+                    <Button variant="outline" onClick={() => navigate("/subscription/manage")}>
+                      Manage Subscription
+                    </Button>
+                  </div>
+                ) : (
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600" onClick={() => navigate("/subscription/plans")}>
                     Upgrade to Premium
                   </Button>
                 )}
-                
-                {profile.is_premium && (
-                  <Button variant="outline">
-                    Manage Subscription
-                  </Button>
-                )}
               </div>
               
-              <div className="border rounded-lg p-6">
-                <h3 className="text-lg font-medium mb-4">Account details</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <p className="text-muted-foreground">Email</p>
-                    <p className="font-medium">{user.email}</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p className="text-muted-foreground">Member since</p>
-                    <p className="font-medium">{new Date(profile.created_at).toLocaleDateString()}</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p className="text-muted-foreground">Last login</p>
-                    <p className="font-medium">
-                      {profile.last_login_at 
-                        ? new Date(profile.last_login_at).toLocaleDateString() 
-                        : 'Never'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Separator />
               
-              <Alert className="bg-red-50 border-red-200">
-                <AlertDescription className="flex flex-col gap-2">
-                  <p>Danger zone</p>
-                  <Button variant="destructive">
-                    Delete Account
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <div>
+                <h3 className="font-medium mb-4">Subscription Benefits</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <span className="bg-green-100 text-green-800 rounded-full p-1 mr-2 mt-0.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <span>Unlimited daily questions and practice tests</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-green-100 text-green-800 rounded-full p-1 mr-2 mt-0.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <span>Advanced grammar and vocabulary tools</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-green-100 text-green-800 rounded-full p-1 mr-2 mt-0.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <span>Full access to all study materials and guides</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-green-100 text-green-800 rounded-full p-1 mr-2 mt-0.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <span>AI-powered personalized learning path</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-green-100 text-green-800 rounded-full p-1 mr-2 mt-0.5">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    <span>Priority customer support</span>
+                  </li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

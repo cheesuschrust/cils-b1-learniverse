@@ -1,166 +1,141 @@
 
 import React, { useEffect } from 'react';
-import { useRoutes, useLocation } from 'react-router-dom';
-import routes from './routes';
-import { useTheme } from '@/components/ui/theme-provider';
-import { useAuth } from '@/contexts/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
-import { setupNetworkListeners } from './serviceWorkerRegistration';
-import { useToast } from '@/hooks/use-toast';
-import { errorMonitoring } from '@/utils/errorMonitoring';
-import { useSystemLog } from '@/hooks/use-system-log';
-import { SkipToContent } from './components/accessibility/SkipToContent';
-import { Helmet } from 'react-helmet-async';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { SkipToContent } from '@/components/accessibility/SkipToContent';
+import { KeyboardShortcutsModal } from '@/components/accessibility/KeyboardShortcutsModal';
 
-// Add keyboard navigation handler
-function KeyboardNavigationHandler() {
-  useEffect(() => {
-    // Function to handle keyboard navigation
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Tab key to show focus outlines
-      if (e.key === 'Tab') {
-        document.body.classList.add('keyboard-navigation');
-      }
-    };
-    
-    // Function to handle mouse events
-    const handleMouseDown = () => {
-      document.body.classList.remove('keyboard-navigation');
-    };
-    
-    // Add event listeners
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('mousedown', handleMouseDown);
-    
-    // Remove event listeners on cleanup
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('mousedown', handleMouseDown);
-    };
-  }, []);
-  
-  return null;
-}
+// Layout components
+import MainLayout from '@/components/layout/MainLayout';
+import AuthLayout from '@/components/layout/AuthLayout';
 
-// Scroll to top on page change component
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  
-  useEffect(() => {
-    // Only automatically scroll to top if the user hasn't scrolled down
-    if (window.scrollY === 0) {
-      window.scrollTo(0, 0);
-    }
-    
-    // Find an element with id="content" to focus on route change
-    const contentElement = document.getElementById('content');
-    if (contentElement) {
-      contentElement.focus();
-    }
-  }, [pathname]);
-  
-  return null;
-}
+// Auth pages
+import LoginPage from '@/pages/auth/LoginPage';
+import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
+import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 
-// Page View Logger
-function PageViewLogger() {
-  const location = useLocation();
-  const { logNavigation } = useSystemLog();
-  
-  useEffect(() => {
-    // Log page view
-    logNavigation(location.pathname);
-    
-    // Add page view to browser history for better back button behavior
-    window.history.replaceState(
-      { ...window.history.state, scrollY: window.scrollY },
-      document.title
-    );
-  }, [location.pathname, logNavigation]);
-  
-  return null;
-}
+// Protected pages
+import DashboardPage from '@/pages/DashboardPage';
+import UserProfilePage from '@/pages/profile/UserProfilePage';
+import UserPreferencesPage from '@/pages/settings/UserPreferencesPage';
+import SubscriptionPlansPage from '@/pages/subscription/SubscriptionPlansPage';
 
-// Online/Offline Status Handler
-function NetworkStatusHandler() {
-  const { toast } = useToast();
-  
-  useEffect(() => {
-    return setupNetworkListeners(
-      // Online handler
-      () => {
-        toast({
-          title: "Back online",
-          description: "Your connection has been restored.",
-        });
-      },
-      // Offline handler
-      () => {
-        toast({
-          title: "You're offline",
-          description: "Some features may be limited until your connection is restored.",
-          variant: "destructive",
-        });
-      }
-    );
-  }, [toast]);
-  
-  return null;
-}
+// Public pages
+import HomePage from '@/pages/HomePage';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
+import NotFoundPage from '@/pages/NotFoundPage';
 
-// Error Boundary for uncaught error logging
-class ErrorLogger extends React.Component<{ children: React.ReactNode }> {
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    errorMonitoring.captureError(error, info.componentStack, 'ui');
-  }
-  
-  render() {
-    return this.props.children;
-  }
-}
+// Protected route component
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 function App() {
-  const routing = useRoutes(routes);
-  const { theme } = useTheme();
-  const { user } = useAuth();
-  
-  // Set data theme for dark mode
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Effect to handle authentication redirects
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.setAttribute('data-theme', theme);
-    
-    // Additional accessibility attributes
-    root.setAttribute('lang', 'en');
-  }, [theme]);
-  
+    if (!isLoading) {
+      // Redirect authenticated users away from auth pages
+      if (isAuthenticated && 
+          (location.pathname === '/login' || 
+           location.pathname === '/signup' || 
+           location.pathname === '/auth/login' || 
+           location.pathname === '/auth/signup')) {
+        navigate('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
+
   return (
-    <ErrorLogger>
-      <Helmet>
-        <meta name="theme-color" content={theme === 'dark' ? '#1a1b1e' : '#ffffff'} />
-        <meta name="color-scheme" content={theme} />
-      </Helmet>
-      
+    <>
       <SkipToContent />
+      <KeyboardShortcutsModal />
       
-      {/* Inject screen-reader only description of the current state */}
-      <div className="sr-only" aria-live="polite">
-        {user ? `You are logged in as ${user.email}` : 'You are not logged in'}
-        {navigator.onLine ? '' : ' You are currently offline.'}
-      </div>
-      
-      {/* Router outlet */}
-      <main id="content" tabIndex={-1}>
-        {routing}
-      </main>
-      
-      {/* Helper components */}
-      <KeyboardNavigationHandler />
-      <ScrollToTop />
-      <PageViewLogger />
-      <NetworkStatusHandler />
-      
-      <Toaster />
-    </ErrorLogger>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="contact" element={<ContactPage />} />
+        </Route>
+        
+        {/* Authentication routes */}
+        <Route path="/auth" element={<AuthLayout requireAuth={false} />}>
+          <Route path="login" element={<LoginPage />} />
+          <Route path="signup" element={<RegisterPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
+        </Route>
+        
+        {/* Legacy auth routes - redirect to new paths */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
+        {/* Protected routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<DashboardPage />} />
+        </Route>
+        
+        {/* Profile & Settings */}
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<UserProfilePage />} />
+        </Route>
+        
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<UserPreferencesPage />} />
+        </Route>
+        
+        {/* Subscription */}
+        <Route path="/subscription" element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<SubscriptionPlansPage />} />
+          <Route path="plans" element={<SubscriptionPlansPage />} />
+        </Route>
+        
+        {/* Premium content (requires subscription) */}
+        <Route path="/premium" element={
+          <ProtectedRoute requirePremium={true}>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          {/* Premium routes would go here */}
+        </Route>
+        
+        {/* Admin routes */}
+        <Route path="/admin" element={
+          <ProtectedRoute requireAdmin={true}>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          {/* Admin routes would go here */}
+        </Route>
+        
+        {/* 404 - Not Found */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
   );
 }
 

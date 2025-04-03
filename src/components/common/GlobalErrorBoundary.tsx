@@ -1,230 +1,166 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import React, { ErrorInfo, Component } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { errorMonitoring } from '@/utils/errorMonitoring';
-import { useSystemLog } from '@/hooks/use-system-log';
-import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import { supabase } from '@/lib/supabase-client';
 
 interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  resetOnPropsChange?: boolean;
+  children: React.ReactNode;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
-  isOffline: boolean;
+  errorId: string | null;
 }
 
-class GlobalErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
       error: null,
       errorInfo: null,
-      isOffline: false
+      errorId: null
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Update state so the next render shows the fallback UI
+    return {
+      hasError: true,
+      error: error,
+      errorInfo: null,
+      errorId: null
+    };
   }
-
-  componentDidMount(): void {
-    window.addEventListener('online', this.handleNetworkChange);
-    window.addEventListener('offline', this.handleNetworkChange);
-  }
-
-  componentWillUnmount(): void {
-    window.removeEventListener('online', this.handleNetworkChange);
-    window.removeEventListener('offline', this.handleNetworkChange);
-  }
-
-  handleNetworkChange = (): void => {
-    this.setState({ isOffline: !navigator.onLine });
-    if (navigator.onLine && this.state.hasError) {
-      // Attempt to recover if we're back online
-      this.resetErrorBoundary();
-    }
-  };
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({ errorInfo });
+    // Log the error to an error reporting service
+    this.logError(error, errorInfo);
     
-    // Call the optional onError callback
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
-    
-    // Log the error to our monitoring service
-    errorMonitoring.captureError(
-      error, 
-      errorInfo.componentStack,
-      'ui',
-      {
-        componentStack: errorInfo.componentStack,
-        offline: !navigator.onLine,
-        url: window.location.href
-      }
-    );
-
-    console.error('Error caught by GlobalErrorBoundary:', error, errorInfo);
-  }
-
-  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
-    // Reset the error state if props have changed and resetOnPropsChange is true
-    if (
-      this.state.hasError && 
-      this.props.resetOnPropsChange && 
-      prevProps !== this.props
-    ) {
-      this.resetErrorBoundary();
-    }
-  }
-
-  resetErrorBoundary = (): void => {
+    // Update state with error info
     this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
+      errorInfo: errorInfo
     });
-  };
+  }
 
-  renderDefaultFallback(): ReactNode {
-    const { error, errorInfo, isOffline } = this.state;
-    
-    if (isOffline) {
+  async logError(error: Error, errorInfo: ErrorInfo): Promise<void> {
+    try {
+      // Generate unique error ID
+      const errorId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      
+      // Get user info if available
+      let userId = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        userId = data?.session?.user?.id;
+      } catch (e) {
+        // Ignore auth errors
+      }
+      
+      // Log error to Supabase
+      const { data, error: logError } = await supabase
+        .from('security_audit_log')
+        .insert([
+          {
+            event_type: 'error',
+            user_id: userId,
+            event_details: {
+              error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              },
+              componentStack: errorInfo.componentStack,
+              url: window.location.href,
+              userAgent: navigator.userAgent,
+            },
+          },
+        ])
+        .select();
+      
+      if (logError) {
+        console.error('Failed to log error:', logError);
+      } else if (data && data[0]) {
+        this.setState({ errorId: data[0].id });
+      }
+      
+      // Also log to console for debugging
+      console.error('Error caught by boundary:', error);
+      console.error('Component stack:', errorInfo.componentStack);
+    } catch (e) {
+      console.error('Error in error logging:', e);
+    }
+  }
+
+  handleRefresh = (): void => {
+    window.location.reload();
+  }
+
+  handleHome = (): void => {
+    window.location.href = '/';
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const { error, errorId } = this.state;
+      
       return (
-        <Card className="w-full max-w-md mx-auto my-8 shadow-lg">
-          <CardHeader className="bg-amber-500/10">
-            <CardTitle className="flex items-center gap-2 text-amber-500">
-              <AlertCircle className="h-5 w-5" />
-              You appear to be offline
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <Alert variant="warning" className="mb-4">
-              <AlertTitle>Network Connectivity Issue</AlertTitle>
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+          <div className="w-full max-w-md space-y-6">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-destructive mb-2">Oops!</h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
+                Something went wrong
+              </p>
+            </div>
+            
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{error?.name || 'Error'}</AlertTitle>
               <AlertDescription>
-                Please check your internet connection and try again.
-                We'll automatically attempt to reconnect when you're back online.
+                {error?.message || 'An unexpected error occurred'}
               </AlertDescription>
             </Alert>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button onClick={this.resetErrorBoundary} className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Retry Connection
-            </Button>
-          </CardFooter>
-        </Card>
+            
+            {errorId && (
+              <div className="text-center mb-6">
+                <p className="text-sm text-muted-foreground">
+                  Error ID: <code className="font-mono">{errorId}</code>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Please quote this ID if you contact support
+                </p>
+              </div>
+            )}
+            
+            <div className="flex flex-col space-y-3">
+              <Button onClick={this.handleRefresh} className="w-full">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Page
+              </Button>
+              
+              <Button onClick={this.handleHome} variant="outline" className="w-full">
+                <Home className="mr-2 h-4 w-4" />
+                Return to Home
+              </Button>
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground mt-6">
+              <p>
+                If this problem persists, please contact customer support.
+              </p>
+            </div>
+          </div>
+        </div>
       );
     }
-    
-    return (
-      <Card className="w-full max-w-md mx-auto my-8 shadow-lg animate-fade-in">
-        <CardHeader className="bg-destructive/10">
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            Something went wrong
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>{error?.name || 'Error'}</AlertTitle>
-            <AlertDescription>
-              {error?.message || 'An unexpected error occurred'}
-            </AlertDescription>
-          </Alert>
-          
-          {process.env.NODE_ENV === 'development' && errorInfo && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Component Stack</h4>
-              <pre className="text-xs bg-muted p-4 rounded overflow-auto max-h-48">
-                {errorInfo.componentStack}
-              </pre>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline"
-            onClick={() => window.location.href = '/'}
-            className="flex items-center gap-2"
-          >
-            <Home className="h-4 w-4" />
-            Go Home
-          </Button>
-          <Button 
-            onClick={this.resetErrorBoundary}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Try Again
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
 
-  render(): ReactNode {
-    const { hasError } = this.state;
-    const { children, fallback } = this.props;
-    
-    if (hasError) {
-      return fallback || this.renderDefaultFallback();
-    }
-    
-    return children;
+    return this.props.children;
   }
 }
-
-// Create a wrapper component to use hooks
-export const GlobalErrorBoundary = ({ 
-  children,
-  fallback,
-  onError,
-  resetOnPropsChange = false
-}: ErrorBoundaryProps) => {
-  const { logError } = useSystemLog();
-  const { toast } = useToast();
-
-  const handleError = (error: Error, errorInfo: ErrorInfo) => {
-    // Log to system logs
-    logError(error, 'GlobalErrorBoundary', {
-      componentStack: errorInfo.componentStack,
-      url: window.location.href
-    });
-    
-    // Show toast notification for non-critical errors
-    toast({
-      title: "Oops! Something went wrong",
-      description: "We've encountered an error and have logged the issue. Please try again.",
-      variant: "destructive",
-    });
-    
-    // Pass to custom error handler if provided
-    if (onError) {
-      onError(error, errorInfo);
-    }
-  };
-
-  return (
-    <GlobalErrorBoundaryClass
-      fallback={fallback}
-      onError={handleError}
-      resetOnPropsChange={resetOnPropsChange}
-    >
-      {children}
-    </GlobalErrorBoundaryClass>
-  );
-};
 
 export default GlobalErrorBoundary;
