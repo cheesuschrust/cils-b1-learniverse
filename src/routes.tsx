@@ -1,72 +1,49 @@
 
 import React from 'react';
-import Index from './pages/Index';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Writing from './pages/Writing';
-import Speaking from './pages/Speaking';
-import Listening from './pages/Listening';
-import Reading from './pages/Reading';
-import Flashcards from './pages/Flashcards';
-import MultipleChoice from './pages/MultipleChoice';
+import { RouteObject } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import AdminLayout from './layouts/AdminLayout';
+import Index from './pages/index';
+import Dashboard from './pages/dashboard';
+import ProgressPage from './pages/progress';
 import NotFound from './pages/NotFound';
-import ItalianCitizenshipTest from './pages/ItalianCitizenshipTest';
-import DailyQuestion from './pages/DailyQuestion';
-import Progress from './pages/Progress';
 
-const routes = [
+// Auth pages
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
+
+// Admin pages
+import AdminDashboard from './pages/admin/Dashboard';
+import ManageUsers from './pages/admin/ManageUsers';
+import ContentManager from './pages/admin/ContentManager';
+import InstitutionalLicensingManager from './components/admin/InstitutionalLicensingManager';
+
+const routes: RouteObject[] = [
   {
     path: '/',
-    element: <Home />
+    element: <MainLayout />,
+    children: [
+      { index: true, element: <Index /> },
+      { path: 'dashboard', element: <Dashboard /> },
+      { path: 'progress', element: <ProgressPage /> },
+      { path: 'login', element: <Login /> },
+      { path: 'signup', element: <Signup /> },
+      { path: 'forgot-password', element: <ForgotPassword /> },
+      { path: '*', element: <NotFound /> },
+    ],
   },
   {
-    path: '/index',
-    element: <Index />
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: 'dashboard', element: <AdminDashboard /> },
+      { path: 'users', element: <ManageUsers /> },
+      { path: 'content', element: <ContentManager /> },
+      { path: 'licensing', element: <InstitutionalLicensingManager /> },
+    ],
   },
-  {
-    path: '/dashboard',
-    element: <Dashboard />
-  },
-  {
-    path: '/writing',
-    element: <Writing />
-  },
-  {
-    path: '/speaking',
-    element: <Speaking />
-  },
-  {
-    path: '/listening',
-    element: <Listening />
-  },
-  {
-    path: '/reading',
-    element: <Reading />
-  },
-  {
-    path: '/flashcards',
-    element: <Flashcards />
-  },
-  {
-    path: '/multiple-choice',
-    element: <MultipleChoice />
-  },
-  {
-    path: '/citizenship',
-    element: <ItalianCitizenshipTest />
-  },
-  {
-    path: '/daily-question',
-    element: <DailyQuestion />
-  },
-  {
-    path: '/progress',
-    element: <Progress />
-  },
-  {
-    path: '*',
-    element: <NotFound />
-  }
 ];
 
 export default routes;

@@ -1,470 +1,335 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Achievement, GamificationState, LevelInfo, RewardItem, Challenge } from '@/types/gamification';
-import { useAuth } from './AuthContext';
+import { GamificationState, Achievement, LevelInfo, Challenge } from '@/types/gamification';
+import { useToast } from '@/hooks/use-toast';
 
-// Level thresholds
-const LEVEL_THRESHOLDS: LevelInfo[] = [
+interface GamificationContextType {
+  gamification: GamificationState;
+  achievements: Achievement[];
+  challenges: Challenge[];
+  isLoading: boolean;
+  addXP: (amount: number) => void;
+  completeAchievement: (id: string) => void;
+  incrementDailyStreak: () => void;
+  resetDailyXP: () => void;
+  updateProgress: (activityType: string, value: number) => void;
+  calculateLevel: (xp: number) => { level: number; progress: number; levelXP: number; nextLevelXP: number };
+}
+
+// Mock levels data
+const levels: LevelInfo[] = [
   { level: 1, minXP: 0, maxXP: 100 },
   { level: 2, minXP: 100, maxXP: 300 },
   { level: 3, minXP: 300, maxXP: 600 },
   { level: 4, minXP: 600, maxXP: 1000 },
-  { level: 5, minXP: 1000, maxXP: 1500 },
-  { level: 6, minXP: 1500, maxXP: 2100 },
-  { level: 7, minXP: 2100, maxXP: 2800 },
-  { level: 8, minXP: 2800, maxXP: 3600 },
-  { level: 9, minXP: 3600, maxXP: 4500 },
-  { level: 10, minXP: 4500, maxXP: 5500 },
-  // Add more levels as needed
+  { level: 5, minXP: 1000, maxXP: 2000 },
+  { level: 6, minXP: 2000, maxXP: 3500 },
+  { level: 7, minXP: 3500, maxXP: 5000 },
+  { level: 8, minXP: 5000, maxXP: 7500 },
+  { level: 9, minXP: 7500, maxXP: 10000 },
+  { level: 10, minXP: 10000, maxXP: 15000 },
 ];
 
-// Create a set of sample achievements
-const SAMPLE_ACHIEVEMENTS: Achievement[] = [
+// Mock achievements data
+const mockAchievements: Achievement[] = [
   {
-    id: "first-lesson",
-    title: "First Step",
-    description: "Complete your first lesson",
-    category: "learning",
-    points: 50,
-    createdAt: new Date(),
-    progress: 0,
-    threshold: 1
-  },
-  {
-    id: "streak-7",
-    title: "Weekly Warrior",
-    description: "Maintain a 7-day streak",
-    category: "streak",
+    id: 'achievement1',
+    title: 'First Steps',
+    description: 'Complete your first lesson',
+    category: 'learning',
     points: 100,
-    createdAt: new Date(),
-    progress: 0,
-    threshold: 7
+    icon: 'trophy',
+    createdAt: new Date('2024-01-01'),
+    unlockedAt: new Date('2024-01-02'),
   },
   {
-    id: "quiz-master",
-    title: "Quiz Master",
-    description: "Score 100% on 5 quizzes",
-    category: "mastery",
+    id: 'achievement2',
+    title: '7 Day Streak',
+    description: 'Study for 7 consecutive days',
+    category: 'streak',
     points: 150,
-    createdAt: new Date(),
-    progress: 0,
-    threshold: 5
+    icon: 'flame',
+    createdAt: new Date('2024-01-01'),
+    unlockedAt: null,
+    progress: 5,
+    threshold: 7,
   },
   {
-    id: "vocabulary-builder",
-    title: "Vocabulary Builder",
-    description: "Learn 100 new Italian words",
-    category: "learning",
+    id: 'achievement3',
+    title: 'Grammar Expert',
+    description: 'Score 100% on three grammar quizzes',
+    category: 'mastery',
     points: 200,
-    createdAt: new Date(),
-    progress: 0,
-    threshold: 100
+    icon: 'star',
+    createdAt: new Date('2024-01-01'),
+    unlockedAt: null,
+    progress: 1,
+    threshold: 3,
   },
   {
-    id: "streak-30",
-    title: "Monthly Maestro",
-    description: "Maintain a 30-day streak",
-    category: "streak",
-    points: 300,
-    createdAt: new Date(),
-    progress: 0,
-    threshold: 30
-  }
+    id: 'achievement4',
+    title: 'Vocabulary Builder',
+    description: 'Learn 100 new words',
+    category: 'learning',
+    points: 250,
+    icon: 'book',
+    createdAt: new Date('2024-01-01'),
+    unlockedAt: null,
+    progress: 65,
+    threshold: 100,
+  },
 ];
 
-interface GamificationContextType {
-  state: GamificationState;
-  addXP: (amount: number, reason?: string) => void;
-  updateStreak: (completed: boolean) => void;
-  getCurrentLevel: () => LevelInfo;
-  getNextLevel: () => LevelInfo | null;
-  checkAchievements: () => void;
-  updateAchievementProgress: (achievementId: string, progress: number) => void;
-  unlockAchievement: (achievementId: string) => Achievement | null;
-  getUnlockedRewards: () => RewardItem[];
-  getChallenges: () => Challenge[];
-  getActiveChallenge: () => Challenge | null;
-  completeChallenge: (challengeId: string) => void;
-  resetDailyProgress: () => void;
-  showAchievementUnlock: (achievement: Achievement) => void;
-  showLevelUp: (oldLevel: number, newLevel: number) => void;
-  currentStreak: number;
-  lastActivity: Date | null;
-}
+// Mock initial state
+const initialState: GamificationState = {
+  xp: 1250,
+  level: 5,
+  levelProgress: 25,
+  achievements: [],
+  unlockedAchievements: [],
+  currentStreak: 7,
+  longestStreak: 12,
+  lastActivity: new Date(),
+  dailyGoalCompleted: true,
+  dailyXP: 150,
+  weeklyXP: 750,
+  totalXP: 1250
+};
 
-const GamificationContext = createContext<GamificationContextType>({
-  state: {
-    xp: 0,
-    level: 1,
-    levelProgress: 0,
-    achievements: [],
-    unlockedAchievements: [],
-    currentStreak: 0,
-    longestStreak: 0,
-    lastActivity: null,
-    dailyGoalCompleted: false,
-    dailyXP: 0,
-    weeklyXP: 0,
-    totalXP: 0
-  },
-  addXP: () => {},
-  updateStreak: () => {},
-  getCurrentLevel: () => LEVEL_THRESHOLDS[0],
-  getNextLevel: () => null,
-  checkAchievements: () => {},
-  updateAchievementProgress: () => {},
-  unlockAchievement: () => null,
-  getUnlockedRewards: () => [],
-  getChallenges: () => [],
-  getActiveChallenge: () => null,
-  completeChallenge: () => {},
-  resetDailyProgress: () => {},
-  showAchievementUnlock: () => {},
-  showLevelUp: () => {},
-  currentStreak: 0,
-  lastActivity: null
-});
+const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
 export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [state, setState] = useState<GamificationState>({
-    xp: 0,
-    level: 1,
-    levelProgress: 0,
-    achievements: [...SAMPLE_ACHIEVEMENTS],
-    unlockedAchievements: [],
-    currentStreak: 0,
-    longestStreak: 0,
-    lastActivity: null,
-    dailyGoalCompleted: false,
-    dailyXP: 0,
-    weeklyXP: 0,
-    totalXP: 0
-  });
-
-  // Load gamification state from localStorage or API
+  const [gamification, setGamification] = useState<GamificationState>(initialState);
+  const [achievements, setAchievements] = useState<Achievement[]>(mockAchievements);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  
+  // Initialize gamification state
   useEffect(() => {
-    if (user) {
-      const loadGamificationState = async () => {
-        try {
-          // In a real implementation, fetch from an API
-          const savedState = localStorage.getItem(`gamification_${user.id}`);
-          
-          if (savedState) {
-            const parsed = JSON.parse(savedState);
-            
-            // Convert string dates back to Date objects
-            if (parsed.lastActivity) {
-              parsed.lastActivity = new Date(parsed.lastActivity);
-            }
-            
-            if (parsed.achievements) {
-              parsed.achievements = parsed.achievements.map((achievement: any) => ({
-                ...achievement,
-                createdAt: new Date(achievement.createdAt),
-                unlockedAt: achievement.unlockedAt ? new Date(achievement.unlockedAt) : null
-              }));
-            }
-            
-            if (parsed.unlockedAchievements) {
-              parsed.unlockedAchievements = parsed.unlockedAchievements.map((achievement: any) => ({
-                ...achievement,
-                createdAt: new Date(achievement.createdAt),
-                unlockedAt: achievement.unlockedAt ? new Date(achievement.unlockedAt) : null
-              }));
-            }
-            
-            setState(parsed);
-          } else {
-            // Initialize with sample achievements
-            setState(prevState => ({
-              ...prevState,
-              achievements: [...SAMPLE_ACHIEVEMENTS]
-            }));
-          }
-        } catch (error) {
-          console.error('Error loading gamification state:', error);
-        }
-      };
-      
-      loadGamificationState();
-    }
-  }, [user]);
-
-  // Save state to localStorage when it changes
-  useEffect(() => {
-    if (user && state.xp > 0) {
-      localStorage.setItem(`gamification_${user.id}`, JSON.stringify(state));
-    }
-  }, [state, user]);
-
-  // Check if the streak needs to be reset
-  useEffect(() => {
-    if (state.lastActivity) {
-      const now = new Date();
-      const lastActivity = new Date(state.lastActivity);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      // Reset streak if last activity was more than 2 days ago
-      if (lastActivity < yesterday && lastActivity.getDate() !== yesterday.getDate()) {
-        setState(prevState => ({
-          ...prevState,
-          currentStreak: 0,
-          dailyGoalCompleted: false
-        }));
-      } else if (now.getDate() !== lastActivity.getDate()) {
-        // Reset daily goal if it's a new day
-        setState(prevState => ({
-          ...prevState,
-          dailyGoalCompleted: false,
-          dailyXP: 0
-        }));
+    // Simulate fetching data from an API
+    setTimeout(() => {
+      setGamification(initialState);
+      setAchievements(mockAchievements);
+      setIsLoading(false);
+    }, 1000);
+    
+    // Check for streak reset
+    checkAndResetStreak();
+  }, []);
+  
+  // Calculate level based on XP
+  const calculateLevel = (xp: number) => {
+    let level = 0;
+    let progress = 0;
+    let levelXP = 0;
+    let nextLevelXP = 0;
+    
+    for (let i = 0; i < levels.length; i++) {
+      if (xp >= levels[i].minXP && xp < levels[i].maxXP) {
+        level = levels[i].level;
+        levelXP = levels[i].minXP;
+        nextLevelXP = levels[i].maxXP;
+        progress = ((xp - levelXP) / (nextLevelXP - levelXP)) * 100;
+        break;
       }
     }
-  }, [state.lastActivity]);
-
-  // Get the current level based on XP
-  const getCurrentLevel = (): LevelInfo => {
-    const level = LEVEL_THRESHOLDS.find(
-      (lvl, index) => 
-        state.xp >= lvl.minXP && 
-        (index === LEVEL_THRESHOLDS.length - 1 || state.xp < LEVEL_THRESHOLDS[index + 1].minXP)
-    );
     
-    return level || LEVEL_THRESHOLDS[0];
-  };
-
-  // Get the next level
-  const getNextLevel = (): LevelInfo | null => {
-    const currentLevelIndex = LEVEL_THRESHOLDS.findIndex(lvl => 
-      state.xp >= lvl.minXP && state.xp < lvl.maxXP
-    );
-    
-    if (currentLevelIndex < LEVEL_THRESHOLDS.length - 1) {
-      return LEVEL_THRESHOLDS[currentLevelIndex + 1];
+    // If XP is beyond the highest defined level
+    if (level === 0 && xp >= levels[levels.length - 1].maxXP) {
+      const lastLevel = levels[levels.length - 1];
+      level = lastLevel.level + 1;
+      levelXP = lastLevel.maxXP;
+      nextLevelXP = levelXP * 1.5; // Estimate for the next level
+      progress = 0;
     }
     
-    return null;
+    return { level, progress, levelXP, nextLevelXP };
   };
-
-  // Add XP and check for level up
-  const addXP = (amount: number, reason?: string) => {
-    if (amount <= 0) return;
+  
+  // Add XP to the user
+  const addXP = (amount: number) => {
+    const newXP = gamification.xp + amount;
+    const { level, progress } = calculateLevel(newXP);
+    const wasLevelUp = level > gamification.level;
     
-    const currentLevel = getCurrentLevel();
-    const newXP = state.xp + amount;
-    const newLevel = LEVEL_THRESHOLDS.find(
-      (lvl, index) => 
-        newXP >= lvl.minXP && 
-        (index === LEVEL_THRESHOLDS.length - 1 || newXP < LEVEL_THRESHOLDS[index + 1].minXP)
-    );
+    setGamification(prev => ({
+      ...prev,
+      xp: newXP,
+      level,
+      levelProgress: progress,
+      dailyXP: prev.dailyXP + amount,
+      weeklyXP: prev.weeklyXP + amount,
+      totalXP: prev.totalXP + amount
+    }));
     
-    if (newLevel && newLevel.level > currentLevel.level) {
-      // Level up occurred!
-      showLevelUp(currentLevel.level, newLevel.level);
+    if (wasLevelUp) {
+      toast({
+        title: "Level Up!",
+        description: `Congratulations! You've reached level ${level}.`,
+        variant: "success",
+      });
     }
     
-    setState(prevState => {
-      const updatedDailyXP = prevState.dailyXP + amount;
-      const updatedWeeklyXP = prevState.weeklyXP + amount;
-      const now = new Date();
-      
-      return {
-        ...prevState,
-        xp: newXP,
-        level: newLevel ? newLevel.level : prevState.level,
-        levelProgress: newLevel 
-          ? Math.round(((newXP - newLevel.minXP) / (newLevel.maxXP - newLevel.minXP)) * 100)
-          : prevState.levelProgress,
-        lastActivity: now,
-        dailyXP: updatedDailyXP,
-        weeklyXP: updatedWeeklyXP,
-        totalXP: prevState.totalXP + amount
-      };
-    });
-    
-    // Check if any achievements should be unlocked
-    checkAchievements();
+    // Check for XP-related achievements
+    checkForAchievements();
   };
-
-  // Update streak when user completes daily goal
-  const updateStreak = (completed: boolean) => {
-    if (!completed) return;
+  
+  // Complete an achievement
+  const completeAchievement = (id: string) => {
+    const achievement = achievements.find(a => a.id === id);
     
-    setState(prevState => {
-      const now = new Date();
-      const lastActivity = prevState.lastActivity ? new Date(prevState.lastActivity) : null;
-      let newStreak = prevState.currentStreak;
+    if (achievement && !achievement.unlockedAt) {
+      // Update the achievement
+      const updatedAchievements = achievements.map(a => 
+        a.id === id ? { ...a, unlockedAt: new Date() } : a
+      );
       
-      // If it's the first activity or a new day
-      if (!lastActivity || (lastActivity && now.getDate() !== lastActivity.getDate())) {
-        newStreak += 1;
-        
-        // Check for streak milestone achievements
-        if (newStreak === 7 || newStreak === 30 || newStreak === 100 || newStreak === 365) {
-          // Show streak notification
-          // This would be handled by a notification system
-        }
-      }
+      setAchievements(updatedAchievements);
+      
+      // Add XP reward
+      addXP(achievement.points);
+      
+      // Update gamification state
+      setGamification(prev => ({
+        ...prev,
+        unlockedAchievements: [...prev.unlockedAchievements, achievement]
+      }));
+      
+      toast({
+        title: "Achievement Unlocked!",
+        description: `${achievement.title}: ${achievement.description}`,
+        variant: "success",
+      });
+    }
+  };
+  
+  // Increment daily streak
+  const incrementDailyStreak = () => {
+    setGamification(prev => {
+      const newStreak = prev.currentStreak + 1;
+      const newLongestStreak = Math.max(newStreak, prev.longestStreak);
       
       return {
-        ...prevState,
+        ...prev,
         currentStreak: newStreak,
-        longestStreak: Math.max(prevState.longestStreak, newStreak),
-        lastActivity: now,
+        longestStreak: newLongestStreak,
+        lastActivity: new Date(),
         dailyGoalCompleted: true
       };
     });
-  };
-
-  // Check all achievements to see if any should be unlocked
-  const checkAchievements = () => {
-    const achievementsToCheck = state.achievements.filter(
-      achievement => !state.unlockedAchievements.some(unlocked => unlocked.id === achievement.id)
-    );
     
-    achievementsToCheck.forEach(achievement => {
-      switch (achievement.id) {
-        case 'streak-7':
-          if (state.currentStreak >= 7) {
-            unlockAchievement(achievement.id);
+    // Check for streak-related achievements
+    checkStreakAchievements();
+  };
+  
+  // Reset daily XP
+  const resetDailyXP = () => {
+    setGamification(prev => ({
+      ...prev,
+      dailyXP: 0,
+      dailyGoalCompleted: false
+    }));
+  };
+  
+  // Check for streak reset
+  const checkAndResetStreak = () => {
+    const lastActivity = new Date(gamification.lastActivity);
+    const now = new Date();
+    
+    // Reset streak if more than 48 hours have passed since the last activity
+    if ((now.getTime() - lastActivity.getTime()) > (48 * 60 * 60 * 1000)) {
+      setGamification(prev => ({
+        ...prev,
+        currentStreak: 0,
+        dailyGoalCompleted: false
+      }));
+      
+      toast({
+        title: "Streak Reset",
+        description: "Your streak has been reset. Complete an activity today to start a new streak!",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Update progress for specific activities
+  const updateProgress = (activityType: string, value: number) => {
+    // Update achievements related to this activity
+    const updatedAchievements = achievements.map(achievement => {
+      if (!achievement.unlockedAt && achievement.threshold && achievement.progress !== undefined) {
+        if (activityType === 'vocabulary' && achievement.id === 'achievement4') {
+          const newProgress = achievement.progress + value;
+          
+          if (newProgress >= achievement.threshold) {
+            // Achievement completed
+            completeAchievement(achievement.id);
+            return { ...achievement, progress: achievement.threshold, unlockedAt: new Date() };
           }
-          break;
-        case 'streak-30':
-          if (state.currentStreak >= 30) {
-            unlockAchievement(achievement.id);
+          
+          return { ...achievement, progress: newProgress };
+        }
+        
+        if (activityType === 'grammar' && achievement.id === 'achievement3') {
+          const newProgress = achievement.progress + value;
+          
+          if (newProgress >= achievement.threshold) {
+            // Achievement completed
+            completeAchievement(achievement.id);
+            return { ...achievement, progress: achievement.threshold, unlockedAt: new Date() };
           }
-          break;
-        // Add other achievement checks based on their IDs
-        default:
-          break;
+          
+          return { ...achievement, progress: newProgress };
+        }
+      }
+      return achievement;
+    });
+    
+    setAchievements(updatedAchievements);
+  };
+  
+  // Check for achievements that might have been completed
+  const checkForAchievements = () => {
+    // Check XP-based achievements, etc.
+  };
+  
+  // Check streak-related achievements
+  const checkStreakAchievements = () => {
+    const streak = gamification.currentStreak + 1;
+    
+    achievements.forEach(achievement => {
+      if (achievement.category === 'streak' && !achievement.unlockedAt) {
+        if (achievement.id === 'achievement2' && streak >= 7) {
+          completeAchievement(achievement.id);
+        }
       }
     });
   };
-
-  // Update progress on a specific achievement
-  const updateAchievementProgress = (achievementId: string, progress: number) => {
-    setState(prevState => {
-      const updatedAchievements = prevState.achievements.map(achievement => {
-        if (achievement.id === achievementId) {
-          const updatedProgress = Math.min(progress, achievement.threshold || 100);
-          
-          // Check if achievement should be unlocked
-          if (updatedProgress >= (achievement.threshold || 100)) {
-            unlockAchievement(achievementId);
-          }
-          
-          return {
-            ...achievement,
-            progress: updatedProgress
-          };
-        }
-        return achievement;
-      });
-      
-      return {
-        ...prevState,
-        achievements: updatedAchievements
-      };
-    });
-  };
-
-  // Unlock an achievement by ID
-  const unlockAchievement = (achievementId: string): Achievement | null => {
-    const achievement = state.achievements.find(a => a.id === achievementId);
-    
-    if (!achievement) return null;
-    
-    // Check if already unlocked
-    if (state.unlockedAchievements.some(a => a.id === achievementId)) {
-      return null;
-    }
-    
-    const unlockedAchievement = {
-      ...achievement,
-      unlockedAt: new Date()
-    };
-    
-    setState(prevState => ({
-      ...prevState,
-      unlockedAchievements: [...prevState.unlockedAchievements, unlockedAchievement],
-      xp: prevState.xp + achievement.points
-    }));
-    
-    // Show achievement unlock notification
-    showAchievementUnlock(unlockedAchievement);
-    
-    return unlockedAchievement;
-  };
-
-  // Get all unlocked rewards
-  const getUnlockedRewards = (): RewardItem[] => {
-    // In a real app, this would return actual reward items
-    return [];
-  };
-
-  // Get all challenges
-  const getChallenges = (): Challenge[] => {
-    // In a real app, this would return actual challenges
-    return [];
-  };
-
-  // Get the active challenge
-  const getActiveChallenge = (): Challenge | null => {
-    // In a real app, this would return the currently active challenge
-    return null;
-  };
-
-  // Complete a challenge
-  const completeChallenge = (challengeId: string) => {
-    // In a real app, this would mark a challenge as completed
-  };
-
-  // Reset daily progress (called at midnight)
-  const resetDailyProgress = () => {
-    setState(prevState => ({
-      ...prevState,
-      dailyGoalCompleted: false,
-      dailyXP: 0
-    }));
-  };
-
-  // Show achievement unlock notification
-  const showAchievementUnlock = (achievement: Achievement) => {
-    // In a real implementation, this would trigger a notification
-    console.log(`Achievement unlocked: ${achievement.title}`);
-  };
-
-  // Show level up notification
-  const showLevelUp = (oldLevel: number, newLevel: number) => {
-    // In a real implementation, this would trigger a notification
-    console.log(`Level up: ${oldLevel} → ${newLevel}`);
-  };
-
+  
   return (
     <GamificationContext.Provider value={{
-      state,
+      gamification,
+      achievements,
+      challenges,
+      isLoading,
       addXP,
-      updateStreak,
-      getCurrentLevel,
-      getNextLevel,
-      checkAchievements,
-      updateAchievementProgress,
-      unlockAchievement,
-      getUnlockedRewards,
-      getChallenges,
-      getActiveChallenge,
-      completeChallenge,
-      resetDailyProgress,
-      showAchievementUnlock,
-      showLevelUp,
-      currentStreak: state.currentStreak,
-      lastActivity: state.lastActivity
+      completeAchievement,
+      incrementDailyStreak,
+      resetDailyXP,
+      updateProgress,
+      calculateLevel
     }}>
       {children}
     </GamificationContext.Provider>
   );
 };
 
-export const useGamificationContext = () => useContext(GamificationContext);
+export const useGamification = () => {
+  const context = useContext(GamificationContext);
+  
+  if (context === undefined) {
+    throw new Error('useGamification must be used within a GamificationProvider');
+  }
+  
+  return context;
+};
