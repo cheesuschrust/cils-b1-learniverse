@@ -1,370 +1,611 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from './AuthContext';
-import * as supabaseClient from '@/lib/supabase-client';
-import { Flashcard, FlashcardSet } from '@/types/flashcard';
-import { normalizeFlashcard } from '@/types/flashcard';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase-client';
+import { useAuth } from './EnhancedAuthContext';
+import { calculateNextReview } from '@/utils/spacedRepetition';
+import { useToast } from '@/hooks/use-toast';
 
-interface FlashcardsContextType {
-  flashcards: Flashcard[];
-  flashcardSets: FlashcardSet[];
+interface FlashcardsContextValue {
+  flashcards: any[];
+  flashcardSets: any[];
+  publicFlashcardSets: any[];
   isLoading: boolean;
-  addFlashcard: (flashcard: Partial<Flashcard>) => Promise<Flashcard>;
-  updateFlashcard: (id: string, updates: Partial<Flashcard>) => Promise<Flashcard>;
-  deleteFlashcard: (id: string) => Promise<boolean>;
-  createFlashcardSet: (set: Partial<FlashcardSet>) => Promise<FlashcardSet>;
-  updateFlashcardSet: (id: string, updates: Partial<FlashcardSet>) => Promise<FlashcardSet>;
+  createFlashcardSet: (data: any) => Promise<any>;
+  updateFlashcardSet: (id: string, data: any) => Promise<any>;
   deleteFlashcardSet: (id: string) => Promise<boolean>;
-  getFlashcardsBySet: (setId: string) => Flashcard[];
-  addCardToSet: (setId: string, cardId: string) => Promise<boolean>;
-  removeCardFromSet: (setId: string, cardId: string) => Promise<boolean>;
-  markCardAsMastered: (cardId: string, mastered: boolean) => Promise<Flashcard>;
-  getPublicFlashcardSets: () => Promise<FlashcardSet[]>;
-  refreshFlashcards: () => Promise<void>;
+  getFlashcardSet: (id: string) => Promise<any>;
+  fetchFlashcards: () => Promise<any[]>;
+  fetchPublicSets: () => Promise<any[]>;
+  addCardToSet: (setId: string, cardData: any) => Promise<any>;
+  updateCard: (cardId: string, updates: any) => Promise<any>;
+  deleteCard: (cardId: string) => Promise<boolean>;
+  updateCardProgress: (cardId: string, correct: boolean, confidence: number) => Promise<any>;
+  exportFlashcards: () => Promise<any[]>;
+  importFlashcards: (data: any[]) => Promise<any>;
 }
 
-const FlashcardsContext = createContext<FlashcardsContextType | undefined>(undefined);
+const FlashcardsContext = createContext<FlashcardsContextValue | undefined>(undefined);
 
-export function FlashcardsProvider({ children }: { children: ReactNode }) {
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const { user } = useAuth();
+export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+  const [flashcards, setFlashcards] = useState<any[]>([]);
+  const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
+  const [publicFlashcardSets, setPublicFlashcardSets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const refreshFlashcards = async () => {
-    if (!user) {
+  // Load user's flashcards
+  const fetchFlashcards = useCallback(async () => {
+    if (!isAuthenticated) {
       setFlashcards([]);
-      setFlashcardSets([]);
-      setIsLoading(false);
-      return;
+      return [];
     }
-
-    setIsLoading(true);
+    
     try {
-      const [cardsData, setsData] = await Promise.all([
-        supabaseClient.fetchFlashcards(user.id),
-        supabaseClient.fetchFlashcardSets(user.id)
-      ]);
-
-      const normalizedCards = cardsData.map(card => normalizeFlashcard(card));
-      setFlashcards(normalizedCards);
-      setFlashcardSets(setsData.map(set => ({
-        ...set,
-        cards: [],
-        createdAt: new Date(set.created_at),
-        updatedAt: new Date(set.updated_at),
-      })));
-    } catch (error: any) {
-      console.error('Error loading flashcards:', error);
-      toast({
-        title: 'Error loading flashcards',
-        description: error.message,
-        variant: 'destructive',
+      setIsLoading(true);
+      
+      // Fetch user's flashcards
+      const { data, error } = await supabase
+        .from('flashcards')
+        .select('*, user_flashcard_progress(*)')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      
+      // Process cards for due dates
+      const processed = data.map(card => {
+        const progress = card.user_flashcard_progress?.[0];
+        const isDue = progress ? 
+          (new Date(progress.next_review) <= new Date()) : 
+          true;
+        
+        return {
+          ...card,
+          progress,
+          isDue
+        };
       });
+      
+      setFlashcards(processed);
+      return processed;
+    } catch (error) {
+      console.error('Error fetching flashcards:', error);
+      toast({
+        title: "Error Loading Flashcards",
+        description: "Failed to load your flashcards",
+        variant: "destructive"
+      });
+      return [];
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, user?.id, toast]);
 
-  useEffect(() => {
-    refreshFlashcards();
-  }, [user]);
-
-  const addFlashcard = async (flashcard: Partial<Flashcard>) => {
-    if (!user) throw new Error('You must be logged in to add flashcards');
-
-    const cardData = {
-      user_id: user.id,
-      front: flashcard.front || flashcard.italian || '',
-      back: flashcard.back || flashcard.english || '',
-      italian: flashcard.italian || flashcard.front || '',
-      english: flashcard.english || flashcard.back || '',
-      tags: flashcard.tags || [],
-      difficulty: flashcard.level || 1,
-      set_id: flashcard.setId,
-    };
-
-    try {
-      const newCard = await supabaseClient.createFlashcard(cardData);
-      const normalizedCard = normalizeFlashcard(newCard);
-      setFlashcards(prev => [...prev, normalizedCard]);
-      return normalizedCard;
-    } catch (error: any) {
-      console.error('Error adding flashcard:', error);
-      toast({
-        title: 'Error adding flashcard',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const updateFlashcard = async (id: string, updates: Partial<Flashcard>) => {
-    try {
-      const updatedCard = await supabaseClient.updateFlashcard(id, {
-        front: updates.front,
-        back: updates.back,
-        italian: updates.italian,
-        english: updates.english,
-        tags: updates.tags,
-        difficulty: updates.level,
-      });
-
-      const normalizedCard = normalizeFlashcard(updatedCard);
-      setFlashcards(prev => 
-        prev.map(card => card.id === id ? normalizedCard : card)
-      );
-      
-      return normalizedCard;
-    } catch (error: any) {
-      console.error('Error updating flashcard:', error);
-      toast({
-        title: 'Error updating flashcard',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const deleteFlashcard = async (id: string) => {
-    try {
-      await supabaseClient.deleteFlashcard(id);
-      setFlashcards(prev => prev.filter(card => card.id !== id));
-      return true;
-    } catch (error: any) {
-      console.error('Error deleting flashcard:', error);
-      toast({
-        title: 'Error deleting flashcard',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const createFlashcardSet = async (set: Partial<FlashcardSet>) => {
-    if (!user) throw new Error('You must be logged in to create flashcard sets');
-
-    const setData = {
-      name: set.name || 'New Set',
-      description: set.description || '',
-      is_public: set.isPublic || false,
-      is_favorite: set.isFavorite || false,
-      language: set.language || 'italian',
-      category: set.category,
-      tags: set.tags || [],
-      user_id: user.id,
-    };
-
-    try {
-      const newSet = await supabaseClient.createFlashcardSet(setData);
-      const formattedSet = {
-        ...newSet,
-        id: newSet.id,
-        cards: [],
-        createdAt: new Date(newSet.created_at),
-        updatedAt: new Date(newSet.updated_at),
-        isPublic: newSet.is_public,
-        isFavorite: newSet.is_favorite,
-      };
-
-      setFlashcardSets(prev => [...prev, formattedSet]);
-      return formattedSet;
-    } catch (error: any) {
-      console.error('Error creating flashcard set:', error);
-      toast({
-        title: 'Error creating flashcard set',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const updateFlashcardSet = async (id: string, updates: Partial<FlashcardSet>) => {
-    try {
-      const updatedSet = await supabaseClient.updateFlashcardSet(id, {
-        name: updates.name,
-        description: updates.description,
-        is_public: updates.isPublic,
-        is_favorite: updates.isFavorite,
-        language: updates.language,
-        category: updates.category,
-        tags: updates.tags,
-      });
-
-      const formattedSet = {
-        ...updatedSet,
-        id: updatedSet.id,
-        cards: flashcardSets.find(set => set.id === id)?.cards || [],
-        createdAt: new Date(updatedSet.created_at),
-        updatedAt: new Date(updatedSet.updated_at),
-        isPublic: updatedSet.is_public,
-        isFavorite: updatedSet.is_favorite,
-      };
-
-      setFlashcardSets(prev => 
-        prev.map(set => set.id === id ? formattedSet : set)
-      );
-      
-      return formattedSet;
-    } catch (error: any) {
-      console.error('Error updating flashcard set:', error);
-      toast({
-        title: 'Error updating flashcard set',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const deleteFlashcardSet = async (id: string) => {
-    try {
-      await supabaseClient.deleteFlashcardSet(id);
-      setFlashcardSets(prev => prev.filter(set => set.id !== id));
-      return true;
-    } catch (error: any) {
-      console.error('Error deleting flashcard set:', error);
-      toast({
-        title: 'Error deleting flashcard set',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const getFlashcardsBySet = (setId: string) => {
-    return flashcards.filter(card => card.setId === setId);
-  };
-
-  const addCardToSet = async (setId: string, cardId: string) => {
-    try {
-      await supabaseClient.updateFlashcard(cardId, { set_id: setId });
-      
-      // Update local state
-      setFlashcards(prev => prev.map(card => 
-        card.id === cardId ? { ...card, setId } : card
-      ));
-      
-      return true;
-    } catch (error: any) {
-      console.error('Error adding card to set:', error);
-      toast({
-        title: 'Error adding card to set',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const removeCardFromSet = async (setId: string, cardId: string) => {
-    try {
-      await supabaseClient.updateFlashcard(cardId, { set_id: null });
-      
-      // Update local state
-      setFlashcards(prev => prev.map(card => 
-        card.id === cardId ? { ...card, setId: undefined } : card
-      ));
-      
-      return true;
-    } catch (error: any) {
-      console.error('Error removing card from set:', error);
-      toast({
-        title: 'Error removing card from set',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const markCardAsMastered = async (cardId: string, mastered: boolean) => {
-    if (!user) throw new Error('You must be logged in to update flashcards');
-
-    try {
-      const updatedProgress = await supabaseClient.updateFlashcardProgress({
-        user_id: user.id,
-        flashcard_id: cardId,
-        status: mastered ? 'mastered' : 'learning',
-        last_review: new Date().toISOString(),
-      });
-      
-      const card = flashcards.find(c => c.id === cardId);
-      if (!card) throw new Error('Flashcard not found');
-      
-      const updatedCard = { ...card, mastered };
-      setFlashcards(prev => prev.map(c => c.id === cardId ? updatedCard : c));
-      
-      return updatedCard;
-    } catch (error: any) {
-      console.error('Error updating flashcard mastery status:', error);
-      toast({
-        title: 'Error updating flashcard',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const getPublicFlashcardSets = async () => {
-    try {
-      const publicSets = await supabaseClient.fetchPublicFlashcardSets();
-      return publicSets.map(set => ({
-        ...set,
-        cards: [],
-        createdAt: new Date(set.created_at),
-        updatedAt: new Date(set.updated_at),
-        isPublic: set.is_public,
-        isFavorite: set.is_favorite,
-      }));
-    } catch (error: any) {
-      console.error('Error fetching public flashcard sets:', error);
-      toast({
-        title: 'Error fetching public flashcard sets',
-        description: error.message,
-        variant: 'destructive',
-      });
+  // Load flashcard sets
+  const fetchFlashcardSets = useCallback(async () => {
+    if (!isAuthenticated) {
+      setFlashcardSets([]);
       return [];
     }
+    
+    try {
+      setIsLoading(true);
+      
+      // Fetch user's flashcard sets
+      const { data: sets, error } = await supabase
+        .from('flashcard_sets')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      
+      // For each set, fetch the cards
+      const setsWithCards = await Promise.all(sets.map(async (set) => {
+        // Fetch cards for this set
+        const { data: cards, error: cardsError } = await supabase
+          .from('flashcards')
+          .select('*, user_flashcard_progress(*)')
+          .eq('set_id', set.id);
+        
+        if (cardsError) throw cardsError;
+        
+        // Calculate due cards
+        const processedCards = cards.map(card => {
+          const progress = card.user_flashcard_progress?.[0];
+          const isDue = progress ? 
+            (new Date(progress.next_review) <= new Date()) : 
+            true;
+          
+          return {
+            ...card,
+            progress,
+            isDue
+          };
+        });
+        
+        const dueCount = processedCards.filter(card => card.isDue).length;
+        
+        return {
+          ...set,
+          cards: processedCards,
+          totalCards: processedCards.length,
+          dueCount
+        };
+      }));
+      
+      setFlashcardSets(setsWithCards);
+      return setsWithCards;
+    } catch (error) {
+      console.error('Error fetching flashcard sets:', error);
+      toast({
+        title: "Error Loading Sets",
+        description: "Failed to load your flashcard sets",
+        variant: "destructive"
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user?.id, toast]);
+
+  // Fetch public flashcard sets
+  const fetchPublicSets = useCallback(async () => {
+    try {
+      // Fetch public flashcard sets
+      const { data: sets, error } = await supabase
+        .from('flashcard_sets')
+        .select('*')
+        .eq('is_public', true)
+        .limit(50);
+      
+      if (error) throw error;
+      
+      // Only fetch cards for a few sets to avoid too many requests
+      const topSets = sets.slice(0, 10);
+      
+      const setsWithInfo = await Promise.all(topSets.map(async (set) => {
+        // Fetch card count for this set
+        const { count, error: countError } = await supabase
+          .from('flashcards')
+          .select('id', { count: 'exact', head: true })
+          .eq('set_id', set.id);
+        
+        if (countError) throw countError;
+        
+        // Fetch user profile for this set
+        const { data: profiles, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('display_name, first_name, last_name')
+          .eq('id', set.user_id)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') throw profileError;
+        
+        const displayName = profiles 
+          ? (profiles.display_name || `${profiles.first_name || ''} ${profiles.last_name || ''}`.trim())
+          : 'Anonymous';
+        
+        return {
+          ...set,
+          totalCards: count,
+          creator: displayName
+        };
+      }));
+      
+      // For the rest of the sets, just show basic info
+      const otherSets = await Promise.all(sets.slice(10).map(async (set) => {
+        return {
+          ...set,
+          totalCards: '??',
+          creator: 'Anonymous'
+        };
+      }));
+      
+      const allSets = [...setsWithInfo, ...otherSets];
+      setPublicFlashcardSets(allSets);
+      return allSets;
+    } catch (error) {
+      console.error('Error fetching public flashcard sets:', error);
+      return [];
+    }
+  }, []);
+
+  // Create a new flashcard set
+  const createFlashcardSet = async (data: any) => {
+    if (!isAuthenticated) {
+      throw new Error('You must be logged in to create a flashcard set');
+    }
+    
+    try {
+      // Create the set
+      const { data: set, error } = await supabase
+        .from('flashcard_sets')
+        .insert({
+          name: data.name,
+          description: data.description,
+          user_id: user?.id,
+          is_public: data.isPublic || false,
+          category: data.category,
+          language: data.language || 'italian',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // If initial cards were provided, create them
+      if (data.initialCards && data.initialCards.length > 0) {
+        const cardsWithSetId = data.initialCards.map((card: any) => ({
+          ...card,
+          set_id: set.id,
+          user_id: user?.id,
+        }));
+        
+        const { data: cards, error: cardsError } = await supabase
+          .from('flashcards')
+          .insert(cardsWithSetId)
+          .select();
+        
+        if (cardsError) throw cardsError;
+        
+        // Refresh the flashcard sets
+        fetchFlashcardSets();
+        
+        return { ...set, cards };
+      }
+      
+      // Refresh the flashcard sets
+      fetchFlashcardSets();
+      
+      return set;
+    } catch (error) {
+      console.error('Error creating flashcard set:', error);
+      throw error;
+    }
+  };
+
+  // Get a specific flashcard set with its cards
+  const getFlashcardSet = async (id: string) => {
+    try {
+      // Fetch the set
+      const { data: set, error } = await supabase
+        .from('flashcard_sets')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      // Fetch cards for this set
+      const { data: cards, error: cardsError } = await supabase
+        .from('flashcards')
+        .select('*, user_flashcard_progress(*)')
+        .eq('set_id', id);
+      
+      if (cardsError) throw cardsError;
+      
+      // Process cards for due dates
+      const processedCards = cards.map(card => {
+        const progress = card.user_flashcard_progress?.[0];
+        const isDue = progress ? 
+          (new Date(progress.next_review) <= new Date()) : 
+          true;
+        
+        return {
+          ...card,
+          progress,
+          isDue
+        };
+      });
+      
+      return { ...set, cards: processedCards };
+    } catch (error) {
+      console.error(`Error fetching flashcard set ${id}:`, error);
+      throw error;
+    }
+  };
+
+  // Update a flashcard set
+  const updateFlashcardSet = async (id: string, data: any) => {
+    try {
+      const { data: updatedSet, error } = await supabase
+        .from('flashcard_sets')
+        .update({
+          name: data.name,
+          description: data.description,
+          is_public: data.isPublic,
+          category: data.category,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Refresh the flashcard sets
+      fetchFlashcardSets();
+      
+      return updatedSet;
+    } catch (error) {
+      console.error(`Error updating flashcard set ${id}:`, error);
+      throw error;
+    }
+  };
+
+  // Delete a flashcard set
+  const deleteFlashcardSet = async (id: string) => {
+    try {
+      // Delete the set (cascade will delete its cards)
+      const { error } = await supabase
+        .from('flashcard_sets')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Refresh the flashcard sets
+      fetchFlashcardSets();
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting flashcard set ${id}:`, error);
+      throw error;
+    }
+  };
+
+  // Add a card to a set
+  const addCardToSet = async (setId: string, cardData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('flashcards')
+        .insert({
+          ...cardData,
+          set_id: setId,
+          user_id: user?.id,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Refresh the flashcards
+      fetchFlashcards();
+      
+      return data;
+    } catch (error) {
+      console.error(`Error adding card to set ${setId}:`, error);
+      throw error;
+    }
+  };
+
+  // Update a card
+  const updateCard = async (cardId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('flashcards')
+        .update(updates)
+        .eq('id', cardId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Refresh the flashcards
+      fetchFlashcards();
+      
+      return data;
+    } catch (error) {
+      console.error(`Error updating card ${cardId}:`, error);
+      throw error;
+    }
+  };
+
+  // Delete a card
+  const deleteCard = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('flashcards')
+        .delete()
+        .eq('id', cardId);
+      
+      if (error) throw error;
+      
+      // Refresh the flashcards
+      fetchFlashcards();
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting card ${cardId}:`, error);
+      throw error;
+    }
+  };
+
+  // Update card progress with spaced repetition
+  const updateCardProgress = async (cardId: string, correct: boolean, confidence: number) => {
+    try {
+      // First, fetch the current progress for this card
+      const { data: card, error: cardError } = await supabase
+        .from('flashcards')
+        .select('*, user_flashcard_progress(*)')
+        .eq('id', cardId)
+        .single();
+      
+      if (cardError) throw cardError;
+      
+      // Get existing progress or default values
+      const progress = card.user_flashcard_progress?.[0];
+      const consecutiveCorrect = progress 
+        ? (correct ? (progress.consecutive_correct || 0) + 1 : 0)
+        : (correct ? 1 : 0);
+      
+      const easeFactor = progress
+        ? (correct ? Math.min(progress.ease_factor + 0.1, 2.5) : Math.max(progress.ease_factor - 0.2, 1.3))
+        : (correct ? 2.5 : 2.3);
+      
+      // Calculate next review date using spaced repetition algorithm
+      const result = calculateNextReview(correct, easeFactor, consecutiveCorrect);
+      
+      // Update or insert progress
+      if (progress) {
+        // Update existing progress
+        const { data, error } = await supabase
+          .from('user_flashcard_progress')
+          .update({
+            next_review: result.nextReviewDate,
+            ease_factor: result.difficultyFactor,
+            consecutive_correct: consecutiveCorrect,
+            review_count: (progress.review_count || 0) + 1,
+            status: correct && consecutiveCorrect >= 4 ? 'mastered' : 'learning'
+          })
+          .eq('id', progress.id)
+          .select();
+        
+        if (error) throw error;
+        return data;
+      } else {
+        // Insert new progress
+        const { data, error } = await supabase
+          .from('user_flashcard_progress')
+          .insert({
+            flashcard_id: cardId,
+            user_id: user?.id,
+            next_review: result.nextReviewDate,
+            ease_factor: result.difficultyFactor,
+            consecutive_correct: consecutiveCorrect,
+            review_count: 1,
+            status: correct && consecutiveCorrect >= 4 ? 'mastered' : 'learning'
+          })
+          .select();
+        
+        if (error) throw error;
+        return data;
+      }
+    } catch (error) {
+      console.error(`Error updating card progress for ${cardId}:`, error);
+      throw error;
+    }
+  };
+
+  // Export flashcards as JSON
+  const exportFlashcards = async () => {
+    try {
+      // Fetch all the user's flashcard sets
+      const sets = await fetchFlashcardSets();
+      
+      // Format the data for export
+      const exportData = sets.map(set => ({
+        name: set.name,
+        description: set.description,
+        category: set.category,
+        cards: set.cards.map((card: any) => ({
+          front: card.front,
+          back: card.back,
+          italian: card.italian,
+          english: card.english
+        }))
+      }));
+      
+      return exportData;
+    } catch (error) {
+      console.error('Error exporting flashcards:', error);
+      throw error;
+    }
+  };
+
+  // Import flashcards from JSON
+  const importFlashcards = async (data: any[]) => {
+    if (!isAuthenticated) {
+      throw new Error('You must be logged in to import flashcards');
+    }
+    
+    try {
+      // Create each set with its cards
+      for (const set of data) {
+        // Create the set
+        const { data: newSet, error } = await supabase
+          .from('flashcard_sets')
+          .insert({
+            name: set.name,
+            description: set.description || 'Imported set',
+            category: set.category,
+            user_id: user?.id,
+            is_public: false
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        // Create the cards for this set
+        if (set.cards && set.cards.length > 0) {
+          const cardsWithSetId = set.cards.map((card: any) => ({
+            front: card.front,
+            back: card.back,
+            italian: card.italian || card.front,
+            english: card.english || card.back,
+            set_id: newSet.id,
+            user_id: user?.id
+          }));
+          
+          const { error: cardsError } = await supabase
+            .from('flashcards')
+            .insert(cardsWithSetId);
+          
+          if (cardsError) throw cardsError;
+        }
+      }
+      
+      // Refresh the flashcard sets
+      fetchFlashcardSets();
+      
+      return { success: true, message: `Imported ${data.length} sets successfully` };
+    } catch (error) {
+      console.error('Error importing flashcards:', error);
+      throw error;
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFlashcardSets();
+      fetchFlashcards();
+    } else {
+      setFlashcards([]);
+      setFlashcardSets([]);
+    }
+  }, [isAuthenticated, fetchFlashcardSets, fetchFlashcards]);
+
+  const contextValue: FlashcardsContextValue = {
+    flashcards,
+    flashcardSets,
+    publicFlashcardSets,
+    isLoading,
+    createFlashcardSet,
+    updateFlashcardSet,
+    deleteFlashcardSet,
+    getFlashcardSet,
+    fetchFlashcards,
+    fetchPublicSets,
+    addCardToSet,
+    updateCard,
+    deleteCard,
+    updateCardProgress,
+    exportFlashcards,
+    importFlashcards
   };
 
   return (
-    <FlashcardsContext.Provider
-      value={{
-        flashcards,
-        flashcardSets,
-        isLoading,
-        addFlashcard,
-        updateFlashcard,
-        deleteFlashcard,
-        createFlashcardSet,
-        updateFlashcardSet,
-        deleteFlashcardSet,
-        getFlashcardsBySet,
-        addCardToSet,
-        removeCardFromSet,
-        markCardAsMastered,
-        getPublicFlashcardSets,
-        refreshFlashcards,
-      }}
-    >
+    <FlashcardsContext.Provider value={contextValue}>
       {children}
     </FlashcardsContext.Provider>
   );
-}
+};
 
-export function useFlashcards() {
+export const useFlashcards = () => {
   const context = useContext(FlashcardsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useFlashcards must be used within a FlashcardsProvider');
   }
   return context;
-}
+};

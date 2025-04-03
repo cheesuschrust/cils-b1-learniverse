@@ -1,415 +1,585 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import useOfflineCapability from '@/hooks/useOfflineCapability';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, BookOpen, Clock, Check, X, VolumeUp, RefreshCw } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Volume2, BookOpen, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { speak } from '@/utils/textToSpeech';
 
-interface ReadingExercise {
-  id: string;
-  title: string;
-  text: string;
-  questions: {
-    id: string;
-    question: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-}
+// Mock reading passages
+const mockPassages = [
+  {
+    id: '1',
+    title: 'La Vita in Italia',
+    description: 'Learn about everyday life in Italy',
+    level: 'beginner',
+    content: `L'Italia è un paese bellissimo con una cultura ricca e una lunga storia. 
+    Gli italiani amano mangiare bene, passare tempo con la famiglia e godere della vita all'aperto. 
+    La colazione è un pasto leggero, spesso solo un caffè e un cornetto. 
+    Il pranzo è tradizionalmente il pasto principale della giornata, mentre la cena è più leggera e si mangia tardi.
+    Molti italiani fanno la "pausa caffè" al bar durante la giornata per socializzare.`,
+    translation: `Italy is a beautiful country with a rich culture and a long history. 
+    Italians love to eat well, spend time with family, and enjoy outdoor living. 
+    Breakfast is a light meal, often just a coffee and a croissant. 
+    Lunch is traditionally the main meal of the day, while dinner is lighter and eaten late.
+    Many Italians take a "coffee break" at the bar during the day to socialize.`,
+    readingTime: 40,
+    words: 86,
+    vocabulary: {
+      'bellissimo': 'beautiful',
+      'ricca': 'rich',
+      'lunga': 'long',
+      'amano': 'love to',
+      'mangiare': 'to eat',
+      'famiglia': 'family',
+      'godere': 'to enjoy',
+      'aperto': 'open, outdoor',
+      'leggero': 'light',
+      'cornetto': 'croissant',
+      'pranzo': 'lunch',
+      'principale': 'main',
+      'giornata': 'day',
+      'cena': 'dinner',
+      'tardi': 'late',
+      'pausa': 'break',
+      'socializzare': 'to socialize'
+    },
+    questions: [
+      {
+        id: 'q1',
+        question: 'What is the main meal of the day in Italy?',
+        options: ['Breakfast', 'Lunch', 'Coffee break', 'Dinner'],
+        correctAnswer: 'Lunch'
+      },
+      {
+        id: 'q2',
+        question: 'What do Italians typically have for breakfast?',
+        options: ['A big meal', 'Coffee and a croissant', 'Pasta', 'Pizza'],
+        correctAnswer: 'Coffee and a croissant'
+      },
+      {
+        id: 'q3',
+        question: 'Why do many Italians take a coffee break?',
+        options: ['To work more', 'To sleep', 'To socialize', 'To exercise'],
+        correctAnswer: 'To socialize'
+      }
+    ]
+  },
+  {
+    id: '2',
+    title: 'Il Sistema Scolastico Italiano',
+    description: 'Discover how the Italian educational system works',
+    level: 'intermediate',
+    content: `Il sistema scolastico italiano è diviso in diversi livelli. L'istruzione è obbligatoria dai 6 ai 16 anni.
+    La scuola primaria (elementare) dura cinque anni, seguita dalla scuola secondaria di primo grado (media) che dura tre anni.
+    Dopo la scuola media, gli studenti frequentano la scuola secondaria di secondo grado, che può essere un liceo, un istituto tecnico o un istituto professionale.
+    Il liceo prepara gli studenti per l'università, mentre gli istituti tecnici e professionali offrono una formazione più pratica.
+    Dopo il diploma, gli studenti possono iscriversi all'università. Il sistema universitario italiano si basa sul sistema di Bologna:
+    laurea triennale (3 anni), laurea magistrale (2 anni) e dottorato di ricerca.`,
+    translation: `The Italian school system is divided into different levels. Education is compulsory from ages 6 to 16.
+    Primary school lasts five years, followed by middle school which lasts three years.
+    After middle school, students attend high school, which can be a liceo, a technical institute, or a vocational institute.
+    The liceo prepares students for university, while technical and vocational institutes offer more practical training.
+    After obtaining a diploma, students can enroll in university. The Italian university system is based on the Bologna system:
+    bachelor's degree (3 years), master's degree (2 years), and doctorate.`,
+    readingTime: 60,
+    words: 131,
+    vocabulary: {
+      'sistema scolastico': 'school system',
+      'diviso': 'divided',
+      'livelli': 'levels',
+      'istruzione': 'education',
+      'obbligatoria': 'compulsory',
+      'scuola primaria': 'primary school',
+      'elementare': 'elementary',
+      'dura': 'lasts',
+      'seguita': 'followed by',
+      'secondaria': 'secondary',
+      'primo grado': 'first level',
+      'media': 'middle school',
+      'studenti': 'students',
+      'frequentano': 'attend',
+      'secondo grado': 'second level',
+      'liceo': 'high school (academic)',
+      'istituto tecnico': 'technical institute',
+      'istituto professionale': 'vocational institute',
+      'prepara': 'prepares',
+      'università': 'university',
+      'formazione': 'training',
+      'pratica': 'practical',
+      'diploma': 'diploma',
+      'iscriversi': 'to enroll',
+      'laurea': 'degree',
+      'triennale': 'three-year',
+      'magistrale': 'master\'s',
+      'dottorato di ricerca': 'doctorate'
+    },
+    questions: [
+      {
+        id: 'q1',
+        question: 'Until what age is education compulsory in Italy?',
+        options: ['14', '16', '18', '21'],
+        correctAnswer: '16'
+      },
+      {
+        id: 'q2',
+        question: 'Which type of high school prepares students for university?',
+        options: ['Istituto professionale', 'Istituto tecnico', 'Liceo', 'Scuola media'],
+        correctAnswer: 'Liceo'
+      },
+      {
+        id: 'q3',
+        question: 'How many years does primary school (scuola elementare) last?',
+        options: ['3', '5', '8', '13'],
+        correctAnswer: '5'
+      },
+      {
+        id: 'q4',
+        question: 'What is the first university degree called in Italy?',
+        options: ['Laurea triennale', 'Laurea magistrale', 'Dottorato', 'Diploma'],
+        correctAnswer: 'Laurea triennale'
+      }
+    ]
+  }
+];
 
-const ReadingModule = () => {
-  const { user } = useAuth();
-  const isPremium = user?.isPremiumUser || false;
-  
-  const [currentExercise, setCurrentExercise] = useState<ReadingExercise | null>(null);
-  const [highlightedText, setHighlightedText] = useState<string | null>(null);
-  const [responses, setResponses] = useState<{ [key: string]: number }>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
+const ReadingModule: React.FC = () => {
+  const [passages, setPassages] = useState<any[]>(mockPassages);
+  const [currentPassageIndex, setCurrentPassageIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+  const [readingStartTime, setReadingStartTime] = useState<Date | null>(null);
+  const [readingEndTime, setReadingEndTime] = useState<Date | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const { isOnline, isOfflineReady, enableOfflineAccess } = useOfflineCapability('/reading');
+  const contentRef = useRef<HTMLDivElement>(null);
   
-  // Mock exercises data
-  const exercises: ReadingExercise[] = [
-    {
-      id: '1',
-      title: 'La Cucina Italiana',
-      text: `La cucina italiana è famosa in tutto il mondo. Ogni regione ha le sue specialità e tradizioni culinarie. Al nord, in Lombardia, è comune mangiare risotto e cotoletta alla milanese. In Emilia-Romagna, puoi gustare la pasta fresca come le tagliatelle al ragù e il parmigiano reggiano. Al centro, in Toscana, la bistecca alla fiorentina è molto popolare. Al sud, in Campania, Napoli è conosciuta per la sua pizza. In Sicilia, i dolci come il cannolo e la cassata sono deliziosi. Gli italiani adorano mangiare in compagnia, e il cibo è una parte importante della cultura italiana.`,
-      questions: [
-        {
-          id: 'q1',
-          question: 'Qual è il piatto tipico della Lombardia menzionato nel testo?',
-          options: [
-            'Pizza', 
-            'Risotto e cotoletta alla milanese', 
-            'Tagliatelle al ragù', 
-            'Cannolo'
-          ],
-          correctAnswer: 1
-        },
-        {
-          id: 'q2',
-          question: 'In quale regione si trova Napoli?',
-          options: ['Toscana', 'Sicilia', 'Lombardia', 'Campania'],
-          correctAnswer: 3
-        },
-        {
-          id: 'q3',
-          question: 'Quali sono i dolci siciliani menzionati nel testo?',
-          options: [
-            'Tiramisù e panna cotta', 
-            'Cotoletta e risotto', 
-            'Cannolo e cassata', 
-            'Pizza e pasta'
-          ],
-          correctAnswer: 2
-        }
-      ],
-      difficulty: 'beginner'
-    }
-  ];
-  
-  // Load the first exercise on component mount
-  React.useEffect(() => {
-    if (exercises.length > 0) {
-      setCurrentExercise(exercises[0]);
-    }
+  const isLimitReached = hasReachedLimit('readingExercises');
+  const maxExercises = getLimit('readingExercises');
+  const currentUsage = getUsage('readingExercises');
+
+  useEffect(() => {
+    // In a real app, fetch passages from the database
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      // We'd normally fetch from API here
+    }, 1000);
   }, []);
   
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    if (selection && selection.toString()) {
-      setHighlightedText(selection.toString());
+  useEffect(() => {
+    // Track reading time when a passage is selected
+    if (currentPassageIndex !== null && !readingStartTime) {
+      setReadingStartTime(new Date());
+    }
+  }, [currentPassageIndex, readingStartTime]);
+
+  const handleStartPassage = async (index: number) => {
+    if (isLimitReached && !user?.isPremium) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've reached your daily limit of ${maxExercises} reading exercises. Upgrade to Premium for unlimited access.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCurrentPassageIndex(index);
+    setSelectedAnswers({});
+    setShowResults(false);
+    setReadingStartTime(new Date());
+    setReadingEndTime(null);
+    setShowTranslation(false);
+    
+    // Reset score
+    setScore({ correct: 0, total: 0 });
+    
+    try {
+      await incrementUsage('readingExercises');
+    } catch (err) {
+      console.error("Failed to increment usage:", err);
     }
   };
-  
-  const handleSpeakText = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'it-IT';
-    window.speechSynthesis.speak(utterance);
+
+  const handleWordClick = (word: string) => {
+    setSelectedWord(word.toLowerCase().replace(/[.,;!?]$/, ''));
   };
-  
-  const handleResponseChange = (questionId: string, optionIndex: number) => {
-    setResponses(prev => ({ ...prev, [questionId]: optionIndex }));
+
+  const handleAnswerSelect = (questionId: string, answer: string) => {
+    setSelectedAnswers({
+      ...selectedAnswers,
+      [questionId]: answer
+    });
   };
-  
+
   const handleSubmit = () => {
-    if (!currentExercise) return;
+    if (currentPassageIndex === null) return;
     
+    const passage = passages[currentPassageIndex];
+    const questions = passage.questions;
+    
+    // Calculate score
     let correctCount = 0;
-    currentExercise.questions.forEach(question => {
-      if (responses[question.id] === question.correctAnswer) {
+    questions.forEach(question => {
+      if (selectedAnswers[question.id] === question.correctAnswer) {
         correctCount++;
       }
     });
     
-    const calculatedScore = Math.round((correctCount / currentExercise.questions.length) * 100);
-    setScore(calculatedScore);
-    setSubmitted(true);
+    setScore({
+      correct: correctCount,
+      total: questions.length
+    });
+    
+    setReadingEndTime(new Date());
+    setShowResults(true);
+    setShowTranslation(true);
   };
-  
-  const handleNewExercise = () => {
-    if (!isPremium) {
-      setShowPremiumDialog(true);
-      return;
-    }
+
+  const handleReset = () => {
+    setSelectedAnswers({});
+    setShowResults(false);
+    setReadingStartTime(new Date());
+    setReadingEndTime(null);
+    setShowTranslation(false);
+  };
+
+  const handleBackToPassages = () => {
+    setCurrentPassageIndex(null);
+    setReadingStartTime(null);
+    setReadingEndTime(null);
+  };
+
+  const speakText = (text: string, language: 'en' | 'it' = 'it') => {
+    speak(text, language);
+  };
+
+  const calculateReadingSpeed = () => {
+    if (!readingStartTime || !readingEndTime || currentPassageIndex === null) return null;
     
-    setIsLoading(true);
+    const passage = passages[currentPassageIndex];
+    const readingTimeInSeconds = (readingEndTime.getTime() - readingStartTime.getTime()) / 1000;
+    const wordsPerMinute = Math.round((passage.words / readingTimeInSeconds) * 60);
     
-    // Simulate loading a new exercise
-    setTimeout(() => {
-      setIsLoading(false);
+    return wordsPerMinute;
+  };
+
+  const renderPassageContent = (content: string, vocabulary: Record<string, string>) => {
+    const words = content.split(/(\s+)/);
+    
+    return words.map((word, index) => {
+      // Skip spaces
+      if (/^\s+$/.test(word)) return word;
       
-      // For demo purposes, just reset with the same exercise
-      setSubmitted(false);
-      setResponses({});
-      setHighlightedText(null);
-    }, 1500);
+      // Clean word for lookup (remove punctuation)
+      const cleanWord = word.toLowerCase().replace(/[.,;!?]$/g, '');
+      
+      // Check if the word is in the vocabulary
+      const isInVocabulary = Object.keys(vocabulary).some(key => 
+        key.toLowerCase() === cleanWord || key.toLowerCase().includes(cleanWord)
+      );
+      
+      if (isInVocabulary) {
+        return (
+          <Popover key={index}>
+            <PopoverTrigger asChild>
+              <span 
+                className="text-blue-600 dark:text-blue-400 cursor-pointer hover:underline" 
+                onClick={() => handleWordClick(cleanWord)}
+              >
+                {word}
+              </span>
+            </PopoverTrigger>
+            <PopoverContent className="w-60">
+              <div className="space-y-2">
+                <h4 className="font-medium">Translation</h4>
+                <p>{findTranslation(cleanWord, vocabulary)}</p>
+                <div className="flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => speakText(word)}>
+                    <VolumeUp className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        );
+      }
+      
+      return <span key={index}>{word}</span>;
+    });
   };
-  
-  // Function to highlight text in the reading passage
-  const renderHighlightedText = (text: string) => {
-    if (!highlightedText) return text;
+
+  const findTranslation = (word: string, vocabulary: Record<string, string>) => {
+    // First try direct match
+    if (vocabulary[word]) return vocabulary[word];
     
-    const parts = text.split(new RegExp(`(${highlightedText})`, 'gi'));
-    
-    return (
-      <>
-        {parts.map((part, index) => 
-          part.toLowerCase() === highlightedText?.toLowerCase() ? (
-            <mark key={index} className="bg-yellow-200 dark:bg-yellow-800">
-              {part}
-            </mark>
-          ) : (
-            part
-          )
-        )}
-      </>
+    // Then try to find as part of a phrase
+    const matchingKey = Object.keys(vocabulary).find(key => 
+      key.toLowerCase().includes(word.toLowerCase())
     );
+    
+    return matchingKey ? `${matchingKey}: ${vocabulary[matchingKey]}` : '(No translation available)';
   };
-  
-  if (!currentExercise) {
+
+  if (!isAuthenticated) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Italian Reading Exercises</CardTitle>
+          <CardDescription>
+            Please log in to access reading exercises
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>You need to be logged in to use the reading exercises.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-muted-foreground">Loading passages...</p>
       </div>
     );
   }
-  
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Reading Practice</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>{currentExercise.title}</CardTitle>
-                  <CardDescription>
-                    Difficulty: <span className="capitalize">{currentExercise.difficulty}</span>
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleSpeakText(currentExercise.text)}
-                >
-                  <Volume2 className="h-4 w-4 mr-2" />
-                  Read Aloud
+
+  if (currentPassageIndex !== null) {
+    const passage = passages[currentPassageIndex];
+    
+    return (
+      <div className="container py-8">
+        <div className="flex justify-between items-center mb-6">
+          <Button variant="ghost" onClick={handleBackToPassages}>
+            ← Back to Passages
+          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant={passage.level === 'beginner' ? 'outline' : (passage.level === 'intermediate' ? 'secondary' : 'destructive')}>
+              {passage.level.charAt(0).toUpperCase() + passage.level.slice(1)}
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {passage.readingTime}s
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <BookOpen className="h-3 w-3" />
+              {passage.words} words
+            </Badge>
+          </div>
+        </div>
+        
+        <Card className="mb-8">
+          <CardHeader className="pb-3">
+            <CardTitle>{passage.title}</CardTitle>
+            <CardDescription>{passage.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-muted p-4 rounded-md">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-medium">Italian Text</h3>
+                <Button variant="ghost" size="sm" onClick={() => speakText(passage.content)}>
+                  <VolumeUp className="h-4 w-4 mr-2" /> Listen
                 </Button>
               </div>
-            </CardHeader>
-            
-            <CardContent>
+              
               <div 
-                className="prose prose-sm max-w-none dark:prose-invert"
-                onMouseUp={handleTextSelection}
+                ref={contentRef} 
+                className="prose dark:prose-invert max-w-none"
               >
-                <p className="text-base leading-relaxed whitespace-pre-line">
-                  {renderHighlightedText(currentExercise.text)}
+                <p className="whitespace-pre-line">
+                  {renderPassageContent(passage.content, passage.vocabulary)}
                 </p>
               </div>
-              
-              {highlightedText && (
-                <div className="mt-4 flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleSpeakText(highlightedText)}
-                  >
-                    <Volume2 className="h-4 w-4 mr-2" />
-                    Speak Selected Text
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setHighlightedText(null)}
-                  >
-                    Clear Selection
+            </div>
+            
+            {(showTranslation || showResults) && (
+              <div className="bg-muted/50 p-4 rounded-md">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium">English Translation</h3>
+                  <Button variant="ghost" size="sm" onClick={() => speakText(passage.translation, 'en')}>
+                    <VolumeUp className="h-4 w-4 mr-2" /> Listen
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Questions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Comprehension Questions</CardTitle>
-              <CardDescription>
-                Read the text and answer the following questions
-              </CardDescription>
-            </CardHeader>
+                <p className="whitespace-pre-line text-muted-foreground">
+                  {passage.translation}
+                </p>
+              </div>
+            )}
             
-            <CardContent className="space-y-6">
-              {currentExercise.questions.map((question, index) => (
-                <div key={question.id} className="space-y-2">
-                  <h3 className="font-medium">
-                    {index + 1}. {question.question}
-                  </h3>
-                  
-                  <RadioGroup
-                    value={responses[question.id]?.toString()}
-                    onValueChange={(value) => handleResponseChange(question.id, parseInt(value))}
-                    disabled={submitted}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium">Comprehension Questions</h3>
+              {passage.questions.map((question, index) => (
+                <div key={question.id} className="space-y-3">
+                  <h3 className="font-medium">{index + 1}. {question.question}</h3>
+                  <RadioGroup 
+                    value={selectedAnswers[question.id] || ''}
+                    onValueChange={(value) => handleAnswerSelect(question.id, value)}
+                    className="space-y-2"
                   >
-                    {question.options.map((option, optIndex) => (
-                      <div 
-                        key={optIndex} 
-                        className={`flex items-center space-x-2 p-2 rounded-md ${
-                          submitted && question.correctAnswer === optIndex
-                            ? 'bg-green-100 dark:bg-green-900/20'
-                            : submitted && responses[question.id] === optIndex && 
-                              question.correctAnswer !== optIndex
-                              ? 'bg-red-100 dark:bg-red-900/20'
-                              : ''
-                        }`}
-                      >
-                        <RadioGroupItem 
-                          value={optIndex.toString()} 
-                          id={`${question.id}-${optIndex}`} 
-                        />
-                        <Label htmlFor={`${question.id}-${optIndex}`} className="flex-grow cursor-pointer">
-                          {option}
-                        </Label>
-                        
-                        {submitted && question.correctAnswer === optIndex && (
-                          <span className="text-green-600">✓</span>
-                        )}
-                        
-                        {submitted && responses[question.id] === optIndex && 
-                         question.correctAnswer !== optIndex && (
-                          <span className="text-red-600">✗</span>
-                        )}
-                      </div>
-                    ))}
+                    {question.options.map((option) => {
+                      const isCorrect = option === question.correctAnswer;
+                      const isSelected = selectedAnswers[question.id] === option;
+                      const showCorrect = showResults && isCorrect;
+                      const showIncorrect = showResults && isSelected && !isCorrect;
+                      
+                      return (
+                        <div 
+                          key={option} 
+                          className={`
+                            flex items-center rounded-md border p-3
+                            ${showCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : ''}
+                            ${showIncorrect ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''}
+                          `}
+                        >
+                          <RadioGroupItem 
+                            value={option} 
+                            id={`${question.id}-${option}`}
+                            disabled={showResults}
+                          />
+                          <Label 
+                            htmlFor={`${question.id}-${option}`}
+                            className="w-full ml-2 flex justify-between"
+                          >
+                            {option}
+                            {showCorrect && <Check className="h-4 w-4 text-green-500" />}
+                            {showIncorrect && <X className="h-4 w-4 text-red-500" />}
+                          </Label>
+                        </div>
+                      );
+                    })}
                   </RadioGroup>
                 </div>
               ))}
-              
-              <div className="flex justify-between items-center pt-4">
-                {submitted ? (
-                  <>
-                    <div className="space-y-1">
-                      <p className="font-medium">Your Score</p>
-                      <div>
-                        <span className="text-2xl font-bold">
-                          {score}%
-                        </span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          ({Object.values(responses).filter(
-                            (response, index) => response === currentExercise.questions[index]?.correctAnswer
-                          ).length}/{currentExercise.questions.length} correct)
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <Button onClick={handleNewExercise}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        'Try Another Passage'
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <Button 
-                    onClick={handleSubmit}
-                    disabled={currentExercise.questions.length !== Object.keys(responses).length}
-                  >
-                    Submit Answers
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Sidebar */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Instructions</CardTitle>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Read the passage carefully and answer the comprehension questions.
-                You can highlight text to focus on specific parts or use the read-aloud feature.
-              </p>
-              
-              <h3 className="font-medium text-sm">Reading Tips:</h3>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li>Look for the main idea in the first and last paragraphs</li>
-                <li>Highlight unfamiliar words and try to understand them from context</li>
-                <li>Use the "Read Aloud" feature to hear pronunciation</li>
-                <li>Read all questions before starting to know what to look for</li>
-                <li>Take notes of important details as you read</li>
-              </ul>
-              
-              <div className="flex items-center gap-2 text-sm font-medium pt-2">
-                <BookOpen className="h-4 w-4" />
-                Reading Tools:
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="h-auto py-1 text-xs justify-start">
-                  <Volume2 className="h-3 w-3 mr-1" /> Read Aloud
-                </Button>
-                <div className="text-xs text-muted-foreground flex items-center">
-                  Listen to the text
-                </div>
-                
-                <Button variant="outline" size="sm" className="h-auto py-1 text-xs justify-start">
-                  Highlight Text
-                </Button>
-                <div className="text-xs text-muted-foreground flex items-center">
-                  Select text to highlight
-                </div>
-              </div>
-              
-              {!isPremium && (
-                <div className="p-4 mt-4 border rounded-md bg-primary/5">
-                  <h4 className="text-sm font-medium">Free User Limit</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Free users can access one reading passage per day.
-                    Upgrade to Premium for unlimited reading exercises.
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            {showResults ? (
+              <>
+                <div className="text-sm">
+                  <p className="font-medium">
+                    Score: {score.correct}/{score.total} ({Math.round((score.correct / score.total) * 100)}%)
                   </p>
-                  <Button className="w-full mt-2" size="sm">
-                    Upgrade to Premium
+                  <p className="text-muted-foreground">
+                    Reading speed: {calculateReadingSpeed()} words per minute
+                  </p>
+                </div>
+                <div className="space-x-2">
+                  <Button variant="outline" onClick={handleReset}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+                  </Button>
+                  <Button onClick={handleBackToPassages}>
+                    Back to Passages
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowTranslation(!showTranslation)}
+                >
+                  {showTranslation ? 'Hide Translation' : 'Show Translation'}
+                </Button>
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={Object.keys(selectedAnswers).length < passage.questions.length}
+                >
+                  Submit Answers
+                </Button>
+              </>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Italian Reading Exercises</h1>
+          <p className="text-muted-foreground">
+            Improve your reading comprehension and vocabulary
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="px-3 py-1">
+            {currentUsage} / {maxExercises} Exercises
+          </Badge>
+          {!isOnline && !isOfflineReady && (
+            <Button onClick={enableOfflineAccess} disabled={!isOnline} variant="outline" size="sm">
+              Enable Offline
+            </Button>
+          )}
         </div>
       </div>
       
-      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Premium Feature</DialogTitle>
-            <DialogDescription>
-              Free users can access one reading exercise per day.
-              Upgrade to Premium for unlimited exercises and more features.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            <h4 className="font-medium">Premium Benefits:</h4>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>Unlimited reading passages</li>
-              <li>Access to all difficulty levels</li>
-              <li>Dictionary integration for vocabulary</li>
-              <li>Personalized reading recommendations</li>
-              <li>Detailed performance analytics</li>
-            </ul>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPremiumDialog(false)}>
-              Not Now
-            </Button>
-            <Button>Upgrade to Premium</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isLimitReached && !user?.isPremium && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Daily Limit Reached</AlertTitle>
+          <AlertDescription>
+            You've reached your daily limit of {maxExercises} reading exercises. 
+            <Button variant="link" className="p-0 h-auto font-normal">
+              Upgrade to Premium
+            </Button> for unlimited access.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {passages.map((passage, index) => (
+          <Card key={passage.id} className="h-full flex flex-col">
+            <CardHeader>
+              <div className="flex justify-between">
+                <CardTitle>{passage.title}</CardTitle>
+                <Badge variant={passage.level === 'beginner' ? 'outline' : (passage.level === 'intermediate' ? 'secondary' : 'destructive')}>
+                  {passage.level.charAt(0).toUpperCase() + passage.level.slice(1)}
+                </Badge>
+              </div>
+              <CardDescription>{passage.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <div className="flex items-center">
+                  <BookOpen className="h-4 w-4 mr-1" /> 
+                  <span>{passage.words} words</span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span>~{passage.readingTime}s</span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="mt-auto">
+              <Button 
+                className="w-full" 
+                onClick={() => handleStartPassage(index)}
+                disabled={isLimitReached && !user?.isPremium}
+              >
+                Start Reading
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/EnhancedAuthContext';
 import useOnlineStatus from './useOnlineStatus';
+import { supabase } from '@/lib/supabase-client';
 
 export type FeatureLimitConfig = {
   free: number;
@@ -14,6 +15,8 @@ export type FeatureLimits = {
   aiSuggestions: FeatureLimitConfig;
   downloads: FeatureLimitConfig;
   listeningExercises: FeatureLimitConfig;
+  readingExercises: FeatureLimitConfig;
+  speakingExercises: FeatureLimitConfig;
 };
 
 const DEFAULT_LIMITS: FeatureLimits = {
@@ -22,6 +25,8 @@ const DEFAULT_LIMITS: FeatureLimits = {
   aiSuggestions: { free: 10, premium: 500 },
   downloads: { free: 3, premium: 100 },
   listeningExercises: { free: 5, premium: 100 },
+  readingExercises: { free: 5, premium: 100 },
+  speakingExercises: { free: 5, premium: 100 },
 };
 
 export type UsageMetrics = {
@@ -32,7 +37,7 @@ export type UsageMetrics = {
  * Hook for managing feature limitations based on subscription tier
  */
 export const useFeatureLimits = () => {
-  const { isPremium, isAuthenticated } = useAuth();
+  const { isPremium, isAuthenticated, user } = useAuth();
   const isOnline = useOnlineStatus();
   const [usageMetrics, setUsageMetrics] = useState<UsageMetrics>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -52,17 +57,37 @@ export const useFeatureLimits = () => {
         }
 
         // If online and authenticated, get from API and update local storage
-        if (isAuthenticated) {
-          // In a real implementation, we would fetch from API
-          // const response = await api.getUserMetrics();
-          // const metrics = response.data;
-          
-          // For now, we'll use localStorage as a mock backend
-          const storedMetrics = localStorage.getItem('usageMetrics');
-          const metrics = storedMetrics ? JSON.parse(storedMetrics) : {};
-          
-          setUsageMetrics(metrics);
-          localStorage.setItem('usageMetrics', JSON.stringify(metrics));
+        if (isAuthenticated && user) {
+          try {
+            // In a real implementation, we would fetch from API
+            // const response = await api.getUserMetrics();
+            // For now, attempt to fetch from Supabase
+            const today = new Date().toISOString().split('T')[0];
+            
+            const { data, error } = await supabase
+              .from('usage_tracking')
+              .select('question_type, count')
+              .eq('user_id', user.id)
+              .eq('date', today);
+            
+            if (error) throw error;
+            
+            const metricsFromDb = data?.reduce((acc: UsageMetrics, current) => {
+              acc[current.question_type] = current.count;
+              return acc;
+            }, {}) || {};
+            
+            setUsageMetrics(metricsFromDb);
+            localStorage.setItem('usageMetrics', JSON.stringify(metricsFromDb));
+          } catch (error) {
+            console.error('Error fetching usage metrics from API:', error);
+            
+            // Fallback to localStorage if API fails
+            const storedMetrics = localStorage.getItem('usageMetrics');
+            if (storedMetrics) {
+              setUsageMetrics(JSON.parse(storedMetrics));
+            }
+          }
         } else {
           // Not authenticated, use whatever is in localStorage
           const storedMetrics = localStorage.getItem('usageMetrics');
@@ -78,12 +103,15 @@ export const useFeatureLimits = () => {
     };
 
     loadUsageMetrics();
-  }, [isAuthenticated, isOnline]);
+  }, [isAuthenticated, isOnline, user]);
 
   /**
    * Check if a feature has reached its limit
    */
   const hasReachedLimit = (feature: keyof FeatureLimits): boolean => {
+    // Premium users have no limits
+    if (isPremium) return false;
+    
     const limit = getLimit(feature);
     const currentUsage = usageMetrics[feature] || 0;
     return currentUsage >= limit;
@@ -109,6 +137,9 @@ export const useFeatureLimits = () => {
    */
   const incrementUsage = async (feature: keyof FeatureLimits): Promise<boolean> => {
     try {
+      // Premium users don't increment usage
+      if (isPremium) return true;
+      
       const currentUsage = usageMetrics[feature] || 0;
       const newUsage = currentUsage + 1;
       
@@ -124,10 +155,27 @@ export const useFeatureLimits = () => {
         [feature]: newUsage
       }));
       
-      // In a real implementation, we would also update the server
-      // if (isAuthenticated && isOnline) {
-      //   await api.updateFeatureUsage(feature, newUsage);
-      // }
+      // If online and authenticated, update the server
+      if (isAuthenticated && isOnline && user) {
+        try {
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Use upsert to either insert or update
+          await supabase.from('usage_tracking').upsert(
+            {
+              user_id: user.id,
+              question_type: feature,
+              date: today,
+              count: newUsage
+            },
+            { onConflict: 'user_id,question_type,date' }
+          );
+        } catch (error) {
+          console.error(`Error updating server usage for ${feature}:`, error);
+          // Continue even if server update fails
+        }
+      }
       
       return true;
     } catch (error) {

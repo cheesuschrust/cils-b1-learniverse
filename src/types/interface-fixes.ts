@@ -1,115 +1,52 @@
 
-// Type definitions for the interface fixes
-
-export interface ReviewSchedule {
-  dueToday: number;
-  dueThisWeek: number;
-  dueNextWeek: number;
-  dueByDate: Record<string, number>;
-  interval?: number;
-}
-
-export interface ReviewPerformance {
-  totalReviews: number;
-  correctReviews: number;
-  efficiency: number;
-  streakDays: number;
-  reviewsByCategory: Record<string, {
-    total: number;
-    correct: number;
-    efficiency: number;
-  }>;
-  score?: number;
-}
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface Flashcard {
   id: string;
-  front: string;
+  front: string; 
   back: string;
-  italian: string;
-  english: string;
+  italian?: string;
+  english?: string;
   level: number;
-  mastered: boolean;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  nextReview: Date;
-  lastReviewed: Date | null;
-  difficulty: string;
-  explanation?: string;
-  setId?: string;
+  difficulty: number;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  set_id?: string;
+  tags?: string[];
+  nextReview?: Date;
+  last_reviewed?: Date;
+  mastered?: boolean;
+  progress?: any;
+  isDue?: boolean;
+}
+
+export interface User extends SupabaseUser {
+  isPremiumUser?: boolean;
+  isPremium?: boolean;
+}
+
+export interface ReviewPerformance {
+  score: number;
+  time: number;
+  date: Date;
+  accuracy: number;
+  speed: number;
+  consistency: number;
+  retention: number;
+  overall: number;
+}
+
+export interface ReviewSchedule {
+  interval?: number;
   dueDate?: Date;
-}
-
-export interface FlashcardSet {
-  id: string;
-  name: string;
-  description: string;
-  cards: Flashcard[];
-  tags: string[];
-  creator: string;
-  difficulty?: string;
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-  totalCards?: number;
-  masteredCards?: number;
-  isPublic: boolean;
-  isFavorite: boolean;
-  language?: string;
-}
-
-export interface FlashcardStats {
-  totalCards: number;
-  masteredCards: number;
+  difficulty?: number;
+  overdue: number;
   dueToday: number;
-  averageAccuracy: number;
-}
-
-export interface SpeakableWordProps {
-  word: string;
-  translation?: string;
-  showIPA?: boolean;
-  autoPlay?: boolean;
-  onPronounce?: (correct: boolean, score: number) => void;
-}
-
-export interface FlashcardComponentProps {
-  flashcard: Flashcard;
-  onMark: (correct: boolean) => void;
-  showAnswer: boolean;
-  toggleShowAnswer: () => void;
-  isRevealed?: boolean;
-  isLastCard?: boolean;
-}
-
-export interface SupportTicketExtension {
-  id?: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  assignedTo?: string;
-}
-
-export interface ImportFormat {
-  name: string;
-  description: string;
-  delimiter: string;
-  hasHeader: boolean;
-  frontField: string;
-  backField: string;
-  example: string;
-}
-
-export interface AnalyticsReportProps {
-  user: any;
-  period: string;
-  data: {
-    sessionCount: number;
-    totalTimeSpent: number;
-    correctAnswers: number;
-    totalQuestions: number;
-    improvement: number;
-    strengths: string[];
-    weaknesses: string[];
-    recommendedTopics: string[];
-  };
+  upcoming: number;
+  dueThisWeek: number;
+  dueNextWeek: number;
+  totalDue: number;
+  nextWeekCount: number;
+  dueByDate: Record<string, number>;
 }
