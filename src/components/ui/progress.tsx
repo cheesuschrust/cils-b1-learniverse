@@ -1,34 +1,34 @@
 
 import * as React from "react"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn } from "@/lib/utils"
 
+interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> {
+  indicatorClassName?: string;
+}
+
 const Progress = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    value?: number
-    max?: number
-    fill?: string
-  }
->(({ className, value, max = 100, fill, ...props }, ref) => (
-  <div
+  React.ElementRef<typeof ProgressPrimitive.Root>,
+  ProgressProps
+>(({ className, value, indicatorClassName, ...props }, ref) => (
+  <ProgressPrimitive.Root
     ref={ref}
-    role="progressbar"
-    aria-valuemin={0}
-    aria-valuemax={max}
-    aria-valuenow={value}
     className={cn(
       "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
       className
     )}
     {...props}
   >
-    <div
-      className={cn("h-full w-full flex-1 bg-primary transition-all", fill)}
+    <ProgressPrimitive.Indicator
+      className={cn(
+        "h-full w-full flex-1 bg-primary transition-all",
+        indicatorClassName
+      )}
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     />
-  </div>
+  </ProgressPrimitive.Root>
 ))
-Progress.displayName = "Progress"
+Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }

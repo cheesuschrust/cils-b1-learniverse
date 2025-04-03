@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface LineChartProps {
   data: any[];
@@ -7,70 +8,122 @@ interface LineChartProps {
   yField?: string;
   height?: number;
   width?: number;
+  showGrid?: boolean;
+  showLegend?: boolean;
+  lineColor?: string;
+  customTooltip?: React.FC<any>;
 }
 
-const LineChart: React.FC<LineChartProps> = ({ 
-  data, 
-  xField = 'date', 
-  yField = 'value', 
+const LineChart: React.FC<LineChartProps> = ({
+  data,
+  xField = 'date',
+  yField = 'count',
   height = 300,
-  width 
+  width,
+  showGrid = true,
+  showLegend = false,
+  lineColor = '#2563eb',
+  customTooltip
 }) => {
-  // Find min and max values for y-axis
-  const values = data.map(d => d[yField]);
-  const max = Math.max(...values);
+  if (!data || data.length === 0) {
+    return (
+      <div 
+        style={{ height: `${height}px`, width: width ? `${width}px` : '100%' }}
+        className="flex items-center justify-center bg-muted/20 rounded-md"
+      >
+        <p className="text-muted-foreground">No data available</p>
+      </div>
+    );
+  }
+
+  // Determine if we have multiple lines (multiple y-axis fields)
+  const multiLine = typeof yField !== 'string';
   
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 100;
-    const y = 100 - ((d[yField] / max) * 100);
-    return `${x},${y}`;
-  }).join(' ');
+  // Format dates for x-axis if xField is 'date'
+  const formatXAxis = (tickItem: string) => {
+    if (xField === 'date') {
+      const date = new Date(tickItem);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    return tickItem;
+  };
+
+  // Default tooltip formatter
+  const DefaultTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border rounded-md shadow-md p-3">
+          <p className="font-medium">
+            {xField === 'date'
+              ? new Date(label).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })
+              : label}
+          </p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center mt-1">
+              <div 
+                className="w-3 h-3 rounded-full mr-2"
+                style={{ backgroundColor: entry.stroke }}
+              ></div>
+              <span className="font-medium">{entry.name}: </span>
+              <span className="ml-1">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div 
-      className="relative" 
-      style={{ height: `${height}px`, width: width ? `${width}px` : '100%' }}
-    >
-      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {/* Grid lines */}
-        <line x1="0" y1="0" x2="100" y2="0" stroke="#e5e7eb" strokeWidth="0.5" />
-        <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" strokeWidth="0.5" />
-        <line x1="0" y1="50" x2="100" y2="50" stroke="#e5e7eb" strokeWidth="0.5" />
-        <line x1="0" y1="75" x2="100" y2="75" stroke="#e5e7eb" strokeWidth="0.5" />
-        <line x1="0" y1="100" x2="100" y2="100" stroke="#e5e7eb" strokeWidth="0.5" />
-        
-        {/* Line */}
-        <polyline
-          fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="2"
-          points={points}
-        />
-        
-        {/* Area */}
-        <polyline
-          fill="hsl(var(--primary) / 0.2)"
-          stroke="none"
-          points={`0,100 ${points} 100,100`}
-        />
-        
-        {/* Points */}
-        {data.map((d, i) => {
-          const x = (i / (data.length - 1)) * 100;
-          const y = 100 - ((d[yField] / max) * 100);
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r="1.5"
-              fill="hsl(var(--primary))"
-              stroke="white"
-              strokeWidth="1"
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer>
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+        >
+          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#888888" opacity={0.2} />}
+          <XAxis 
+            dataKey={xField} 
+            tickFormatter={formatXAxis}
+            stroke="#888888"
+            fontSize={12}
+          />
+          <YAxis 
+            stroke="#888888"
+            fontSize={12}
+          />
+          <Tooltip content={customTooltip || <DefaultTooltip />} />
+          {showLegend && <Legend />}
+          
+          {multiLine ? (
+            // Render multiple lines if yField is an array
+            (yField as string[]).map((field, index) => (
+              <Line
+                key={field}
+                type="monotone"
+                dataKey={field}
+                name={field}
+                stroke={Array.isArray(lineColor) ? lineColor[index % lineColor.length] : lineColor}
+                activeDot={{ r: 8 }}
+                strokeWidth={2}
+              />
+            ))
+          ) : (
+            // Render single line
+            <Line
+              type="monotone"
+              dataKey={yField}
+              stroke={lineColor}
+              activeDot={{ r: 8 }}
+              strokeWidth={2}
             />
-          );
-        })}
-      </svg>
+          )}
+        </RechartsLineChart>
+      </ResponsiveContainer>
     </div>
   );
 };

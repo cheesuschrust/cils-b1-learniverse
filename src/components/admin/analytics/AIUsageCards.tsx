@@ -1,94 +1,72 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowUpRight, Bot, Zap, Gauge, Brain } from 'lucide-react';
 
 interface AIUsageCardsProps {
   period: string;
 }
 
 const AIUsageCards: React.FC<AIUsageCardsProps> = ({ period }) => {
-  // Mock data - in a real app, this would come from API
-  const stats = {
-    totalRequests: 325745,
-    averageResponseTime: 187,
-    averageConfidence: 87.5,
-    errorRate: 2.1
+  // This would normally come from an API call based on the period
+  const aiUsage = {
+    totalRequests: period === '7d' ? 87463 : period === '30d' ? 324589 : 986732,
+    avgLatency: period === '7d' ? 142 : period === '30d' ? 156 : 174,
+    errorRate: period === '7d' ? 1.2 : period === '30d' ? 1.8 : 2.3,
+    costPerDay: period === '7d' ? 24.86 : period === '30d' ? 22.14 : 19.37
   };
-
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-            Total AI Requests
-            <Bot className="h-4 w-4 text-muted-foreground" />
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Total AI Requests</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalRequests.toLocaleString()}</div>
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
-            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
-            <span className="text-green-500 font-medium">+8.3%</span>
-            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          <div className="text-2xl font-bold">{aiUsage.totalRequests.toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Over the last {period === '7d' ? '7 days' : period === '30d' ? '30 days' : '90 days'}
           </div>
-          <Progress value={78} className="h-1 mt-2" />
+          <Progress value={75} className="h-1 mt-2" />
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-            Response Time
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.averageResponseTime}ms</div>
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
-            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" transform="rotate(90)" />
-            <span className="text-green-500 font-medium">-15ms</span>
-            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          <div className="text-2xl font-bold">{aiUsage.avgLatency}ms</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Target: &lt;200ms
           </div>
-          <Progress value={40} className="h-1 mt-2" />
+          <Progress value={(aiUsage.avgLatency / 200) * 100} className="h-1 mt-2" indicatorClassName="bg-green-500" />
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-            Confidence Score
-            <Gauge className="h-4 w-4 text-muted-foreground" />
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.averageConfidence}%</div>
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
-            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
-            <span className="text-green-500 font-medium">+2.3%</span>
-            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          <div className="text-2xl font-bold">{aiUsage.errorRate}%</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Target: &lt;5%
           </div>
-          <Progress value={stats.averageConfidence} className="h-1 mt-2" />
+          <Progress value={(aiUsage.errorRate / 5) * 100} className="h-1 mt-2" indicatorClassName="bg-green-500" />
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-            Error Rate
-            <Badge variant="outline" className="text-green-500 border-green-500">Low</Badge>
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Avg Cost per Day</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.errorRate}%</div>
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
-            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" transform="rotate(90)" />
-            <span className="text-green-500 font-medium">-0.4%</span>
-            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          <div className="text-2xl font-bold">${aiUsage.costPerDay}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Budget: $30/day
           </div>
-          <Progress value={stats.errorRate * 5} className="h-1 mt-2" />
+          <Progress value={(aiUsage.costPerDay / 30) * 100} className="h-1 mt-2" indicatorClassName="bg-blue-500" />
         </CardContent>
       </Card>
     </div>
