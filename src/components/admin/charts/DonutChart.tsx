@@ -14,6 +14,7 @@ interface DonutChartProps {
   paddingAngle?: number;
   className?: string;
   tooltip?: boolean;
+  dataKey?: string; // Added to support different data structures
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#a4de6c'];
@@ -22,6 +23,7 @@ const DonutChart: React.FC<DonutChartProps> = ({
   data,
   nameKey = 'name',
   valueKey = 'value',
+  dataKey,
   height = 300,
   showLegend = true,
   colors = COLORS,
@@ -31,6 +33,9 @@ const DonutChart: React.FC<DonutChartProps> = ({
   className = '',
   tooltip = true
 }) => {
+  // Use dataKey if provided, otherwise use valueKey
+  const actualDataKey = dataKey || valueKey;
+
   return (
     <div className={className}>
       <ResponsiveContainer width="100%" height={height}>
@@ -44,7 +49,7 @@ const DonutChart: React.FC<DonutChartProps> = ({
             innerRadius={innerRadius}
             paddingAngle={paddingAngle}
             fill="#8884d8"
-            dataKey={valueKey}
+            dataKey={actualDataKey}
             nameKey={nameKey}
           >
             {data.map((entry, index) => (
