@@ -1,130 +1,167 @@
 
-import { useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase-client';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import useOnlineStatus from './useOnlineStatus';
 
-// Free tier usage limits
-const FREE_TIER_LIMITS = {
-  questionsPerDay: 10,
-  flashcardsPerDay: 20,
-  exercisesPerDay: 5
+export type FeatureLimitConfig = {
+  free: number;
+  premium: number;
 };
 
-export function useFeatureLimits() {
-  const { user, isPremium } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+export type FeatureLimits = {
+  flashcards: FeatureLimitConfig;
+  writingExercises: FeatureLimitConfig;
+  aiSuggestions: FeatureLimitConfig;
+  downloads: FeatureLimitConfig;
+  listeningExercises: FeatureLimitConfig;
+};
 
-  // Check if user can use a feature within limits
-  const checkFeatureAccess = useCallback(async (featureType: string): Promise<boolean> => {
-    // Premium users always have access
-    if (isPremium) return true;
-    
-    // Not logged in
-    if (!user) return false;
+const DEFAULT_LIMITS: FeatureLimits = {
+  flashcards: { free: 50, premium: 1000 },
+  writingExercises: { free: 5, premium: 100 },
+  aiSuggestions: { free: 10, premium: 500 },
+  downloads: { free: 3, premium: 100 },
+  listeningExercises: { free: 5, premium: 100 },
+};
 
-    setIsLoading(true);
-    try {
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Check current usage from Supabase
-      const { data, error } = await supabase
-        .from('usage_tracking')
-        .select('count')
-        .eq('user_id', user.id)
-        .eq('feature_type', featureType)
-        .eq('date', today)
-        .single();
-        
-      if (error && error.code !== 'PGRST116') { // Not found is okay
-        console.error('Error checking feature access:', error);
-        return true; // Allow access on error to avoid blocking users
+export type UsageMetrics = {
+  [key: string]: number;
+};
+
+/**
+ * Hook for managing feature limitations based on subscription tier
+ */
+export const useFeatureLimits = () => {
+  const { isPremium, isAuthenticated } = useAuth();
+  const isOnline = useOnlineStatus();
+  const [usageMetrics, setUsageMetrics] = useState<UsageMetrics>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load usage metrics from local storage or API
+  useEffect(() => {
+    const loadUsageMetrics = async () => {
+      try {
+        // If offline, get from localStorage only
+        if (!isOnline) {
+          const storedMetrics = localStorage.getItem('usageMetrics');
+          if (storedMetrics) {
+            setUsageMetrics(JSON.parse(storedMetrics));
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        // If online and authenticated, get from API and update local storage
+        if (isAuthenticated) {
+          // In a real implementation, we would fetch from API
+          // const response = await api.getUserMetrics();
+          // const metrics = response.data;
+          
+          // For now, we'll use localStorage as a mock backend
+          const storedMetrics = localStorage.getItem('usageMetrics');
+          const metrics = storedMetrics ? JSON.parse(storedMetrics) : {};
+          
+          setUsageMetrics(metrics);
+          localStorage.setItem('usageMetrics', JSON.stringify(metrics));
+        } else {
+          // Not authenticated, use whatever is in localStorage
+          const storedMetrics = localStorage.getItem('usageMetrics');
+          if (storedMetrics) {
+            setUsageMetrics(JSON.parse(storedMetrics));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading usage metrics:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      const currentCount = data?.count || 0;
-      const limit = FREE_TIER_LIMITS[featureType as keyof typeof FREE_TIER_LIMITS] || 0;
-      
-      return currentCount < limit;
-      
-    } catch (error) {
-      console.error('Error in checkFeatureAccess:', error);
-      return true; // Allow access on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, isPremium]);
+    };
 
-  // Track feature usage
-  const trackFeatureUsage = useCallback(async (featureType: string): Promise<void> => {
-    if (!user || isPremium) return; // Don't track for premium users
-    
+    loadUsageMetrics();
+  }, [isAuthenticated, isOnline]);
+
+  /**
+   * Check if a feature has reached its limit
+   */
+  const hasReachedLimit = (feature: keyof FeatureLimits): boolean => {
+    const limit = getLimit(feature);
+    const currentUsage = usageMetrics[feature] || 0;
+    return currentUsage >= limit;
+  };
+
+  /**
+   * Get the limit for a specific feature based on subscription
+   */
+  const getLimit = (feature: keyof FeatureLimits): number => {
+    const tier = isPremium ? 'premium' : 'free';
+    return DEFAULT_LIMITS[feature][tier];
+  };
+
+  /**
+   * Get current usage for a feature
+   */
+  const getUsage = (feature: keyof FeatureLimits): number => {
+    return usageMetrics[feature] || 0;
+  };
+
+  /**
+   * Increment usage for a feature
+   */
+  const incrementUsage = async (feature: keyof FeatureLimits): Promise<boolean> => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const currentUsage = usageMetrics[feature] || 0;
+      const newUsage = currentUsage + 1;
       
-      // Check if record exists for today
-      const { data, error } = await supabase
-        .from('usage_tracking')
-        .select('id, count')
-        .eq('user_id', user.id)
-        .eq('feature_type', featureType)
-        .eq('date', today)
-        .maybeSingle();
-        
-      if (error) throw error;
+      // Update local state
+      setUsageMetrics(prev => ({
+        ...prev,
+        [feature]: newUsage
+      }));
       
-      if (data) {
-        // Update existing record
-        await supabase
-          .from('usage_tracking')
-          .update({ count: data.count + 1 })
-          .eq('id', data.id);
-      } else {
-        // Create new record
-        await supabase
-          .from('usage_tracking')
-          .insert({
-            user_id: user.id,
-            feature_type: featureType,
-            date: today,
-            count: 1
-          });
-      }
-    } catch (error) {
-      console.error('Error tracking feature usage:', error);
-    }
-  }, [user, isPremium]);
-
-  // Use a feature with limit checking
-  const useFeature = useCallback(async (featureType: string): Promise<boolean> => {
-    if (isPremium) return true; // Premium users always have access
-    
-    const canAccess = await checkFeatureAccess(featureType);
-    
-    if (canAccess) {
-      await trackFeatureUsage(featureType);
+      // Save to localStorage
+      localStorage.setItem('usageMetrics', JSON.stringify({
+        ...usageMetrics,
+        [feature]: newUsage
+      }));
+      
+      // In a real implementation, we would also update the server
+      // if (isAuthenticated && isOnline) {
+      //   await api.updateFeatureUsage(feature, newUsage);
+      // }
+      
       return true;
-    } else {
-      // Show upgrade prompt
-      toast({
-        title: "Free Plan Limit Reached",
-        description: `You've reached the daily limit for this feature. Upgrade to Premium for unlimited access.`,
-        action: (
-          <a href="/subscription" className="bg-primary text-white px-3 py-2 text-xs rounded-md font-medium">
-            Upgrade
-          </a>
-        ),
-      });
+    } catch (error) {
+      console.error(`Error incrementing usage for ${feature}:`, error);
       return false;
     }
-  }, [checkFeatureAccess, trackFeatureUsage, isPremium, toast]);
+  };
+
+  /**
+   * Reset usage for testing purposes
+   */
+  const resetUsage = (feature: keyof FeatureLimits) => {
+    setUsageMetrics(prev => ({
+      ...prev,
+      [feature]: 0
+    }));
+    
+    const updatedMetrics = {
+      ...usageMetrics,
+      [feature]: 0
+    };
+    
+    localStorage.setItem('usageMetrics', JSON.stringify(updatedMetrics));
+  };
 
   return {
+    hasReachedLimit,
+    getLimit,
+    getUsage,
+    incrementUsage,
+    resetUsage,
     isLoading,
-    limits: FREE_TIER_LIMITS,
-    checkFeatureAccess,
-    trackFeatureUsage,
-    useFeature
+    DEFAULT_LIMITS
   };
-}
+};
+
+export default useFeatureLimits;
