@@ -11,6 +11,8 @@ import ActivityHeatmap from '@/components/analytics/ActivityHeatmap';
 import StudyRecommendations from '@/components/analytics/StudyRecommendations';
 import GoalTracker from '@/components/analytics/GoalTracker';
 import AnalyticsReport from '@/components/analytics/AnalyticsReport';
+import ReviewProgress from '@/components/analytics/ReviewProgress';
+import EnhancedRecommendationEngine from '@/components/recommendations/EnhancedRecommendationEngine';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, ChevronDown, DownloadCloud, BarChart2, LineChart, PieChart, Target, Award, Eye, FileText } from 'lucide-react';
 import { ReviewSchedule, ReviewPerformance } from '@/types/interface-fixes';
@@ -32,34 +34,6 @@ const questionService = {
       reviewsByCategory: {}
     }
   })
-};
-
-const ReviewProgress = ({ 
-  reviewPerformance, 
-  reviewSchedule 
-}: { 
-  reviewPerformance: ReviewPerformance, 
-  reviewSchedule: ReviewSchedule 
-}) => {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Review Progress</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-4">
-          <div className="w-20 h-20 rounded-full border-8 border-primary flex items-center justify-center">
-            <span className="text-2xl font-bold">{reviewPerformance.efficiency}%</span>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Due today</p>
-            <p className="text-2xl font-bold">{reviewSchedule.dueToday}</p>
-            <p className="text-xs text-muted-foreground">{reviewSchedule.dueThisWeek} this week</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 };
 
 const Analytics = () => {
@@ -194,7 +168,6 @@ const Analytics = () => {
       activityData: [
         { date: '2023-01-01', total: 45, correct: 36, score: 80, timeSpent: 25 },
         { date: '2023-01-02', total: 38, correct: 32, score: 84, timeSpent: 22 },
-        // Add more activity data as needed
       ],
       categoryData: categoryData,
       knowledgeGaps: knowledgeGapsData,
@@ -286,6 +259,10 @@ const Analytics = () => {
               reviewPerformance={reviewStats.performance}
               reviewSchedule={reviewStats.schedule}
             />
+          </div>
+          
+          <div className="mb-6">
+            <EnhancedRecommendationEngine />
           </div>
           
           <Tabs defaultValue="performance" className="space-y-6">
