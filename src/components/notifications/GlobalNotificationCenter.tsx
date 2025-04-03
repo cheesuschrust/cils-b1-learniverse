@@ -1,217 +1,238 @@
 
-import React, { useState } from 'react';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useEffect } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, Clock, CheckSquare, Trash2 } from 'lucide-react';
-import NotificationItem from './NotificationItem';
+import { Separator } from '@/components/ui/separator';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import NotificationItem from '@/components/notifications/NotificationItem';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Bell, CheckCheck, Trash } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-interface GlobalNotificationCenterProps {
+export interface GlobalNotificationCenterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const GlobalNotificationCenter: React.FC<GlobalNotificationCenterProps> = ({
   open,
-  onOpenChange,
+  onOpenChange
 }) => {
   const {
     notifications,
-    markAsRead,
-    removeNotification,
+    unreadCount,
     markAllAsRead,
     clearAll,
+    markAsRead,
+    removeNotification,
   } = useNotifications();
-  const [activeTab, setActiveTab] = useState('all');
 
-  const unreadNotifications = notifications.filter((n) => !n.read);
-  const achievementNotifications = notifications.filter((n) => n.type === 'achievement' || n.type === 'milestone');
-  const reminderNotifications = notifications.filter((n) => n.type === 'reminder');
-
-  const handleMarkAsRead = async (id: string) => {
-    await markAsRead(id);
-  };
-
-  const handleDismiss = async (id: string) => {
-    await removeNotification(id);
-  };
-
-  const handleAction = (notification: any, actionId: string) => {
-    const action = notification.actions?.find((a: any) => a.id === actionId);
-    if (action && action.action) {
-      action.action();
+  // Mark notifications as read when opening
+  useEffect(() => {
+    if (open && unreadCount > 0) {
+      // We don't want to mark all as read immediately, just when viewed
     }
+  }, [open, unreadCount]);
+
+  // Separate notifications by type/priority
+  const highPriorityNotifications = notifications.filter(n => n.priority === 'high');
+  const otherNotifications = notifications.filter(n => n.priority !== 'high');
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const readNotifications = notifications.filter(n => n.read);
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead();
+  };
+
+  const handleClearAll = async () => {
+    await clearAll();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0" onInteractOutside={(e) => e.preventDefault()}>
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle className="text-lg font-medium">Notification Center</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+        <SheetHeader className="border-b p-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              <SheetTitle>Notifications</SheetTitle>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                disabled={unreadCount === 0}
+                className="text-xs h-8"
+              >
+                <CheckCheck className="mr-1 h-4 w-4" />
+                Mark all as read
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAll}
+                disabled={notifications.length === 0}
+                className="text-xs h-8"
+              >
+                <Trash className="mr-1 h-4 w-4" />
+                Clear all
+              </Button>
+            </div>
+          </div>
+          <SheetDescription className="flex justify-between items-center">
+            <span>Stay updated with your learning progress</span>
+            {unreadCount > 0 && (
+              <Badge variant="default" className="ml-2">
+                {unreadCount} unread
+              </Badge>
+            )}
+          </SheetDescription>
+        </SheetHeader>
         
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <div className="px-4 border-b">
-            <TabsList className="grid grid-cols-4 gap-2">
-              <TabsTrigger value="all" className="flex items-center">
-                <Bell className="mr-2 h-4 w-4" />
+        <Tabs defaultValue="all" className="flex-1 flex flex-col">
+          <div className="border-b px-4">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="all" className="flex gap-2 items-center">
                 All
-                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                  {notifications.length}
-                </span>
+                {notifications.length > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1">
+                    {notifications.length}
+                  </Badge>
+                )}
               </TabsTrigger>
-              
-              <TabsTrigger value="unread" className="flex items-center">
-                <CheckSquare className="mr-2 h-4 w-4" />
+              <TabsTrigger value="unread" className="flex gap-2 items-center">
                 Unread
-                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                  {unreadNotifications.length}
-                </span>
+                {unreadNotifications.length > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1">
+                    {unreadNotifications.length}
+                  </Badge>
+                )}
               </TabsTrigger>
-              
-              <TabsTrigger value="achievements" className="flex items-center">
-                <Bell className="mr-2 h-4 w-4" />
-                Achievements
-                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                  {achievementNotifications.length}
-                </span>
-              </TabsTrigger>
-              
-              <TabsTrigger value="reminders" className="flex items-center">
-                <Clock className="mr-2 h-4 w-4" />
-                Reminders
-                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                  {reminderNotifications.length}
-                </span>
+              <TabsTrigger value="important" className="flex gap-2 items-center">
+                Important
+                {highPriorityNotifications.length > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1">
+                    {highPriorityNotifications.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
           </div>
-
-          <div className="flex-1 flex flex-col">
-            <div className="p-2 border-b flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                {activeTab === 'all' && `${notifications.length} notifications`}
-                {activeTab === 'unread' && `${unreadNotifications.length} unread notifications`}
-                {activeTab === 'achievements' && `${achievementNotifications.length} achievement notifications`}
-                {activeTab === 'reminders' && `${reminderNotifications.length} reminder notifications`}
-              </p>
-              <div className="flex gap-2">
-                {activeTab === 'unread' && unreadNotifications.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => markAllAsRead()}>
-                    <CheckSquare className="mr-2 h-4 w-4" /> Mark all as read
-                  </Button>
-                )}
-                {notifications.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => clearAll()}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Clear all
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <TabsContent value="all" className="p-2 h-full">
-                {notifications.length > 0 ? (
-                  <div className="space-y-2">
-                    {notifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        notification={notification}
-                        onDismiss={() => handleDismiss(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                        onAction={(actionId) => handleAction(notification, actionId)}
-                        showControls
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Bell className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
-                      <p className="mt-2 text-muted-foreground">No notifications</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="unread" className="p-2 h-full">
-                {unreadNotifications.length > 0 ? (
-                  <div className="space-y-2">
-                    {unreadNotifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        notification={notification}
-                        onDismiss={() => handleDismiss(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                        onAction={(actionId) => handleAction(notification, actionId)}
-                        showControls
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <CheckSquare className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
-                      <p className="mt-2 text-muted-foreground">No unread notifications</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="achievements" className="p-2 h-full">
-                {achievementNotifications.length > 0 ? (
-                  <div className="space-y-2">
-                    {achievementNotifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        notification={notification}
-                        onDismiss={() => handleDismiss(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                        onAction={(actionId) => handleAction(notification, actionId)}
-                        showControls
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Bell className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
-                      <p className="mt-2 text-muted-foreground">No achievement notifications</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="reminders" className="p-2 h-full">
-                {reminderNotifications.length > 0 ? (
-                  <div className="space-y-2">
-                    {reminderNotifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        notification={notification}
-                        onDismiss={() => handleDismiss(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                        onAction={(actionId) => handleAction(notification, actionId)}
-                        showControls
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Clock className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
-                      <p className="mt-2 text-muted-foreground">No reminders</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-            </ScrollArea>
-          </div>
+          
+          <ScrollArea className="flex-1">
+            <TabsContent value="all" className="m-0">
+              {notifications.length > 0 ? (
+                <div className="divide-y">
+                  {notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onDismiss={() => removeNotification(notification.id)}
+                      onRead={() => markAsRead(notification.id)}
+                      onClick={() => {
+                        markAsRead(notification.id);
+                        if (notification.link) {
+                          window.location.href = notification.link;
+                          onOpenChange(false);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center h-[300px]">
+                  <Bell className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="font-medium text-lg">No notifications</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You're all caught up! Check back later for updates.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="unread" className="m-0">
+              {unreadNotifications.length > 0 ? (
+                <div className="divide-y">
+                  {unreadNotifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onDismiss={() => removeNotification(notification.id)}
+                      onRead={() => markAsRead(notification.id)}
+                      onClick={() => {
+                        markAsRead(notification.id);
+                        if (notification.link) {
+                          window.location.href = notification.link;
+                          onOpenChange(false);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center h-[300px]">
+                  <CheckCheck className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="font-medium text-lg">No unread notifications</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You've read all your notifications.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="important" className="m-0">
+              {highPriorityNotifications.length > 0 ? (
+                <div className="divide-y">
+                  {highPriorityNotifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onDismiss={() => removeNotification(notification.id)}
+                      onRead={() => markAsRead(notification.id)}
+                      onClick={() => {
+                        markAsRead(notification.id);
+                        if (notification.link) {
+                          window.location.href = notification.link;
+                          onOpenChange(false);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center h-[300px]">
+                  <Bell className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="font-medium text-lg">No important notifications</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You don't have any high-priority notifications at the moment.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </ScrollArea>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+        
+        <div className="p-4 border-t">
+          <Button 
+            onClick={() => onOpenChange(false)} 
+            variant="outline" 
+            className="w-full"
+          >
+            Close
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
