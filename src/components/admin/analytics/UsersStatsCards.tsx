@@ -1,74 +1,96 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserPlus, Percent, Award, UserCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { ArrowUpRight, ArrowDownRight, Users, UserPlus, UserCheck, UserMinus } from 'lucide-react';
 
-type UsersStatsCardsProps = {
-  data: {
-    total: number;
-    active: number;
-    growth: number;
-    premium: number;
-    newToday?: number;
-  }
-};
+interface UsersStatsCardsProps {
+  period: string;
+}
 
-const UsersStatsCards: React.FC<UsersStatsCardsProps> = ({ data }) => {
+const UsersStatsCards: React.FC<UsersStatsCardsProps> = ({ period }) => {
+  // Mock data - in a real app, this would come from API
+  const stats = {
+    totalUsers: 2735,
+    newUsers: 124,
+    activeUsers: 842,
+    retention: 68.4,
+    churn: 5.2
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Total Users
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.total.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">
-            {data.newToday ? `+${data.newToday} today` : ''}
-          </p>
+          <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">12.5%</span>
+            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          </div>
+          <Progress value={78} className="h-1 mt-2" />
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-          <UserCheck className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            New Users
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.active.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">
-            {data.total > 0 ? 
-              `${Math.round((data.active / data.total) * 100)}% of total users` : 
-              '0% of total users'}
-          </p>
+          <div className="text-2xl font-bold">{stats.newUsers}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">8.2%</span>
+            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          </div>
+          <Progress value={65} className="h-1 mt-2" />
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">User Growth</CardTitle>
-          <UserPlus className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Active Users
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.growth}%</div>
-          <p className="text-xs text-muted-foreground">
-            Based on time period
-          </p>
+          <div className="text-2xl font-bold">{stats.activeUsers}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">4.3%</span>
+            <span className="ml-1">from last {period === '7d' ? 'week' : 'month'}</span>
+          </div>
+          <Progress value={70} className="h-1 mt-2" />
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Premium Users</CardTitle>
-          <Award className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            User Retention
+            <Badge variant="outline">{stats.retention}%</Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.premium.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">
-            {data.total > 0 ? 
-              `${Math.round((data.premium / data.total) * 100)}% of total users` : 
-              '0% of total users'}
-          </p>
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-medium">Churn Rate</div>
+            <div className="flex items-center">
+              <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />
+              <span className="text-xs text-green-500">{stats.churn}%</span>
+            </div>
+          </div>
+          <Progress value={stats.retention} className="h-3 mt-2" />
         </CardContent>
       </Card>
     </div>

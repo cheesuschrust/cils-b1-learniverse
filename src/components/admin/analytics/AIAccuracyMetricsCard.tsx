@@ -1,69 +1,42 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LineChart } from '@/components/admin/charts';
 
-interface AIAccuracyMetricsCardProps {
-  accuracy: {
-    overall: number;
-    speechRecognition: number;
-    textGeneration: number;
-    translation: number;
-    flashcardGeneration: number;
-  };
-}
+const AIAccuracyMetricsCard: React.FC = () => {
+  // Mock data for AI accuracy over time
+  const accuracyData = [
+    { date: '2023-03-20', value: 78 },
+    { date: '2023-03-27', value: 79 },
+    { date: '2023-04-03', value: 81 },
+    { date: '2023-04-10', value: 82 },
+    { date: '2023-04-17', value: 84 },
+    { date: '2023-04-24', value: 85 },
+    { date: '2023-05-01', value: 87 },
+    { date: '2023-05-08', value: 88 },
+  ];
 
-export const AIAccuracyMetricsCard: React.FC<AIAccuracyMetricsCardProps> = ({ accuracy }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI Accuracy Metrics</CardTitle>
-        <CardDescription>
-          Performance across different AI features
-        </CardDescription>
+        <CardTitle className="text-lg">AI Accuracy Over Time</CardTitle>
+        <CardDescription>Tracking improvements in model performance</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        <LineChart data={accuracyData} xField="date" yField="value" height={250} />
+        <div className="mt-4 flex items-center justify-between text-sm">
           <div>
-            <Label className="mb-2 block">Overall Accuracy</Label>
-            <div className="flex items-center">
-              <Progress value={accuracy.overall} className="h-4 flex-1" />
-              <span className="ml-4 font-medium">{accuracy.overall}%</span>
-            </div>
+            <div className="font-medium">Starting Accuracy</div>
+            <div>78%</div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label className="mb-2 block">Speech Recognition</Label>
-              <div className="flex items-center">
-                <Progress value={accuracy.speechRecognition} className="h-3 flex-1" />
-                <span className="ml-4 font-medium">{accuracy.speechRecognition}%</span>
-              </div>
-              
-              <Label className="mb-2 mt-4 block">Text Generation</Label>
-              <div className="flex items-center">
-                <Progress value={accuracy.textGeneration} className="h-3 flex-1" />
-                <span className="ml-4 font-medium">{accuracy.textGeneration}%</span>
-              </div>
-            </div>
-            
-            <div>
-              <Label className="mb-2 block">Translation</Label>
-              <div className="flex items-center">
-                <Progress value={accuracy.translation} className="h-3 flex-1" />
-                <span className="ml-4 font-medium">{accuracy.translation}%</span>
-              </div>
-              
-              <Label className="mb-2 mt-4 block">Flashcard Generation</Label>
-              <div className="flex items-center">
-                <Progress value={accuracy.flashcardGeneration} className="h-3 flex-1" />
-                <span className="ml-4 font-medium">{accuracy.flashcardGeneration}%</span>
-              </div>
-            </div>
+          <div>
+            <div className="font-medium">Current Accuracy</div>
+            <div className="text-green-500">88% (+10%)</div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default AIAccuracyMetricsCard;

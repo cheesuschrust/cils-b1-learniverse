@@ -1,13 +1,9 @@
 
-export * from './UsersStatsCards';
-export * from './UserTrendsChart';
-export * from './UserDistributionCard';
-export * from './ContentCategoriesCard';
-export * from './RevenueTrendsCard';
-export * from './AIPerformanceCard';
-export * from './GeographicalDistributionCard';
-export * from './ContentStatsCards';
-export * from './AIUsageCards';
-export * from './AIAccuracyMetricsCard';
-export * from './ModelUsageCard';
-export * from './PerformanceMetricsCard';
+export { default as UserDistributionCard } from './UserDistributionCard';
+export { default as UsersStatsCards } from './UsersStatsCards';
+export { default as ContentStatsCards } from './ContentStatsCards';
+export { default as AIPerformanceCard } from './AIPerformanceCard';
+export { default as AIAccuracyMetricsCard } from './AIAccuracyMetricsCard';
+export { default as ModelUsageCard } from './ModelUsageCard';
+export { default as AIUsageCards } from './AIUsageCards';
+export { default as RevenueTrendsCard } from './RevenueTrendsCard';

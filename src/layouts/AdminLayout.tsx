@@ -5,10 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Users, FileText, BarChart, Settings, Database,
-  Package, LifeBuoy, AlertCircle, Home, Bot, CreditCard
+  Package, LifeBuoy, AlertCircle, Home, Bot, CreditCard,
+  Upload, FileUp, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import AdminNavigation from '@/components/navigation/AdminNavigation';
 
 const AdminLayout: React.FC = () => {
   const { user } = useAuth();
@@ -87,70 +89,16 @@ const AdminLayout: React.FC = () => {
           <h1 className="text-xl font-bold text-primary">Admin Dashboard</h1>
         </div>
         
-        <nav className="flex-1 space-y-1">
+        <AdminNavigation />
+        
+        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
           <Link to="/">
-            <Button variant="ghost" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start">
               <Home className="mr-2 h-5 w-5" />
               Return to App
             </Button>
           </Link>
-          
-          <Link to="/admin">
-            <Button variant="ghost" className="w-full justify-start">
-              <Settings className="mr-2 h-5 w-5" />
-              Dashboard
-            </Button>
-          </Link>
-          
-          <Link to="/admin/users">
-            <Button variant="ghost" className="w-full justify-start">
-              <Users className="mr-2 h-5 w-5" />
-              User Management
-            </Button>
-          </Link>
-          
-          <Link to="/admin/content">
-            <Button variant="ghost" className="w-full justify-start">
-              <FileText className="mr-2 h-5 w-5" />
-              Content Management
-            </Button>
-          </Link>
-
-          <Link to="/admin/ai-management">
-            <Button variant="ghost" className="w-full justify-start">
-              <Bot className="mr-2 h-5 w-5" />
-              AI Management
-            </Button>
-          </Link>
-          
-          <Link to="/admin/subscriptions">
-            <Button variant="ghost" className="w-full justify-start">
-              <CreditCard className="mr-2 h-5 w-5" />
-              Subscriptions
-            </Button>
-          </Link>
-          
-          <Link to="/admin/analytics">
-            <Button variant="ghost" className="w-full justify-start">
-              <BarChart className="mr-2 h-5 w-5" />
-              Analytics
-            </Button>
-          </Link>
-          
-          <Link to="/admin/support-tickets">
-            <Button variant="ghost" className="w-full justify-start">
-              <LifeBuoy className="mr-2 h-5 w-5" />
-              Support Tickets
-            </Button>
-          </Link>
-          
-          <Link to="/admin/system-health">
-            <Button variant="ghost" className="w-full justify-start">
-              <AlertCircle className="mr-2 h-5 w-5" />
-              System Health
-            </Button>
-          </Link>
-        </nav>
+        </div>
       </div>
       
       {/* Main content */}

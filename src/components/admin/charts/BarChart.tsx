@@ -1,32 +1,36 @@
 
 import React from 'react';
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface BarChartProps {
   data: any[];
-  xKey: string;
-  yKey: string;
-  color: string;
-  height?: number | string;
+  height?: number;
+  width?: number;
 }
 
-export const BarChart: React.FC<BarChartProps> = ({ 
-  data, 
-  xKey, 
-  yKey, 
-  color,
-  height = 300
-}) => {
+const BarChart: React.FC<BarChartProps> = ({ data, height = 300, width }) => {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <RechartsBarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey={xKey} />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey={yKey} fill={color} />
-      </RechartsBarChart>
-    </ResponsiveContainer>
+    <div 
+      style={{ height: `${height}px`, width: width ? `${width}px` : '100%' }}
+      className="flex items-end justify-between gap-2 py-4"
+    >
+      {data.map((item, i) => (
+        <div key={i} className="flex flex-col items-center">
+          <div className="flex h-full items-end space-x-2">
+            {Object.keys(item).filter(key => key !== 'date' && key !== 'name').map((key) => (
+              <div
+                key={key}
+                style={{ height: `${(item[key] / 20) * 100}%` }}
+                className={`w-8 rounded-md bg-primary ${key === 'admin' ? 'opacity-70' : ''}`}
+              />
+            ))}
+          </div>
+          <div className="mt-2 text-xs">
+            {item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : item.name}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
+
+export default BarChart;

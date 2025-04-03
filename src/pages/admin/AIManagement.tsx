@@ -1,13 +1,14 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { 
   Card, 
   CardContent, 
   CardDescription, 
+  CardFooter, 
   CardHeader, 
-  CardTitle,
-  CardFooter 
+  CardTitle 
 } from '@/components/ui/card';
 import { 
   Tabs, 
@@ -16,1243 +17,620 @@ import {
   TabsTrigger 
 } from '@/components/ui/tabs';
 import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  BarChart,
-  Bar
-} from 'recharts';
-import { 
-  Bot, 
-  Settings, 
-  AlertTriangle, 
-  Save, 
-  BarChart as BarChartIcon,
-  RefreshCw, 
-  Check, 
-  X, 
-  RotateCw,
-  Sliders, 
-  Server,
-  Database,
-  Webhook,
-  Cpu,
-  GitBranch
-} from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { 
+  Brain, 
+  Settings, 
+  BarChart2, 
+  FileQuestion, 
+  Download, 
+  Upload, 
+  RefreshCw, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle, 
+  Gauge,
+  Sliders
+} from 'lucide-react';
 
 interface AIModel {
+  id: string;
+  name: string;
+  version: string;
+  provider: string;
+  status: 'active' | 'inactive' | 'training' | 'evaluating';
+  accuracy: number;
+  last_updated: string;
+  capabilities: string[];
+}
+
+interface AIPerformanceMetrics {
   id: string;
   model_name: string;
   version: string;
   accuracy: number;
   confidence_score: number;
-  training_date: string | null;
-  metrics: any;
+  metrics: {
+    precision: number;
+    recall: number;
+    f1_score: number;
+    content_types: Record<string, number>;
+  };
   created_at: string;
-  updated_at: string;
 }
 
-const AIManagement = () => {
+interface ThresholdConfig {
+  content_type: string;
+  confidence_threshold: number;
+  max_processing_time: number;
+  enabled: boolean;
+}
+
+const AIManagement: React.FC = () => {
   const [models, setModels] = useState<AIModel[]>([]);
+  const [performanceData, setPerformanceData] = useState<AIPerformanceMetrics[]>([]);
+  const [thresholds, setThresholds] = useState<ThresholdConfig[]>([
+    { content_type: 'flashcards', confidence_threshold: 0.7, max_processing_time: 5000, enabled: true },
+    { content_type: 'multiple_choice', confidence_threshold: 0.75, max_processing_time: 8000, enabled: true },
+    { content_type: 'reading', confidence_threshold: 0.65, max_processing_time: 10000, enabled: true },
+    { content_type: 'writing', confidence_threshold: 0.8, max_processing_time: 12000, enabled: true },
+    { content_type: 'speaking', confidence_threshold: 0.75, max_processing_time: 15000, enabled: true }
+  ]);
   const [loading, setLoading] = useState(true);
-  const [activeProvider, setActiveProvider] = useState('openai');
-  const [confidenceThreshold, setConfidenceThreshold] = useState(70);
-  const [isTrainingModel, setIsTrainingModel] = useState(false);
-  const [trainingProgress, setTrainingProgress] = useState(0);
-  
+  const [activeTab, setActiveTab] = useState('models');
   const { toast } = useToast();
-  
-  const perfData = [
-    { date: '2023-01', accuracy: 85, confidence: 72, errors: 15 },
-    { date: '2023-02', accuracy: 87, confidence: 75, errors: 13 },
-    { date: '2023-03', accuracy: 86, confidence: 74, errors: 14 },
-    { date: '2023-04', accuracy: 89, confidence: 78, errors: 11 },
-    { date: '2023-05', accuracy: 91, confidence: 82, errors: 9 },
-    { date: '2023-06', accuracy: 93, confidence: 85, errors: 7 },
-  ];
-  
-  // Mock error analysis data
-  const errorCategories = [
-    { category: 'Grammar Classification', count: 23, percentage: 38 },
-    { category: 'Word Sense Disambiguation', count: 18, percentage: 30 },
-    { category: 'Cultural Context', count: 12, percentage: 20 },
-    { category: 'Idiomatic Expressions', count: 7, percentage: 12 },
-  ];
-  
+
   useEffect(() => {
     fetchModels();
+    fetchPerformanceData();
   }, []);
-  
+
   const fetchModels = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('ai_model_performance')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
+        .from('ai_providers')
+        .select('*');
+
       if (error) throw error;
-      
-      if (data) {
-        setModels(data);
-      }
+
+      setModels(data.map(provider => ({
+        id: provider.id,
+        name: provider.name,
+        version: provider.configuration?.version || '1.0',
+        provider: provider.provider_type,
+        status: provider.is_active ? 'active' : 'inactive',
+        accuracy: 0.85, // Mock accuracy
+        last_updated: provider.updated_at,
+        capabilities: provider.capabilities || []
+      })));
     } catch (error) {
       console.error('Error fetching AI models:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch AI models. Please try again.',
+        description: 'Failed to fetch AI models data.',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
-  
-  const simulateModelTraining = () => {
-    setIsTrainingModel(true);
-    setTrainingProgress(0);
-    
-    const interval = setInterval(() => {
-      setTrainingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsTrainingModel(false);
-          
-          toast({
-            title: 'Training Complete',
-            description: 'The AI model has been trained successfully.',
-          });
-          
-          // Add new model to the list
-          const newModel = {
-            id: `model-${Date.now()}`,
-            model_name: 'Italian GPT',
-            version: `1.${models.length + 1}`,
-            accuracy: 94.5,
-            confidence_score: 86.2,
-            training_date: new Date().toISOString(),
-            metrics: {
-              precision: 0.92,
-              recall: 0.89,
-              f1_score: 0.90,
-              training_samples: 2450,
-              training_time_minutes: 35
-            },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          setModels(prev => [newModel, ...prev]);
-          
-          return 0;
-        }
-        return prev + 2;
+
+  const fetchPerformanceData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_model_performance')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setPerformanceData(data.map(item => ({
+          ...item,
+          metrics: item.metrics || {
+            precision: 0.83,
+            recall: 0.79,
+            f1_score: 0.81,
+            content_types: {
+              flashcards: 0.88,
+              multiple_choice: 0.85,
+              reading: 0.75,
+              writing: 0.82,
+              speaking: 0.78
+            }
+          }
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching AI performance data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch AI performance metrics.',
+        variant: 'destructive',
       });
-    }, 300);
-    
-    return () => clearInterval(interval);
+    }
   };
-  
+
+  const updateModelStatus = async (id: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('ai_providers')
+        .update({ is_active: isActive })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setModels(models.map(model => 
+        model.id === id 
+          ? { ...model, status: isActive ? 'active' : 'inactive' } 
+          : model
+      ));
+
+      toast({
+        title: 'Success',
+        description: `AI model ${isActive ? 'activated' : 'deactivated'} successfully.`,
+      });
+    } catch (error) {
+      console.error('Error updating AI model status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update AI model status.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveThresholds = () => {
+    // In a real application, save these thresholds to the backend
+    toast({
+      title: 'Settings Saved',
+      description: 'AI threshold configurations have been updated.',
+    });
+  };
+
+  const getModelStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+      case 'inactive':
+        return <Badge variant="outline">Inactive</Badge>;
+      case 'training':
+        return <Badge variant="secondary" className="bg-blue-500">Training</Badge>;
+      case 'evaluating':
+        return <Badge variant="secondary" className="bg-amber-500">Evaluating</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <Helmet>
-        <title>AI Management - Admin</title>
-      </Helmet>
-      
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">AI Management</h1>
-        
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={fetchModels}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          
-          <Button onClick={simulateModelTraining} disabled={isTrainingModel}>
-            {isTrainingModel ? (
-              <>
-                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                Training...
-              </>
-            ) : (
-              <>
-                <Cpu className="mr-2 h-4 w-4" />
-                Train New Model
-              </>
-            )}
-          </Button>
+    <ProtectedRoute requireAdmin={true}>
+      <div className="space-y-6">
+        <Helmet>
+          <title>AI Management - Admin</title>
+        </Helmet>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">AI Management</h1>
+            <p className="text-muted-foreground mt-2">
+              Configure and monitor the AI models powering your platform
+            </p>
+          </div>
         </div>
-      </div>
-      
-      {isTrainingModel && (
-        <Card className="border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex justify-between items-center">
-              <span className="flex items-center">
-                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                Training in Progress
-              </span>
-              <span className="text-sm">{trainingProgress}%</span>
-            </CardTitle>
-            <CardDescription>
-              Training a new version of the Italian language model
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Progress value={trainingProgress} className="h-2" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Training Data</p>
-                <p className="text-xl font-semibold">2,450</p>
-                <p className="text-xs text-muted-foreground">samples</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Model Size</p>
-                <p className="text-xl font-semibold">1.2B</p>
-                <p className="text-xs text-muted-foreground">parameters</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Training Mode</p>
-                <p className="text-xl font-semibold">Fine-tune</p>
-                <p className="text-xs text-muted-foreground">from base model</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">ETA</p>
-                <p className="text-xl font-semibold">{Math.ceil((100 - trainingProgress) / 2)}</p>
-                <p className="text-xs text-muted-foreground">minutes</p>
-              </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="models" className="flex items-center">
+              <Brain className="mr-2 h-4 w-4" />
+              Models
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center">
+              <BarChart2 className="mr-2 h-4 w-4" />
+              Performance
+            </TabsTrigger>
+            <TabsTrigger value="thresholds" className="flex items-center">
+              <Sliders className="mr-2 h-4 w-4" />
+              Thresholds
+            </TabsTrigger>
+            <TabsTrigger value="training" className="flex items-center">
+              <FileQuestion className="mr-2 h-4 w-4" />
+              Training Data
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Models Tab */}
+          <TabsContent value="models">
+            <div className="grid gap-6 md:grid-cols-2">
+              {loading ? (
+                Array(2).fill(0).map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader className="pb-2">
+                      <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                      <div className="h-4 w-64 bg-gray-100 dark:bg-gray-800 rounded"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                models.map((model) => (
+                  <Card key={model.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>{model.name}</CardTitle>
+                        {getModelStatusBadge(model.status)}
+                      </div>
+                      <CardDescription>
+                        v{model.version} • Provider: {model.provider}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="text-sm font-medium">Accuracy</div>
+                            <div className="text-sm text-muted-foreground">{(model.accuracy * 100).toFixed(1)}%</div>
+                          </div>
+                          <Progress value={model.accuracy * 100} className="h-2" />
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {model.capabilities.map((capability, i) => (
+                            <Badge key={i} variant="outline">{capability}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        Last updated: {new Date(model.last_updated).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={model.status === 'active'}
+                          onCheckedChange={(checked) => updateModelStatus(model.id, checked)}
+                        />
+                        <span className="text-sm">
+                          {model.status === 'active' ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Tabs defaultValue="models">
-        <TabsList className="grid grid-cols-5 w-full">
-          <TabsTrigger value="models">Models</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="errors">Error Analysis</TabsTrigger>
-          <TabsTrigger value="training">Training Pipeline</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="models" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Models</CardTitle>
-              <CardDescription>
-                Manage and monitor AI models and their performance.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Model Name</TableHead>
-                    <TableHead>Version</TableHead>
-                    <TableHead>Accuracy</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Training Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20 ml-auto"></div></TableCell>
-                      </TableRow>
-                    ))
-                  ) : models.length > 0 ? (
-                    models.map((model, index) => (
-                      <TableRow key={model.id}>
-                        <TableCell className="font-medium">{model.model_name}</TableCell>
-                        <TableCell>v{model.version}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <span className={model.accuracy >= 90 ? 'text-green-600' : 'text-amber-600'}>
-                              {model.accuracy}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <span className={model.confidence_score >= 80 ? 'text-green-600' : 'text-amber-600'}>
-                              {model.confidence_score}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {model.training_date ? new Date(model.training_date).toLocaleDateString() : 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={index === 0 ? 'default' : 'outline'}>
-                            {index === 0 ? 'Active' : 'Archived'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            {index !== 0 && (
-                              <Button variant="outline" size="sm">
-                                Activate
-                              </Button>
-                            )}
-                            <Button variant="outline" size="icon" className="h-8 w-8">
-                              <GitBranch className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                        No AI models found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          </TabsContent>
+
+          {/* Performance Tab */}
+          <TabsContent value="performance">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Model Comparison</CardTitle>
+                <CardTitle>Performance Metrics</CardTitle>
+                <CardDescription>
+                  Overall performance metrics across all content types
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={models.slice(0, 3).map(m => ({
-                        name: `v${m.version}`,
-                        accuracy: m.accuracy,
-                        confidence: m.confidence_score
-                      }))}
-                      layout="vertical"
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" domain={[0, 100]} />
-                      <YAxis dataKey="name" type="category" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="accuracy" name="Accuracy" fill="#4f46e5" />
-                      <Bar dataKey="confidence" name="Confidence" fill="#06b6d4" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                {performanceData.length > 0 ? (
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Overall Accuracy
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between">
+                            <div className="text-2xl font-bold">
+                              {(performanceData[0].accuracy * 100).toFixed(1)}%
+                            </div>
+                            <Gauge className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <Progress value={performanceData[0].accuracy * 100} className="h-2 mt-4" />
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Confidence Score
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between">
+                            <div className="text-2xl font-bold">
+                              {(performanceData[0].confidence_score * 100).toFixed(1)}%
+                            </div>
+                            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <Progress value={performanceData[0].confidence_score * 100} className="h-2 mt-4" />
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                            F1 Score
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between">
+                            <div className="text-2xl font-bold">
+                              {(performanceData[0].metrics.f1_score * 100).toFixed(1)}%
+                            </div>
+                            <BarChart2 className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <Progress value={performanceData[0].metrics.f1_score * 100} className="h-2 mt-4" />
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Content Type Performance</h3>
+                      <div className="space-y-4">
+                        {Object.entries(performanceData[0].metrics.content_types).map(([type, score]) => (
+                          <div key={type}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-sm font-medium capitalize">{type}</div>
+                              <div className="text-sm text-muted-foreground">{(score * 100).toFixed(1)}%</div>
+                            </div>
+                            <Progress value={score * 100} className="h-2" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No performance data available.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Thresholds Tab */}
+          <TabsContent value="thresholds">
+            <Card>
+              <CardHeader>
+                <CardTitle>Confidence Thresholds</CardTitle>
+                <CardDescription>
+                  Configure minimum confidence levels for different content types
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {thresholds.map((threshold, i) => (
+                    <div key={i} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium capitalize">{threshold.content_type}</h3>
+                        <Switch 
+                          checked={threshold.enabled}
+                          onCheckedChange={(checked) => {
+                            const newThresholds = [...thresholds];
+                            newThresholds[i].enabled = checked;
+                            setThresholds(newThresholds);
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm">Confidence Threshold</div>
+                          <div className="text-sm font-medium">{(threshold.confidence_threshold * 100).toFixed()}%</div>
+                        </div>
+                        <Slider
+                          value={[threshold.confidence_threshold * 100]}
+                          min={50}
+                          max={95}
+                          step={5}
+                          onValueChange={(value) => {
+                            const newThresholds = [...thresholds];
+                            newThresholds[i].confidence_threshold = value[0] / 100;
+                            setThresholds(newThresholds);
+                          }}
+                          disabled={!threshold.enabled}
+                          className="mb-6"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm">Max Processing Time (ms)</div>
+                          <div className="text-sm font-medium">{threshold.max_processing_time}ms</div>
+                        </div>
+                        <Slider
+                          value={[threshold.max_processing_time]}
+                          min={1000}
+                          max={20000}
+                          step={1000}
+                          onValueChange={(value) => {
+                            const newThresholds = [...thresholds];
+                            newThresholds[i].max_processing_time = value[0];
+                            setThresholds(newThresholds);
+                          }}
+                          disabled={!threshold.enabled}
+                          className="mb-6"
+                        />
+                      </div>
+                      
+                      {i < thresholds.length - 1 && <div className="border-t border-gray-200 dark:border-gray-800 my-4" />}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
+              <CardFooter>
+                <Button onClick={handleSaveThresholds}>Save Thresholds</Button>
+              </CardFooter>
             </Card>
-            
+          </TabsContent>
+
+          {/* Training Data Tab */}
+          <TabsContent value="training">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Metrics Breakdown</CardTitle>
+                <CardTitle>Training Data Management</CardTitle>
+                <CardDescription>
+                  Manage and monitor the training data used by AI models
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                {models.length > 0 && models[0].metrics ? (
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium">Training Examples</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Currently using 1,342 curated examples in the training set
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import
+                    </Button>
+                    <Button variant="outline">
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border rounded-md p-4">
+                  <h3 className="font-medium mb-4">Training Distribution</h3>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between text-sm">
-                        <span>Precision</span>
-                        <span className="font-medium">{models[0].metrics.precision?.toFixed(2) || 'N/A'}</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-medium">Flashcards</div>
+                        <div className="text-sm text-muted-foreground">412 examples</div>
                       </div>
-                      <Progress value={models[0].metrics.precision * 100 || 0} className="h-2 mt-1" />
+                      <Progress value={31} className="h-2" />
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm">
-                        <span>Recall</span>
-                        <span className="font-medium">{models[0].metrics.recall?.toFixed(2) || 'N/A'}</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-medium">Multiple Choice</div>
+                        <div className="text-sm text-muted-foreground">385 examples</div>
                       </div>
-                      <Progress value={models[0].metrics.recall * 100 || 0} className="h-2 mt-1" />
+                      <Progress value={29} className="h-2" />
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm">
-                        <span>F1 Score</span>
-                        <span className="font-medium">{models[0].metrics.f1_score?.toFixed(2) || 'N/A'}</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-medium">Reading</div>
+                        <div className="text-sm text-muted-foreground">245 examples</div>
                       </div>
-                      <Progress value={models[0].metrics.f1_score * 100 || 0} className="h-2 mt-1" />
+                      <Progress value={18} className="h-2" />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-medium">Writing</div>
+                        <div className="text-sm text-muted-foreground">178 examples</div>
+                      </div>
+                      <Progress value={13} className="h-2" />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-medium">Speaking</div>
+                        <div className="text-sm text-muted-foreground">122 examples</div>
+                      </div>
+                      <Progress value={9} className="h-2" />
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No metrics available</p>
+                </div>
+
+                <div className="border rounded-md p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-medium">Training Pipeline</h3>
+                    <Badge variant="outline">Last trained 3 days ago</Badge>
                   </div>
-                )}
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <Checkbox id="auto-train" />
+                      <label
+                        htmlFor="auto-train"
+                        className="ml-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Enable automatic training (weekly)
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox id="auto-evaluate" />
+                      <label
+                        htmlFor="auto-evaluate"
+                        className="ml-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Enable automatic evaluation
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox id="feedback-loop" />
+                      <label
+                        htmlFor="feedback-loop"
+                        className="ml-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Use user corrections in training loop
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox id="human-review" />
+                      <label
+                        htmlFor="human-review"
+                        className="ml-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Require human review for new examples
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox id="outlier-detection" />
+                      <label
+                        htmlFor="outlier-detection"
+                        className="ml-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Enable outlier detection
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Model Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {models.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Training Samples:</span>
-                      <span className="font-medium">{models[0].metrics?.training_samples || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Training Time:</span>
-                      <span className="font-medium">{models[0].metrics?.training_time_minutes || 'N/A'} minutes</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Model Size:</span>
-                      <span className="font-medium">1.2B parameters</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Base Model:</span>
-                      <span className="font-medium">GPT-3.5</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Created:</span>
-                      <span className="font-medium">
-                        {new Date(models[0].created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Last Updated:</span>
-                      <span className="font-medium">
-                        {new Date(models[0].updated_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No model details available</p>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="border-t pt-4">
-                <Button variant="outline" className="w-full">
-                  View Full Specification
+              <CardFooter>
+                <Button>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Start Training
                 </Button>
               </CardFooter>
             </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Provider Settings</CardTitle>
-              <CardDescription>
-                Configure your AI model providers and settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium">Active Provider</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select which AI provider to use for inference.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className={`border rounded-lg p-4 cursor-pointer transition-colors ${activeProvider === 'openai' ? 'border-primary bg-primary/5' : ''}`} onClick={() => setActiveProvider('openai')}>
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">OpenAI</h4>
-                      {activeProvider === 'openai' && <Check className="h-4 w-4 text-primary" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">GPT-4 based models</p>
-                  </div>
-                  
-                  <div className={`border rounded-lg p-4 cursor-pointer transition-colors ${activeProvider === 'azure' ? 'border-primary bg-primary/5' : ''}`} onClick={() => setActiveProvider('azure')}>
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Azure OpenAI</h4>
-                      {activeProvider === 'azure' && <Check className="h-4 w-4 text-primary" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Self-hosted GPT models</p>
-                  </div>
-                  
-                  <div className={`border rounded-lg p-4 cursor-pointer transition-colors ${activeProvider === 'custom' ? 'border-primary bg-primary/5' : ''}`} onClick={() => setActiveProvider('custom')}>
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Custom Model</h4>
-                      {activeProvider === 'custom' && <Check className="h-4 w-4 text-primary" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Self-trained Italian model</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Model Configuration</h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure parameters and thresholds for the AI model.
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <Label htmlFor="confidence-threshold">Confidence Threshold</Label>
-                        <span className="text-muted-foreground">{confidenceThreshold}%</span>
-                      </div>
-                      <Slider
-                        id="confidence-threshold"
-                        min={0}
-                        max={100}
-                        step={1}
-                        defaultValue={[70]}
-                        value={[confidenceThreshold]}
-                        onValueChange={(value) => setConfidenceThreshold(value[0])}
-                        className="mb-6"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Responses below this confidence threshold will be flagged for human review.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="temperature">Temperature</Label>
-                      <Select defaultValue="0.7">
-                        <SelectTrigger id="temperature">
-                          <SelectValue placeholder="Select temperature" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0.3">0.3 (More focused)</SelectItem>
-                          <SelectItem value="0.5">0.5</SelectItem>
-                          <SelectItem value="0.7">0.7 (Balanced)</SelectItem>
-                          <SelectItem value="0.9">0.9</SelectItem>
-                          <SelectItem value="1.0">1.0 (More creative)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="max-tokens">Max Tokens</Label>
-                      <Select defaultValue="1024">
-                        <SelectTrigger id="max-tokens">
-                          <SelectValue placeholder="Select max tokens" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="256">256</SelectItem>
-                          <SelectItem value="512">512</SelectItem>
-                          <SelectItem value="1024">1,024</SelectItem>
-                          <SelectItem value="2048">2,048</SelectItem>
-                          <SelectItem value="4096">4,096</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="auto-correct">Auto-Correction</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Automatically correct minor errors in user input
-                        </p>
-                      </div>
-                      <Switch id="auto-correct" defaultChecked />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="confidence-score">Show Confidence Score</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Display confidence score to users with responses
-                        </p>
-                      </div>
-                      <Switch id="confidence-score" defaultChecked />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="fallback">Human Fallback</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Use human review for low-confidence responses
-                        </p>
-                      </div>
-                      <Switch id="fallback" />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="logging">Enhanced Logging</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Log detailed model interactions for analysis
-                        </p>
-                      </div>
-                      <Switch id="logging" defaultChecked />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">API Configuration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="api-key">API Key</Label>
-                    <Input id="api-key" type="password" value="●●●●●●●●●●●●●●●●●●" readOnly />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="api-endpoint">API Endpoint</Label>
-                    <Input id="api-endpoint" defaultValue="https://api.openai.com/v1" />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4 flex justify-between">
-              <Button variant="outline">Reset to Defaults</Button>
-              <Button>
-                <Save className="mr-2 h-4 w-4" />
-                Save Settings
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>API Integration</CardTitle>
-              <CardDescription>
-                Configure webhook endpoints and third-party integrations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Webhook Endpoint</Label>
-                    <div className="flex space-x-2">
-                      <Input defaultValue="https://example.com/api/italian-ai-webhook" />
-                      <Button variant="outline" size="icon">
-                        <Webhook className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Receive notifications when model predictions require review.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Authentication</Label>
-                    <Select defaultValue="bearer">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select auth type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="bearer">Bearer Token</SelectItem>
-                        <SelectItem value="basic">Basic Auth</SelectItem>
-                        <SelectItem value="api-key">API Key</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Secret Token</Label>
-                    <Input type="password" value="●●●●●●●●●●●●●●●●●●" />
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="space-y-2 mb-4">
-                    <Label>Event Types</Label>
-                    <div className="border rounded-md p-3 space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="low-confidence" defaultChecked />
-                        <Label htmlFor="low-confidence">Low Confidence Predictions</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="errors" defaultChecked />
-                        <Label htmlFor="errors">Error Events</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="model-updates" defaultChecked />
-                        <Label htmlFor="model-updates">Model Updates</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="training-complete" />
-                        <Label htmlFor="training-complete">Training Completion</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="user-feedback" />
-                        <Label htmlFor="user-feedback">User Feedback</Label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button variant="outline" className="w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    Test Webhook
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="performance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Metrics</CardTitle>
-              <CardDescription>
-                Track AI model performance over time.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={perfData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="accuracy" name="Accuracy %" stroke="#4f46e5" strokeWidth={2} />
-                    <Line type="monotone" dataKey="confidence" name="Confidence %" stroke="#06b6d4" strokeWidth={2} />
-                    <Line type="monotone" dataKey="errors" name="Errors" stroke="#ef4444" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Average Accuracy</p>
-                        <p className="text-2xl font-bold">92.4%</p>
-                      </div>
-                      <Badge variant={92.4 >= 90 ? 'default' : 'outline'} className="ml-auto">
-                        +2.5%
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Response Time</p>
-                        <p className="text-2xl font-bold">0.45s</p>
-                      </div>
-                      <Badge variant="outline" className="ml-auto">
-                        -0.12s
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Error Rate</p>
-                        <p className="text-2xl font-bold">2.3%</p>
-                      </div>
-                      <Badge variant="default" className="bg-green-600 ml-auto">
-                        -1.2%
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Type Performance</CardTitle>
-                <CardDescription>
-                  AI model accuracy across different content types.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Grammar Exercises</span>
-                      <span className="font-medium">94.5%</span>
-                    </div>
-                    <Progress value={94.5} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Vocabulary Questions</span>
-                      <span className="font-medium">92.8%</span>
-                    </div>
-                    <Progress value={92.8} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Conversation Analysis</span>
-                      <span className="font-medium">89.2%</span>
-                    </div>
-                    <Progress value={89.2} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Reading Comprehension</span>
-                      <span className="font-medium">87.5%</span>
-                    </div>
-                    <Progress value={87.5} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Cultural References</span>
-                      <span className="font-medium">85.1%</span>
-                    </div>
-                    <Progress value={85.1} className="h-2" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>User Feedback</CardTitle>
-                <CardDescription>
-                  User satisfaction with AI-generated responses.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                      <span>Helpful</span>
-                    </div>
-                    <span className="font-medium">78.5%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                      <span>Somewhat Helpful</span>
-                    </div>
-                    <span className="font-medium">15.2%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                      <span>Not Helpful</span>
-                    </div>
-                    <span className="font-medium">6.3%</span>
-                  </div>
-                  
-                  <div className="pt-4 mt-4 border-t">
-                    <h4 className="text-sm font-medium mb-2">Top Feedback Categories</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Accuracy of Explanations</span>
-                        <span className="text-green-600">+24%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Clarity of Responses</span>
-                        <span className="text-green-600">+18%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Cultural Context</span>
-                        <span className="text-red-600">-12%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="errors" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Error Analysis</CardTitle>
-              <CardDescription>
-                Identify and analyze error patterns to improve model performance.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-base font-medium mb-4">Error Categories</h3>
-                    <div className="space-y-4">
-                      {errorCategories.map((category, index) => (
-                        <div key={index}>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>{category.category}</span>
-                            <span className="font-medium">{category.count} errors ({category.percentage}%)</span>
-                          </div>
-                          <Progress value={category.percentage} className="h-2" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-base font-medium mb-4">Error Trend</h3>
-                    <div className="h-[200px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={[
-                          { month: 'Jan', errors: 28 },
-                          { month: 'Feb', errors: 25 },
-                          { month: 'Mar', errors: 22 },
-                          { month: 'Apr', errors: 19 },
-                          { month: 'May', errors: 15 },
-                          { month: 'Jun', errors: 12 }
-                        ]}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="errors" name="Error Count" stroke="#ef4444" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                    
-                    <div className="mt-4 text-center">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        -57% errors over 6 months
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-base font-medium mb-4">Recent Errors</h3>
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Error Type</TableHead>
-                          <TableHead>User Input</TableHead>
-                          <TableHead>AI Response</TableHead>
-                          <TableHead>Expected</TableHead>
-                          <TableHead>Confidence</TableHead>
-                          <TableHead>Time</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Grammar Classification</TableCell>
-                          <TableCell>"Ho mangiato un panino ieri"</TableCell>
-                          <TableCell>Present Tense</TableCell>
-                          <TableCell>Past Tense</TableCell>
-                          <TableCell>62%</TableCell>
-                          <TableCell>2h ago</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Word Sense</TableCell>
-                          <TableCell>"Sono andato in banca"</TableCell>
-                          <TableCell>River Bank</TableCell>
-                          <TableCell>Financial Bank</TableCell>
-                          <TableCell>58%</TableCell>
-                          <TableCell>5h ago</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Cultural Context</TableCell>
-                          <TableCell>"Facciamo aperitivo"</TableCell>
-                          <TableCell>Let's have drinks</TableCell>
-                          <TableCell>Let's have pre-dinner drinks & snacks</TableCell>
-                          <TableCell>72%</TableCell>
-                          <TableCell>12h ago</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="outline" className="w-full">
-                <BarChartIcon className="mr-2 h-4 w-4" />
-                View Full Error Report
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Auto-detection flagged potential issues</AlertTitle>
-            <AlertDescription>
-              Our system has identified a pattern of increased errors in cultural context translations. 
-              Consider adding more training data for these specific scenarios.
-            </AlertDescription>
-          </Alert>
-        </TabsContent>
-        
-        <TabsContent value="training" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Training Pipeline</CardTitle>
-              <CardDescription>
-                Configure and manage the AI model training pipeline.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Training Data</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>Grammar Examples</span>
-                          <span className="font-medium">1,250</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Vocabulary</span>
-                          <span className="font-medium">3,500</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Conversations</span>
-                          <span className="font-medium">850</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Cultural References</span>
-                          <span className="font-medium">620</span>
-                        </div>
-                        <div className="pt-2 mt-2 border-t">
-                          <div className="flex justify-between text-sm font-medium">
-                            <span>Total Examples</span>
-                            <span>6,220</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Database className="mr-2 h-3 w-3" />
-                        Manage Data
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Training Schedule</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium">Auto-training</p>
-                            <p className="text-xs text-muted-foreground">Weekly on new data</p>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium">Full retraining</p>
-                            <p className="text-xs text-muted-foreground">Monthly</p>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium">Low-resource mode</p>
-                            <p className="text-xs text-muted-foreground">Save GPU resources</p>
-                          </div>
-                          <Switch />
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Settings className="mr-2 h-3 w-3" />
-                        Configure
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Last Training</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Date</span>
-                          <span className="font-medium">June 15, 2023</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Duration</span>
-                          <span className="font-medium">35 minutes</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Samples</span>
-                          <span className="font-medium">2,450</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Result</span>
-                          <Badge variant="outline" className="ml-auto">Success</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <Button size="sm" className="w-full" onClick={simulateModelTraining} disabled={isTrainingModel}>
-                        {isTrainingModel ? (
-                          <>
-                            <RotateCw className="mr-2 h-3 w-3 animate-spin" />
-                            Training...
-                          </>
-                        ) : (
-                          <>
-                            <RotateCw className="mr-2 h-3 w-3" />
-                            Train Now
-                          </>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </div>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Training Configuration</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="base-model">Base Model</Label>
-                          <Select defaultValue="gpt-3.5">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a base model" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="gpt-3.5">GPT-3.5</SelectItem>
-                              <SelectItem value="gpt-4">GPT-4</SelectItem>
-                              <SelectItem value="llama-2">LLaMA 2</SelectItem>
-                              <SelectItem value="mistral">Mistral</SelectItem>
-                              <SelectItem value="custom">Custom Model</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="training-method">Training Method</Label>
-                          <Select defaultValue="fine-tuning">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select training method" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fine-tuning">Fine-tuning</SelectItem>
-                              <SelectItem value="rlhf">Reinforcement Learning (RLHF)</SelectItem>
-                              <SelectItem value="dpo">Direct Preference Optimization</SelectItem>
-                              <SelectItem value="full">Full Model Training</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="epochs">Training Epochs</Label>
-                          <Select defaultValue="3">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select number of epochs" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1 Epoch</SelectItem>
-                              <SelectItem value="2">2 Epochs</SelectItem>
-                              <SelectItem value="3">3 Epochs</SelectItem>
-                              <SelectItem value="4">4 Epochs</SelectItem>
-                              <SelectItem value="5">5 Epochs</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="learning-rate">Learning Rate</Label>
-                          <Select defaultValue="5e-5">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select learning rate" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1e-5">1e-5 (Very Low)</SelectItem>
-                              <SelectItem value="5e-5">5e-5 (Low)</SelectItem>
-                              <SelectItem value="1e-4">1e-4 (Medium)</SelectItem>
-                              <SelectItem value="5e-4">5e-4 (High)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="batch-size">Batch Size</Label>
-                          <Select defaultValue="16">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select batch size" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="8">8</SelectItem>
-                              <SelectItem value="16">16</SelectItem>
-                              <SelectItem value="32">32</SelectItem>
-                              <SelectItem value="64">64</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="use-gpu">Use GPU Acceleration</Label>
-                            <Switch id="use-gpu" defaultChecked />
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="distributed">Distributed Training</Label>
-                            <Switch id="distributed" />
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="save-checkpoints">Save Checkpoints</Label>
-                            <Switch id="save-checkpoints" defaultChecked />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4 flex justify-between">
-                    <Button variant="outline">Reset Defaults</Button>
-                    <Button>Save Configuration</Button>
-                  </CardFooter>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </ProtectedRoute>
   );
 };
 

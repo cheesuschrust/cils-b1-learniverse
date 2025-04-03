@@ -2,13 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
   Table, 
   TableBody, 
   TableCaption, 
@@ -18,21 +11,12 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,14 +26,21 @@ import {
   Filter, 
   Edit, 
   Trash, 
-  Eye, 
   MoreHorizontal,
-  Check,
-  X,
-  FileUp,
-  Tag,
-  Loader2
+  Eye,
+  FileCheck,
+  FileX,
+  Link as LinkIcon,
+  ArrowUpRight,
+  Tags
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Pagination,
   PaginationContent,
@@ -58,77 +49,79 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useToast } from '@/components/ui/use-toast';
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ContentItem {
   id: string;
   title: string;
   content_type: string;
   status: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  category_id: string | null;
   tags: string[];
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+  category_id: string | null;
+  metadata: any;
 }
 
-const ContentManager = () => {
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  parent_id: string | null;
+}
+
+const ContentManager: React.FC = () => {
   const [content, setContent] = useState<ContentItem[]>([]);
   const [filteredContent, setFilteredContent] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
   const [filter, setFilter] = useState({
     type: 'all',
     status: 'all',
-    category: 'all'
+    category: 'all',
   });
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
-  const itemsPerPage = 10;
-
+  
   const { toast } = useToast();
-
+  
   useEffect(() => {
     fetchContent();
     fetchCategories();
   }, [currentPage]);
-
+  
   useEffect(() => {
     filterContent();
-  }, [content, searchQuery, filter]);
-
+  }, [content, searchQuery, filter, currentTab]);
+  
   const fetchContent = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('content_items')
-        .select('*')
+        .select('*, created_by:users(email)')
         .order('created_at', { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
         
       if (error) throw error;
       
       if (data) {
-        setContent(data);
+        setContent(data as ContentItem[]);
         
         // Get total count for pagination
         const { count, error: countError } = await supabase
@@ -144,7 +137,7 @@ const ContentManager = () => {
       console.error('Error fetching content:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch content. Please try again.',
+        description: 'Failed to fetch content items. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -156,7 +149,7 @@ const ContentManager = () => {
     try {
       const { data, error } = await supabase
         .from('content_categories')
-        .select('id, name')
+        .select('*')
         .order('name');
         
       if (error) throw error;
@@ -166,21 +159,32 @@ const ContentManager = () => {
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch categories. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
   
   const filterContent = () => {
     let filtered = [...content];
     
-    // Apply search
-    if (searchQuery) {
+    // Apply tab filter first
+    if (currentTab !== 'all') {
+      filtered = filtered.filter(item => item.status === currentTab);
+    }
+    
+    // Apply search query
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        item => item.title?.toLowerCase().includes(query)
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(query) ||
+        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query)))
       );
     }
     
-    // Apply filters
+    // Apply dropdown filters
     if (filter.type !== 'all') {
       filtered = filtered.filter(item => item.content_type === filter.type);
     }
@@ -196,12 +200,12 @@ const ContentManager = () => {
     setFilteredContent(filtered);
   };
   
-  const handleSelectItem = (itemId: string) => {
-    setSelectedItems(prevSelected => {
-      if (prevSelected.includes(itemId)) {
-        return prevSelected.filter(id => id !== itemId);
+  const handleSelectItem = (id: string) => {
+    setSelectedItems(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(i => i !== id);
       } else {
-        return [...prevSelected, itemId];
+        return [...prev, id];
       }
     });
   };
@@ -214,22 +218,27 @@ const ContentManager = () => {
     }
   };
   
-  const handleUpdateStatus = async (itemId: string, status: string) => {
+  const handleStatusChange = async (id: string, status: string) => {
     try {
       const { error } = await supabase
         .from('content_items')
         .update({ status })
-        .eq('id', itemId);
+        .eq('id', id);
         
       if (error) throw error;
       
       toast({
         title: 'Status Updated',
-        description: `Content status has been updated to ${status}.`,
+        description: `Content status changed to "${status}".`,
       });
       
       // Refresh content
-      fetchContent();
+      const updatedContent = content.map(item => 
+        item.id === id ? { ...item, status } : item
+      );
+      setContent(updatedContent);
+      filterContent();
+      
     } catch (error) {
       console.error('Error updating content status:', error);
       toast({
@@ -240,559 +249,432 @@ const ContentManager = () => {
     }
   };
   
-  const getCategoryNameById = (id: string | null) => {
-    if (!id) return 'Uncategorized';
-    const category = categories.find(cat => cat.id === id);
+  const handleBulkStatusChange = async (status: string) => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('content_items')
+        .update({ status })
+        .in('id', selectedItems);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Status Updated',
+        description: `${selectedItems.length} items updated to "${status}".`,
+      });
+      
+      // Refresh content
+      fetchContent();
+      
+      // Clear selection
+      setSelectedItems([]);
+      
+    } catch (error) {
+      console.error('Error updating content status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update content status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const handleDeleteContent = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('content_items')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Content Deleted',
+        description: 'The content item has been permanently deleted.',
+      });
+      
+      // Refresh content
+      const updatedContent = content.filter(item => item.id !== id);
+      setContent(updatedContent);
+      filterContent();
+      
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete content. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'published':
+        return <Badge variant="default">Published</Badge>;
+      case 'draft':
+        return <Badge variant="outline">Draft</Badge>;
+      case 'review':
+        return <Badge variant="secondary">In Review</Badge>;
+      case 'archived':
+        return <Badge variant="secondary">Archived</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+  
+  const getContentTypeBadge = (type: string) => {
+    switch (type) {
+      case 'flashcards':
+        return <Badge className="bg-blue-500">Flashcards</Badge>;
+      case 'multiple_choice':
+        return <Badge className="bg-green-500">Quiz</Badge>;
+      case 'reading':
+        return <Badge className="bg-purple-500">Reading</Badge>;
+      case 'writing':
+        return <Badge className="bg-amber-500">Writing</Badge>;
+      case 'speaking':
+        return <Badge className="bg-rose-500">Speaking</Badge>;
+      case 'listening':
+        return <Badge className="bg-cyan-500">Listening</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
+    }
+  };
+  
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return 'Uncategorized';
+    const category = categories.find(c => c.id === categoryId);
     return category ? category.name : 'Unknown';
   };
   
   return (
-    <div className="space-y-6">
-      <Helmet>
-        <title>Content Management - Admin</title>
-      </Helmet>
-      
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Content Management</h1>
+    <ProtectedRoute requireAdmin={true}>
+      <div className="space-y-6">
+        <Helmet>
+          <title>Content Management - Admin</title>
+        </Helmet>
         
-        <div className="flex space-x-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Content Management</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage and organize your learning content
+            </p>
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button asChild>
+              <a href="/admin/content-upload">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Content
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Content</DialogTitle>
-                <DialogDescription>
-                  Add new learning content to the platform.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Tabs defaultValue="text">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="text">Text Content</TabsTrigger>
-                  <TabsTrigger value="upload">File Upload</TabsTrigger>
-                  <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="text" className="space-y-4">
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="title" className="text-right">
-                        Title
-                      </Label>
-                      <Input id="title" placeholder="Content title" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="content-type" className="text-right">
-                        Content Type
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="lesson">Lesson</SelectItem>
-                          <SelectItem value="exercise">Exercise</SelectItem>
-                          <SelectItem value="quiz">Quiz</SelectItem>
-                          <SelectItem value="flashcards">Flashcards</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="category" className="text-right">
-                        Category
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-start gap-4">
-                      <Label htmlFor="content" className="text-right pt-2">
-                        Content
-                      </Label>
-                      <Textarea 
-                        id="content" 
-                        placeholder="Enter your content here..." 
-                        className="col-span-3 min-h-[200px]" 
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="tags" className="text-right">
-                        Tags
-                      </Label>
-                      <div className="col-span-3 flex items-center space-x-2">
-                        <Input id="tags" placeholder="Add tags separated by commas" />
-                        <Button variant="outline" size="icon">
-                          <Tag className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="upload" className="space-y-4">
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="upload-title" className="text-right">
-                        Title
-                      </Label>
-                      <Input id="upload-title" placeholder="File title" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right">
-                        File
-                      </Label>
-                      <div className="col-span-3">
-                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-8 text-center">
-                          <FileUp className="mx-auto h-12 w-12 text-gray-400" />
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Drag and drop or click to upload
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Supports PDF, DOCX, PPTX up to 10MB
-                            </p>
-                          </div>
-                          <Input 
-                            type="file" 
-                            className="hidden" 
-                            id="file-upload" 
-                          />
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            className="mt-4"
-                            onClick={() => document.getElementById('file-upload')?.click()}
-                          >
-                            Select File
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="file-type" className="text-right">
-                        Content Type
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="document">Document</SelectItem>
-                          <SelectItem value="presentation">Presentation</SelectItem>
-                          <SelectItem value="worksheet">Worksheet</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="file-category" className="text-right">
-                        Category
-                      </Label>
-                      <Select>
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="bulk" className="space-y-4">
-                  <div className="grid gap-4 py-4">
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-8 text-center">
-                      <FileUp className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Upload a CSV file with content items
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Download template for required format
-                        </p>
-                      </div>
-                      <Button 
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                      >
-                        Download Template
-                      </Button>
-                      <Input 
-                        type="file" 
-                        className="hidden" 
-                        id="bulk-upload" 
-                        accept=".csv"
-                      />
-                      <Button 
-                        type="button"
-                        className="mt-4 ml-2"
-                        onClick={() => document.getElementById('bulk-upload')?.click()}
-                      >
-                        Select CSV File
-                      </Button>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>The CSV file should include the following columns:</p>
-                      <ul className="list-disc ml-5 mt-1">
-                        <li>title</li>
-                        <li>content_type</li>
-                        <li>category_id</li>
-                        <li>content (JSON format)</li>
-                        <li>tags (comma-separated)</li>
-                      </ul>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              <DialogFooter>
-                <div className="flex items-center mr-auto space-x-2">
-                  <Checkbox id="publish" />
-                  <Label htmlFor="publish">Publish immediately</Label>
-                </div>
-                <Button variant="outline" onClick={() => {}}>Cancel</Button>
-                <Button>Save Content</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          <Button variant="outline" onClick={() => fetchContent()}>
-            Refresh
-          </Button>
+              </a>
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All Content</TabsTrigger>
-          <TabsTrigger value="drafts">Drafts</TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
-          <TabsTrigger value="review">Under Review</TabsTrigger>
-        </TabsList>
         
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Library</CardTitle>
-              <CardDescription>
-                Manage all learning content in the platform.
-              </CardDescription>
-              
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search content..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Select
-                    value={filter.type}
-                    onValueChange={(value) => setFilter({ ...filter, type: value })}
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="lesson">Lesson</SelectItem>
-                      <SelectItem value="exercise">Exercise</SelectItem>
-                      <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="flashcards">Flashcards</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select
-                    value={filter.status}
-                    onValueChange={(value) => setFilter({ ...filter, status: value })}
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="review">Under Review</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select
-                    value={filter.category}
-                    onValueChange={(value) => setFilter({ ...filter, category: value })}
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Content Library</CardTitle>
+            <CardDescription>
+              Browse, filter, and manage all content items.
+            </CardDescription>
+            
+            <Tabs 
+              value={currentTab} 
+              onValueChange={setCurrentTab}
+              className="mt-6"
+            >
+              <TabsList>
+                <TabsTrigger value="all">
+                  All Content
+                </TabsTrigger>
+                <TabsTrigger value="published">
+                  Published
+                </TabsTrigger>
+                <TabsTrigger value="draft">
+                  Drafts
+                </TabsTrigger>
+                <TabsTrigger value="review">
+                  In Review
+                </TabsTrigger>
+                <TabsTrigger value="archived">
+                  Archived
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search content..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox 
-                          checked={selectedItems.length === filteredContent.length && filteredContent.length > 0}
-                          onCheckedChange={handleSelectAll}
-                          aria-label="Select all"
-                        />
-                      </TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      Array.from({ length: 5 }).map((_, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-40"></div>
-                          </TableCell>
-                          <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div></TableCell>
-                          <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div></TableCell>
-                          <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div></TableCell>
-                          <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div></TableCell>
-                          <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div></TableCell>
-                          <TableCell><div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-8"></div></TableCell>
-                        </TableRow>
-                      ))
-                    ) : filteredContent.length > 0 ? (
-                      filteredContent.map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Checkbox 
-                              checked={selectedItems.includes(item.id)}
-                              onCheckedChange={() => handleSelectItem(item.id)}
-                              aria-label={`Select ${item.title}`}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">{item.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.content_type}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {getCategoryNameById(item.category_id)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              item.status === 'published' ? 'default' : 
-                              item.status === 'review' ? 'outline' : 
-                              'secondary'
-                            }>
-                              {item.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Open menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  <span>Preview</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <span>Edit Content</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleUpdateStatus(item.id, 'draft')}>
-                                  <Badge variant="secondary" className="mr-2">Draft</Badge>
-                                  <span>Set as Draft</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleUpdateStatus(item.id, 'review')}>
-                                  <Badge variant="outline" className="mr-2">Review</Badge>
-                                  <span>Send for Review</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleUpdateStatus(item.id, 'published')}>
-                                  <Badge variant="default" className="mr-2">Published</Badge>
-                                  <span>Publish</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  <span>Delete</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center">
-                          No content items found.
+              <div className="flex flex-wrap gap-2">
+                <Select
+                  value={filter.type}
+                  onValueChange={(value) => setFilter({ ...filter, type: value })}
+                >
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Content Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="flashcards">Flashcards</SelectItem>
+                    <SelectItem value="multiple_choice">Quiz</SelectItem>
+                    <SelectItem value="reading">Reading</SelectItem>
+                    <SelectItem value="writing">Writing</SelectItem>
+                    <SelectItem value="speaking">Speaking</SelectItem>
+                    <SelectItem value="listening">Listening</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select
+                  value={filter.category}
+                  onValueChange={(value) => setFilter({ ...filter, category: value })}
+                >
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.length === filteredContent.length && filteredContent.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {totalPages > 1 && (
-                <div className="mt-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => Math.abs(page - currentPage) < 3 || page === 1 || page === totalPages)
-                        .map((page, i, array) => {
-                          if (i > 0 && array[i - 1] !== page - 1) {
-                            return (
-                              <React.Fragment key={`ellipsis-${page}`}>
-                                <PaginationItem>
-                                  <PaginationLink disabled>...</PaginationLink>
-                                </PaginationItem>
-                                <PaginationItem>
-                                  <PaginationLink
-                                    onClick={() => setCurrentPage(page)}
-                                    isActive={currentPage === page}
-                                  >
-                                    {page}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              </React.Fragment>
-                            );
-                          }
+                    ))
+                  ) : filteredContent.length > 0 ? (
+                    filteredContent.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.includes(item.id)}
+                            onChange={() => handleSelectItem(item.id)}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium truncate max-w-[250px]">{item.title}</div>
+                          {item.tags && item.tags.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {item.tags.slice(0, 3).map((tag, i) => (
+                                <span 
+                                  key={i} 
+                                  className="px-1.5 py-0.5 bg-muted text-xs rounded-sm">
+                                  {tag}
+                                </span>
+                              ))}
+                              {item.tags.length > 3 && (
+                                <span className="px-1.5 py-0.5 bg-muted text-xs rounded-sm">
+                                  +{item.tags.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{getContentTypeBadge(item.content_type)}</TableCell>
+                        <TableCell>{getCategoryName(item.category_id)}</TableCell>
+                        <TableCell>{getStatusBadge(item.status)}</TableCell>
+                        <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="mr-2 h-4 w-4" />
+                                <span>View Content</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit Content</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Tags className="mr-2 h-4 w-4" />
+                                <span>Edit Tags</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {item.status !== 'published' && (
+                                <DropdownMenuItem onSelect={() => handleStatusChange(item.id, 'published')}>
+                                  <FileCheck className="mr-2 h-4 w-4" />
+                                  <span>Publish</span>
+                                </DropdownMenuItem>
+                              )}
+                              {item.status !== 'draft' && (
+                                <DropdownMenuItem onSelect={() => handleStatusChange(item.id, 'draft')}>
+                                  <FileX className="mr-2 h-4 w-4" />
+                                  <span>Mark as Draft</span>
+                                </DropdownMenuItem>
+                              )}
+                              {item.status !== 'archived' && (
+                                <DropdownMenuItem onSelect={() => handleStatusChange(item.id, 'archived')}>
+                                  <FileX className="mr-2 h-4 w-4" />
+                                  <span>Archive</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-red-600" onSelect={() => handleDeleteContent(item.id)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        No content found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => Math.abs(page - currentPage) < 3 || page === 1 || page === totalPages)
+                      .map((page, i, array) => {
+                        if (i > 0 && array[i - 1] !== page - 1) {
                           return (
-                            <PaginationItem key={page}>
-                              <PaginationLink
-                                onClick={() => setCurrentPage(page)}
-                                isActive={currentPage === page}
-                              >
-                                {page}
-                              </PaginationLink>
-                            </PaginationItem>
+                            <React.Fragment key={`ellipsis-${page}`}>
+                              <PaginationItem>
+                                <PaginationLink disabled>...</PaginationLink>
+                              </PaginationItem>
+                              <PaginationItem>
+                                <PaginationLink
+                                  onClick={() => setCurrentPage(page)}
+                                  isActive={currentPage === page}
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            </React.Fragment>
                           );
-                        })}
-                      
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        }
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+            
+            {selectedItems.length > 0 && (
+              <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background border shadow-lg rounded-lg p-4 flex items-center gap-4">
+                <span className="text-sm font-medium">
+                  {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
+                </span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleBulkStatusChange('published')}>
+                    <FileCheck className="mr-1 h-4 w-4" /> Publish
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkStatusChange('draft')}>
+                    Mark as Draft
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkStatusChange('archived')}>
+                    Archive
+                  </Button>
+                  <Button size="sm" variant="destructive">
+                    <Trash className="mr-1 h-4 w-4" /> Delete
+                  </Button>
                 </div>
-              )}
-              
-              {selectedItems.length > 0 && (
-                <div className="mt-4 p-2 bg-muted rounded-md flex justify-between items-center">
-                  <span>{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</span>
-                  <div className="space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(selectedItems[0], 'published')}>
-                      <Check className="mr-2 h-4 w-4" />
-                      Publish
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(selectedItems[0], 'draft')}>
-                      <X className="mr-2 h-4 w-4" />
-                      Unpublish
-                    </Button>
-                    <Button size="sm" variant="destructive">
-                      <Trash className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="drafts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Draft Content</CardTitle>
-              <CardDescription>Content items that are still in progress.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Filter status set to "draft" will display here.
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="published" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Published Content</CardTitle>
-              <CardDescription>Content that is live and visible to users.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Filter status set to "published" will display here.
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="review" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Under Review</CardTitle>
-              <CardDescription>Content waiting for approval before publishing.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Filter status set to "review" will display here.
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </ProtectedRoute>
   );
 };
 

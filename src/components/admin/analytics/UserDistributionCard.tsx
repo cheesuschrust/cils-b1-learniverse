@@ -1,67 +1,26 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, ResponsiveContainer, Cell } from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DonutChart } from '@/components/admin/charts';
 
-interface UserDistributionCardProps {
-  data: { name: string; value: number }[];
-  totalUsers: number;
-  showFooter?: boolean;
-  className?: string;
-}
+const userDistributionData = [
+  { name: 'Free', value: 68 },
+  { name: 'Premium', value: 24 },
+  { name: 'Instructor', value: 8 }
+];
 
-export const UserDistributionCard: React.FC<UserDistributionCardProps> = ({ 
-  data, 
-  totalUsers,
-  showFooter = false,
-  className
-}) => {
-  const colors = ["#3b82f6", "#22c55e", "#6366f1"];
-
+const UserDistributionCard: React.FC = () => {
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader>
         <CardTitle>User Distribution</CardTitle>
-        <CardDescription>
-          Users by subscription plan
-        </CardDescription>
+        <CardDescription>Breakdown by subscription tier</CardDescription>
       </CardHeader>
-      <CardContent className="flex justify-center">
-        <div className="h-52 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                fill="#8884d8"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent>
+        <DonutChart data={userDistributionData} height={300} />
       </CardContent>
-      
-      {showFooter && (
-        <CardFooter className="pt-0">
-          <div className="w-full space-y-1">
-            {data.map((plan, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span>{plan.name}</span>
-                <span>{Math.round(plan.value / totalUsers * 100)}%</span>
-              </div>
-            ))}
-          </div>
-        </CardFooter>
-      )}
     </Card>
   );
 };
+
+export default UserDistributionCard;

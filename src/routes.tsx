@@ -3,28 +3,28 @@ import React from 'react';
 import { RouteObject } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
-import Index from './pages/index';
+import Index from './pages/Index';
 import Dashboard from './pages/dashboard';
 import ProgressPage from './pages/progress';
 import NotFound from './pages/NotFound';
 import Analytics from './pages/Analytics';
 
 // Auth pages
-import Login from './pages/auth/Login';
-import Signup from './pages/auth/Signup';
-import ForgotPassword from './pages/auth/ForgotPassword';
+import LoginPage from './pages/auth/LoginPage';
+import SignupPage from './pages/auth/SignupPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 // Admin pages
-import AdminDashboard from './pages/admin/Dashboard';
-import ManageUsers from './pages/admin/ManageUsers';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
 import ContentManager from './pages/admin/ContentManager';
 import AIManagement from './pages/admin/AIManagement';
 import SubscriptionManager from './pages/admin/SubscriptionManager';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import SupportTickets from './pages/admin/SupportTickets';
 import SystemHealth from './pages/admin/SystemHealth';
-import UserManagement from './pages/admin/UserManagement';
-import InstitutionalLicensingManager from './components/admin/InstitutionalLicensingManager';
+import ContentUploader from './pages/admin/ContentUploader';
+import ContentAnalysis from './pages/admin/ContentAnalysis';
 
 const routes: RouteObject[] = [
   {
@@ -35,9 +35,9 @@ const routes: RouteObject[] = [
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'progress', element: <ProgressPage /> },
       { path: 'analytics', element: <Analytics /> },
-      { path: 'login', element: <Login /> },
-      { path: 'signup', element: <Signup /> },
-      { path: 'forgot-password', element: <ForgotPassword /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'signup', element: <SignupPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: '*', element: <NotFound /> },
     ],
   },
@@ -49,12 +49,13 @@ const routes: RouteObject[] = [
       { path: 'dashboard', element: <AdminDashboard /> },
       { path: 'users', element: <UserManagement /> },
       { path: 'content', element: <ContentManager /> },
+      { path: 'content-upload', element: <ContentUploader /> },
+      { path: 'content-analysis', element: <ContentAnalysis /> },
       { path: 'ai-management', element: <AIManagement /> },
       { path: 'subscriptions', element: <SubscriptionManager /> },
       { path: 'analytics', element: <AdminAnalytics /> },
       { path: 'support-tickets', element: <SupportTickets /> },
       { path: 'system-health', element: <SystemHealth /> },
-      { path: 'licensing', element: <InstitutionalLicensingManager /> },
     ],
   },
 ];

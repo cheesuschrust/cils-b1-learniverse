@@ -10,15 +10,11 @@ import {
   MessageSquare,
   Upload,
   AlertCircle,
-  Box,
-  Brain,
-  Tags,
-  Store,
-  Building,
-  MessageSquareText,
-  AppWindow,
+  Bot,
+  CreditCard,
   Search
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface AdminNavigationItem {
   title: string;
@@ -48,6 +44,11 @@ const AdminNavigation: React.FC = () => {
       icon: <FileText className="h-5 w-5" />,
     },
     {
+      title: 'Content Upload',
+      href: '/admin/content-upload',
+      icon: <Upload className="h-5 w-5" />,
+    },
+    {
       title: 'Content Analysis',
       href: '/admin/content-analysis',
       icon: <Search className="h-5 w-5" />,
@@ -55,17 +56,17 @@ const AdminNavigation: React.FC = () => {
     {
       title: 'AI Management',
       href: '/admin/ai-management',
-      icon: <Brain className="h-5 w-5" />,
+      icon: <Bot className="h-5 w-5" />,
     },
     {
-      title: 'System Tests',
-      href: '/admin/system-tests',
-      icon: <AlertCircle className="h-5 w-5" />,
+      title: 'Subscriptions',
+      href: '/admin/subscriptions',
+      icon: <CreditCard className="h-5 w-5" />,
     },
     {
-      title: 'System Logs',
-      href: '/admin/logs',
-      icon: <Database className="h-5 w-5" />,
+      title: 'Analytics',
+      href: '/admin/analytics',
+      icon: <BarChart3 className="h-5 w-5" />,
     },
     {
       title: 'Support Tickets',
@@ -73,81 +74,31 @@ const AdminNavigation: React.FC = () => {
       icon: <MessageSquare className="h-5 w-5" />,
     },
     {
-      title: 'File Uploader',
-      href: '/admin/file-uploader',
-      icon: <Upload className="h-5 w-5" />,
-    },
-    {
-      title: 'Analytics Dashboard',
-      href: '/admin/analytics',
-      icon: <BarChart3 className="h-5 w-5" />,
-      beta: true,
-    },
-    {
-      title: 'Email Configuration',
-      href: '/admin/email-config',
-      icon: <MessageSquareText className="h-5 w-5" />,
-    },
-    {
-      title: 'Institutional Licensing',
-      href: '/admin/institutional-licensing',
-      icon: <Building className="h-5 w-5" />,
-    },
-    {
-      title: 'Ad Management',
-      href: '/admin/ad-management',
-      icon: <Tags className="h-5 w-5" />,
-    },
-    {
-      title: 'Chatbot Management',
-      href: '/admin/chatbot-management',
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
-    {
-      title: 'App Store Listing',
-      href: '/admin/app-store-listing',
-      icon: <AppWindow className="h-5 w-5" />,
-    },
-    {
-      title: 'E-commerce Integration',
-      href: '/admin/ecommerce',
-      icon: <Store className="h-5 w-5" />,
-      beta: true,
-    },
-    {
-      title: 'SEO Management',
-      href: '/admin/seo',
-      icon: <Search className="h-5 w-5" />,
-    },
-    {
-      title: 'Settings',
-      href: '/admin/settings',
-      icon: <Settings className="h-5 w-5" />,
-    },
+      title: 'System Health',
+      href: '/admin/system-health',
+      icon: <AlertCircle className="h-5 w-5" />,
+    }
   ];
 
   return (
-    <div className="space-y-1">
+    <nav className="flex-1 space-y-1">
       {navItems.map((item) => (
-        <Link
-          key={item.href}
-          to={item.href}
-          className={`flex items-center px-3 py-2 text-sm rounded-md group ${
-            isActive(item.href)
-              ? 'bg-primary/10 text-primary font-medium'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          }`}
-        >
-          {item.icon}
-          <span className="ml-3 flex-1">{item.title}</span>
-          {item.beta && (
-            <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-              Beta
-            </span>
-          )}
+        <Link key={item.href} to={item.href}>
+          <Button 
+            variant={isActive(item.href) ? "secondary" : "ghost"}
+            className="w-full justify-start"
+          >
+            {item.icon}
+            <span className="ml-3 flex-1">{item.title}</span>
+            {item.beta && (
+              <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
+                Beta
+              </span>
+            )}
+          </Button>
         </Link>
       ))}
-    </div>
+    </nav>
   );
 };
 

@@ -1,85 +1,55 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Badge } from '@/components/ui/badge';
 
-interface AIPerformanceCardProps {
-  data: {
-    accuracy: {
-      overall: number;
-      speechRecognition: number;
-      textGeneration: number;
-      translation: number;
-      flashcardGeneration: number;
-    };
-    byDay: { day: string; requests: number }[];
-  };
+interface AIPerformanceData {
+  name: string;
+  accuracy: number;
+  questions: number;
 }
 
-export const AIPerformanceCard: React.FC<AIPerformanceCardProps> = ({ data }) => {
+interface AIPerformanceCardProps {
+  data: AIPerformanceData[];
+}
+
+const AIPerformanceCard: React.FC<AIPerformanceCardProps> = ({ data }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI System Performance</CardTitle>
-        <CardDescription>
-          Accuracy metrics across different AI features
-        </CardDescription>
+        <CardTitle className="text-lg">AI Accuracy by Content Type</CardTitle>
+        <CardDescription>Model performance across different question types</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <div>
-            <div className="text-center mb-2">
-              <span className="text-sm font-medium">Overall</span>
-              <div className="text-2xl font-bold">{data.accuracy.overall}%</div>
+        <div className="space-y-6">
+          {data.map((item, i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center">
+                    <span className="font-medium">{item.name}</span>
+                    {item.accuracy >= 90 ? (
+                      <Badge variant="default" className="ml-2 bg-green-500">High</Badge>
+                    ) : item.accuracy >= 80 ? (
+                      <Badge variant="default" className="ml-2 bg-amber-500">Good</Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-2">Needs Improvement</Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {item.questions.toLocaleString()} questions processed
+                  </div>
+                </div>
+                <div className="text-lg font-bold">{item.accuracy}%</div>
+              </div>
+              <Progress value={item.accuracy} className="h-2" />
             </div>
-            <Progress value={data.accuracy.overall} className="h-2" />
-          </div>
-          <div>
-            <div className="text-center mb-2">
-              <span className="text-sm font-medium">Speech</span>
-              <div className="text-2xl font-bold">{data.accuracy.speechRecognition}%</div>
-            </div>
-            <Progress value={data.accuracy.speechRecognition} className="h-2" />
-          </div>
-          <div>
-            <div className="text-center mb-2">
-              <span className="text-sm font-medium">Text</span>
-              <div className="text-2xl font-bold">{data.accuracy.textGeneration}%</div>
-            </div>
-            <Progress value={data.accuracy.textGeneration} className="h-2" />
-          </div>
-          <div>
-            <div className="text-center mb-2">
-              <span className="text-sm font-medium">Translation</span>
-              <div className="text-2xl font-bold">{data.accuracy.translation}%</div>
-            </div>
-            <Progress value={data.accuracy.translation} className="h-2" />
-          </div>
-          <div>
-            <div className="text-center mb-2">
-              <span className="text-sm font-medium">Flashcards</span>
-              <div className="text-2xl font-bold">{data.accuracy.flashcardGeneration}%</div>
-            </div>
-            <Progress value={data.accuracy.flashcardGeneration} className="h-2" />
-          </div>
-        </div>
-        
-        <Separator className="my-6" />
-        
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.byDay}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="requests" fill="#6366f1" />
-            </BarChart>
-          </ResponsiveContainer>
+          ))}
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default AIPerformanceCard;

@@ -1,116 +1,132 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, BookOpen, MessageSquare, FileQuestion } from "lucide-react";
-import { supabase } from '@/lib/supabase';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { ArrowUpRight, FileText, BookOpen, PenLine, Mic, HeadphonesIcon } from 'lucide-react';
 
-const ContentStatsCards: React.FC = () => {
-  const [stats, setStats] = useState({
-    totalContent: 0,
-    totalQuestions: 0,
-    contentToday: 0,
-    questionsToday: 0
-  });
-  
-  useEffect(() => {
-    const fetchContentStats = async () => {
-      try {
-        // Get today's date
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString();
-        
-        // Get total content count
-        const { count: contentCount, error: contentError } = await supabase
-          .from('content')
-          .select('*', { count: 'exact', head: true });
-        
-        // Get content added today
-        const { count: contentTodayCount, error: contentTodayError } = await supabase
-          .from('content')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', todayStr);
-        
-        // Get total questions count
-        const { count: questionsCount, error: questionsError } = await supabase
-          .from('questions')
-          .select('*', { count: 'exact', head: true });
-        
-        // Get questions added today
-        const { count: questionsTodayCount, error: questionsTodayError } = await supabase
-          .from('questions')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', todayStr);
-        
-        setStats({
-          totalContent: contentCount || 0,
-          totalQuestions: questionsCount || 0,
-          contentToday: contentTodayCount || 0,
-          questionsToday: questionsTodayCount || 0
-        });
-      } catch (error) {
-        console.error('Error fetching content stats:', error);
-      }
-    };
-    
-    fetchContentStats();
-  }, []);
-  
+interface ContentStatsCardsProps {
+  period: string;
+}
+
+const ContentStatsCards: React.FC<ContentStatsCardsProps> = ({ period }) => {
+  // Mock data - in a real app, this would come from API
+  const stats = {
+    totalContent: 3921,
+    flashcards: 1425,
+    multipleChoice: 856,
+    reading: 742,
+    writing: 524,
+    speaking: 374
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Content</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Total Content
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalContent.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.contentToday > 0 ? `+${stats.contentToday} today` : ''}
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Questions</CardTitle>
-          <FileQuestion className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalQuestions.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.questionsToday > 0 ? `+${stats.questionsToday} today` : ''}
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg. Questions/Content</CardTitle>
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.totalContent > 0 
-              ? (stats.totalQuestions / stats.totalContent).toFixed(1) 
-              : '0'}
+          <div className="text-2xl font-bold">{stats.totalContent}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+32</span>
+            <span className="ml-1">this week</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Questions per content item
-          </p>
+          <Progress value={85} className="h-1 mt-2" />
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Content Engagement</CardTitle>
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Flashcards
+            <Badge className="bg-blue-500">36.3%</Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">--</div>
-          <p className="text-xs text-muted-foreground">
-            Average interactions per item
-          </p>
+          <div className="text-2xl font-bold">{stats.flashcards}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+14</span>
+            <span className="ml-1">this week</span>
+          </div>
+          <Progress value={36.3} className="h-1 mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Quizzes
+            <Badge className="bg-green-500">21.8%</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.multipleChoice}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+7</span>
+            <span className="ml-1">this week</span>
+          </div>
+          <Progress value={21.8} className="h-1 mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Reading
+            <Badge className="bg-purple-500">18.9%</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.reading}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+5</span>
+            <span className="ml-1">this week</span>
+          </div>
+          <Progress value={18.9} className="h-1 mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Writing
+            <Badge className="bg-amber-500">13.4%</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.writing}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+3</span>
+            <span className="ml-1">this week</span>
+          </div>
+          <Progress value={13.4} className="h-1 mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            Speaking
+            <Badge className="bg-rose-500">9.5%</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.speaking}</div>
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            <span className="text-green-500 font-medium">+3</span>
+            <span className="ml-1">this week</span>
+          </div>
+          <Progress value={9.5} className="h-1 mt-2" />
         </CardContent>
       </Card>
     </div>
