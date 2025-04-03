@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,9 +98,6 @@ const DailyQuestion = () => {
   if (isLoading) {
     return (
       <div className="container py-8 max-w-3xl mx-auto">
-        <Helmet>
-          <title>Daily Question | CILS Italian Citizenship</title>
-        </Helmet>
         <Card className="w-full">
           <CardContent className="flex items-center justify-center p-12">
             <div className="flex flex-col items-center gap-4">
@@ -117,9 +113,6 @@ const DailyQuestion = () => {
   if (hasCompletedToday && isCorrect !== null) {
     return (
       <div className="container py-8 max-w-3xl mx-auto">
-        <Helmet>
-          <title>Daily Question | CILS Italian Citizenship</title>
-        </Helmet>
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
@@ -230,9 +223,6 @@ const DailyQuestion = () => {
 
   return (
     <div className="container py-8 max-w-3xl mx-auto">
-      <Helmet>
-        <title>Daily Question | CILS Italian Citizenship</title>
-      </Helmet>
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">

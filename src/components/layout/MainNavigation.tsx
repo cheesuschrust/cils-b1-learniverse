@@ -1,217 +1,280 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Home,
+  BarChart3,
+  BookOpen,
+  User,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  HelpCircle,
+  CalendarCheck,
+  MessageSquare,
+  Headphones,
+  Edit
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Bell,
-  BookOpen,
-  Home,
-  LogOut,
-  Menu,
-  Mic,
-  PenLine,
-  Settings,
-  User,
-  X,
-  BookOpenCheck,
-  Trophy,
-  Zap,
-  HelpCircle,
-  Calendar,
-} from 'lucide-react';
-import { Headphones } from '@/components/icons';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
-const MainNavigation: React.FC = () => {
-  const { user, logout } = useAuth();
+const MainNavigation = () => {
+  const { user } = useAuth();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+      checkUnreadNotifications();
+    }
+  }, [user]);
   
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+  
+  const checkUnreadNotifications = async () => {
+    try {
+      // Placeholder for notification system
+      // This would fetch actual unread notifications from the backend
+      setUnreadNotifications(2);
+    } catch (error) {
+      console.error('Error checking notifications:', error);
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      await logout();
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Error logging out:', error);
     }
   };
-  
-  // Get user initials for avatar fallback
-  const getUserInitials = () => {
-    if (!user) return '?';
-    if (user.displayName) {
-      return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+
+  const getInitials = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name[0]}${userProfile.last_name[0]}`.toUpperCase();
     }
-    if (user.firstName) {
-      return user.firstName[0].toUpperCase() + (user.lastName ? user.lastName[0].toUpperCase() : '');
-    }
-    return user.email[0].toUpperCase();
+    return user?.email?.[0].toUpperCase() || 'U';
   };
-  
-  // Nav items configuration
+
   const navItems = [
-    { label: 'Home', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
-    { label: 'Daily Question', href: '/daily-question', icon: <Zap className="h-4 w-4" /> },
-    { label: 'Reading', href: '/reading', icon: <BookOpen className="h-4 w-4" /> },
-    { label: 'Writing', href: '/writing', icon: <PenLine className="h-4 w-4" /> },
-    { label: 'Speaking', href: '/speaking', icon: <Mic className="h-4 w-4" /> },
-    { label: 'Listening', href: '/listening', icon: <Headphones className="h-4 w-4" /> },
-    { label: 'Flashcards', href: '/flashcards', icon: <BookOpenCheck className="h-4 w-4" /> },
-    { label: 'Progress', href: '/progress', icon: <Trophy className="h-4 w-4" /> },
+    {
+      title: 'Home',
+      path: '/',
+      icon: <Home className="h-5 w-5" />
+    },
+    {
+      title: 'Dashboard',
+      path: '/dashboard',
+      icon: <BarChart3 className="h-5 w-5" />
+    },
+    {
+      title: 'Progress',
+      path: '/progress',
+      icon: <BarChart3 className="h-5 w-5" />
+    },
+    {
+      title: 'Daily Question',
+      path: '/daily-question',
+      icon: <CalendarCheck className="h-5 w-5" />
+    },
+    {
+      title: 'Flashcards',
+      path: '/flashcards',
+      icon: <BookOpen className="h-5 w-5" />
+    },
+    {
+      title: 'Listening',
+      path: '/listening',
+      icon: <Headphones className="h-5 w-5" />
+    },
+    {
+      title: 'Speaking',
+      path: '/speaking',
+      icon: <MessageSquare className="h-5 w-5" />
+    },
+    {
+      title: 'Writing',
+      path: '/writing',
+      icon: <Edit className="h-5 w-5" />
+    }
   ];
-  
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
     <header className="border-b">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg hidden md:inline">CILS B1 Prep</span>
+            <span className="font-bold text-lg">CILS Italian</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-6">
-            {navItems.map((item) => (
+            {navItems.filter(item => user || item.path === '/').map(item => (
               <Link
-                key={item.href}
-                to={item.href}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                key={item.path}
+                to={item.path}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground'
+                }`}
               >
-                {item.label}
+                {item.title}
               </Link>
             ))}
           </nav>
         </div>
         
-        <div className="flex items-center gap-4">
-          {user ? (
-            <>
-              <Button variant="ghost" size="icon" className="relative" asChild>
-                <Link to="/notifications">
-                  <Bell className="h-5 w-5" />
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">3</Badge>
-                </Link>
-              </Button>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar>
-                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.firstName || 'User'} />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.displayName || user.firstName || user.email}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer w-full flex">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/achievements" className="cursor-pointer w-full flex">
-                        <Trophy className="mr-2 h-4 w-4" />
-                        <span>Achievements</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/calendar" className="cursor-pointer w-full flex">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>Calendar</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings" className="cursor-pointer w-full flex">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/help" className="cursor-pointer w-full flex">
-                        <HelpCircle className="mr-2 h-4 w-4" />
-                        <span>Help</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger asChild>
+        {user ? (
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative p-0 h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{userProfile?.first_name} {userProfile?.last_name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/help" className="flex items-center cursor-pointer">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Help</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4">
+                  {navItems.map(item => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
+                        isActive(item.path) ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {item.icon}
+                      {item.title}
+                    </Link>
+                  ))}
+                  <div className="h-px bg-border my-2" />
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 text-sm font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="h-5 w-5" />
+                    Profile
+                  </Link>
+                  <Link
+                    to="/settings"
+                    className="flex items-center gap-2 text-sm font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Settings className="h-5 w-5" />
+                    Settings
+                  </Link>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="md:hidden"
-                    aria-label="Toggle menu"
+                    className="flex items-center gap-2 justify-start p-0 h-auto font-medium"
+                    onClick={handleLogout}
                   >
-                    <Menu className="h-6 w-6" />
+                    <LogOut className="h-5 w-5" />
+                    Log out
                   </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="sm:max-w-sm">
-                  <SheetHeader className="mb-6">
-                    <SheetTitle className="flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      CILS B1 Prep
-                    </SheetTitle>
-                  </SheetHeader>
-                  <nav className="flex flex-col gap-4">
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className="flex items-center gap-2 text-sm font-medium p-2 rounded-md hover:bg-muted"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    ))}
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/login">Log in</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/signup">Sign up</Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-            </>
-          )}
-        </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost">
+              <Link to="/auth?mode=signin">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/auth?mode=signup">Sign Up</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </header>
   );

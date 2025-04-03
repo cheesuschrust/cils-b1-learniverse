@@ -1,61 +1,81 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-interface ConfidenceIndicatorProps {
-  score: number;  // 0 to 1 value
+export interface ConfidenceIndicatorProps {
+  score: number;
+  label?: boolean;
+  showDetails?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  showText?: boolean;
   className?: string;
 }
 
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
+  label = true,
+  showDetails = false,
   size = 'md',
-  showText = true,
-  className = ''
+  className = '',
 }) => {
-  // Ensure score is between 0 and 1
-  const normalizedScore = Math.max(0, Math.min(1, score));
+  // Ensure the score is a number between 0-100
+  const normalizedScore = typeof score === 'number' ? Math.max(0, Math.min(100, score * 100)) : 0;
   
-  // Determine the color based on the score
-  let color = '';
-  let label = '';
+  // Determine color based on score
+  let color = 'bg-red-500';
+  let textColor = 'text-red-700';
+  let icon = <AlertCircle className="h-4 w-4" />;
+  let labelText = 'Low';
   
-  if (normalizedScore < 0.5) {
-    color = 'bg-red-500 text-white';
-    label = 'Low';
-  } else if (normalizedScore < 0.7) {
-    color = 'bg-yellow-500 text-black';
-    label = 'Medium';
-  } else if (normalizedScore < 0.9) {
-    color = 'bg-green-500 text-white';
-    label = 'High';
-  } else {
-    color = 'bg-emerald-600 text-white';
-    label = 'Very High';
+  if (normalizedScore >= 80) {
+    color = 'bg-green-500';
+    textColor = 'text-green-700';
+    icon = <CheckCircle2 className="h-4 w-4" />;
+    labelText = 'High';
+  } else if (normalizedScore >= 50) {
+    color = 'bg-yellow-500';
+    textColor = 'text-yellow-700';
+    icon = <Sparkles className="h-4 w-4" />;
+    labelText = 'Medium';
   }
   
-  // Convert score to percentage for display
-  const percentage = Math.round(normalizedScore * 100);
-  
-  // Size classes
   const sizeClasses = {
-    sm: 'text-xs py-0.5 px-1.5',
-    md: 'text-sm py-0.5 px-2',
-    lg: 'text-base py-1 px-3'
+    sm: 'text-xs',
+    md: 'text-sm',
+    lg: 'text-base',
   };
   
+  const progressSizes = {
+    sm: 'h-1',
+    md: 'h-2',
+    lg: 'h-3',
+  };
+
   return (
-    <Badge className={`${color} ${sizeClasses[size]} ${className}`}>
-      {showText ? (
-        <>
-          {label} <span className="ml-1 opacity-80">{percentage}%</span>
-        </>
-      ) : (
-        `${percentage}%`
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <div className="flex items-center gap-2 justify-end">
+        {label && (
+          <Badge
+            variant="outline"
+            className={`${textColor} flex items-center gap-1 ${sizeClasses[size]}`}
+          >
+            {icon}
+            <span>
+              {showDetails ? `${Math.round(normalizedScore)}% Confidence` : `${labelText} Confidence`}
+            </span>
+          </Badge>
+        )}
+      </div>
+      
+      {showDetails && (
+        <Progress 
+          value={normalizedScore} 
+          className={`w-full ${progressSizes[size]}`}
+          fill={color} 
+        />
       )}
-    </Badge>
+    </div>
   );
 };
 
