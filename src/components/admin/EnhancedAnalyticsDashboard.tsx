@@ -1,435 +1,247 @@
 
-import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  UserDistributionCard,
-  UsersStatsCards,
-  ContentStatsCards,
-  AIPerformanceCard,
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  UsersStatsCards, 
+  ContentStatsCards, 
+  AIPerformanceCard, 
   AIAccuracyMetricsCard,
   ModelUsageCard,
   AIUsageCards,
-  RevenueTrendsCard
-} from '@/components/admin/analytics';
-import { 
-  BarChart3, 
-  LineChart as LineChartIcon, 
-  PieChart, 
-  Download, 
-  RefreshCw, 
-  Calendar,
-  Users,
-  Bot,
-  FileText,
-  Clock,
-  ArrowUpRight,
-  TrendingUp,
-  DollarSign,
-  Activity
-} from 'lucide-react';
+  RevenueTrendsCard,
+  UserDistributionCard
+} from './analytics';
 
-interface EnhancedAnalyticsDashboardProps {
-  // Props if needed
-}
-
-const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = () => {
-  const [period, setPeriod] = useState("30d");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleRefresh = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-  };
-
-  const handleDownloadReport = () => {
-    // This would trigger report generation
-    toast({
-      title: "Report Generated",
-      description: "Analytics report has been generated and downloaded.",
-    });
-  };
-  
-  // Sample data
-  const summaryCards = [
-    {
-      title: "Total Users",
-      value: "24,832",
-      change: "+12.5%",
-      isUp: true,
-      icon: <Users className="h-4 w-4" />
+const EnhancedAnalyticsDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isLoading, setIsLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState({
+    users: {
+      total: 0,
+      active: 0,
+      new: 0,
+      premium: 0,
+      retention: 0,
+      churn: 0
     },
-    {
-      title: "Content Items",
-      value: "8,294",
-      change: "+23.1%",
-      isUp: true,
-      icon: <FileText className="h-4 w-4" />
+    content: {
+      totalItems: 0,
+      published: 0,
+      draft: 0,
+      engagement: 0,
+      topCategories: []
     },
-    {
-      title: "AI Accuracy",
-      value: "92.7%",
-      change: "+3.2%",
-      isUp: true,
-      icon: <Bot className="h-4 w-4" />
+    ai: {
+      accuracy: 0,
+      usage: 0,
+      responseTime: 0,
+      errorRate: 0,
+      satisfaction: 0
     },
-    {
-      title: "Monthly Revenue",
-      value: "$42,891",
-      change: "+18.4%",
-      isUp: true,
-      icon: <DollarSign className="h-4 w-4" />
-    },
-  ];
+    revenue: {
+      monthly: 0,
+      annual: 0,
+      growth: 0,
+      arpu: 0
+    }
+  });
 
-  const periods = [
-    { value: "7d", label: "Last 7 days" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "90d", label: "Last 90 days" },
-    { value: "year", label: "Last year" },
-    { value: "all", label: "All time" },
-  ];
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      setIsLoading(true);
+      try {
+        // In a real implementation, these would be separate API calls to fetch different metrics
+        // For now, simulate API responses with a delay
+        
+        // Fetch user statistics
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*');
+          
+        if (userError) throw userError;
+        
+        // Fetch content statistics
+        const { data: contentData, error: contentError } = await supabase
+          .from('content_items')
+          .select('*');
+          
+        if (contentError) throw contentError;
+        
+        // Fetch AI performance metrics
+        const { data: aiData, error: aiError } = await supabase
+          .from('ai_model_performance')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (aiError) throw aiError;
+
+        // Process the data and update state
+        setAnalyticsData({
+          users: {
+            total: userData?.length || 0,
+            active: userData?.filter(u => u.status === 'active')?.length || 0,
+            new: userData?.filter(u => {
+              const createdDate = new Date(u.created_at);
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              return createdDate > thirtyDaysAgo;
+            })?.length || 0,
+            premium: userData?.filter(u => u.subscription_tier === 'premium')?.length || 0,
+            retention: 85, // Example - this would come from a proper calculation
+            churn: 15 // Example - this would come from a proper calculation
+          },
+          content: {
+            totalItems: contentData?.length || 0,
+            published: contentData?.filter(c => c.status === 'published')?.length || 0,
+            draft: contentData?.filter(c => c.status === 'draft')?.length || 0,
+            engagement: 78, // Example - this would come from a proper calculation
+            topCategories: [
+              { name: 'Vocabulary', count: 120 },
+              { name: 'Grammar', count: 85 },
+              { name: 'Culture', count: 65 }
+            ] // Example - this would come from processed data
+          },
+          ai: {
+            accuracy: aiData?.[0]?.accuracy || 0,
+            usage: 8750, // Example - this would come from a proper calculation
+            responseTime: 1.2, // seconds
+            errorRate: 3.5, // percentage
+            satisfaction: 87 // percentage
+          },
+          revenue: {
+            monthly: 42350,
+            annual: 508200,
+            growth: 7.9,
+            arpu: 29.99
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data. Please try again later.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAnalyticsData();
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Enhanced Analytics Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Comprehensive platform metrics and insights
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[180px]">
-              <Calendar className="mr-2 h-4 w-4 opacity-50" />
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              {periods.map((period) => (
-                <SelectItem key={period.value} value={period.value}>
-                  {period.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Button variant="outline" onClick={handleDownloadReport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
+          <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
+          <p className="text-muted-foreground">Comprehensive insights into platform performance and user activity.</p>
         </div>
       </div>
-
-      {/* Key Metrics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {summaryCards.map((card, idx) => (
-          <Card key={idx}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                {card.icon}
-                <span className="ml-2">{card.title}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <div className="flex items-center mt-1 text-xs">
-                <span className={card.isUp ? 'text-green-500' : 'text-red-500'}>
-                  {card.change}
-                  {card.isUp ? (
-                    <ArrowUpRight className="inline h-3 w-3 ml-1" />
-                  ) : (
-                    <TrendingUp className="inline h-3 w-3 ml-1" />
-                  )}
-                </span>
-                <span className="text-muted-foreground ml-1">
-                  from last period
-                </span>
-              </div>
-              <Progress value={70} className="h-1 mt-2" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center justify-center">
-            <Activity className="mr-2 h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center justify-center">
-            <Users className="mr-2 h-4 w-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="content" className="flex items-center justify-center">
-            <FileText className="mr-2 h-4 w-4" />
-            Content
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="flex items-center justify-center">
-            <Bot className="mr-2 h-4 w-4" />
-            AI Performance
-          </TabsTrigger>
-          <TabsTrigger value="revenue" className="flex items-center justify-center">
-            <DollarSign className="mr-2 h-4 w-4" />
-            Revenue
-          </TabsTrigger>
+      
+      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="ai">AI Performance</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
         
-        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader>
-                <CardTitle>User Growth</CardTitle>
-                <CardDescription>Monthly new signups and activations</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the line chart component */}
-                  <p className="text-muted-foreground">User growth visualization</p>
+                <div className="text-2xl font-bold">
+                  {isLoading ? 'Loading...' : analyticsData.users.total.toLocaleString()}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  +{isLoading ? '...' : analyticsData.users.new} in the last 30 days
+                </p>
               </CardContent>
             </Card>
-            
             <Card>
-              <CardHeader>
-                <CardTitle>Content Engagement</CardTitle>
-                <CardDescription>Most engaged content types and completion rates</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Content Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the bar chart component */}
-                  <p className="text-muted-foreground">Content engagement visualization</p>
+                <div className="text-2xl font-bold">
+                  {isLoading ? 'Loading...' : analyticsData.content.totalItems.toLocaleString()}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {isLoading ? '...' : analyticsData.content.published} published items
+                </p>
               </CardContent>
             </Card>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Platform Activity Timeline</CardTitle>
-                <CardDescription>Hourly distribution of platform usage</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">AI Accuracy</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the timeline component */}
-                  <p className="text-muted-foreground">Platform activity visualization</p>
+                <div className="text-2xl font-bold">
+                  {isLoading ? 'Loading...' : `${analyticsData.ai.accuracy}%`}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {isLoading ? '...' : analyticsData.ai.usage.toLocaleString()} AI responses generated
+                </p>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-        
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
-          <UsersStatsCards period={period} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UserDistributionCard />
             <Card>
-              <CardHeader>
-                <CardTitle>User Retention</CardTitle>
-                <CardDescription>Cohort analysis of user retention rates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the retention chart component */}
-                  <p className="text-muted-foreground">Retention visualization</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        {/* Content Tab */}
-        <TabsContent value="content" className="space-y-4">
-          <ContentStatsCards period={period} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Performance</CardTitle>
-                <CardDescription>User engagement metrics by content type</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-8">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Flashcards</div>
-                        <div className="text-sm text-muted-foreground">14,532 views • 87% completion</div>
-                      </div>
-                      <div className="font-medium">8.7/10</div>
-                    </div>
-                    <Progress value={87} className="h-2" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Multiple Choice</div>
-                        <div className="text-sm text-muted-foreground">9,845 views • 82% completion</div>
-                      </div>
-                      <div className="font-medium">8.2/10</div>
-                    </div>
-                    <Progress value={82} className="h-2" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Reading</div>
-                        <div className="text-sm text-muted-foreground">7,423 views • 76% completion</div>
-                      </div>
-                      <div className="font-medium">7.8/10</div>
-                    </div>
-                    <Progress value={76} className="h-2" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Trends</CardTitle>
-                <CardDescription>Usage patterns over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the content trends chart */}
-                  <p className="text-muted-foreground">Content trends visualization</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        {/* AI Tab */}
-        <TabsContent value="ai" className="space-y-4">
-          <AIUsageCards period={period} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AIPerformanceCard data={[
-              { name: 'Flashcards', accuracy: 94, questions: 1265 },
-              { name: 'Multiple Choice', accuracy: 88, questions: 987 },
-              { name: 'Reading', accuracy: 79, questions: 654 },
-              { name: 'Writing', accuracy: 82, questions: 432 },
-              { name: 'Speaking', accuracy: 75, questions: 321 }
-            ]} />
-            <AIAccuracyMetricsCard />
-          </div>
-          <ModelUsageCard />
-        </TabsContent>
-        
-        {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$42,891</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  +18.4% from last month
+                <div className="text-2xl font-bold">
+                  {isLoading ? 'Loading...' : `$${analyticsData.revenue.monthly.toLocaleString()}`}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  +{isLoading ? '...' : analyticsData.revenue.growth}% from previous month
                 </p>
-                <Progress value={84} className="h-1 mt-2" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3,287</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  +5.2% from last week
-                </p>
-                <Progress value={72} className="h-1 mt-2" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">LTV</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$127.54</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  +3.2% from last month
-                </p>
-                <Progress value={68} className="h-1 mt-2" />
               </CardContent>
             </Card>
           </div>
           
-          <RevenueTrendsCard />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <RevenueTrendsCard />
+            <AIAccuracyMetricsCard />
+            <UserDistributionCard />
+          </div>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Subscription Distribution</CardTitle>
-              <CardDescription>Active subscriptions by plan</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Premium Monthly</div>
-                      <div className="font-medium">1,842 users</div>
-                    </div>
-                    <Progress value={56} className="h-2" />
-                    <div className="text-xs text-muted-foreground">56% of subscriptions • $18,420/mo</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Premium Annual</div>
-                      <div className="font-medium">964 users</div>
-                    </div>
-                    <Progress value={29} className="h-2" />
-                    <div className="text-xs text-muted-foreground">29% of subscriptions • $14,460/mo</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Instructor</div>
-                      <div className="font-medium">481 users</div>
-                    </div>
-                    <Progress value={15} className="h-2" />
-                    <div className="text-xs text-muted-foreground">15% of subscriptions • $9,620/mo</div>
-                  </div>
-                </div>
-                
-                <div className="h-[200px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                  {/* Placeholder for the donut chart */}
-                  <p className="text-muted-foreground">Subscription distribution chart</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <AIPerformanceCard />
+            <ContentStatsCards />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="users" className="space-y-4">
+          <UsersStatsCards />
+          <UserDistributionCard />
+        </TabsContent>
+        
+        <TabsContent value="content" className="space-y-4">
+          <ContentStatsCards />
+        </TabsContent>
+        
+        <TabsContent value="ai" className="space-y-4">
+          <AIPerformanceCard />
+          <div className="grid gap-4 md:grid-cols-2">
+            <AIAccuracyMetricsCard />
+            <ModelUsageCard />
+          </div>
+          <AIUsageCards />
+        </TabsContent>
+        
+        <TabsContent value="revenue" className="space-y-4">
+          <RevenueTrendsCard />
         </TabsContent>
       </Tabs>
     </div>
