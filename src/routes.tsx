@@ -8,6 +8,8 @@ import Dashboard from './pages/dashboard';
 import ProgressPage from './pages/progress';
 import NotFound from './pages/NotFound';
 import Analytics from './pages/Analytics';
+import SupportCenter from './pages/SupportCenter';
+import SubscriptionPage from './pages/subscription/SubscriptionPage';
 
 // Auth pages
 import LoginPage from './pages/auth/LoginPage';
@@ -38,6 +40,8 @@ const routes: RouteObject[] = [
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'subscription', element: <SubscriptionPage /> },
+      { path: 'support-center', element: <SupportCenter /> },
       { path: '*', element: <NotFound /> },
     ],
   },
