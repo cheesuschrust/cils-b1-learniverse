@@ -1,257 +1,349 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BubbleChart } from '@/components/admin/charts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadarChart, BubbleChart } from '@/components/admin/charts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download, BarChart, PieChart } from 'lucide-react';
 
-interface ModelEvaluationMetric {
+type MetricDimension = {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface AIModelData {
   modelName: string;
   version: string;
-  accuracy: number;
-  latency: number;
-  dataSize: number;
-  trainTime: number;
-  costPerThousand: number;
-  date: string;
+  metrics: Record<string, number>;
+  trainingDate: Date;
+  datasetSize: number;
 }
 
 interface AIModelEvaluationCardProps {
-  metrics?: ModelEvaluationMetric[];
-  isLoading?: boolean;
-  onRefresh?: () => void;
+  models: AIModelData[];
   className?: string;
+  onModelSelect?: (modelName: string, version: string) => void;
 }
 
-const DEFAULT_METRICS: ModelEvaluationMetric[] = [
-  {
-    modelName: "GPT-4o",
-    version: "1.0",
-    accuracy: 92.5,
-    latency: 450,
-    dataSize: 5000,
-    trainTime: 48.2,
-    costPerThousand: 8.2,
-    date: "2025-03-12"
-  },
-  {
-    modelName: "GPT-4o",
-    version: "1.1",
-    accuracy: 94.1,
-    latency: 420,
-    dataSize: 7500,
-    trainTime: 52.5,
-    costPerThousand: 7.9,
-    date: "2025-03-20"
-  },
-  {
-    modelName: "Custom-Italian-T5",
-    version: "2.0",
-    accuracy: 89.3,
-    latency: 180,
-    dataSize: 3200,
-    trainTime: 36.7,
-    costPerThousand: 3.5,
-    date: "2025-03-15"
-  },
-  {
-    modelName: "Custom-Italian-T5",
-    version: "2.1",
-    accuracy: 91.4,
-    latency: 185,
-    dataSize: 4100,
-    trainTime: 39.2,
-    costPerThousand: 3.2,
-    date: "2025-03-25"
-  },
-  {
-    modelName: "Mistral-Italian",
-    version: "1.0",
-    accuracy: 87.8,
-    latency: 210,
-    dataSize: 2800,
-    trainTime: 28.5,
-    costPerThousand: 2.8,
-    date: "2025-03-10"
-  },
-  {
-    modelName: "Mistral-Italian",
-    version: "1.1",
-    accuracy: 90.2,
-    latency: 195,
-    dataSize: 3600,
-    trainTime: 32.3,
-    costPerThousand: 2.6,
-    date: "2025-03-22"
-  }
-];
-
 const AIModelEvaluationCard: React.FC<AIModelEvaluationCardProps> = ({
-  metrics = DEFAULT_METRICS,
-  isLoading = false,
-  onRefresh,
-  className = ''
+  models,
+  className = '',
+  onModelSelect
 }) => {
-  const [xMetric, setXMetric] = useState<string>('accuracy');
-  const [yMetric, setYMetric] = useState<string>('latency');
-  const [zMetric, setZMetric] = useState<string>('dataSize');
   const { toast } = useToast();
+  const [selectedModels, setSelectedModels] = useState<string[]>(
+    models.length > 0 ? [models[0].modelName] : []
+  );
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
+    'accuracy', 'latency', 'confidenceScore', 'f1Score'
+  ]);
   
-  const metricOptions = [
-    { value: 'accuracy', label: 'Accuracy (%)', unit: '%' },
-    { value: 'latency', label: 'Latency (ms)', unit: 'ms' },
-    { value: 'dataSize', label: 'Training Data Size', unit: '' },
-    { value: 'trainTime', label: 'Training Time (hrs)', unit: ' hrs' },
-    { value: 'costPerThousand', label: 'Cost per 1K tokens ($)', unit: '$' },
+  const allMetrics: MetricDimension[] = [
+    { id: 'accuracy', name: 'Accuracy', description: 'Overall correctness of predictions' },
+    { id: 'latency', name: 'Response Time', description: 'Average response time in milliseconds' },
+    { id: 'confidenceScore', name: 'Confidence', description: 'Model\'s certainty in its predictions' },
+    { id: 'f1Score', name: 'F1 Score', description: 'Harmonic mean of precision and recall' },
+    { id: 'precision', name: 'Precision', description: 'Fraction of relevant instances among retrieved instances' },
+    { id: 'recall', name: 'Recall', description: 'Fraction of relevant instances that were retrieved' },
+    { id: 'dataEfficiency', name: 'Data Efficiency', description: 'Performance relative to training data size' },
+    { id: 'memoryUsage', name: 'Memory Usage', description: 'RAM consumed during inference (MB)' }
   ];
   
-  const getMetricUnit = (metricName: string) => {
-    const metric = metricOptions.find(m => m.value === metricName);
-    return metric?.unit || '';
-  };
+  const filteredModels = models.filter(model => 
+    selectedModels.includes(model.modelName)
+  );
   
-  const handleExportData = () => {
-    toast({
-      title: "Data exported",
-      description: "Model evaluation metrics have been exported to CSV"
+  // Transform data for radar chart
+  const transformedRadarData = selectedMetrics.map(metricId => {
+    const dataPoint: Record<string, any> = { 
+      category: allMetrics.find(m => m.id === metricId)?.name || metricId 
+    };
+    
+    filteredModels.forEach(model => {
+      dataPoint[`${model.modelName} v${model.version}`] = 
+        model.metrics[metricId] || 0;
+    });
+    
+    return dataPoint;
+  });
+  
+  // Transform data for bubble chart
+  const bubbleData = models.map(model => ({
+    modelName: `${model.modelName} v${model.version}`,
+    xAxis: model.metrics.accuracy || 0,
+    yAxis: model.metrics.latency || 0,
+    zAxis: model.datasetSize || 1000,
+    trainingDate: model.trainingDate
+  }));
+  
+  const handleModelToggle = (modelName: string) => {
+    setSelectedModels(prev => {
+      if (prev.includes(modelName)) {
+        if (prev.length > 1) {
+          return prev.filter(m => m !== modelName);
+        }
+        toast({
+          title: "Cannot remove model",
+          description: "At least one model must be selected for comparison.",
+          variant: "warning"
+        });
+        return prev;
+      } else {
+        return [...prev, modelName];
+      }
     });
   };
   
-  const handleRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
-    } else {
-      toast({
-        title: "Data refreshed",
-        description: "Model evaluation metrics have been updated"
-      });
-    }
+  const handleMetricToggle = (metricId: string) => {
+    setSelectedMetrics(prev => {
+      if (prev.includes(metricId)) {
+        if (prev.length > 1) {
+          return prev.filter(m => m !== metricId);
+        }
+        return prev;
+      } else if (prev.length < 6) { // Limit to 6 metrics for readability
+        return [...prev, metricId];
+      } else {
+        toast({
+          title: "Too many metrics selected",
+          description: "You can select up to 6 metrics for comparison.",
+          variant: "warning"
+        });
+        return prev;
+      }
+    });
   };
   
-  // Group models by their name for the chart
-  const modelNames = [...new Set(metrics.map(m => m.modelName))];
-  const chartGroups = modelNames.map(name => ({ name }));
+  const handleDownload = () => {
+    // Create CSV content
+    const headers = ['Model', 'Version', 'Training Date', 'Dataset Size', ...allMetrics.map(m => m.name)];
+    const rows = models.map(model => [
+      model.modelName,
+      model.version,
+      model.trainingDate.toISOString().split('T')[0],
+      model.datasetSize.toString(),
+      ...allMetrics.map(metric => (model.metrics[metric.id] || 0).toString())
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ai-model-comparison-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Report Downloaded",
+      description: "AI Model comparison data has been exported to CSV.",
+      variant: "success"
+    });
+  };
   
+  const getUniqueModelNames = () => {
+    const uniqueNames = Array.from(new Set(models.map(model => model.modelName)));
+    return uniqueNames;
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
         <div className="flex flex-wrap justify-between items-center">
           <div>
-            <CardTitle>AI Model Performance Evaluation</CardTitle>
-            <CardDescription>Compare different AI models across various metrics</CardDescription>
+            <CardTitle className="text-lg">AI Model Performance Evaluation</CardTitle>
+            <CardDescription>
+              Compare metrics across different AI model versions
+            </CardDescription>
           </div>
-          <div className="flex space-x-2">
-            <Button size="sm" variant="outline" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleExportData}>
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={handleDownload}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Data
+          </Button>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 mt-2">
+          <div className="text-sm font-medium mb-1 mr-2">Models:</div>
+          {getUniqueModelNames().map(modelName => (
+            <div 
+              key={modelName}
+              onClick={() => handleModelToggle(modelName)}
+              className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
+                selectedModels.includes(modelName) 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              {modelName}
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex flex-wrap gap-2 mt-2">
+          <div className="text-sm font-medium mb-1 mr-2">Metrics:</div>
+          {allMetrics.slice(0, 8).map(metric => (
+            <div 
+              key={metric.id}
+              onClick={() => handleMetricToggle(metric.id)}
+              title={metric.description}
+              className={`px-3 py-1 text-sm rounded-full transition-colors cursor-pointer ${
+                selectedMetrics.includes(metric.id) 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              {metric.name}
+            </div>
+          ))}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-4 mb-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-sm font-medium mb-1 block">X-Axis Metric</label>
-            <Select defaultValue={xMetric} onValueChange={setXMetric}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {metricOptions.map(option => (
-                  <SelectItem key={`x-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <Tabs defaultValue="radar">
+          <TabsList className="mb-4 w-full">
+            <TabsTrigger value="radar" className="flex items-center">
+              <PieChart className="mr-2 h-4 w-4" />
+              Radar Comparison
+            </TabsTrigger>
+            <TabsTrigger value="scatter" className="flex items-center">
+              <BarChart className="mr-2 h-4 w-4" />
+              Accuracy vs. Speed
+            </TabsTrigger>
+            <TabsTrigger value="data">Data Table</TabsTrigger>
+          </TabsList>
           
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-sm font-medium mb-1 block">Y-Axis Metric</label>
-            <Select defaultValue={yMetric} onValueChange={setYMetric}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {metricOptions.map(option => (
-                  <SelectItem key={`y-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <TabsContent value="radar">
+            {filteredModels.length > 0 && selectedMetrics.length > 0 ? (
+              <RadarChart 
+                data={transformedRadarData}
+                dataKeys={filteredModels.map(m => `${m.modelName} v${m.version}`)}
+                nameKey="category"
+                height={350}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                Select at least one model and one metric to visualize
+              </div>
+            )}
+          </TabsContent>
           
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-sm font-medium mb-1 block">Bubble Size</label>
-            <Select defaultValue={zMetric} onValueChange={setZMetric}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {metricOptions.map(option => (
-                  <SelectItem key={`z-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <TabsContent value="scatter">
+            <BubbleChart
+              data={bubbleData}
+              xAxis={{ dataKey: "xAxis", name: "Accuracy (%)" }}
+              yAxis={{ dataKey: "yAxis", name: "Response Time (ms)" }}
+              zAxis={{ dataKey: "zAxis", name: "Dataset Size", range: [40, 200] }}
+              groups={getUniqueModelNames().map((name, index) => ({ name }))}
+              height={350}
+            />
+            <div className="mt-2 text-sm text-muted-foreground">
+              <p>Bubble size represents the number of examples in the training dataset</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="data">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead>Training Date</TableHead>
+                    <TableHead>Dataset Size</TableHead>
+                    {selectedMetrics.map(metricId => (
+                      <TableHead key={metricId}>
+                        {allMetrics.find(m => m.id === metricId)?.name || metricId}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredModels.map(model => (
+                    <TableRow key={`${model.modelName}-${model.version}`}>
+                      <TableCell className="font-medium">{model.modelName}</TableCell>
+                      <TableCell>v{model.version}</TableCell>
+                      <TableCell>{model.trainingDate.toLocaleDateString()}</TableCell>
+                      <TableCell>{model.datasetSize.toLocaleString()}</TableCell>
+                      {selectedMetrics.map(metricId => (
+                        <TableCell key={metricId}>
+                          {model.metrics[metricId]?.toFixed(2) || 'N/A'}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right">
+                        {onModelSelect && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => onModelSelect(model.modelName, model.version)}
+                          >
+                            Select
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
+        
+        {onModelSelect && (
+          <div className="mt-6 border-t pt-4">
+            <div className="text-sm font-medium mb-2">Deploy AI Model</div>
+            <div className="flex space-x-4">
+              <Select 
+                onValueChange={(value) => {
+                  const [modelName, version] = value.split('|');
+                  onModelSelect(modelName, version);
+                }}
+                defaultValue={`${models[0]?.modelName}|${models[0]?.version}`}
+              >
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select model to deploy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map(model => (
+                    <SelectItem 
+                      key={`${model.modelName}-${model.version}`} 
+                      value={`${model.modelName}|${model.version}`}
+                    >
+                      {model.modelName} v{model.version} - Accuracy: {model.metrics.accuracy?.toFixed(1)}%
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button className="ml-2">
+                Deploy Selected Model
+              </Button>
+            </div>
           </div>
-        </div>
-        
-        <BubbleChart
-          data={metrics}
-          xAxis={{ 
-            dataKey: xMetric, 
-            name: metricOptions.find(m => m.value === xMetric)?.label,
-            unit: getMetricUnit(xMetric)
-          }}
-          yAxis={{ 
-            dataKey: yMetric, 
-            name: metricOptions.find(m => m.value === yMetric)?.label,
-            unit: getMetricUnit(yMetric)
-          }}
-          zAxis={{ 
-            dataKey: zMetric, 
-            name: metricOptions.find(m => m.value === zMetric)?.label,
-            range: [40, 400] 
-          }}
-          groups={chartGroups}
-          height={400}
-        />
-        
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead>
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Model</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Version</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accuracy</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Latency</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data Size</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cost</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {metrics.map((metric, idx) => (
-                <tr key={`${metric.modelName}-${metric.version}-${idx}`}>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">{metric.modelName}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">{metric.version}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">{metric.accuracy}%</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">{metric.latency} ms</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">{metric.dataSize.toLocaleString()}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">${metric.costPerThousand.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
