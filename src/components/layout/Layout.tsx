@@ -1,35 +1,45 @@
 
 import React from 'react';
+import { Outlet } from 'react-router-dom';
+import MainNavigation from '@/components/navigation/MainNavigation';
+import { Toaster } from '@/components/ui/toaster';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import MobileNav from '@/components/navigation/MobileNav';
 import { useAuth } from '@/contexts/AuthContext';
-import MainNavigation from './MainNavigation';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { GamificationProvider } from '@/contexts/GamificationContext';
 
-interface LayoutProps {
-  children: React.ReactNode;
+export interface LayoutProps {
+  children?: React.ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useAuth();
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <MainNavigation />
-      
-      <main className="flex-1">
-        {children}
-      </main>
-      
-      <footer className="border-t py-6">
-        <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} CILS Italian Citizenship Test Preparation Platform
-          </p>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground">Terms of Service</a>
-            <a href="#" className="hover:text-foreground">Support</a>
-          </div>
+    <NotificationsProvider>
+      <GamificationProvider>
+        <div className="min-h-screen flex flex-col">
+          <header className="border-b sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex justify-between items-center h-16">
+              <MainNavigation />
+              <div className="block md:hidden">
+                <MobileNav />
+              </div>
+            </div>
+          </header>
+          
+          <main className="flex-1 flex flex-col">
+            <ScrollArea className="h-full">
+              {children || <Outlet />}
+            </ScrollArea>
+          </main>
+          
+          <Toaster />
         </div>
-      </footer>
-    </div>
+      </GamificationProvider>
+    </NotificationsProvider>
   );
 };
+
+export default Layout;

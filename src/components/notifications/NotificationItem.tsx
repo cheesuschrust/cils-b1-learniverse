@@ -1,168 +1,166 @@
 
-import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Bell, Check, Clock, X } from 'lucide-react';
+import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { Notification } from '@/types/notification';
 import { cn } from '@/lib/utils';
-import { format, isToday, isYesterday } from 'date-fns';
-import { NotificationItemProps, NotificationAction } from '@/types/notification'; 
-import GlobalNotificationAction from './GlobalNotificationAction';
+import { Button } from '@/components/ui/button';
+import { 
+  Bell, 
+  Star, 
+  Calendar, 
+  Clock, 
+  Check, 
+  X, 
+  Trash2,
+  AlertTriangle,
+  File,
+  MessageSquare
+} from 'lucide-react';
 
-// Helper to format notification date
-const formatNotificationDate = (date: Date) => {
-  if (isToday(date)) {
-    return `Today at ${format(date, 'h:mm a')}`;
-  } else if (isYesterday(date)) {
-    return `Yesterday at ${format(date, 'h:mm a')}`;
-  } else {
-    return format(date, 'MMM d, yyyy');
-  }
-};
+interface NotificationItemProps {
+  notification: Notification;
+  onRead: (id: string) => void;
+  onRemove: (id: string) => void;
+  onClick?: (notification: Notification) => void;
+}
 
-const NotificationItem: React.FC<NotificationItemProps & { 
-  onAction?: (action: NotificationAction) => void 
-}> = ({ 
-  notification, 
-  onDismiss, 
-  onRead, 
-  className = "",
-  showControls = false,
-  onAction 
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onRead,
+  onRemove,
+  onClick,
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  // If no id provided, use a fallback
-  const notificationId = notification.id ?? 'notification-id';
-  
-  const handleDismiss = () => {
-    onDismiss(notificationId);
-  };
-  
-  const handleRead = () => {
-    if (!notification.read) {
-      onRead(notificationId);
+  // Format the time since the notification was created
+  const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { 
+    addSuffix: true 
+  });
+
+  // Get the appropriate icon based on notification type
+  const getIcon = () => {
+    switch (notification.type) {
+      case 'achievement':
+        return <Star className="h-5 w-5 text-yellow-500" />;
+      case 'streak':
+        return <Calendar className="h-5 w-5 text-orange-500" />;
+      case 'reminder':
+        return <Clock className="h-5 w-5 text-blue-500" />;
+      case 'milestone':
+        return <Star className="h-5 w-5 text-purple-500" />;
+      case 'system':
+        return <Bell className="h-5 w-5 text-gray-500" />;
+      case 'file-processing':
+        return <File className="h-5 w-5 text-green-500" />;
+      case 'feedback':
+        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+      default:
+        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const handleAction = (action: NotificationAction) => {
-    if (onAction) {
-      onAction(action);
-    } else {
-      // If no onAction handler provided, just execute the action directly
-      action.action();
-    }
-  };
-  
-  // Determine icon based on notification type
-  const getIcon = () => {
-    if (notification.icon) return notification.icon;
-    
-    switch (notification.type) {
-      case 'success':
-        return <Check className="h-5 w-5 text-green-500" />;
-      case 'error':
-        return <X className="h-5 w-5 text-red-500" />;
-      case 'warning':
-        return <Bell className="h-5 w-5 text-yellow-500" />;
-      case 'info':
+  // Get the priority class for styling
+  const getPriorityClass = () => {
+    switch (notification.priority) {
+      case 'high':
+        return 'border-l-red-500';
+      case 'medium':
+        return 'border-l-yellow-500';
+      case 'low':
       default:
-        return <Bell className="h-5 w-5 text-blue-500" />;
+        return 'border-l-transparent';
     }
   };
-  
-  // Get formatted timestamp
-  const getTimestamp = () => {
-    const date = notification.createdAt || notification.timestamp || new Date();
-    return typeof date === 'string' ? new Date(date) : date;
+
+  // Handle click on the notification
+  const handleClick = () => {
+    if (!notification.read) {
+      onRead(notification.id);
+    }
+    
+    if (onClick) {
+      onClick(notification);
+    }
   };
-  
+
+  // Check if notification is expired
+  const isExpired = notification.expires ? new Date(notification.expires) < new Date() : false;
+
+  // Render notification actions if present
+  const renderActions = () => {
+    if (!notification.actions || notification.actions.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="flex mt-2 gap-2">
+        {notification.actions.map((action) => (
+          <Button
+            key={action.id}
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              action.action();
+              // Mark as read when action is taken
+              if (!notification.read) {
+                onRead(notification.id);
+              }
+            }}
+          >
+            {action.label}
+          </Button>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <Card 
+    <div 
       className={cn(
-        "p-4 transition-all duration-200 border-l-4",
-        !notification.read ? "bg-background" : "bg-muted/30",
-        notification.type === 'success' && "border-l-green-500",
-        notification.type === 'error' && "border-l-red-500", 
-        notification.type === 'warning' && "border-l-yellow-500",
-        notification.type === 'info' && "border-l-blue-500",
-        notification.type === 'system' && "border-l-purple-500",
-        !notification.type && "border-l-gray-500",
-        isHovered && "shadow-md",
-        className
+        "p-4 hover:bg-muted/50 transition-colors cursor-pointer border-l-4",
+        !notification.read && "bg-muted/20",
+        getPriorityClass(),
+        isExpired && "opacity-50"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleRead}
+      onClick={handleClick}
     >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-1">
-          {getIcon()}
-        </div>
-        
+        <div className="mt-0.5">{getIcon()}</div>
         <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-start">
-            <h4 className="text-sm font-medium text-foreground line-clamp-1">
+          <div className="flex items-center justify-between mb-1">
+            <h4 className={cn(
+              "text-sm font-medium truncate",
+              !notification.read && "font-semibold"
+            )}>
               {notification.title}
             </h4>
-            
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-1 shrink-0 ml-2">
               {!notification.read && (
-                <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                <div className="h-2 w-2 bg-blue-500 rounded-full" />
               )}
-              
-              {showControls && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 w-6 p-0 rounded-full hover:bg-muted"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDismiss();
-                  }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="sr-only">Dismiss</span>
-                </Button>
-              )}
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {timeAgo}
+              </span>
             </div>
           </div>
-          
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+          <p className="text-sm text-muted-foreground line-clamp-2">
             {notification.message}
           </p>
-          
-          {notification.link && (
-            <a 
-              href={notification.link} 
-              className="text-xs text-blue-500 hover:underline mt-1 inline-block"
-              onClick={(e) => e.stopPropagation()}
-            >
-              View details
-            </a>
-          )}
-          
-          {notification.actions && notification.actions.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {notification.actions.map((action, index) => (
-                <GlobalNotificationAction
-                  key={index}
-                  label={action.label}
-                  onClick={action.action}
-                  id={notificationId}
-                  variant={action.variant || "default"}
-                  icon={action.icon}
-                />
-              ))}
-            </div>
-          )}
-          
-          <div className="flex items-center text-xs text-muted-foreground mt-2">
-            <Clock className="h-3 w-3 mr-1" />
-            <span>{formatNotificationDate(getTimestamp())}</span>
-          </div>
+          {renderActions()}
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(notification.id);
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 };
 

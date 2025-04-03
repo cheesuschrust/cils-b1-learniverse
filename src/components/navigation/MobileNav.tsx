@@ -1,140 +1,136 @@
 
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
 import {
-  HomeIcon, BookOpenText, GraduationCap, Headphones, Pen, 
-  CalendarDays, Users, LineChart, HelpCircle, User, Settings, LogOut,
-  FileText, List
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Home,
+  BookOpen,
+  BarChart3,
+  User,
+  Settings,
+  LogOut,
+  Menu,
+  Calendar
 } from 'lucide-react';
 
-interface MobileNavProps {
-  onNavItemClick?: () => void;
-}
+const MobileNav: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
 
-export function MobileNav({ onNavItemClick }: MobileNavProps) {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-  
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-    onNavItemClick?.();
-  };
-  
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    onNavItemClick?.();
-  };
-  
-  const NavItem = ({ 
-    to, 
-    children, 
-    icon: Icon 
-  }: { 
-    to: string; 
-    children: React.ReactNode; 
-    icon: React.ElementType 
-  }) => (
-    <NavLink 
-      to={to} 
-      onClick={onNavItemClick}
-      className={({ isActive }) => 
-        `flex items-center py-2 px-3 my-1 text-sm font-medium rounded-md ${
-          isActive 
-            ? "bg-primary/10 text-primary" 
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`
-      }
-    >
-      <Icon className="mr-2 h-4 w-4" />
-      <span>{children}</span>
-    </NavLink>
-  );
-  
+  // Navigation items
+  const navItems = [
+    { name: 'Home', path: user ? '/dashboard' : '/', icon: <Home className="h-5 w-5 mr-2" /> },
+    { name: 'Daily Question', path: '/daily-question', icon: <Calendar className="h-5 w-5 mr-2" /> },
+    { name: 'Flashcards', path: '/flashcards', icon: <BookOpen className="h-5 w-5 mr-2" /> },
+    { name: 'Progress', path: '/progress', icon: <BarChart3 className="h-5 w-5 mr-2" /> },
+  ];
+
   return (
-    <div className="flex flex-col h-full py-4">
-      <div className="px-4 py-2">
-        <div className="flex items-center">
-          <BookOpenText className="h-6 w-6 text-primary mr-2" />
-          <span className="text-xl font-bold">ItalianApp</span>
-        </div>
-      </div>
-      
-      <Separator className="my-2" />
-      
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-6">
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-              Main
-            </h3>
-            <NavItem to="/app/dashboard" icon={HomeIcon}>Dashboard</NavItem>
-            <NavItem to="/app/lessons" icon={GraduationCap}>Lessons</NavItem>
-            <NavItem to="/app/calendar" icon={CalendarDays}>Calendar</NavItem>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-[250px] sm:w-[300px]">
+        <div className="flex flex-col h-full">
+          <div className="flex items-center gap-2 py-4">
+            {user ? (
+              <>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.avatar_url || ""} alt={user.email || "User"} />
+                  <AvatarFallback>
+                    {user.email?.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {user.isPremiumUser ? "Premium User" : "Free User"}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" asChild className="w-full">
+                  <Link to="/auth" onClick={() => setOpen(false)}>
+                    Log In
+                  </Link>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link to="/auth?signup=true" onClick={() => setOpen(false)}>
+                    Sign Up
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
           
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-              Study Tools
-            </h3>
-            <NavItem to="/app/flashcards" icon={BookOpenText}>Flashcards</NavItem>
-            <NavItem to="/app/multiple-choice" icon={FileText}>Multiple Choice</NavItem>
-            <NavItem to="/app/speaking" icon={Headphones}>Speaking Practice</NavItem>
-            <NavItem to="/app/listening" icon={Headphones}>Listening Exercises</NavItem>
-            <NavItem to="/app/writing" icon={Pen}>Writing Exercises</NavItem>
-            <NavItem to="/app/vocabulary-lists" icon={List}>Vocabulary Lists</NavItem>
-          </div>
+          <Separator />
           
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-              Progress
-            </h3>
-            <NavItem to="/app/communities" icon={Users}>Communities</NavItem>
-            <NavItem to="/app/progress" icon={LineChart}>Progress Tracker</NavItem>
-          </div>
+          <nav className="flex flex-col gap-1 py-4">
+            {navItems.map((item) => (
+              <SheetClose key={item.path} asChild>
+                <Link 
+                  to={item.path}
+                  className="flex items-center px-2 py-3 text-sm rounded-md hover:bg-accent"
+                >
+                  {item.icon}
+                  {item.name}
+                </Link>
+              </SheetClose>
+            ))}
+          </nav>
           
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-              Support
-            </h3>
-            <NavItem to="/app/support" icon={HelpCircle}>Help & Support</NavItem>
-          </div>
+          <Separator />
+          
+          {user && (
+            <div className="flex flex-col gap-1 py-4 mt-auto">
+              <SheetClose asChild>
+                <Link 
+                  to="/profile" 
+                  className="flex items-center px-2 py-3 text-sm rounded-md hover:bg-accent"
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  Profile
+                </Link>
+              </SheetClose>
+              <SheetClose asChild>
+                <Link 
+                  to="/settings" 
+                  className="flex items-center px-2 py-3 text-sm rounded-md hover:bg-accent"
+                >
+                  <Settings className="h-5 w-5 mr-2" />
+                  Settings
+                </Link>
+              </SheetClose>
+              <Button 
+                variant="ghost" 
+                className="justify-start px-2 mt-2"
+                onClick={() => {
+                  logout();
+                  setOpen(false);
+                }}
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Log out
+              </Button>
+            </div>
+          )}
         </div>
-      </ScrollArea>
-      
-      <div className="mt-auto px-3 py-2">
-        <Separator className="my-2" />
-        <div className="space-y-2">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start" 
-            onClick={() => handleNavigation('/app/profile')}
-          >
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start" 
-            onClick={() => handleNavigation('/app/settings')}
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-destructive hover:text-destructive" 
-            onClick={handleLogout}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Logout</span>
-          </Button>
-        </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
-}
+};
+
+export default MobileNav;
