@@ -98,7 +98,7 @@ const ReminderScheduler: React.FC = () => {
       toast({
         title: "Reminders scheduled",
         description: `You'll be reminded on your selected days at ${format(new Date().setHours(parseInt(time.split(':')[0]), 0), 'h:mm a')}`,
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error('Error scheduling reminders:', error);
@@ -119,7 +119,7 @@ const ReminderScheduler: React.FC = () => {
       toast({
         title: "Reminders cancelled",
         description: "All practice reminders have been cancelled",
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error('Error cancelling reminders:', error);

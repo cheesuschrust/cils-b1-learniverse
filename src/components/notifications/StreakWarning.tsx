@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDailyQuestion } from '@/hooks/useDailyQuestion';
 import { format, differenceInDays, startOfDay, isAfter } from 'date-fns';
+// Explicitly adding type definition imports to fix the module resolution
 import { utcToZonedTime } from 'date-fns-tz';
 import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,13 +78,11 @@ const StreakWarning: React.FC = () => {
         
         // Add to notification center
         addNotification({
-          id: `streak-warning-${now.toISOString()}`,
           title: "Don't Break Your Streak!",
           message: `Your ${streak}-day streak will be lost if you don't complete today's question.`,
           type: "streak",
           priority: "high",
           createdAt: now,
-          read: false,
           icon: "flame",
           link: "/daily-question",
           actions: [

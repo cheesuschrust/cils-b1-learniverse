@@ -86,6 +86,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                     notification={notification}
                     onDismiss={() => handleDismiss(notification.id)}
                     onRead={() => handleMarkAsRead(notification.id)}
+                    onClick={() => {
+                      handleMarkAsRead(notification.id);
+                      setIsOpen(false);
+                      if (notification.link) {
+                        window.location.href = notification.link;
+                      }
+                    }}
                   />
                 ))
               ) : (
