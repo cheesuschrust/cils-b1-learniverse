@@ -7,63 +7,61 @@ import {
   PolarRadiusAxis, 
   Radar, 
   Legend, 
-  Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Tooltip
 } from 'recharts';
 
-interface DataPoint {
-  [key: string]: number | string;
-}
-
 interface RadarChartProps {
-  data: DataPoint[];
+  data: Record<string, any>[];
   dataKeys: string[];
-  nameKey?: string;
+  nameKey: string;
   height?: number;
-  colors?: string[];
   className?: string;
-  showLegend?: boolean;
-  fillOpacity?: number;
-  showTooltip?: boolean;
+  title?: string;
+  colors?: string[];
 }
 
-const DEFAULT_COLORS = [
-  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', 
-  '#8884d8', '#82ca9d', '#ffc658', '#a4de6c'
-];
-
+/**
+ * RadarChart component to visualize multi-dimensional data
+ * Useful for comparing different models/categories across multiple metrics
+ */
 const RadarChart: React.FC<RadarChartProps> = ({
   data,
   dataKeys,
-  nameKey = 'name',
+  nameKey,
   height = 300,
-  colors = DEFAULT_COLORS,
   className = '',
-  showLegend = true,
-  fillOpacity = 0.6,
-  showTooltip = true
+  title,
+  colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F']
 }) => {
   return (
-    <div className={className}>
+    <div className={`w-full ${className}`}>
+      {title && <h3 className="text-base font-medium mb-2">{title}</h3>}
+      
       <ResponsiveContainer width="100%" height={height}>
         <RechartsRadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
           <PolarGrid />
           <PolarAngleAxis dataKey={nameKey} />
-          <PolarRadiusAxis />
+          <PolarRadiusAxis angle={30} domain={[0, 'auto']} />
           
-          {dataKeys.map((dataKey, index) => (
+          <Tooltip 
+            formatter={(value, name) => {
+              return [`${value}`, name];
+            }}
+          />
+          
+          {dataKeys.map((key, index) => (
             <Radar
-              key={dataKey}
-              name={dataKey}
-              dataKey={dataKey}
+              key={key}
+              name={key}
+              dataKey={key}
               stroke={colors[index % colors.length]}
               fill={colors[index % colors.length]}
-              fillOpacity={fillOpacity}
+              fillOpacity={0.2}
             />
           ))}
           
-          {showLegend && <Legend />}
-          {showTooltip && <Tooltip />}
+          <Legend />
         </RechartsRadarChart>
       </ResponsiveContainer>
     </div>
