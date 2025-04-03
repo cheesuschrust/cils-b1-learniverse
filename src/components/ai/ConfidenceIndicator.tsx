@@ -6,12 +6,14 @@ interface ConfidenceIndicatorProps {
   score: number;  // 0 to 1 value
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
+  className?: string;
 }
 
 const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   score,
   size = 'md',
-  showText = true
+  showText = true,
+  className = ''
 }) => {
   // Ensure score is between 0 and 1
   const normalizedScore = Math.max(0, Math.min(1, score));
@@ -45,7 +47,7 @@ const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
   };
   
   return (
-    <Badge className={`${color} ${sizeClasses[size]}`}>
+    <Badge className={`${color} ${sizeClasses[size]} ${className}`}>
       {showText ? (
         <>
           {label} <span className="ml-1 opacity-80">{percentage}%</span>

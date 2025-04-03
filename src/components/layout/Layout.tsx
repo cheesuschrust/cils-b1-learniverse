@@ -1,33 +1,35 @@
 
-import React, { ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
-import Header from './Header';
-import Footer from './Footer';
-import { Toaster } from '@/components/ui/toaster';
-import DataWizard from '@/components/DataWizard';
-import DatabaseOptimizer from '@/components/DatabaseOptimizer';
-import DataMagic from '@/components/DataMagic';
+import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import MainNavigation from './MainNavigation';
 
 interface LayoutProps {
-  children?: ReactNode;
+  children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { user } = useAuth();
+
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
+    <div className="flex flex-col min-h-screen">
+      <MainNavigation />
       
       <main className="flex-1">
-        {children || <Outlet />}
+        {children}
       </main>
       
-      <Footer />
-      <Toaster />
-      <DataWizard />
-      <DatabaseOptimizer />
-      <DataMagic />
+      <footer className="border-t py-6">
+        <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} CILS Italian Citizenship Test Preparation Platform
+          </p>
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <a href="#" className="hover:text-foreground">Privacy Policy</a>
+            <a href="#" className="hover:text-foreground">Terms of Service</a>
+            <a href="#" className="hover:text-foreground">Support</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
-
-export default Layout;

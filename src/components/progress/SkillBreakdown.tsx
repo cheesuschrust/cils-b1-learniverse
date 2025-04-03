@@ -1,109 +1,167 @@
 
-import React, { useState } from 'react';
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle } from "lucide-react";
+import React from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle2, XCircle, AlertCircle, Lightbulb } from 'lucide-react';
 
-interface SkillBreakdownProps {
-  sections: {
-    name: string;
-    icon: React.ReactNode;
-    skills: Array<{
-      name: string;
-      score: number;
-    }>;
-    strengths: string[];
-    weaknesses: string[];
-  }[];
+export interface SkillScore {
+  name: string;
+  score: number;
+  targetScore: number;
+  recentImprovement?: number;
+  icon?: React.ReactNode;
+  status: 'passed' | 'needs-improvement' | 'critical';
+  recommendations?: string[];
 }
 
-const SkillBreakdown: React.FC<SkillBreakdownProps> = ({ sections }) => {
-  const [activeTab, setActiveTab] = useState(sections[0].name.toLowerCase());
+interface SkillBreakdownProps {
+  skills: SkillScore[];
+  examLabel?: string;
+}
+
+const SkillBreakdown: React.FC<SkillBreakdownProps> = ({ 
+  skills, 
+  examLabel = 'CILS B1 Citizenship Exam' 
+}) => {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'passed':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'needs-improvement':
+        return <AlertCircle className="h-5 w-5 text-amber-500" />;
+      case 'critical':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'passed':
+        return 'text-green-700 bg-green-50 border-green-200';
+      case 'needs-improvement':
+        return 'text-amber-700 bg-amber-50 border-amber-200';
+      case 'critical':
+        return 'text-red-700 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-700 bg-gray-50 border-gray-200';
+    }
+  };
+  
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'passed':
+        return 'Passed';
+      case 'needs-improvement':
+        return 'Needs Practice';
+      case 'critical':
+        return 'Critical';
+      default:
+        return 'Unknown';
+    }
+  };
+  
+  const calculateOverallReadiness = () => {
+    const passedSkills = skills.filter(skill => skill.status === 'passed').length;
+    const totalSkills = skills.length;
+    const percentage = Math.round((passedSkills / totalSkills) * 100);
+    
+    if (percentage >= 80) return { status: 'ready', label: 'Ready for Exam' };
+    if (percentage >= 50) return { status: 'almost', label: 'Almost Ready' };
+    return { status: 'not-ready', label: 'Not Ready Yet' };
+  };
+  
+  const readiness = calculateOverallReadiness();
   
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="w-full grid grid-cols-2 md:grid-cols-4">
-        {sections.map((section) => (
-          <TabsTrigger 
-            key={section.name} 
-            value={section.name.toLowerCase()}
-            className="flex items-center space-x-2"
-          >
-            {section.icon}
-            <span>{section.name}</span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      
-      {sections.map((section) => (
-        <TabsContent 
-          key={section.name} 
-          value={section.name.toLowerCase()}
-          className="space-y-6 pt-4"
-        >
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Skill Analysis</h3>
-              
-              <div className="space-y-3">
-                {section.skills.map((skill) => (
-                  <div key={skill.name} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>{skill.name}</span>
-                      <span className="font-medium">{skill.score}%</span>
-                    </div>
-                    <Progress value={skill.score} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <h3 className="text-sm font-medium">Strengths</h3>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-lg">Skills Breakdown</CardTitle>
+        <CardDescription>
+          Your proficiency by exam area for {examLabel}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          {skills.map((skill, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-2">
+                  {skill.icon}
+                  <span className="font-medium">{skill.name}</span>
                 </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {section.strengths.map((strength, index) => (
-                    <Badge key={index} variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
-                      {strength}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{skill.score}%</span>
+                  {skill.recentImprovement && skill.recentImprovement > 0 && (
+                    <Badge variant="outline" className="text-green-600 bg-green-50">
+                      +{skill.recentImprovement}%
                     </Badge>
-                  ))}
+                  )}
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <XCircle className="h-4 w-4 text-red-500" />
-                  <h3 className="text-sm font-medium">Areas to Improve</h3>
+              <div className="flex items-center gap-2">
+                <Progress 
+                  value={skill.score} 
+                  max={100} 
+                  className="h-2 flex-1" 
+                />
+                <Badge
+                  variant="outline"
+                  className={`${getStatusColor(skill.status)} text-xs flex items-center gap-1`}
+                >
+                  {getStatusIcon(skill.status)}
+                  <span>{getStatusLabel(skill.status)}</span>
+                </Badge>
+              </div>
+              
+              {skill.status !== 'passed' && skill.recommendations && skill.recommendations.length > 0 && (
+                <div className="mt-1 ml-1 text-sm text-muted-foreground flex items-start gap-1">
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <span>{skill.recommendations[0]}</span>
                 </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {section.weaknesses.map((weakness, index) => (
-                    <Badge key={index} variant="secondary" className="bg-red-50 text-red-700 hover:bg-red-100">
-                      {weakness}
-                    </Badge>
-                  ))}
-                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <div className={`mt-6 p-4 border rounded-lg ${
+          readiness.status === 'ready' ? 'bg-green-50 border-green-200' :
+          readiness.status === 'almost' ? 'bg-amber-50 border-amber-200' :
+          'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {readiness.status === 'ready' ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : readiness.status === 'almost' ? (
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500" />
+              )}
+              <div>
+                <p className="font-medium">Exam Readiness</p>
+                <p className="text-sm text-muted-foreground">Overall assessment</p>
               </div>
             </div>
-            
-            <div className="p-3 rounded-md bg-muted/20 border">
-              <h3 className="text-sm font-medium mb-2">CILS B1 {section.name} Requirements</h3>
-              <p className="text-sm text-muted-foreground">
-                {section.name === 'Listening' && 'Ability to understand main points in clear speech on familiar matters. 30-minute test with two recordings covering everyday situations.'}
-                {section.name === 'Reading' && 'Ability to understand texts on familiar topics. 40-minute test with three texts of varying lengths covering common subjects.'}
-                {section.name === 'Writing' && 'Ability to write simple connected text on familiar topics. 60-minute test with form completion and short essay (80-100 words).'}
-                {section.name === 'Speaking' && 'Ability to deal with most situations likely to arise while traveling. 10-minute interview covering personal information and simple opinions.'}
-              </p>
-            </div>
+            <Badge className={
+              readiness.status === 'ready' ? 'bg-green-100 text-green-800 hover:bg-green-200' :
+              readiness.status === 'almost' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' :
+              'bg-red-100 text-red-800 hover:bg-red-200'
+            }>
+              {readiness.label}
+            </Badge>
           </div>
-        </TabsContent>
-      ))}
-    </Tabs>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-0">
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium">Target score:</span> {skills[0]?.targetScore}% or higher in each skill area
+        </p>
+      </CardFooter>
+    </Card>
   );
 };
 
