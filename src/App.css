@@ -1,42 +1,138 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+
+/* App-specific styles that complement index.css */
+
+/* Add fade-in animation to the main content */
+#content {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Ensure focus outlines are visible only for keyboard navigation */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Make transition smooth between pages */
+.page-transition {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.page-transition-enter {
+  opacity: 0;
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+}
+
+.page-transition-exit {
+  opacity: 1;
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+}
+
+/* Add styles for form error states */
+.form-error-shake {
+  animation: shake 0.4s ease-in-out 0s 1;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+/* Ensure buttons have consistent min-height for touch targets */
+button {
+  min-height: 2.5rem;
+  line-height: 1;
+}
+
+/* Fix responsive table layout */
+.responsive-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Improve link accessibility */
+a:not([class]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+a:not([class]):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Add hover effects to all interactive elements */
+button:hover:not(:disabled),
+.button:hover:not(:disabled),
+a.card:hover,
+a.list-item:hover,
+.interactive:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+/* Ensure proper contrast for text on different backgrounds */
+.bg-primary {
+  color: var(--primary-foreground);
+}
+
+.bg-destructive {
+  color: var(--destructive-foreground);
+}
+
+.bg-accent {
+  color: var(--accent-foreground);
+}
+
+.bg-secondary {
+  color: var(--secondary-foreground);
+}
+
+/* Make SVGs accessible */
+svg:not([aria-hidden="true"]) {
+  pointer-events: none;
+}
+
+/* Set reduced animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+/* Add hover styles but only on devices that support hover */
+@media (hover: hover) {
+  button:hover:not(:disabled),
+  .button:hover:not(:disabled) {
+    filter: brightness(1.05);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Ensure buttons are disabled when loading */
+button.loading,
+.button.loading {
+  cursor: wait;
+  opacity: 0.7;
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+/* Apply better spacing for stacked form fields */
+.form-field + .form-field {
+  margin-top: 1rem;
 }
