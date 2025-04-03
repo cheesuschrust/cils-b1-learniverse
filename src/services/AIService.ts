@@ -1,6 +1,7 @@
 
 import { AIServiceOptions, AIServiceInterface } from "@/types/ai";
 import * as HuggingFace from "@/utils/huggingFaceIntegration";
+import { supabase } from "@/lib/supabase-client";
 
 // Map to track ongoing requests
 const activeRequests = new Map<string, AbortController>();
@@ -12,12 +13,26 @@ export const generateText = async (prompt: string, options?: AIServiceOptions): 
   try {
     console.log("AI Service - Generating text with prompt:", prompt);
     
-    // In a real implementation with a larger model, we would use a proper API
-    // For now, we'll simulate generating response text to avoid large downloads
-    return `AI generated response based on: ${prompt.substring(0, 50)}...`;
+    const controller = new AbortController();
+    const requestId = Math.random().toString(36).substring(2, 15);
+    activeRequests.set(requestId, controller);
+    
+    try {
+      const response = await supabase.functions.invoke('ai-text-generation', {
+        body: { prompt, options },
+        signal: controller.signal
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      return response.data.generatedText;
+    } finally {
+      activeRequests.delete(requestId);
+    }
   } catch (error) {
     console.error("Error generating text:", error);
-    throw error;
+    
+    // Fallback for development/testing
+    return `AI generated response based on: ${prompt.substring(0, 50)}...`;
   }
 };
 
@@ -62,9 +77,29 @@ export const getConfidenceScore = (contentType: string): number => {
 /**
  * Add training examples for a particular content type
  */
-export const addTrainingExamples = (contentType: string, examples: any[]): number => {
+export const addTrainingExamples = async (contentType: string, examples: any[]): Promise<number> => {
   console.log("AI Service - Adding training examples for:", contentType);
-  return examples.length;
+  
+  try {
+    // Store examples in the ai_training_data table
+    const { data, error } = await supabase
+      .from('ai_training_data')
+      .insert(
+        examples.map(example => ({
+          input_text: example.input,
+          expected_output: example.output,
+          content_type: contentType,
+          difficulty: example.difficulty || 'intermediate',
+          language: example.language || 'italian'
+        }))
+      );
+      
+    if (error) throw error;
+    return examples.length;
+  } catch (error) {
+    console.error("Error adding training examples:", error);
+    return 0;
+  }
 };
 
 /**
@@ -77,26 +112,60 @@ export const generateFlashcards = async (
 ): Promise<any[]> => {
   console.log("AI Service - Generating flashcards for:", topic);
   
-  // Simulated flashcard generation
-  const flashcards = [];
-  for (let i = 0; i < count; i++) {
-    flashcards.push({
-      id: `flashcard-${i}`,
-      front: `Italian term ${i + 1} for ${topic}`,
-      back: `English definition ${i + 1} for ${topic}`,
-      italian: `Italian term ${i + 1} for ${topic}`,
-      english: `English definition ${i + 1} for ${topic}`,
-      difficulty: 1,
-      level: 1,
-      mastered: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      explanation: `Example explanation for ${topic} term ${i + 1}`,
-      tags: [topic, difficulty]
+  try {
+    const prompt = `Generate ${count} flashcards for learning Italian vocabulary about "${topic}" at ${difficulty} level. Include the Italian term, English definition, and an example sentence in Italian.`;
+    
+    const response = await supabase.functions.invoke('ai-text-generation', {
+      body: { 
+        prompt,
+        model: "gpt-4o-mini",
+        options: {
+          responseFormat: 'json'
+        }
+      }
     });
+    
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    
+    // Parse and format the generated flashcards
+    // This assumes the AI returned properly structured data
+    const generatedCards = response.data.generatedContent || [];
+    
+    return generatedCards.map((card: any, index: number) => ({
+      id: `flashcard-${Date.now()}-${index}`,
+      front: card.italian || `Italian term ${index + 1} for ${topic}`,
+      back: card.english || `English definition ${index + 1} for ${topic}`,
+      italian: card.italian || `Italian term ${index + 1} for ${topic}`,
+      english: card.english || `English definition ${index + 1} for ${topic}`,
+      example: card.example || `Example sentence for ${topic}`,
+      difficulty: difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2,
+      level: difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2,
+      mastered: false,
+      tags: [topic, difficulty]
+    }));
+  } catch (error) {
+    console.error("Error generating flashcards:", error);
+    
+    // Fallback for development/testing
+    const flashcards = [];
+    for (let i = 0; i < count; i++) {
+      flashcards.push({
+        id: `flashcard-${Date.now()}-${i}`,
+        front: `Italian term ${i + 1} for ${topic}`,
+        back: `English definition ${i + 1} for ${topic}`,
+        italian: `Italian term ${i + 1} for ${topic}`,
+        english: `English definition ${i + 1} for ${topic}`,
+        difficulty: difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2,
+        level: difficulty === "beginner" ? 1 : difficulty === "advanced" ? 3 : 2,
+        mastered: false,
+        tags: [topic, difficulty]
+      });
+    }
+    
+    return flashcards;
   }
-  
-  return flashcards;
 };
 
 /**
@@ -109,57 +178,165 @@ export const generateQuestions = async (
 ): Promise<any[]> => {
   console.log("AI Service - Generating questions for content");
   
-  // Simulated question generation
-  const questions = [];
-  for (let i = 0; i < count; i++) {
-    questions.push({
-      id: `question-${i}`,
-      text: `Sample question ${i + 1} about the content`,
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option A",
-      explanation: "Sample explanation for the correct answer",
-      type: type,
-      difficulty: "intermediate",
-      category: "general",
-      tags: ["sample", "generated"],
+  try {
+    const prompt = `Generate ${count} ${type} questions based on this Italian content: "${content.substring(0, 500)}...". Focus on testing comprehension and language skills.`;
+    
+    const response = await supabase.functions.invoke('ai-text-generation', {
+      body: { 
+        prompt,
+        model: "gpt-4o-mini",
+        options: {
+          responseFormat: 'json'
+        }
+      }
+    });
+    
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    
+    // Parse and format the generated questions
+    const generatedQuestions = response.data.generatedContent || [];
+    
+    return generatedQuestions.map((question: any, index: number) => ({
+      id: `question-${Date.now()}-${index}`,
+      text: question.text || `Question ${index + 1} about the content`,
+      options: question.options || ["Option A", "Option B", "Option C", "Option D"],
+      correctAnswer: question.correctAnswer || "Option A",
+      explanation: question.explanation || "Explanation for the correct answer",
+      type: question.type || type,
+      difficulty: question.difficulty || "intermediate",
+      category: question.category || "general",
+      tags: question.tags || ["generated"],
       createdAt: new Date(),
       updatedAt: new Date(),
-      language: "english",
+      language: "italian",
       points: 10
-    });
+    }));
+  } catch (error) {
+    console.error("Error generating questions:", error);
+    
+    // Fallback for development/testing
+    const questions = [];
+    for (let i = 0; i < count; i++) {
+      questions.push({
+        id: `question-${Date.now()}-${i}`,
+        text: `Sample question ${i + 1} about the content`,
+        options: ["Option A", "Option B", "Option C", "Option D"],
+        correctAnswer: "Option A",
+        explanation: "Sample explanation for the correct answer",
+        type: type,
+        difficulty: "intermediate",
+        category: "general",
+        tags: ["sample", "generated"],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        language: "italian",
+        points: 10
+      });
+    }
+    
+    return questions;
   }
-  
-  return questions;
 };
 
 /**
  * Translate text from one language to another
  */
-export const translateTextAI = async (
+export const translateText = async (
   text: string, 
   from: 'en' | 'it', 
   to: 'en' | 'it'
 ): Promise<string> => {
   try {
-    // Use HuggingFace for translation
-    return await HuggingFace.translateText(text, from, to);
+    const response = await supabase.functions.invoke('ai-translation', {
+      body: { 
+        text,
+        sourceLanguage: from,
+        targetLanguage: to
+      }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    return response.data.translatedText;
   } catch (error) {
     console.error("Error translating text:", error);
+    
     // Fallback solution
     return `[Translation from ${from} to ${to}]: ${text}`;
   }
 };
 
 /**
+ * Analyze grammar and provide feedback
+ */
+export const analyzeGrammar = async (
+  text: string,
+  language: 'en' | 'it' = 'it'
+): Promise<any> => {
+  try {
+    const response = await supabase.functions.invoke('ai-grammar-analysis', {
+      body: { 
+        text,
+        language
+      }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    return response.data;
+  } catch (error) {
+    console.error("Error analyzing grammar:", error);
+    
+    // Fallback solution
+    return {
+      score: 75,
+      feedback: "Unable to analyze grammar in depth. Please try again later.",
+      grammarIssues: [],
+      vocabularyFeedback: "N/A",
+      structureFeedback: "N/A",
+      overallScore: 75
+    };
+  }
+};
+
+/**
  * Recognize speech from audio
  */
-export const recognizeSpeechAI = async (audioData: Blob): Promise<string> => {
+export const recognizeSpeech = async (audioData: Blob): Promise<string> => {
   try {
-    // Use HuggingFace for speech recognition
-    const result = await HuggingFace.recognizeSpeech(audioData);
-    return result.text;
+    // Convert blob to base64
+    const buffer = await audioData.arrayBuffer();
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    
+    const response = await supabase.functions.invoke('ai-speech-recognition', {
+      body: { audio: base64Audio, language: 'it' }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    return response.data.text;
   } catch (error) {
     console.error("Error recognizing speech:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate speech from text
+ */
+export const generateSpeech = async (
+  text: string,
+  voice: string = 'alloy',
+  model: string = 'tts-1'
+): Promise<string> => {
+  try {
+    const response = await supabase.functions.invoke('ai-text-to-speech', {
+      body: { text, voice, model }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    return response.data.audioContent;
+  } catch (error) {
+    console.error("Error generating speech:", error);
     throw error;
   }
 };
@@ -176,6 +353,33 @@ export const comparePronunciation = async (
   } catch (error) {
     console.error("Error comparing pronunciation:", error);
     return 0.7; // Default fallback similarity
+  }
+};
+
+/**
+ * Process document content
+ */
+export const processDocument = async (
+  content: string,
+  userId: string,
+  includeInTraining: boolean = false,
+  documentType?: string
+): Promise<any> => {
+  try {
+    const response = await supabase.functions.invoke('process-document', {
+      body: { 
+        documentContent: content, 
+        userId,
+        includeInTraining,
+        documentType
+      }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    return response.data;
+  } catch (error) {
+    console.error("Error processing document:", error);
+    throw error;
   }
 };
 

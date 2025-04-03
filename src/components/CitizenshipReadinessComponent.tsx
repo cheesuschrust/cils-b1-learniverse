@@ -2,167 +2,140 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  FileText, 
-  Languages, 
-  Mic, 
-  PenTool 
-} from 'lucide-react';
-import { ItalianLevel } from '@/types/italian-types';
+import { Progress } from '@/components/ui/progress';
+import { AlertCircle, CheckCircle, Clock, Trophy } from 'lucide-react';
+
+type ReadinessLevel = 'beginner' | 'intermediate' | 'advanced';
 
 interface CitizenshipReadinessComponentProps {
+  level: ReadinessLevel;
   readinessScore: number;
-  level: ItalianLevel;
   assessmentAvailable: boolean;
-  lastAssessmentDate?: Date;
   onStartAssessment: () => void;
+  lastAssessmentDate?: Date;
 }
 
 const CitizenshipReadinessComponent: React.FC<CitizenshipReadinessComponentProps> = ({
-  readinessScore,
   level,
+  readinessScore,
   assessmentAvailable,
-  lastAssessmentDate,
-  onStartAssessment
+  onStartAssessment,
+  lastAssessmentDate
 }) => {
-  // Format the last assessment date
-  const formattedDate = lastAssessmentDate 
-    ? new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }).format(lastAssessmentDate)
-    : 'Never';
-
-  // Determine the readiness status and message
-  const getReadinessStatus = (score: number) => {
-    if (score >= 80) {
-      return {
-        label: 'Ready',
-        message: "You're well-prepared for the citizenship test!",
-        color: "text-green-600"
-      };
-    } else if (score >= 60) {
-      return {
-        label: 'Almost Ready',
-        message: "You're making good progress, but need more practice in some areas.",
-        color: "text-amber-600"
-      };
-    } else {
-      return {
-        label: 'Needs Practice',
-        message: "More preparation is needed before taking the citizenship test.",
-        color: "text-red-600"
-      };
-    }
+  const getReadinessStatus = () => {
+    if (readinessScore >= 80) return { label: 'Ready', color: 'text-green-500', icon: <CheckCircle className="h-5 w-5 text-green-500" /> };
+    if (readinessScore >= 50) return { label: 'Almost Ready', color: 'text-amber-500', icon: <Clock className="h-5 w-5 text-amber-500" /> };
+    return { label: 'Not Ready', color: 'text-red-500', icon: <AlertCircle className="h-5 w-5 text-red-500" /> };
   };
-
-  const readinessStatus = getReadinessStatus(readinessScore);
-
-  // Mock skill breakdown data
-  const skillBreakdown = [
-    { name: 'Language Comprehension', score: Math.min(100, readinessScore + 10), icon: <Languages className="h-4 w-4" /> },
-    { name: 'Cultural Knowledge', score: Math.max(0, readinessScore - 5), icon: <FileText className="h-4 w-4" /> },
-    { name: 'Speaking Ability', score: readinessScore, icon: <Mic className="h-4 w-4" /> },
-    { name: 'Writing Skills', score: Math.min(100, readinessScore + 5), icon: <PenTool className="h-4 w-4" /> },
-  ];
-
+  
+  const readinessStatus = getReadinessStatus();
+  
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className={readinessStatus.color}>{readinessStatus.label}</span>
-            <Badge variant="outline" className="text-xs font-normal">
-              {level.toUpperCase()}
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-semibold">CILS B1 Citizenship Exam</h3>
+              <p className="text-muted-foreground">Level: <span className="capitalize">{level}</span></p>
+            </div>
+            <Badge 
+              className={`px-2 py-1 ${
+                readinessScore >= 80
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : readinessScore >= 50
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+              }`}
+            >
+              {readinessStatus.label}
             </Badge>
-          </h2>
-          <p className="text-muted-foreground">{readinessStatus.message}</p>
-        </div>
-        
-        <Button 
-          onClick={onStartAssessment}
-          disabled={!assessmentAvailable}
-        >
-          Take Readiness Assessment
-        </Button>
-      </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-medium">Overall Readiness</h3>
-            <span className="font-bold text-lg">{Math.round(readinessScore)}%</span>
           </div>
           
-          <Progress value={readinessScore} className="h-2 mb-6" />
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>Last assessment</span>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Overall Readiness</span>
+                <span className="text-sm font-medium">{Math.round(readinessScore)}%</span>
               </div>
-              <span>{formattedDate}</span>
+              <Progress value={readinessScore} className="h-2" />
             </div>
             
-            {!assessmentAvailable && (
-              <div className="flex items-center gap-2 p-3 bg-amber-100 text-amber-800 rounded-md text-sm">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span>Complete at least 50% of practice exercises to unlock the readiness assessment</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 bg-muted rounded-md">
+                <h4 className="text-sm font-medium mb-2 flex items-center">
+                  <Trophy className="h-4 w-4 mr-2 text-primary" />
+                  Required Modules
+                </h4>
+                <ul className="space-y-1 text-sm">
+                  <li className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                    Listening Comprehension
+                  </li>
+                  <li className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                    Reading Comprehension
+                  </li>
+                  <li className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-amber-500 mr-2"></div>
+                    Written Production
+                  </li>
+                  <li className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-red-500 mr-2"></div>
+                    Oral Production
+                  </li>
+                </ul>
               </div>
+              
+              <div className="p-4 bg-muted rounded-md">
+                <h4 className="text-sm font-medium mb-2">Citizenship Knowledge Areas</h4>
+                <ul className="space-y-1 text-sm">
+                  <li className="flex justify-between">
+                    <span>Italian Culture</span>
+                    <span>85%</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Government Structure</span>
+                    <span>62%</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Rights & Duties</span>
+                    <span>78%</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>History & Geography</span>
+                    <span>93%</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            {lastAssessmentDate && (
+              <p className="text-xs text-muted-foreground">
+                Last assessment taken on: {lastAssessmentDate.toLocaleDateString()}
+              </p>
             )}
           </div>
-        </CardContent>
-      </Card>
-      
-      <div className="space-y-4">
-        <h3 className="font-medium">Skill Breakdown</h3>
-        
-        <div className="space-y-4">
-          {skillBreakdown.map((skill) => (
-            <div key={skill.name} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  {skill.icon}
-                  <span className="text-sm">{skill.name}</span>
-                </div>
-                <span className="text-sm font-medium">{skill.score}%</span>
-              </div>
-              <Progress value={skill.score} className="h-1.5" />
-            </div>
-          ))}
+          
+          <div className="mt-6">
+            <Button 
+              className="w-full" 
+              disabled={!assessmentAvailable}
+              onClick={onStartAssessment}
+            >
+              Start Readiness Assessment
+            </Button>
+            
+            {!assessmentAvailable && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Complete at least 50% of the required modules to unlock the assessment
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      
-      <div className="space-y-4">
-        <h3 className="font-medium">Preparation Tips</h3>
-        
-        <ul className="space-y-2">
-          <li className="flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600 mt-1" />
-            <span>Practice Italian listening comprehension daily with authentic materials</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600 mt-1" />
-            <span>Review Italian history and cultural knowledge related to citizenship</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600 mt-1" />
-            <span>Complete all sections of the practice exercises for best results</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600 mt-1" />
-            <span>Take the readiness assessment at least once a month to track progress</span>
-          </li>
-        </ul>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

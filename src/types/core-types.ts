@@ -1,75 +1,123 @@
 
+// Define core type definitions used across the application
+
+// User types
 export interface User {
   id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  subscription?: string;
-  status?: string;
-  preferences?: UserPreferences;
+  isPremium?: boolean;
   isPremiumUser?: boolean;
+  displayName?: string;
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
-export interface UserPreferences {
-  theme: string;
-  notifications: boolean;
-  emailNotifications: boolean;
+// Learning content types
+export type ContentType = 'flashcards' | 'reading' | 'listening' | 'writing' | 'speaking' | 'grammar' | 'citizenship';
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianTestSection = 'grammar' | 'vocabulary' | 'culture' | 'listening' | 'reading' | 'writing' | 'speaking' | 'citizenship';
+
+// Exercise types
+export interface Exercise {
+  id: string;
+  title: string;
+  description?: string;
+  type: ContentType;
+  difficulty: DifficultyLevel;
+  content: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Learning progress tracking
+export interface Progress {
+  userId: string;
+  contentId: string;
+  progress: number;
+  completed: boolean;
+  score?: number;
+  lastActivity: Date;
+}
+
+// Analytics types for tracking user performance
+export interface PerformanceMetrics {
+  accuracy: number;
+  speed?: number;
+  consistency?: number;
+  retention?: number;
+}
+
+// AI-related types
+export interface AIContentAnalysis {
+  contentType: ContentType;
+  confidence: number;
+  language: 'italian' | 'english' | 'mixed';
+  topics: string[];
+  complexity: DifficultyLevel;
+}
+
+export interface AIQuestion {
+  id: string;
+  text: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+  type: 'multiple-choice' | 'open-ended' | 'true-false';
+  difficulty: DifficultyLevel;
+}
+
+export interface AIGenerationResult {
+  questions: AIQuestion[];
+  error?: string;
+}
+
+export interface TranslationResult {
+  originalText: string;
+  translatedText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+export interface AudioProcessingResult {
+  text: string;
+  confidence: number;
   language: string;
-  difficulty: string;
-  onboardingCompleted: boolean;
-  [key: string]: any;
 }
 
-export interface UserProfile {
+// Document processing types
+export interface ProcessedDocument {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  is_premium: boolean;
-  premium_until: string | null;
+  title?: string;
+  content: string;
+  contentType: ContentType;
+  analysis: AIContentAnalysis;
+  questions?: AIQuestion[];
   created_at: string;
-  updated_at: string;
-  last_login_at: string | null;
+  created_by: string;
 }
 
-export interface UserStats {
+// Model training data types
+export interface TrainingData {
   id: string;
-  user_id: string;
-  questions_answered: number;
-  correct_answers: number;
-  streak_days: number;
-  last_activity_date: string | null;
-  reading_score: number | null;
-  writing_score: number | null;
-  listening_score: number | null;
-  speaking_score: number | null;
-  updated_at: string;
+  inputText: string;
+  expectedOutput: string;
+  contentType: string;
+  difficulty: DifficultyLevel;
+  language: string;
+  created_at?: string;
+  created_by?: string;
 }
 
-export interface UserAchievement {
+export interface ModelPerformance {
   id: string;
-  user_id: string;
-  achievement_type: string;
-  achievement_name: string;
-  description: string;
-  achieved_at: string;
-  metadata?: any;
-}
-
-export interface DailyQuestion {
-  id: string;
-  question_date: string;
-  question_text: string;
-  options: any;
-  correct_answer: string;
-  explanation: string | null;
-  category: string;
-  difficulty: string;
-  is_premium: boolean;
-  created_at: string;
+  modelName: string;
+  version: string;
+  metrics: {
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1Score: number;
+  };
+  trainingDate: string;
 }

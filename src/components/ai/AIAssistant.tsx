@@ -1,51 +1,71 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useAI } from '@/hooks/useAI';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar } from '@/components/ui/avatar';
-import { Loader2, Send, Volume2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Send, Volume2, RotateCcw, Languages, Mic } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase-client';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
   id: string;
   content: string;
-  role: 'user' | 'assistant';
+  isUser: boolean;
   timestamp: Date;
-  translated?: string;
+  translation?: string;
+  audioUrl?: string;
 }
 
 interface AIAssistantProps {
   initialContext?: string;
   assistantName?: string;
   showTranslation?: boolean;
+  className?: string;
 }
 
 const AIAssistant: React.FC<AIAssistantProps> = ({
-  initialContext = "I'm learning Italian for citizenship",
-  assistantName = "Lucia",
-  showTranslation = true
+  initialContext = 'Italian language learning',
+  assistantName = 'AI Assistant',
+  showTranslation = false,
+  className = ''
 }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [displayTranslation, setDisplayTranslation] = useState(showTranslation);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { generateText, isProcessing, generateSpeech, analyzeSpeech, translateText } = useAI();
   const { user } = useAuth();
+  const { hasReachedLimit, incrementUsage } = useFeatureLimits();
   const { toast } = useToast();
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      content: `Ciao! Sono ${assistantName}, il tuo assistente per l'italiano. Come posso aiutarti oggi?`,
-      role: 'assistant',
-      timestamp: new Date(),
-      translated: 'Hi! I am Lucia, your Italian assistant. How can I help you today?'
+  useEffect(() => {
+    const welcomeMessage: Message = {
+      id: uuidv4(),
+      content: `Ciao! I'm your Italian language assistant. How can I help you with your ${initialContext} today?`,
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages([welcomeMessage]);
+    
+    if (displayTranslation) {
+      handleTranslation(welcomeMessage);
     }
-  ]);
-  
-  const [input, setInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showEnglish, setShowEnglish] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  }, []);
   
   useEffect(() => {
     scrollToBottom();
@@ -55,197 +75,375 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
     
+    if (hasReachedLimit('aiSuggestions')) {
+      toast({
+        title: "Usage Limit Reached",
+        description: "You've reached your daily AI chat limit. Upgrade to premium for unlimited access.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       content: input,
-      role: 'user',
+      isUser: true,
       timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsProcessing(true);
+    setIsTyping(true);
     
     try {
-      // Call OpenAI for assistant response
-      const { data: responseData, error: responseError } = await supabase.functions.invoke('italian-assistant', {
-        body: {
-          message: input,
-          history: messages.slice(-10), // Send last 10 messages for context
-          context: initialContext,
-          level: "intermediate"  // Could be dynamic based on user's profile
-        }
-      });
+      const conversationContext = messages
+        .slice(-4)
+        .map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
       
-      if (responseError) throw new Error(responseError.message);
+      const prompt = `
+        You are an Italian language tutor named ${assistantName}.
+        Topic: ${initialContext}
+        
+        Recent conversation:
+        ${conversationContext}
+        
+        User: ${input}
+        
+        Respond in Italian, keep your response helpful, concise, and focused on helping the user learn Italian.
+        If they ask a question in English, still respond in Italian but with simpler language.
+        Only use English if specifically asked for a translation or explanation of a concept.
+      `;
       
-      if (!responseData) {
-        throw new Error('No response from assistant');
-      }
-
-      // Translate the assistant's Italian response to English if needed
-      let translatedText = undefined;
-      if (showTranslation) {
-        try {
-          const { data: translationData } = await supabase.functions.invoke('translate-text', {
-            body: {
-              text: responseData.response,
-              sourceLanguage: 'it',
-              targetLanguage: 'en'
-            }
-          });
-          
-          if (translationData) {
-            translatedText = translationData.translatedText;
-          }
-        } catch (translationError) {
-          console.error('Translation failed:', translationError);
-        }
-      }
+      const response = await generateText(prompt);
       
       const assistantMessage: Message = {
-        id: Date.now().toString() + '-assistant',
-        content: responseData.response,
-        role: 'assistant',
-        timestamp: new Date(),
-        translated: translatedText
+        id: uuidv4(),
+        content: response,
+        isUser: false,
+        timestamp: new Date()
       };
       
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error calling assistant:', error);
+      
+      if (user) {
+        await supabase.from('user_activity_logs').insert({
+          user_id: user.id,
+          activity_type: 'ai_chat',
+          details: {
+            user_message: input,
+            ai_response: response,
+            context: initialContext
+          }
+        });
+      }
+      
+      if (displayTranslation) {
+        handleTranslation(assistantMessage);
+      }
+      
+      await incrementUsage('aiSuggestions');
+    } catch (error: any) {
       toast({
-        title: "Communication Error",
-        description: "There was a problem contacting the AI assistant.",
+        title: "Error",
+        description: error.message || "Failed to generate response. Please try again.",
+        variant: "destructive"
+      });
+      
+      setMessages(prev => [
+        ...prev,
+        {
+          id: uuidv4(),
+          content: "Mi dispiace, ho avuto un problema. Puoi riprovare? (Sorry, I had a problem. Can you try again?)",
+          isUser: false,
+          timestamp: new Date()
+        }
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+  
+  const handlePlayAudio = async (message: Message) => {
+    if (isPlayingAudio) return;
+    
+    try {
+      setIsPlayingAudio(true);
+      
+      if (message.audioUrl) {
+        const audio = new Audio(message.audioUrl);
+        await audio.play();
+        return;
+      }
+      
+      const audioContent = await generateSpeech(message.content);
+      
+      const binaryData = atob(audioContent);
+      const byteArray = new Uint8Array(binaryData.length);
+      for (let i = 0; i < binaryData.length; i++) {
+        byteArray[i] = binaryData.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: 'audio/mp3' });
+      const audioUrl = URL.createObjectURL(blob);
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === message.id ? { ...msg, audioUrl } : msg
+        )
+      );
+      
+      const audio = new Audio(audioUrl);
+      await audio.play();
+    } catch (error: any) {
+      toast({
+        title: "Audio Error",
+        description: error.message || "Failed to generate or play audio.",
         variant: "destructive"
       });
     } finally {
-      setIsProcessing(false);
+      setIsPlayingAudio(false);
     }
   };
   
-  const playText = async (text: string) => {
+  const handleTranslation = async (message: Message) => {
+    if (message.isUser || message.translation) return;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: {
-          text,
-          voice: "pNInz6obpgDQGcFmaJgB", // Italian female voice
-          model: "eleven_multilingual_v2"
-        }
-      });
+      const translatedText = await translateText(message.content, 'it', 'en');
       
-      if (error) throw error;
-      
-      if (data && data.audioContent) {
-        const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-        audio.play();
-      }
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === message.id ? { ...msg, translation: translatedText } : msg
+        )
+      );
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Translation error:', error);
+    }
+  };
+  
+  const handleStartRecording = async () => {
+    if (isRecording) return;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      setAudioChunks([]);
+      setIsRecording(true);
+      setAudioRecorder(recorder);
+      
+      recorder.ondataavailable = (e) => {
+        setAudioChunks(prev => [...prev, e.data]);
+      };
+      
+      recorder.onstop = handleRecordingStopped;
+      
+      recorder.start();
+      
       toast({
-        title: "Audio Error",
-        description: "Could not play audio for this message.",
+        title: "Recording Started",
+        description: "Speak now... Click the microphone again to stop recording."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Recording Error",
+        description: error.message || "Could not access microphone. Please check permissions.",
         variant: "destructive"
       });
     }
   };
   
+  const handleStopRecording = () => {
+    if (audioRecorder && isRecording) {
+      audioRecorder.stop();
+      audioRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+  
+  const handleRecordingStopped = async () => {
+    setIsRecording(false);
+    
+    if (audioChunks.length === 0) return;
+    
+    try {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      
+      const { transcribedText } = await analyzeSpeech(audioBlob, "");
+      
+      setInput(transcribedText);
+      
+      toast({
+        title: "Speech Recognized",
+        description: "Your speech has been transcribed. You can edit it before sending."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Speech Recognition Error",
+        description: error.message || "Failed to recognize speech. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleClearConversation = () => {
+    const welcomeMessage = messages[0];
+    setMessages([welcomeMessage]);
+    setInput('');
+    toast({
+      title: "Conversation Cleared",
+      description: "The conversation history has been cleared."
+    });
+  };
+  
   return (
-    <Card className="flex flex-col h-[600px] max-h-[80vh]">
-      <CardHeader className="pb-3">
-        <CardTitle>Chat with {assistantName}</CardTitle>
-        <CardDescription>
-          Your Italian language assistant
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="flex-grow overflow-y-auto">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
-            >
-              {message.role === 'assistant' && (
-                <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-                  <span className="text-xs font-semibold">{assistantName[0]}</span>
-                </Avatar>
-              )}
-              
-              <div className={`max-w-[80%] rounded-lg p-3 
-                ${message.role === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted'}`}
-              >
-                <div className="flex justify-between gap-2">
-                  <p>{message.content}</p>
-                  {message.role === 'assistant' && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-5 w-5 rounded-full"
-                      onClick={() => playText(message.content)}
-                    >
-                      <Volume2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                
-                {showTranslation && message.translated && (
-                  <div className={`mt-1 pt-1 text-xs ${message.role === 'user' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                    {showEnglish && message.translated}
-                  </div>
-                )}
-              </div>
-              
-              {message.role === 'user' && (
-                <Avatar className="h-8 w-8 bg-secondary">
-                  <span className="text-xs">{user?.email?.charAt(0) || 'U'}</span>
-                </Avatar>
-              )}
+    <Card className={cn('flex flex-col h-[600px]', className)}>
+      <CardHeader className="px-4 py-2 border-b">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8 mr-2">
+              <AvatarImage src="/assets/ai-assistant.png" alt={assistantName} />
+              <AvatarFallback>{assistantName.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-medium text-sm">{assistantName}</h3>
+              <p className="text-xs text-muted-foreground">Italian Assistant</p>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </CardContent>
-      
-      <CardFooter className="border-t pt-4 pb-6">
-        <form onSubmit={handleSendMessage} className="flex w-full gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            disabled={isProcessing}
-            className="flex-grow"
-          />
-          <Button type="submit" disabled={!input.trim() || isProcessing}>
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
-      </CardFooter>
-      
-      {showTranslation && (
-        <div className="px-4 pb-2 flex justify-end">
-          <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-            <span>Show English</span>
-            <input
-              type="checkbox"
-              checked={showEnglish}
-              onChange={() => setShowEnglish(!showEnglish)}
-              className="rounded"
-            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-translation"
+                checked={displayTranslation}
+                onCheckedChange={setDisplayTranslation}
+                className="data-[state=checked]:bg-green-500"
+              />
+              <Label htmlFor="show-translation" className="text-xs">
+                <Languages className="h-3 w-3 inline mr-1" />
+                Translations
+              </Label>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleClearConversation}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-      )}
+      </CardHeader>
+      
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                message.isUser
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              
+              {!message.isUser && message.translation && displayTranslation && (
+                <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-muted-foreground italic">{message.translation}</p>
+                </div>
+              )}
+              
+              {!message.isUser && (
+                <div className="flex items-center justify-end mt-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => handlePlayAudio(message)}
+                    disabled={isPlayingAudio}
+                  >
+                    {isPlayingAudio ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Volume2 className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] bg-muted rounded-lg px-4 py-2">
+              <div className="flex space-x-1">
+                <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce"></div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </CardContent>
+      
+      <CardFooter className="p-4 pt-2 border-t">
+        <div className="w-full space-y-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message in English or Italian..."
+            className="resize-none"
+            rows={2}
+            disabled={isProcessing || isTyping}
+          />
+          
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={isRecording ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ''}
+                onClick={isRecording ? handleStopRecording : handleStartRecording}
+              >
+                <Mic className="h-4 w-4 mr-1" />
+                {isRecording ? 'Stop' : 'Speak'}
+              </Button>
+              
+              {user?.isPremium ? (
+                <Badge variant="secondary" className="h-7">Premium</Badge>
+              ) : (
+                <Badge variant="outline" className="h-7">
+                  {5 - (hasReachedLimit('aiSuggestions') ? 5 : 0)} chats left
+                </Badge>
+              )}
+            </div>
+            
+            <Button
+              onClick={handleSendMessage}
+              disabled={!input.trim() || isProcessing || isTyping}
+              size="sm"
+            >
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send
+            </Button>
+          </div>
+        </div>
+      </CardFooter>
     </Card>
   );
 };

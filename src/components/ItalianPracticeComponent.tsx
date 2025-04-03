@@ -1,215 +1,294 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AIGeneratedQuestion, 
-  ItalianLevel, 
-  ItalianTestSection,
-  AnswerResults 
-} from '@/types/italian-types';
-import { useAuth } from '@/contexts/AuthContext';
-import QuestionAnsweringComponent from './learning/QuestionAnsweringComponent';
-import { Loader2, BookOpen, Mic, FileText, PenTool, Languages } from 'lucide-react';
+import { useAI } from '@/hooks/useAI';
+
+import { useToast } from '@/components/ui/use-toast';
+import { Loader2, Book, Award } from 'lucide-react';
+
+export type ItalianTestSection = 
+  'grammar' | 
+  'vocabulary' | 
+  'culture' | 
+  'listening' | 
+  'reading' | 
+  'writing' | 
+  'speaking' | 
+  'citizenship';
+
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
 
 interface ItalianPracticeComponentProps {
-  initialSection?: ItalianTestSection;
-  level?: ItalianLevel;
-  testSection?: ItalianTestSection;
+  initialSection: ItalianTestSection;
+  level: ItalianLevel;
   isCitizenshipMode?: boolean;
-  onComplete?: (results: AnswerResults) => void;
-  userId?: string;
+  onComplete?: (result: { score: number; section: ItalianTestSection }) => void;
+  userId: string;
 }
 
-// Export as named export
 export const ItalianPracticeComponent: React.FC<ItalianPracticeComponentProps> = ({
-  initialSection = 'grammar',
-  level = 'intermediate',
-  testSection,
+  initialSection,
+  level,
   isCitizenshipMode = false,
   onComplete,
   userId
 }) => {
-  const [activeTab, setActiveTab] = useState<ItalianTestSection>(initialSection);
-  const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [completedSections, setCompletedSections] = useState<Record<ItalianTestSection, number>>({
-    grammar: 0,
-    vocabulary: 0,
-    culture: 0,
-    listening: 0,
-    reading: 0,
-    writing: 0,
-    speaking: 0,
-    citizenship: 0
-  });
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<Record<number, any>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState(0);
   
-  const { user } = useAuth();
+  const { generateQuestions, isProcessing } = useAI();
+  const { toast } = useToast();
   
-  // Mock function for generating questions - in a real app, this would call an API
-  const generateQuestions = async (params: {
-    contentTypes: ItalianTestSection[];
-    difficulty: ItalianLevel;
-    count: number;
-    isCitizenshipFocused: boolean;
-    language?: string;
-  }) => {
-    // Simulate API call with a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // Placeholder for actual question generation/fetching logic
+  React.useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        setIsLoading(true);
+        
+        const result = await generateQuestions({
+          contentTypes: [initialSection],
+          topics: isCitizenshipMode ? ['citizenship', 'italian culture', 'government'] : [initialSection],
+          difficulty: level,
+          count: 5,
+          isCitizenshipFocused: isCitizenshipMode
+        });
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        setQuestions(result.questions || []);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load questions. Please try again.",
+          variant: "destructive"
+        });
+        
+        // Use placeholder questions if real ones couldn't be loaded
+        setQuestions([
+          {
+            id: '1',
+            text: `Sample question 1 for ${initialSection} (${level})`,
+            type: 'multiple-choice',
+            options: ['Option A', 'Option B', 'Option C', 'Option D'],
+            correctAnswer: 'Option A',
+            explanation: 'This is the explanation for the correct answer.'
+          },
+          {
+            id: '2',
+            text: `Sample question 2 for ${initialSection} (${level})`,
+            type: 'multiple-choice',
+            options: ['Option A', 'Option B', 'Option C', 'Option D'],
+            correctAnswer: 'Option B',
+            explanation: 'This is the explanation for the correct answer.'
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Mock questions based on the selected section
-    const mockQuestions: AIGeneratedQuestion[] = Array(params.count).fill(null).map((_, index) => ({
-      id: `question-${index}`,
-      text: `Sample ${params.contentTypes[0]} question ${index + 1}?`,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: 'Option A',
-      explanation: `This is an explanation for question ${index + 1}`,
-      type: params.contentTypes[0],
-      difficulty: params.difficulty,
-      questionType: 'multipleChoice',
-      isCitizenshipRelevant: params.isCitizenshipFocused,
-      question: `Sample ${params.contentTypes[0]} question ${index + 1}?`
-    }));
-    
-    return { questions: mockQuestions };
+    loadQuestions();
+  }, [initialSection, level, isCitizenshipMode]);
+  
+  const handleAnswer = (answer: any) => {
+    setUserAnswers({
+      ...userAnswers,
+      [currentIndex]: answer
+    });
   };
   
-  // Load questions when section changes
-  useEffect(() => {
-    loadQuestionsForSection(activeTab);
-  }, [activeTab]);
-  
-  // Function to load questions for a specific section
-  const loadQuestionsForSection = async (section: ItalianTestSection) => {
-    setIsLoading(true);
-    try {
-      const result = await generateQuestions({
-        contentTypes: [section],
-        difficulty: level,
-        count: 5,
-        isCitizenshipFocused: isCitizenshipMode,
-        language: 'italian'
-      });
-      
-      if (result && result.questions) {
-        setQuestions(result.questions);
-      }
-    } catch (error) {
-      console.error(`Error loading ${section} questions:`, error);
-    } finally {
-      setIsLoading(false);
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      calculateScore();
+      setShowResults(true);
     }
   };
   
-  // Handle section completion
-  const handleSectionComplete = (score: number) => {
-    setCompletedSections(prev => ({
-      ...prev,
-      [activeTab]: score
-    }));
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+  
+  const calculateScore = () => {
+    let correctCount = 0;
+    
+    questions.forEach((question, index) => {
+      const userAnswer = userAnswers[index];
+      if (userAnswer === question.correctAnswer) {
+        correctCount++;
+      }
+    });
+    
+    const calculatedScore = (correctCount / questions.length) * 100;
+    setScore(calculatedScore);
     
     if (onComplete) {
-      onComplete({score, time: 0});
+      onComplete({
+        score: calculatedScore,
+        section: initialSection
+      });
     }
   };
   
-  // Get section icon
-  const getSectionIcon = (section: ItalianTestSection) => {
-    switch (section) {
-      case 'grammar': return <BookOpen className="h-4 w-4" />;
-      case 'vocabulary': return <Languages className="h-4 w-4" />;
-      case 'listening': return <Mic className="h-4 w-4" />;
-      case 'reading': return <FileText className="h-4 w-4" />;
-      case 'writing': return <PenTool className="h-4 w-4" />;
-      default: return <BookOpen className="h-4 w-4" />;
-    }
+  const resetPractice = () => {
+    setCurrentIndex(0);
+    setUserAnswers({});
+    setShowResults(false);
+    setScore(0);
   };
+  
+  if (isLoading || isProcessing) {
+    return (
+      <Card>
+        <CardContent className="py-10">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading practice questions...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (showResults) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center">Practice Results</CardTitle>
+        </CardHeader>
+        <CardContent className="py-6">
+          <div className="text-center space-y-6">
+            <Award className="h-16 w-16 mx-auto text-primary" />
+            
+            <div>
+              <h3 className="text-2xl font-bold">Your Score: {Math.round(score)}%</h3>
+              <p className="text-muted-foreground mt-1">
+                {score >= 70 
+                  ? `Great job! You're doing well on this ${initialSection} section.`
+                  : `Keep practicing this ${initialSection} section to improve your score.`
+                }
+              </p>
+            </div>
+            
+            <div className="space-y-4 max-w-md mx-auto">
+              <h4 className="font-medium">Practice Summary</h4>
+              <div className="space-y-2">
+                {questions.map((question, index) => (
+                  <div key={index} className="text-left p-3 border rounded-md">
+                    <p className="text-sm font-medium">{question.text}</p>
+                    <div className="mt-1 text-sm flex justify-between">
+                      <span>
+                        Your answer: 
+                        <span className={userAnswers[index] === question.correctAnswer 
+                          ? "text-green-500 font-medium ml-1" 
+                          : "text-red-500 font-medium ml-1"
+                        }>
+                          {userAnswers[index] || 'Not answered'}
+                        </span>
+                      </span>
+                      {userAnswers[index] !== question.correctAnswer && (
+                        <span className="text-green-500 font-medium">
+                          Correct: {question.correctAnswer}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-4">
+                <Button onClick={resetPractice} className="w-full">Practice Again</Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const currentQuestion = questions[currentIndex];
   
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Italian Practice - {level}</CardTitle>
-        <CardDescription>
-          Practice different aspects of Italian language
-        </CardDescription>
+        <CardTitle className="flex items-center">
+          <Book className="h-5 w-5 mr-2" />
+          <span className="capitalize">{initialSection}</span> Practice
+        </CardTitle>
       </CardHeader>
-      
-      <CardContent>
-        <Tabs 
-          defaultValue={initialSection} 
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as ItalianTestSection)}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 w-full">
-            <TabsTrigger value="grammar" className="text-xs md:text-sm flex items-center gap-1">
-              <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Grammar</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="vocabulary" className="text-xs md:text-sm flex items-center gap-1">
-              <Languages className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Vocabulary</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="listening" className="text-xs md:text-sm flex items-center gap-1">
-              <Mic className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Listening</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="reading" className="text-xs md:text-sm flex items-center gap-1">
-              <FileText className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Reading</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="writing" className="text-xs md:text-sm flex items-center gap-1">
-              <PenTool className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Writing</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="speaking" className="text-xs md:text-sm flex items-center gap-1">
-              <Mic className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Speaking</span>
-            </TabsTrigger>
-            
-            <TabsTrigger value="culture" className="text-xs md:text-sm flex items-center gap-1">
-              <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden md:inline">Culture</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <div className="mt-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-10">
-                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
-                <p>Loading {activeTab} practice questions...</p>
+      <CardContent className="space-y-6">
+        {currentQuestion ? (
+          <>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Question {currentIndex + 1} of {questions.length}</span>
+                <span className="text-sm font-medium capitalize">{level} level</span>
               </div>
-            ) : (
-              Object.keys(completedSections).map(section => (
-                <TabsContent key={section} value={section} className="mt-0">
-                  <QuestionAnsweringComponent 
-                    questions={questions}
-                    contentType={section as ItalianTestSection}
-                    onComplete={handleSectionComplete}
-                    difficultyLevel={level}
-                    userId={userId || user?.id}
-                  />
-                </TabsContent>
-              ))
+              
+              <h3 className="text-lg font-medium">{currentQuestion.text}</h3>
+            </div>
+            
+            {currentQuestion.type === 'multiple-choice' && currentQuestion.options && (
+              <div className="space-y-2">
+                {currentQuestion.options.map((option: string, optIndex: number) => (
+                  <div 
+                    key={optIndex}
+                    className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                      userAnswers[currentIndex] === option 
+                        ? 'bg-primary text-primary-foreground border-primary' 
+                        : 'hover:bg-accent'
+                    }`}
+                    onClick={() => handleAnswer(option)}
+                  >
+                    {option}
+                  </div>
+                ))}
+              </div>
             )}
+            
+            {currentQuestion.type === 'open-ended' && (
+              <div className="space-y-2">
+                <textarea
+                  className="w-full p-3 border rounded-md min-h-[100px]"
+                  placeholder="Type your answer here..."
+                  value={userAnswers[currentIndex] || ''}
+                  onChange={(e) => handleAnswer(e.target.value)}
+                />
+              </div>
+            )}
+            
+            <div className="flex justify-between pt-4">
+              <Button 
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+              >
+                Previous
+              </Button>
+              
+              <Button onClick={handleNext}>
+                {currentIndex < questions.length - 1 ? 'Next' : 'Finish'}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-6">
+            <p>No questions available. Try again later.</p>
           </div>
-        </Tabs>
+        )}
       </CardContent>
-      
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={() => loadQuestionsForSection(activeTab)}>
-          Refresh Questions
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
 
-// Also export as default
 export default ItalianPracticeComponent;

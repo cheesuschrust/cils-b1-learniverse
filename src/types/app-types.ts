@@ -1,58 +1,56 @@
 
-import { ItalianLevel, ItalianTestSection } from './italian-types';
+// Define application-specific types that build on core-types
 
-// Core application types
-export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ContentType = 'flashcards' | 'multiple-choice' | 'writing' | 'speaking' | 'listening';
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'destructive';
+import { DifficultyLevel, AIQuestion, AIGenerationResult } from './core-types';
 
-// AI Question types
-export interface AIQuestion {
+// Flashcard types
+export interface Flashcard {
   id: string;
-  text: string;
-  options?: string[];
-  correctAnswer: string;
-  explanation?: string;
-  type: ItalianTestSection;
-  difficulty: ItalianLevel;
+  front: string; 
+  back: string;
+  italian?: string;
+  english?: string;
+  level: number;
+  difficulty: number;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  set_id?: string;
+  tags?: string[];
+  nextReview?: Date;
+  last_reviewed?: Date;
+  mastered?: boolean;
+  progress?: any;
+  isDue?: boolean;
 }
 
-// Error boundary props
-export interface EnhancedErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback: React.ReactNode;
-  showDetails?: boolean;
-  reportErrors?: boolean;
+export interface FlashcardSet {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+  category?: string;
+  tags?: string[];
+  user_id?: string;
+  is_public: boolean;
+  is_favorite: boolean;
+  created_at: string;
+  updated_at: string;
+  cards?: Flashcard[];
+  dueCount?: number;
+  totalCards?: number;
+  lastStudied?: string;
 }
 
-// AI Content Processor
-export interface AIContentProcessorProps {
-  content: string;
-  onProcessed: (result: any) => void;
-  processingOptions?: ProcessContentOptions;
+// AI utilities context types
+export interface QuestionGenerationParams {
+  contentTypes: string[];
+  topics: string[];
+  difficulty: DifficultyLevel;
+  count: number;
+  isCitizenshipFocused?: boolean;
 }
 
-export interface ProcessContentOptions {
-  type?: ContentType;
-  difficulty?: DifficultyLevel;
-  language?: 'italian' | 'english' | 'both';
-  maxResults?: number;
-}
-
-// UI Components
-export interface ConfidenceIndicatorProps {
-  score: number;
-  label?: string;
-  size?: 'sm' | 'md' | 'lg';
-  contentType?: string;
-}
-
-export interface LevelBadgeProps {
-  level: ItalianLevel;
-  className?: string;
-}
-
-// AIUtils Context types
 export interface AIUtilsContextType {
   generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
   isGenerating: boolean;
@@ -60,27 +58,100 @@ export interface AIUtilsContextType {
   usageLimit: number;
 }
 
-export interface QuestionGenerationParams {
-  contentTypes: ItalianTestSection[];
-  difficulty: ItalianLevel;
-  count?: number;
-  isCitizenshipFocused?: boolean;
-  language?: 'english' | 'italian' | 'both';
+// Content processing types
+export interface ContentProcessorProps {
+  onProcessed?: (result: any) => void;
+  initialContent?: string;
+  initialContentType?: string;
+  userId?: string;
 }
 
-export interface AIGenerationResult {
-  questions: AIQuestion[];
-  error?: string;
-}
-
-// User Profile
-export interface UserProfile {
-  id: string;
-  displayName: string;
-  email: string;
+export interface ProcessingResult {
+  contentType: string;
+  confidence: number;
   language: string;
-  difficulty: DifficultyLevel;
-  createdAt: Date;
-  updatedAt: Date;
-  isPremiumUser: boolean;
+  topics: string[];
+  questions?: AIQuestion[];
+}
+
+// AI Assistant types
+export interface ChatMessage {
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
+  translation?: string;
+}
+
+export interface ChatContext {
+  topic?: string;
+  language?: 'italian' | 'english' | 'both';
+  difficulty?: DifficultyLevel;
+  userLevel?: DifficultyLevel;
+}
+
+// AI Feedback types
+export interface FeedbackItem {
+  text: string;
+  explanation: string;
+  suggestion?: string;
+  severity: 'minor' | 'major' | 'critical';
+}
+
+export interface GrammarAnalysisResult {
+  score: number;
+  feedback: string;
+  grammarIssues: FeedbackItem[];
+  vocabularyFeedback?: string;
+  structureFeedback?: string;
+  overallScore: number;
+}
+
+// Speech analysis types
+export interface SpeechAnalysisResult {
+  transcribedText: string;
+  similarityScore: number;
+  feedback: string;
+  wordLevelAnalysis?: Array<{
+    word: string;
+    confidence: number;
+    startTime: number;
+    endTime: number;
+  }>;
+}
+
+// Model training types
+export interface TrainingExample {
+  input: string;
+  output: string;
+  metadata?: {
+    difficulty: DifficultyLevel;
+    language: string;
+    contentType: string;
+  };
+}
+
+// Content visualization types
+export interface ContentImpact {
+  contentId: string;
+  impactScore: number;
+  usageCount: number;
+  userProgress: number;
+  confidenceScore: number;
+}
+
+export interface UserContribution {
+  userId: string;
+  contributionCount: number;
+  qualityScore: number;
+  contentTypes: Record<string, number>;
+  lastContribution: Date;
+}
+
+// Health indicators
+export interface ContentHealthIndicator {
+  contentId: string;
+  score: number;
+  issues: string[];
+  recommendations: string[];
 }

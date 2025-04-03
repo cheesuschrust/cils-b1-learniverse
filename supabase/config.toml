@@ -1,47 +1,28 @@
 
 project_id = "nxmbadblisjgqdmhwrmz"
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-
-[studio]
-port = 54323
-
-[inbucket]
-port = 54324
-
-[auth]
-enabled = true
-
-[storage]
-enabled = true
-
-[realtime]
-enabled = true
-
-[analytics]
-enabled = false
-
-[vector]
-enabled = false
-
-[functions]
-[functions.text-to-speech]
+[functions.ai-text-generation]
 verify_jwt = true
 
-[functions.speech-to-text]
+[functions.ai-speech-recognition]
 verify_jwt = true
 
-[functions.translate-text]
+[functions.ai-text-to-speech]
 verify_jwt = true
 
-[functions.analyze-grammar]
+[functions.ai-grammar-analysis]
+verify_jwt = true
+
+[functions.ai-translation]
 verify_jwt = true
 
 [functions.process-document]
 verify_jwt = true
+
+[functions]
+[functions.import]
+include = ["node_modules"]
+
+[global.env_variables]
+OPENAI_API_KEY = "{{OPENAI_API_KEY}}"
+HUGGING_FACE_API_KEY = "{{HUGGING_FACE_API_KEY}}"
