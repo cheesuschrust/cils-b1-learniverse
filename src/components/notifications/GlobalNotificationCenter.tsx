@@ -1,230 +1,218 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useDailyQuestion } from '@/hooks/useDailyQuestion';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import { Notification, NotificationType } from '@/types/notification';
-import { useLocation } from 'react-router-dom';
-import NotificationCenter from './NotificationCenter';
-import { 
-  Bell, 
-  Star, 
-  Calendar, 
-  Clock, 
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  RefreshCw,
-  Flame,
-  Download
-} from 'lucide-react';
-import { addDays, isPast, isToday, format, subDays } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Bell, Clock, CheckSquare, Trash2 } from 'lucide-react';
+import NotificationItem from './NotificationItem';
 
 interface GlobalNotificationCenterProps {
-  checkIntervalMinutes?: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const GlobalNotificationCenter: React.FC<GlobalNotificationCenterProps> = ({
-  checkIntervalMinutes = 5
+  open,
+  onOpenChange,
 }) => {
-  const { user } = useAuth();
-  const { streak } = useDailyQuestion();
-  const { notifications, addNotification, markAsRead } = useNotifications();
-  const { toast } = useToast();
-  const location = useLocation();
-  const [lastCheckedStreak, setLastCheckedStreak] = useState(0);
-  const [lastReminderSent, setLastReminderSent] = useState<Date | null>(null);
-  
-  // Display toast notification based on notification type
-  const displayToastNotification = (notification: Notification) => {
-    // Skip if already read
-    if (notification.read) return;
-    
-    // Mark notification as read when toast is shown
-    markAsRead(notification.id);
-    
-    // Determine toast variant based on notification type
-    let variant = "default";
-    let icon = <Bell className="h-5 w-5" />;
-    
-    if (notification.type === "achievement") {
-      variant = "success";
-      icon = <Star className="h-5 w-5 text-yellow-500" />;
-    } else if (notification.type === "streak") {
-      variant = "success";
-      icon = <Flame className="h-5 w-5 text-orange-500" />;
-    } else if (notification.type === "reminder") {
-      variant = "info";
-      icon = <Clock className="h-5 w-5 text-blue-500" />;
-    } else if (notification.type === "milestone") {
-      variant = "success";
-      icon = <CheckCircle className="h-5 w-5 text-green-500" />;
-    } else if (notification.type === "system") {
-      variant = "default";
-      icon = <Info className="h-5 w-5 text-gray-500" />;
-    } else if (notification.type === "file-processing") {
-      variant = "default";
-      icon = <RefreshCw className="h-5 w-5 text-blue-500" />;
-    } else if (notification.type === "feedback") {
-      variant = "info";
-      icon = <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-    }
-    
-    // Display the toast
-    toast({
-      title: notification.title,
-      description: notification.message,
-      variant: variant as any,
-      action: notification.actions?.length ? (
-        <div className="flex gap-2 mt-2">
-          {notification.actions.map((action) => (
-            <button
-              key={action.id}
-              className={`px-3 py-1 rounded text-xs font-medium ${
-                action.variant === "destructive" 
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" 
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              }`}
-              onClick={() => {
-                action.action();
-              }}
-            >
-              {action.icon && (
-                <span className="mr-1">{action.icon}</span>
-              )}
-              {action.label}
-            </button>
-          ))}
-        </div>
-      ) : undefined,
-    });
+  const {
+    notifications,
+    markAsRead,
+    removeNotification,
+    markAllAsRead,
+    clearAll,
+  } = useNotifications();
+  const [activeTab, setActiveTab] = useState('all');
+
+  const unreadNotifications = notifications.filter((n) => !n.read);
+  const achievementNotifications = notifications.filter((n) => n.type === 'achievement' || n.type === 'milestone');
+  const reminderNotifications = notifications.filter((n) => n.type === 'reminder');
+
+  const handleMarkAsRead = async (id: string) => {
+    await markAsRead(id);
   };
 
-  // Check for streak notifications
-  useEffect(() => {
-    // Only run when streak changes and is greater than lastCheckedStreak
-    if (user && streak > lastCheckedStreak && streak > 0) {
-      // Special streak milestones
-      if (streak % 7 === 0) {
-        // Weekly streak milestone
-        addNotification({
-          id: `streak-weekly-${streak}-${Date.now()}`,
-          title: `${streak}-Day Streak Milestone!`,
-          message: `Congratulations! You've maintained your streak for ${streak} days. Keep up the fantastic work!`,
-          type: 'streak',
-          createdAt: new Date(),
-          read: false,
-          priority: 'high',
-          icon: 'flame',
-          actions: [
-            {
-              id: 'view-streak',
-              label: 'View Progress',
-              action: () => {
-                window.location.href = '/progress';
-              }
-            }
-          ]
-        });
-      } else if (streak % 30 === 0) {
-        // Monthly streak milestone
-        addNotification({
-          id: `streak-monthly-${streak}-${Date.now()}`,
-          title: `${streak}-Day Streak Achievement!`,
-          message: `Amazing! You've practiced consistently for ${streak} days. You're making incredible progress in your Italian learning journey!`,
-          type: 'achievement',
-          createdAt: new Date(),
-          read: false,
-          priority: 'high',
-          icon: 'trophy',
-        });
-      } else if (streak % 100 === 0) {
-        // Century streak milestone
-        addNotification({
-          id: `streak-century-${streak}-${Date.now()}`,
-          title: `${streak} Day Streak Master!`,
-          message: `Incredible achievement! You've maintained your learning streak for ${streak} days. You're truly dedicated to mastering Italian!`,
-          type: 'achievement',
-          createdAt: new Date(),
-          read: false,
-          priority: 'high',
-          icon: 'trophy',
-        });
-      } else if (streak === 3 || streak === 5) {
-        // Small milestone for early encouragement
-        addNotification({
-          id: `streak-small-${streak}-${Date.now()}`,
-          title: `${streak} Day Streak!`,
-          message: `You're building momentum! Keep practicing daily to maintain your streak.`,
-          type: 'streak',
-          createdAt: new Date(),
-          read: false,
-          priority: 'medium',
-          icon: 'flame',
-        });
-      }
-      
-      // Update last checked streak
-      setLastCheckedStreak(streak);
+  const handleDismiss = async (id: string) => {
+    await removeNotification(id);
+  };
+
+  const handleAction = (notification: any, actionId: string) => {
+    const action = notification.actions?.find((a: any) => a.id === actionId);
+    if (action && action.action) {
+      action.action();
     }
-  }, [streak, lastCheckedStreak, user, addNotification]);
+  };
 
-  // Show streak warning notification when user hasn't completed daily question
-  useEffect(() => {
-    if (!user) return;
-    
-    const checkInterval = setInterval(() => {
-      const now = new Date();
-      const currentHour = now.getHours();
-      
-      // Only send reminders in the afternoon/evening (after 4pm)
-      if (currentHour >= 16 && (!lastReminderSent || !isToday(lastReminderSent))) {
-        // Check if user has completed daily question
-        if (location.pathname !== '/daily-question') {
-          addNotification({
-            id: `streak-reminder-${Date.now()}`,
-            title: "Don't Break Your Streak!",
-            message: streak > 0 
-              ? `You're on a ${streak}-day streak. Don't forget to complete your daily question today!`
-              : "Don't forget to complete your daily question today!",
-            type: 'reminder',
-            createdAt: new Date(),
-            read: false,
-            priority: 'medium',
-            icon: 'flame',
-            actions: [
-              {
-                id: 'go-to-daily',
-                label: 'Go to Daily Question',
-                action: () => {
-                  window.location.href = '/daily-question';
-                }
-              }
-            ]
-          });
-          
-          // Update last reminder sent
-          setLastReminderSent(new Date());
-        }
-      }
-    }, checkIntervalMinutes * 60 * 1000);
-    
-    return () => clearInterval(checkInterval);
-  }, [user, streak, lastReminderSent, location.pathname, addNotification, checkIntervalMinutes]);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader className="p-4 border-b">
+          <DialogTitle className="text-lg font-medium">Notification Center</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <div className="px-4 border-b">
+            <TabsList className="grid grid-cols-4 gap-2">
+              <TabsTrigger value="all" className="flex items-center">
+                <Bell className="mr-2 h-4 w-4" />
+                All
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                  {notifications.length}
+                </span>
+              </TabsTrigger>
+              
+              <TabsTrigger value="unread" className="flex items-center">
+                <CheckSquare className="mr-2 h-4 w-4" />
+                Unread
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                  {unreadNotifications.length}
+                </span>
+              </TabsTrigger>
+              
+              <TabsTrigger value="achievements" className="flex items-center">
+                <Bell className="mr-2 h-4 w-4" />
+                Achievements
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                  {achievementNotifications.length}
+                </span>
+              </TabsTrigger>
+              
+              <TabsTrigger value="reminders" className="flex items-center">
+                <Clock className="mr-2 h-4 w-4" />
+                Reminders
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                  {reminderNotifications.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-  // Process unread notifications
-  useEffect(() => {
-    // Find unread notifications to display as toasts
-    const unreadNotifications = notifications.filter(n => !n.read);
-    
-    // Display at most 3 unread notifications as toasts to avoid overwhelming the user
-    unreadNotifications.slice(0, 3).forEach(notification => {
-      displayToastNotification(notification);
-    });
-  }, [notifications]);
+          <div className="flex-1 flex flex-col">
+            <div className="p-2 border-b flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                {activeTab === 'all' && `${notifications.length} notifications`}
+                {activeTab === 'unread' && `${unreadNotifications.length} unread notifications`}
+                {activeTab === 'achievements' && `${achievementNotifications.length} achievement notifications`}
+                {activeTab === 'reminders' && `${reminderNotifications.length} reminder notifications`}
+              </p>
+              <div className="flex gap-2">
+                {activeTab === 'unread' && unreadNotifications.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => markAllAsRead()}>
+                    <CheckSquare className="mr-2 h-4 w-4" /> Mark all as read
+                  </Button>
+                )}
+                {notifications.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => clearAll()}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear all
+                  </Button>
+                )}
+              </div>
+            </div>
 
-  return <NotificationCenter />;
+            <ScrollArea className="flex-1">
+              <TabsContent value="all" className="p-2 h-full">
+                {notifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {notifications.map((notification) => (
+                      <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onDismiss={() => handleDismiss(notification.id)}
+                        onRead={() => handleMarkAsRead(notification.id)}
+                        onAction={(actionId) => handleAction(notification, actionId)}
+                        showControls
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Bell className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                      <p className="mt-2 text-muted-foreground">No notifications</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="unread" className="p-2 h-full">
+                {unreadNotifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {unreadNotifications.map((notification) => (
+                      <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onDismiss={() => handleDismiss(notification.id)}
+                        onRead={() => handleMarkAsRead(notification.id)}
+                        onAction={(actionId) => handleAction(notification, actionId)}
+                        showControls
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <CheckSquare className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                      <p className="mt-2 text-muted-foreground">No unread notifications</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="achievements" className="p-2 h-full">
+                {achievementNotifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {achievementNotifications.map((notification) => (
+                      <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onDismiss={() => handleDismiss(notification.id)}
+                        onRead={() => handleMarkAsRead(notification.id)}
+                        onAction={(actionId) => handleAction(notification, actionId)}
+                        showControls
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Bell className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                      <p className="mt-2 text-muted-foreground">No achievement notifications</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="reminders" className="p-2 h-full">
+                {reminderNotifications.length > 0 ? (
+                  <div className="space-y-2">
+                    {reminderNotifications.map((notification) => (
+                      <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onDismiss={() => handleDismiss(notification.id)}
+                        onRead={() => handleMarkAsRead(notification.id)}
+                        onAction={(actionId) => handleAction(notification, actionId)}
+                        showControls
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Clock className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                      <p className="mt-2 text-muted-foreground">No reminders</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </ScrollArea>
+          </div>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default GlobalNotificationCenter;

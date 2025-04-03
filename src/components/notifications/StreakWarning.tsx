@@ -55,12 +55,9 @@ const StreakWarning: React.FC = () => {
         
         // Add notification
         addNotification({
-          id: `streak-warning-${Date.now()}`,
           title: "Streak at Risk!",
           message: `Your ${streak}-day streak will be lost if you don't complete today's question.`,
           type: 'streak',
-          createdAt: new Date(),
-          read: false,
           priority: 'high',
           icon: 'flame',
           actions: [

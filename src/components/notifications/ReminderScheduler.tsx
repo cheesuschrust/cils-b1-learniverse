@@ -13,230 +13,136 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { format, addMinutes, addHours, addDays, setHours, setMinutes } from 'date-fns';
-import { CalendarIcon, Clock } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
+import { Clock } from 'lucide-react';
+import { format, addDays, addHours, set } from 'date-fns';
 
 interface ReminderSchedulerProps {
   children?: React.ReactNode;
-  buttonVariant?: 'default' | 'outline' | 'secondary';
-  buttonSize?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-const ReminderScheduler: React.FC<ReminderSchedulerProps> = ({
-  children,
-  buttonVariant = 'outline',
-  buttonSize = 'default',
-}) => {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [date, setDate] = useState<Date>(addDays(new Date(), 1));
-  const [time, setTime] = useState('09:00');
-  const [presetOption, setPresetOption] = useState('');
+const ReminderScheduler: React.FC<ReminderSchedulerProps> = ({ children }) => {
   const { scheduleReminder } = useNotifications();
-  const { toast } = useToast();
-
-  const handlePresetChange = (value: string) => {
-    setPresetOption(value);
-    const now = new Date();
-    
-    switch (value) {
-      case 'fifteen_minutes':
-        setDate(addMinutes(now, 15));
-        setTime(format(addMinutes(now, 15), 'HH:mm'));
-        break;
-      case 'one_hour':
-        setDate(addHours(now, 1));
-        setTime(format(addHours(now, 1), 'HH:mm'));
-        break;
-      case 'tomorrow_morning':
-        const tomorrow = addDays(now, 1);
-        setDate(tomorrow);
-        setTime('09:00');
-        break;
-      case 'tomorrow_evening':
-        const tomorrowEvening = addDays(now, 1);
-        setDate(tomorrowEvening);
-        setTime('19:00');
-        break;
-      case 'weekend':
-        // Calculate next Saturday
-        const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
-        setDate(addDays(now, daysUntilSaturday));
-        setTime('10:00');
-        break;
-      default:
-        break;
-    }
-  };
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('Study Reminder');
+  const [message, setMessage] = useState('Time to practice your Italian!');
+  const [date, setDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+  const [time, setTime] = useState(format(new Date(), 'HH:mm'));
 
   const handleSchedule = async () => {
-    if (!title.trim() || !message.trim()) {
-      toast({
-        title: 'Missing information',
-        description: 'Please enter both a title and message for your reminder.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     const [hours, minutes] = time.split(':').map(Number);
-    const scheduledDateTime = setMinutes(setHours(date, hours), minutes);
-
-    if (scheduledDateTime <= new Date()) {
-      toast({
-        title: 'Invalid time',
-        description: 'Please select a future date and time.',
-        variant: 'destructive'
-      });
+    const reminderDate = set(new Date(date), { hours, minutes, seconds: 0 });
+    
+    // Don't allow scheduling in the past
+    if (reminderDate < new Date()) {
+      alert("Please select a future date and time.");
       return;
     }
-
-    const id = await scheduleReminder(title, message, scheduledDateTime);
     
-    if (id) {
-      toast({
-        title: 'Reminder scheduled',
-        description: `Your reminder has been scheduled for ${format(scheduledDateTime, 'PPP')} at ${format(scheduledDateTime, 'p')}.`,
-        variant: 'default'
-      });
-      setOpen(false);
-      
-      // Reset form
-      setTitle('');
-      setMessage('');
-      setDate(addDays(new Date(), 1));
-      setTime('09:00');
-      setPresetOption('');
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Failed to schedule reminder. Please try again.',
-        variant: 'destructive'
-      });
-    }
+    await scheduleReminder(title, message, reminderDate);
+    setOpen(false);
+    
+    // Reset form
+    setTitle('Study Reminder');
+    setMessage('Time to practice your Italian!');
+    setDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+    setTime(format(new Date(), 'HH:mm'));
   };
+
+  const getPresetTimes = () => {
+    const now = new Date();
+    return [
+      { label: "Tomorrow morning", date: addDays(now, 1), time: "09:00" },
+      { label: "Tomorrow evening", date: addDays(now, 1), time: "19:00" },
+      { label: "In 3 hours", date: now, time: format(addHours(now, 3), 'HH:mm') },
+      { label: "Next weekend", date: addDays(now, 7 - now.getDay()), time: "10:00" }
+    ];
+  };
+  
+  const presetTimes = getPresetTimes();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button variant={buttonVariant} size={buttonSize}>
-            <Clock className="mr-2 h-4 w-4" />
-            Schedule Reminder
+          <Button variant="outline" className="flex gap-2 items-center">
+            <Clock className="h-4 w-4" />
+            <span>Set Study Reminder</span>
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Schedule a reminder</DialogTitle>
+          <DialogTitle>Schedule a Study Reminder</DialogTitle>
           <DialogDescription>
-            Set up a reminder to help you stay on track with your language learning goals.
+            Set up a reminder to help maintain your study routine.
           </DialogDescription>
         </DialogHeader>
+        
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="preset" className="text-right">
-              Preset
-            </Label>
-            <Select value={presetOption} onValueChange={handlePresetChange}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Choose a preset time" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fifteen_minutes">In 15 minutes</SelectItem>
-                <SelectItem value="one_hour">In 1 hour</SelectItem>
-                <SelectItem value="tomorrow_morning">Tomorrow morning</SelectItem>
-                <SelectItem value="tomorrow_evening">Tomorrow evening</SelectItem>
-                <SelectItem value="weekend">Weekend</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              Title
-            </Label>
-            <Input 
-              id="title" 
-              className="col-span-3" 
+          <div className="grid gap-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Reminder title"
+              placeholder="Reminder Title"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="message" className="text-right">
-              Message
-            </Label>
-            <Input 
-              id="message" 
-              className="col-span-3" 
+          
+          <div className="grid gap-2">
+            <Label htmlFor="message">Message</Label>
+            <Input
+              id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Reminder message"
+              placeholder="Reminder Message"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
-              Date
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                min={format(new Date(), 'yyyy-MM-dd')}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="time">Time</Label>
+              <Input
+                id="time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="mt-2">
+            <Label>Quick presets</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {presetTimes.map((preset, index) => (
                 <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "col-span-3 justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDate(format(preset.date, 'yyyy-MM-dd'));
+                    setTime(preset.time);
+                  }}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, 'PPP') : <span>Pick a date</span>}
+                  {preset.label}
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(date) => date && setDate(date)}
-                  initialFocus
-                  disabled={(date) => date < new Date()}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="time" className="text-right">
-              Time
-            </Label>
-            <Input 
-              id="time" 
-              type="time" 
-              className="col-span-3"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
+              ))}
+            </div>
           </div>
         </div>
+        
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
           <Button onClick={handleSchedule}>Schedule Reminder</Button>
         </DialogFooter>
       </DialogContent>

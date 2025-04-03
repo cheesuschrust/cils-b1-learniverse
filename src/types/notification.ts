@@ -1,18 +1,21 @@
 
-export interface NotificationAction {
-  id: string;
-  label: string;
-  action: () => void;
-}
-
 export type NotificationType = 
   | 'achievement' 
   | 'streak' 
   | 'reminder' 
   | 'milestone' 
   | 'system' 
-  | 'file-processing'
-  | 'feedback';
+  | 'progress';
+
+export type NotificationPriority = 'low' | 'medium' | 'high';
+
+export interface NotificationAction {
+  id: string;
+  label: string;
+  action: () => void;
+  variant?: 'default' | 'outline' | 'destructive';
+  icon?: string;
+}
 
 export interface Notification {
   id: string;
@@ -25,6 +28,15 @@ export interface Notification {
   expires?: Date;
   icon?: string;
   link?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: NotificationPriority;
+  metadata?: Record<string, any>;
+}
+
+export interface ScheduledNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  scheduledFor: Date;
   metadata?: Record<string, any>;
 }

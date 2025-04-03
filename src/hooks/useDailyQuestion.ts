@@ -1,239 +1,111 @@
 
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
-export interface DailyQuestion {
-  id: string;
-  question_text: string;
-  options: string[];
-  correct_answer: string;
-  explanation?: string;
-  category: string;
-  difficulty: string;
-  question_date: string;
-  is_premium: boolean;
-}
-
-interface UseDailyQuestionReturn {
-  todaysQuestion: DailyQuestion | null;
-  isLoading: boolean;
-  hasCompletedToday: boolean;
-  submitAnswer: (answer: string) => Promise<boolean>;
+interface DailyQuestionStatus {
   streak: number;
-  resetQuestion: () => void;
-  isCorrect: boolean | null;
-  selectedAnswer: string | null;
-  setSelectedAnswer: (answer: string | null) => void;
+  hasCompletedToday: boolean;
+  lastCompletionDate: string | null;
 }
 
-export function useDailyQuestion(): UseDailyQuestionReturn {
-  const [todaysQuestion, setTodaysQuestion] = useState<DailyQuestion | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasCompletedToday, setHasCompletedToday] = useState<boolean>(false);
-  const [streak, setStreak] = useState<number>(0);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  
-  const { toast } = useToast();
+export function useDailyQuestion() {
   const { user } = useAuth();
+  const [streak, setStreak] = useState<number>(0);
+  const [hasCompletedToday, setHasCompletedToday] = useState<boolean>(false);
+  const [lastCompletionDate, setLastCompletionDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Get today's date in YYYY-MM-DD format based on user's timezone
-  const getTodayDateString = () => {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
-  };
-
-  // Fetch user's streak data
-  const fetchUserStreak = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('streak_days')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        setStreak(data.streak_days || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching streak:', error);
-    }
-  };
-
-  // Fetch today's question
-  const fetchTodaysQuestion = async () => {
+  useEffect(() => {
     if (!user) {
-      setIsLoading(false);
+      setLoading(false);
       return;
     }
-    
-    setIsLoading(true);
+
+    fetchDailyQuestionStatus();
+  }, [user]);
+
+  const fetchDailyQuestionStatus = async () => {
     try {
-      const today = getTodayDateString();
-      
-      // First check if user has already completed today's question
-      const { data: attemptData, error: attemptError } = await supabase
-        .from('user_progress')
+      setLoading(true);
+      // Get the user metrics which contains the streak info
+      const { data: userMetrics, error: metricsError } = await supabase
+        .from('user_metrics')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('content_type', 'daily_question')
-        .eq('created_at::date', today)
+        .eq('user_id', user?.id)
         .single();
       
-      if (attemptError && attemptError.code !== 'PGSQL_EMPTY_RESULT') {
-        throw attemptError;
+      if (metricsError && metricsError.code !== 'PGSQL_EMPTY_RESULT') {
+        throw metricsError;
       }
-      
-      if (attemptData) {
-        setHasCompletedToday(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Fetch today's question
-      const { data: questionData, error: questionError } = await supabase
-        .from('daily_questions')
+
+      // Get the latest question attempt to determine if the user has completed today's question
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data: attempts, error: attemptsError } = await supabase
+        .from('question_attempts')
         .select('*')
-        .eq('question_date', today)
-        .eq('is_premium', user.isPremiumUser ? true : false)
-        .limit(1)
-        .single();
-      
-      if (questionError) {
-        // If no question is found for today, try to get a non-premium one as fallback
-        if (questionError.code === 'PGSQL_EMPTY_RESULT') {
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('daily_questions')
-            .select('*')
-            .eq('question_date', today)
-            .eq('is_premium', false)
-            .limit(1)
-            .single();
-          
-          if (fallbackError) {
-            throw fallbackError;
-          }
-          
-          setTodaysQuestion(fallbackData);
-        } else {
-          throw questionError;
-        }
-      } else {
-        setTodaysQuestion(questionData);
+        .eq('user_id', user?.id)
+        .eq('completed', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (attemptsError) {
+        throw attemptsError;
       }
+
+      // Set the streak
+      const currentStreak = userMetrics?.streak || 0;
+      setStreak(currentStreak);
+
+      // Determine if the user has completed today's question
+      const latestAttempt = attempts && attempts.length > 0 ? attempts[0] : null;
+      const latestDate = latestAttempt 
+        ? format(new Date(latestAttempt.created_at), 'yyyy-MM-dd') 
+        : null;
+      
+      setLastCompletionDate(latestDate);
+      setHasCompletedToday(latestDate === today);
     } catch (error) {
-      console.error('Error fetching daily question:', error);
-      toast({
-        title: "Couldn't load today's question",
-        description: "Please try again later",
-        variant: "destructive"
-      });
+      console.error('Error fetching daily question status:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Submit answer to today's question
-  const submitAnswer = async (answer: string): Promise<boolean> => {
-    if (!user?.id || !todaysQuestion) return false;
-    
+  // Mark today's question as completed
+  const completeToday = async () => {
+    if (!user) return;
+
     try {
-      const isAnswerCorrect = answer === todaysQuestion.correct_answer;
-      setIsCorrect(isAnswerCorrect);
-      
-      // Record user's answer
-      const { error } = await supabase
-        .from('user_progress')
-        .insert({
-          user_id: user.id,
-          content_type: 'daily_question',
-          content_id: todaysQuestion.id,
-          score: isAnswerCorrect ? 100 : 0,
-          completed: true,
-          answers: { 
-            selectedAnswer: answer,
-            isCorrect: isAnswerCorrect
-          }
-        });
-      
-      if (error) throw error;
-      
-      // Update streak
-      await updateStreak(isAnswerCorrect);
-      
-      setHasCompletedToday(true);
-      
-      return isAnswerCorrect;
+      // Update the user metrics to reflect the completion
+      const { error: metricsError } = await supabase
+        .from('user_metrics')
+        .update({
+          streak: streak + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (metricsError) {
+        throw metricsError;
+      }
+
+      // Refetch the status
+      fetchDailyQuestionStatus();
+      return true;
     } catch (error) {
-      console.error('Error submitting answer:', error);
-      toast({
-        title: "Failed to submit answer",
-        description: "Please try again",
-        variant: "destructive"
-      });
+      console.error('Error completing daily question:', error);
       return false;
     }
   };
 
-  // Update user's streak
-  const updateStreak = async (isCorrect: boolean) => {
-    if (!user?.id) return;
-    
-    try {
-      // This will trigger the database function to update streaks
-      const { data, error } = await supabase
-        .rpc('update_user_streak', { 
-          user_id: user.id,
-          is_correct: isCorrect 
-        });
-      
-      if (error) throw error;
-      
-      if (data && typeof data === 'number') {
-        setStreak(data);
-        
-        // If streak milestone, show celebration toast
-        if (data > 0 && data % 5 === 0) {
-          toast({
-            title: `${data} Day Streak!`,
-            description: "Keep up the great work with your daily practice!",
-            variant: "default"
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error updating streak:', error);
-    }
-  };
-
-  // Reset question state for testing purposes
-  const resetQuestion = () => {
-    setHasCompletedToday(false);
-    setIsCorrect(null);
-    setSelectedAnswer(null);
-    fetchTodaysQuestion();
-  };
-
-  useEffect(() => {
-    fetchTodaysQuestion();
-    fetchUserStreak();
-  }, [user?.id]);
-
   return {
-    todaysQuestion,
-    isLoading,
-    hasCompletedToday,
-    submitAnswer,
     streak,
-    resetQuestion,
-    isCorrect,
-    selectedAnswer,
-    setSelectedAnswer
+    hasCompletedToday,
+    lastCompletionDate,
+    loading,
+    completeToday,
+    refetch: fetchDailyQuestionStatus
   };
 }
