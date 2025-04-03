@@ -19,6 +19,7 @@ import WritingPage from '@/pages/learning/WritingPage';
 import SpeakingPage from '@/pages/learning/SpeakingPage';
 import ListeningPage from '@/pages/learning/ListeningPage';
 import FlashcardsPage from '@/pages/learning/FlashcardsPage';
+import AIAssistantPage from '@/pages/learning/AIAssistantPage';
 import UserProfilePage from '@/pages/profile/UserProfilePage';
 import SubscriptionPage from '@/pages/subscription/SubscriptionPage';
 
@@ -64,6 +65,7 @@ function App() {
               <Route path="speaking" element={<SpeakingPage />} />
               <Route path="listening" element={<ListeningPage />} />
               <Route path="flashcards" element={<FlashcardsPage />} />
+              <Route path="ai-assistant" element={<AIAssistantPage />} />
               
               {/* Premium routes */}
               <Route path="premium" element={
