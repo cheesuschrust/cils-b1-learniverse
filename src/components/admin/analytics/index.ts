@@ -8,3 +8,4 @@ export { default as ModelUsageCard } from './ModelUsageCard';
 export { default as AIUsageCards } from './AIUsageCards';
 export { default as RevenueTrendsCard } from './RevenueTrendsCard';
 export { default as AIModelComparisonCard } from './AIModelComparisonCard';
+export { default as AIModelEvaluationCard } from './AIModelEvaluationCard';
