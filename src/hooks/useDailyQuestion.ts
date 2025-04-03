@@ -1,16 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, isAfter, isSameDay, parseISO, subDays } from 'date-fns';
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { useGamificationContext } from '@/contexts/GamificationContext';
-
-interface DailyQuestionStatus {
-  streak: number;
-  hasCompletedToday: boolean;
-  lastCompletionDate: string | null;
-}
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase-client';
+import { format, isAfter, isSameDay } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
 interface DailyQuestion {
   id: string;
@@ -24,452 +17,312 @@ interface DailyQuestion {
   is_premium: boolean;
 }
 
-export function useDailyQuestion() {
+export const useDailyQuestion = () => {
   const { user } = useAuth();
-  const { addNotification } = useNotifications();
-  const { showAchievementUnlock } = useGamificationContext();
+  const { toast } = useToast();
   
-  const [streak, setStreak] = useState<number>(0);
-  const [hasCompletedToday, setHasCompletedToday] = useState<boolean>(false);
-  const [lastCompletionDate, setLastCompletionDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [todaysQuestion, setTodaysQuestion] = useState<DailyQuestion | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasCompletedToday, setHasCompletedToday] = useState<boolean>(false);
+  const [streak, setStreak] = useState<number>(0);
+  const [lastCompletionDate, setLastCompletionDate] = useState<Date | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [questionHistory, setQuestionHistory] = useState<string[]>([]);
-  const [userTimeZone, setUserTimeZone] = useState<string>('UTC');
-  const [recentCategories, setRecentCategories] = useState<Record<string, number>>({});
+  const [userTimezone, setUserTimezone] = useState<string>('UTC');
 
-  // On component mount, determine the user's timezone
+  // Get user's timezone
   useEffect(() => {
     try {
-      const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setUserTimeZone(detectedTimeZone || 'UTC');
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setUserTimezone(timezone || 'UTC');
     } catch (e) {
-      console.error('Error detecting timezone, defaulting to UTC:', e);
-      setUserTimeZone('UTC');
+      console.error('Error detecting timezone:', e);
+      setUserTimezone('UTC');
     }
   }, []);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    fetchDailyQuestionStatus();
-  }, [user, userTimeZone]);
-
-  // Fetch user's daily question status and today's question
-  const fetchDailyQuestionStatus = async () => {
+  // Function to fetch today's question
+  const fetchTodaysQuestion = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      
-      // Get today's date in user's timezone
-      const nowInUserTZ = utcToZonedTime(new Date(), userTimeZone);
-      const todayStr = format(nowInUserTZ, 'yyyy-MM-dd');
-      
-      // Get the user metrics which contains the streak info
-      const { data: userMetrics, error: metricsError } = await supabase
-        .from('user_metrics')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (metricsError && metricsError.code !== 'PGSQL_EMPTY_RESULT') {
-        throw metricsError;
-      }
+      // Get today's date in the user's timezone
+      const now = new Date();
+      const today = format(utcToZonedTime(now, userTimezone), 'yyyy-MM-dd');
 
-      // Get question history to avoid repetition
-      const { data: historyData, error: historyError } = await supabase
-        .from('question_attempts')
-        .select('question_id, created_at, category')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(30);
-        
-      if (historyError) {
-        console.error('Error fetching question history:', historyError);
-      } else if (historyData) {
-        // Track recent question categories for balancing
-        const categories: Record<string, number> = {};
-        const questionIds = historyData.map(item => {
-          if (item.category) {
-            categories[item.category] = (categories[item.category] || 0) + 1;
-          }
-          return item.question_id;
-        });
-        
-        setQuestionHistory(questionIds);
-        setRecentCategories(categories);
-      }
-      
-      // Get the latest question attempt to determine if the user has completed today's question
-      const { data: attempts, error: attemptsError } = await supabase
-        .from('question_attempts')
-        .select('*, question:question_id(*)')
-        .eq('user_id', user?.id)
-        .eq('completed', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (attemptsError) {
-        throw attemptsError;
-      }
-
-      // Set the streak
-      const currentStreak = userMetrics?.streak || 0;
-      setStreak(currentStreak);
-
-      // Determine if the user has completed today's question
-      const latestAttempt = attempts && attempts.length > 0 ? attempts[0] : null;
-      const latestDate = latestAttempt 
-        ? format(utcToZonedTime(new Date(latestAttempt.created_at), userTimeZone), 'yyyy-MM-dd') 
-        : null;
-      
-      setLastCompletionDate(latestDate);
-      const completedToday = latestDate === todayStr;
-      setHasCompletedToday(completedToday);
-
-      // If the user has completed today's question, set the question and result
-      if (completedToday && latestAttempt) {
-        setTodaysQuestion(latestAttempt.question);
-        setIsCorrect(latestAttempt.is_correct);
-        setSelectedAnswer(latestAttempt.selected_answer);
-      } else {
-        // If not completed, fetch a new question for today
-        await fetchTodaysQuestion();
-      }
-    } catch (error) {
-      console.error('Error fetching daily question status:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch a new question for today based on user's progress and question history
-  const fetchTodaysQuestion = async () => {
-    try {
-      // Get user's progress stats to determine appropriate difficulty
-      const { data: userStats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      
-      // If we can't get user stats, default to intermediate difficulty
-      let targetDifficulty = 'intermediate';
-      
-      if (!statsError && userStats) {
-        const averageScore = Object.entries({
-          listening_score: userStats.listening_score,
-          reading_score: userStats.reading_score,
-          writing_score: userStats.writing_score,
-          speaking_score: userStats.speaking_score,
-        }).reduce((sum, [_, score]) => sum + (score || 0), 0) / 4;
-        
-        // Adjust difficulty based on user's average score
-        if (averageScore >= 80) targetDifficulty = 'advanced';
-        else if (averageScore < 50) targetDifficulty = 'beginner';
-      }
-      
-      // Determine which categories to prioritize (those with lower scores or less frequency)
-      let targetCategories: string[] = [];
-      
-      if (!statsError && userStats) {
-        const categoryScores = {
-          listening: userStats.listening_score || 50,
-          reading: userStats.reading_score || 50,
-          writing: userStats.writing_score || 50, 
-          speaking: userStats.speaking_score || 50,
-          grammar: 50, // Default if no specific score
-          vocabulary: 50, // Default if no specific score
-          culture: 50, // Default if no specific score
-          citizenship: 50 // Default if no specific score
-        };
-        
-        // Sort categories by lowest score first
-        targetCategories = Object.entries(categoryScores)
-          .sort(([, scoreA], [, scoreB]) => scoreA - scoreB)
-          .map(([category]) => category);
-      }
-      
-      // Get today's date in user's timezone
-      const nowInUserTZ = utcToZonedTime(new Date(), userTimeZone);
-      const todayStr = format(nowInUserTZ, 'yyyy-MM-dd');
-      
-      // First check if there's a daily question specifically assigned to today
-      const { data: dailyQuestion, error: dailyError } = await supabase
+      // Fetch today's question from the database
+      const { data: questionData, error: questionError } = await supabase
         .from('daily_questions')
         .select('*')
-        .eq('question_date', todayStr)
+        .eq('question_date', today)
         .single();
-      
-      if (!dailyError && dailyQuestion) {
-        setTodaysQuestion(dailyQuestion);
-        return;
-      }
-      
-      // If no specific daily question for today, select based on user profile
-      let query = supabase
-        .from('daily_questions')
-        .select('*');
-      
-      // Free users can only access non-premium questions
-      if (user && !user.isPremiumUser) {
-        query = query.eq('is_premium', false);
-      }
-      
-      // Avoid questions the user has already seen
-      if (questionHistory.length > 0) {
-        query = query.not('id', 'in', `(${questionHistory.join(',')})`);
-      }
-      
-      // Try to match the target difficulty
-      query = query.eq('difficulty', targetDifficulty);
-      
-      // Try to get a question from a prioritized category
-      let question = null;
-      
-      // Try each target category in order of priority
-      for (const category of targetCategories) {
-        const { data, error } = await query
-          .eq('category', category)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!error && data) {
-          question = data;
-          break;
-        }
-      }
-      
-      // If no question found with target difficulty and category, relax constraints
-      if (!question) {
-        const { data, error } = await supabase
-          .from('daily_questions')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (!error) question = data;
-      }
-      
-      setTodaysQuestion(question);
-    } catch (error) {
-      console.error('Error fetching today\'s question:', error);
-    }
-  };
 
-  // Submit an answer to today's question
-  const submitAnswer = async (answer: string): Promise<boolean> => {
-    if (!user || !todaysQuestion) return false;
-    
-    try {
-      const isAnswerCorrect = answer === todaysQuestion.correct_answer;
-      setIsCorrect(isAnswerCorrect);
-      setSelectedAnswer(answer);
-      
-      // Record the attempt in the database
-      const { error: attemptError } = await supabase
-        .from('question_attempts')
-        .insert({
-          user_id: user.id,
-          question_id: todaysQuestion.id,
-          selected_answer: answer,
-          is_correct: isAnswerCorrect,
-          completed: true,
-          category: todaysQuestion.category,
-          difficulty: todaysQuestion.difficulty,
-          created_at: new Date().toISOString()
-        });
-      
-      if (attemptError) throw attemptError;
-      
-      // Update streak and other metrics
-      await completeToday(isAnswerCorrect);
-      
-      // Set the question as completed for today
-      setHasCompletedToday(true);
-      
-      return isAnswerCorrect;
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-      return false;
-    }
-  };
-
-  // Mark today's question as completed and update statistics
-  const completeToday = async (isCorrect: boolean = true) => {
-    if (!user) return false;
-
-    try {
-      // Get the current date in the user's timezone
-      const nowInUserTZ = utcToZonedTime(new Date(), userTimeZone);
-      const todayStr = format(nowInUserTZ, 'yyyy-MM-dd');
-      
-      // Get the user's current metrics
-      const { data: metrics, error: fetchError } = await supabase
-        .from('user_metrics')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (fetchError && fetchError.code !== 'PGSQL_EMPTY_RESULT') {
-        throw fetchError;
+      if (questionError && questionError.code !== 'PGRST116') {
+        throw questionError;
       }
-      
-      const existingMetrics = metrics || { streak: 0, last_daily_question: null };
-      let newStreak = existingMetrics.streak;
-      
-      // Handle streak calculation with timezone awareness
-      const lastCompletionDate = existingMetrics.last_daily_question 
-        ? utcToZonedTime(parseISO(existingMetrics.last_daily_question), userTimeZone)
-        : null;
-      
-      if (!lastCompletionDate) {
-        // First time completing a daily question
-        newStreak = 1;
-      } else {
-        const yesterday = subDays(nowInUserTZ, 1);
-        
-        if (isSameDay(lastCompletionDate, yesterday)) {
-          // Completed yesterday's question, increment streak
-          newStreak += 1;
-        } else if (isSameDay(lastCompletionDate, nowInUserTZ)) {
-          // Already completed today, maintain streak
-          // Do nothing, keep the streak as is
-        } else {
-          // Broke the streak
-          newStreak = 1;
-        }
-      }
-      
-      // Update user metrics with new streak and last completion date
-      const { error: updateError } = await supabase
-        .from('user_metrics')
-        .upsert({
-          user_id: user.id,
-          streak: newStreak,
-          last_daily_question: nowInUserTZ.toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      
-      if (updateError) throw updateError;
-      
-      // Update the local streak state
-      setStreak(newStreak);
-      setLastCompletionDate(todayStr);
-      
-      // Award points via gamification if the answer is correct
-      if (isCorrect) {
-        // Update user gamification data - increase XP, etc.
-        const { data: gamification, error: gamificationError } = await supabase
-          .from('user_gamification')
-          .select('*')
+
+      // If user is logged in, check if they have already completed today's question
+      if (user) {
+        const { data: userStatsData, error: userStatsError } = await supabase
+          .from('user_stats')
+          .select('streak_days, last_activity_date')
           .eq('user_id', user.id)
           .single();
+
+        if (userStatsError && userStatsError.code !== 'PGRST116') {
+          throw userStatsError;
+        }
+
+        if (userStatsData) {
+          setStreak(userStatsData.streak_days || 0);
           
-        if (gamificationError && gamificationError.code !== 'PGSQL_EMPTY_RESULT') {
-          console.error('Error fetching gamification data:', gamificationError);
-        } else {
-          const xpToAward = 10; // Base XP for completing daily question
-          const streakBonus = Math.min(10, Math.floor(newStreak / 3)); // Bonus for maintaining streak
-          const totalXP = xpToAward + streakBonus;
-          
-          if (gamification) {
-            await supabase
-              .from('user_gamification')
-              .update({
-                xp: (gamification.xp || 0) + totalXP,
-                weekly_xp: (gamification.weekly_xp || 0) + totalXP,
-                lifetime_xp: (gamification.lifetime_xp || 0) + totalXP,
-                last_activity_date: new Date().toISOString()
-              })
-              .eq('user_id', user.id);
-          } else {
-            await supabase
-              .from('user_gamification')
-              .insert({
-                user_id: user.id,
-                xp: totalXP,
-                weekly_xp: totalXP,
-                lifetime_xp: totalXP,
-                last_activity_date: new Date().toISOString()
-              });
+          if (userStatsData.last_activity_date) {
+            const lastActivityDate = new Date(userStatsData.last_activity_date);
+            setLastCompletionDate(lastActivityDate);
+            
+            // Check if the user has completed today's question
+            setHasCompletedToday(isSameDay(
+              utcToZonedTime(lastActivityDate, userTimezone),
+              utcToZonedTime(now, userTimezone)
+            ));
           }
         }
-        
-        // Check for streak-based achievements
-        if (newStreak >= 7 && newStreak % 7 === 0) {
-          // Weekly streak achievement
-          addNotification({
-            title: 'Weekly Streak Achieved!',
-            message: `You've maintained a ${newStreak}-day streak. Keep it up!`,
-            type: 'streak',
-            priority: 'high',
-            icon: 'flame'
-          });
-        } else if (newStreak >= 30 && newStreak % 30 === 0) {
-          // Monthly streak achievement
-          addNotification({
-            title: 'Monthly Streak Achieved!',
-            message: `Incredible! You've maintained a ${newStreak}-day streak.`,
-            type: 'achievement',
-            priority: 'high',
-            icon: 'trophy'
-          });
+
+        // If there's a today's question, check if the user has already answered it
+        if (questionData) {
+          const { data: userAnswersData, error: userAnswersError } = await supabase
+            .from('user_progress')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('content_id', questionData.id)
+            .single();
+
+          if (userAnswersError && userAnswersError.code !== 'PGRST116') {
+            throw userAnswersError;
+          }
+
+          if (userAnswersData) {
+            setHasCompletedToday(true);
+            setIsCorrect(userAnswersData.score === 100);
+            setSelectedAnswer(userAnswersData.answers?.selected || null);
+          }
         }
       }
-      
-      return true;
-    } catch (error) {
-      console.error('Error completing daily question:', error);
-      return false;
-    }
-  };
 
-  // Reset the current question (Premium users only)
-  const resetQuestion = async () => {
-    if (!user?.isPremiumUser) {
-      addNotification({
-        title: 'Premium Feature',
-        message: 'Question reset is only available for premium users. Upgrade your account to access this feature.',
-        type: 'system',
-        priority: 'medium',
+      // Set today's question
+      setTodaysQuestion(questionData || null);
+    } catch (error) {
+      console.error('Error fetching daily question:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load today\'s question. Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, toast, userTimezone]);
+
+  // Load the question on component mount and when user or timezone changes
+  useEffect(() => {
+    fetchTodaysQuestion();
+  }, [fetchTodaysQuestion]);
+
+  // Submit the user's answer to the daily question
+  const submitAnswer = async (answer: string): Promise<boolean> => {
+    if (!user || !todaysQuestion) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to submit an answer.',
+        variant: 'destructive',
       });
       return false;
     }
-    
+
+    setSelectedAnswer(answer);
+    const isAnswerCorrect = answer === todaysQuestion.correct_answer;
+    setIsCorrect(isAnswerCorrect);
+
     try {
+      // Save user's answer
+      const { error: progressError } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          content_id: todaysQuestion.id,
+          score: isAnswerCorrect ? 100 : 0,
+          completed: true,
+          answers: { selected: answer, isCorrect: isAnswerCorrect },
+          last_activity: new Date().toISOString(),
+          time_spent: 60, // Assuming 1 minute spent on the question
+        });
+
+      if (progressError) throw progressError;
+
+      // Update user stats
+      const today = new Date();
+      const { data: userStatsData, error: statsGetError } = await supabase
+        .from('user_stats')
+        .select('streak_days, last_activity_date')
+        .eq('user_id', user.id)
+        .single();
+
+      if (statsGetError && statsGetError.code !== 'PGRST116') throw statsGetError;
+
+      // Calculate the new streak value
+      let newStreak = 1;
+      let streakIncreased = false;
+
+      if (userStatsData) {
+        const lastActivityDate = userStatsData.last_activity_date 
+          ? new Date(userStatsData.last_activity_date) 
+          : null;
+        
+        // If last activity was yesterday, increment streak
+        if (lastActivityDate) {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          if (isSameDay(lastActivityDate, yesterday)) {
+            newStreak = (userStatsData.streak_days || 0) + 1;
+            streakIncreased = true;
+          } 
+          // If last activity was today, maintain streak
+          else if (isSameDay(lastActivityDate, today)) {
+            newStreak = userStatsData.streak_days || 1;
+          }
+          // Otherwise reset streak to 1
+          else {
+            newStreak = 1;
+          }
+        }
+      }
+
+      // Update user stats in database
+      const { error: statsUpdateError } = await supabase
+        .from('user_stats')
+        .upsert({
+          user_id: user.id,
+          streak_days: newStreak,
+          questions_answered: userStatsData?.questions_answered 
+            ? userStatsData.questions_answered + 1 
+            : 1,
+          correct_answers: userStatsData?.correct_answers 
+            ? (isAnswerCorrect ? userStatsData.correct_answers + 1 : userStatsData.correct_answers)
+            : (isAnswerCorrect ? 1 : 0),
+          last_activity_date: today.toISOString(),
+        });
+
+      if (statsUpdateError) throw statsUpdateError;
+
+      // Update local streak state
+      setStreak(newStreak);
+      setHasCompletedToday(true);
+      setLastCompletionDate(today);
+
+      // Show success notification
+      toast({
+        title: isAnswerCorrect ? 'Correct!' : 'Incorrect',
+        description: isAnswerCorrect 
+          ? 'Great job! You got the correct answer.' 
+          : `The correct answer was: ${todaysQuestion.correct_answer}`,
+        variant: isAnswerCorrect ? 'default' : 'destructive',
+      });
+
+      // Show streak increase notification if streak increased
+      if (streakIncreased && newStreak > 1) {
+        toast({
+          title: 'Streak Updated!',
+          description: `You've maintained a ${newStreak}-day streak. Keep it up!`,
+          variant: 'default',
+        });
+      }
+
+      return isAnswerCorrect;
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit your answer. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  // Reset the daily question (premium feature)
+  const resetQuestion = async () => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to reset the question.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const isPremium = user.isPremiumUser;
+    
+    if (!isPremium) {
+      toast({
+        title: 'Premium Feature',
+        description: 'Reset daily question is only available for premium users.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!todaysQuestion) {
+      toast({
+        title: 'Error',
+        description: 'No question available to reset.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Delete the user's progress for today's question
+      const { error: deleteError } = await supabase
+        .from('user_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('content_id', todaysQuestion.id);
+
+      if (deleteError) throw deleteError;
+
+      // Reset the states
+      setHasCompletedToday(false);
       setIsCorrect(null);
       setSelectedAnswer(null);
-      setHasCompletedToday(false);
-      
-      // Fetch a new question
-      await fetchTodaysQuestion();
-      
-      return true;
+
+      toast({
+        title: 'Question Reset',
+        description: 'Today\'s question has been reset. You can try again!',
+        variant: 'default',
+      });
     } catch (error) {
       console.error('Error resetting question:', error);
-      return false;
+      toast({
+        title: 'Error',
+        description: 'Failed to reset the question. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   return {
-    streak,
-    hasCompletedToday,
-    lastCompletionDate,
-    loading,
     todaysQuestion,
+    isLoading,
+    hasCompletedToday,
+    streak,
+    lastCompletionDate,
     isCorrect,
     selectedAnswer,
     setSelectedAnswer,
     submitAnswer,
-    completeToday,
     resetQuestion,
-    refetch: fetchDailyQuestionStatus
+    refreshQuestion: fetchTodaysQuestion,
   };
-}
+};
+
+export default useDailyQuestion;

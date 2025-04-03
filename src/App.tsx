@@ -1,112 +1,31 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Layout } from './components/layout/Layout';
-import DailyQuestion from './pages/DailyQuestion';
-import Dashboard from './pages/Dashboard';
-import Progress from './pages/progress';
-import Flashcards from './pages/Flashcards';
-import Settings from './pages/Settings';
-import Profile from './pages/Profile';
-import Home from './pages/Home';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { useAuth } from './contexts/AuthContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from './components/ui/toaster';
+import routes from './routes';
+import { AuthProvider } from './contexts/AuthContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { GamificationProvider } from './contexts/GamificationContext';
-import { AuthLayout } from './components/layout/AuthLayout';
-import StreakWarning from './components/notifications/StreakWarning';
+import NotificationManager from './components/notifications/NotificationManager';
 
-function App() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
-
+const App = () => {
   return (
-    <NotificationsProvider>
-      <GamificationProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-          </Route>
-
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/progress"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Progress />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/daily-question"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <DailyQuestion />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/flashcards"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Flashcards />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Auth routes */}
-          <Route path="/auth" element={<AuthLayout children={null} requireAuth={false} />} />
-        </Routes>
-        
-        {/* Global components */}
-        {user && <StreakWarning />}
-      </GamificationProvider>
-    </NotificationsProvider>
+    <Router>
+      <AuthProvider>
+        <NotificationsProvider>
+          <GamificationProvider>
+            <Routes>
+              {routes.map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
+            </Routes>
+            <NotificationManager />
+            <Toaster />
+          </GamificationProvider>
+        </NotificationsProvider>
+      </AuthProvider>
+    </Router>
   );
-}
+};
 
 export default App;

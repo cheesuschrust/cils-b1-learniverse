@@ -1,31 +1,15 @@
 
 import React from 'react';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  Bell, 
-  Calendar, 
-  Trophy, 
-  Clock, 
-  Flame,
-  MessageSquare,
-  Info,
-  ExternalLink,
-  X
-} from 'lucide-react';
+import { format } from 'date-fns';
+import { Check, X, ChevronRight, Bell, Award, Calendar, Clock, Flag, AlertTriangle } from 'lucide-react';
+import { Notification } from '@/types/notification';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { 
-  NotificationType, 
-  Notification,
-  NotificationAction,
-} from '@/types/notification';
 
-export interface NotificationItemProps {
+interface NotificationItemProps {
   notification: Notification;
-  onDismiss: () => void;
-  onRead: () => void;
+  onDismiss?: () => void;
+  onRead?: () => void;
   onClick?: () => void;
 }
 
@@ -33,130 +17,142 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onDismiss,
   onRead,
-  onClick
+  onClick,
 }) => {
-  const {
-    id,
-    title,
-    message,
-    type,
-    createdAt,
-    read,
-    actions,
-    icon,
-    link
-  } = notification;
+  // Format the notification creation date
+  const formattedDate = format(
+    new Date(notification.createdAt),
+    'MMM d, h:mm a'
+  );
 
-  const handleClick = () => {
-    if (!read) {
-      onRead();
-    }
-    if (onClick) {
-      onClick();
-    } else if (link) {
-      window.location.href = link;
-    }
-  };
+  // Determine if the notification is expired
+  const isExpired = notification.expires && new Date(notification.expires) < new Date();
 
-  const renderIcon = () => {
-    const iconClasses = "h-5 w-5";
-    const defaultIcon = type === 'achievement' ? Trophy : 
-                       type === 'streak' ? Flame : 
-                       type === 'system' ? Bell : 
-                       type === 'reminder' ? Clock : 
-                       type === 'milestone' ? Calendar : 
-                       MessageSquare;
-    
-    // If a custom icon name is provided, render the corresponding icon
-    if (icon === 'trophy') return <Trophy className={iconClasses} />;
-    if (icon === 'flame') return <Flame className={iconClasses} />;
-    if (icon === 'bell') return <Bell className={iconClasses} />;
-    if (icon === 'clock') return <Clock className={iconClasses} />;
-    if (icon === 'calendar') return <Calendar className={iconClasses} />;
-    if (icon === 'info') return <Info className={iconClasses} />;
-    if (icon === 'alert') return <AlertCircle className={iconClasses} />;
-    if (icon === 'check') return <CheckCircle className={iconClasses} />;
-    
-    // Fallback to the default icon based on notification type
-    const IconComponent = defaultIcon;
-    return <IconComponent className={iconClasses} />;
-  };
+  // Skip rendering expired notifications
+  if (isExpired) return null;
 
-  const getTypeStyles = () => {
-    switch(type) {
+  // Get icon based on notification type
+  const getIcon = () => {
+    switch (notification.type) {
       case 'achievement':
-        return 'bg-green-50 border-green-200';
+        return <Award className="h-5 w-5 text-indigo-500" />;
       case 'streak':
-        return 'bg-orange-50 border-orange-200';
-      case 'system':
-        return 'bg-blue-50 border-blue-200';
+        return <Calendar className="h-5 w-5 text-orange-500" />;
       case 'reminder':
-        return 'bg-purple-50 border-purple-200';
+        return <Clock className="h-5 w-5 text-blue-500" />;
       case 'milestone':
-        return 'bg-amber-50 border-amber-200';
+        return <Flag className="h-5 w-5 text-green-500" />;
+      case 'system':
       default:
-        return 'bg-gray-50 border-gray-200';
+        return <Bell className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  // Get priority style
+  const getPriorityStyle = () => {
+    switch (notification.priority) {
+      case 'high':
+        return 'border-l-4 border-red-500';
+      case 'medium':
+        return 'border-l-4 border-yellow-500';
+      case 'low':
+      default:
+        return '';
     }
   };
 
   return (
     <div 
       className={cn(
-        "p-4 border rounded-lg hover:bg-accent/10 transition-colors cursor-pointer",
-        read ? 'opacity-75' : 'border-l-4',
-        getTypeStyles()
+        "p-4 hover:bg-accent cursor-pointer relative",
+        notification.read ? 'opacity-75' : '',
+        getPriorityStyle()
       )}
-      onClick={handleClick}
+      onClick={() => {
+        if (!notification.read && onRead) {
+          onRead();
+        }
+        if (onClick) {
+          onClick();
+        }
+      }}
     >
       <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center">
-          {renderIcon()}
+        <div className="flex-shrink-0 mt-0.5">
+          {getIcon()}
         </div>
+        
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start">
-            <h4 className="font-medium text-sm">
-              {title}
+            <h4 className={cn(
+              "text-sm font-medium",
+              notification.read ? 'text-muted-foreground' : ''
+            )}>
+              {notification.title}
             </h4>
-            <button 
-              className="text-muted-foreground hover:text-foreground p-1 rounded-full" 
-              onClick={(e) => {
-                e.stopPropagation();
-                onDismiss();
-              }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+              {formattedDate}
+            </span>
           </div>
-          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
-            {message}
+          
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+            {notification.message}
           </p>
-          {actions && actions.length > 0 && (
+          
+          {notification.actions && notification.actions.length > 0 && (
             <div className="flex gap-2 mt-2">
-              {actions.map((action) => (
-                <Button 
-                  key={action.id} 
-                  size="sm" 
-                  variant={action.variant || "outline"} 
+              {notification.actions.map((action) => (
+                <Button
+                  key={action.id}
+                  variant={action.variant || 'default'}
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     action.action();
                   }}
-                  className="text-xs h-7"
+                  className="h-7 text-xs px-2 py-1"
                 >
                   {action.label}
                 </Button>
               ))}
             </div>
           )}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
-            </span>
-            {link && (
-              <ExternalLink className="h-3 w-3 text-muted-foreground" />
-            )}
-          </div>
         </div>
+        
+        {!notification.read && (
+          <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+        )}
+      </div>
+      
+      <div className="absolute top-2 right-2 flex space-x-1">
+        {onRead && !notification.read && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRead();
+            }}
+            aria-label="Mark as read"
+          >
+            <Check className="h-3 w-3" />
+          </Button>
+        )}
+        {onDismiss && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            aria-label="Dismiss notification"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     </div>
   );
