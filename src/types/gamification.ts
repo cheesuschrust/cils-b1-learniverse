@@ -1,75 +1,91 @@
 
-export type AchievementCategory = 
-  | 'learning' 
-  | 'streak' 
-  | 'mastery' 
-  | 'social' 
-  | 'challenge' 
-  | 'special';
+export type AchievementCategory = 'learning' | 'streak' | 'mastery' | 'social' | 'challenge' | 'special';
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: string;
   category: AchievementCategory;
   points: number;
-  requiredValue: number;
-  currentValue?: number;
-  unlockedAt?: Date;
-  thresholds?: number[];
-  level?: number;
-  maxLevel?: number;
+  icon?: string;
+  createdAt: Date;
+  unlockedAt?: Date | null;
+  progress?: number;
+  threshold?: number;
+  secret?: boolean;
 }
 
-export interface Level {
+export interface LevelInfo {
   level: number;
-  minXp: number;
-  maxXp: number;
-  title?: string;
+  minXP: number;
+  maxXP: number;
+  unlocks?: string[];
 }
 
-export interface UserGamification {
+export interface GamificationState {
   xp: number;
   level: number;
-  achievements: UserAchievement[];
-  streakDays: number;
+  levelProgress: number;
+  achievements: Achievement[];
+  unlockedAchievements: Achievement[];
+  currentStreak: number;
   longestStreak: number;
-  lastActivityDate?: Date;
-  weeklyXp: number;
-  totalCorrectAnswers: number;
-  totalCompletedReviews: number;
-  weeklyChallenge?: WeeklyChallenge;
-  lifetimeXp: number;
+  lastActivity: Date | null;
+  dailyGoalCompleted: boolean;
+  dailyXP: number;
+  weeklyXP: number;
+  totalXP: number;
 }
 
-export interface UserAchievement {
+export interface RewardItem {
   id: string;
-  progress: number;
-  earnedAt?: Date;
-  level?: number;
+  name: string;
+  description: string;
+  type: 'unlock' | 'content' | 'feature' | 'badge';
+  icon?: string;
+  unlockedAt?: Date | null;
 }
 
-export interface WeeklyChallenge {
+export interface Challenge {
   id: string;
   title: string;
   description: string;
-  goal: number;
-  currentProgress: number;
   xpReward: number;
   startDate: Date;
   endDate: Date;
   completed: boolean;
-  completedAt?: Date;
+  progress?: number;
+  tasks: ChallengeTask[];
+}
+
+export interface ChallengeTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  type: 'lesson' | 'quiz' | 'practice' | 'streak' | 'custom';
+  requiredValue?: number;
+  currentValue?: number;
 }
 
 export interface LeaderboardEntry {
   userId: string;
   username: string;
-  displayName?: string;
-  avatar?: string;
+  avatarUrl?: string;
   xp: number;
   level: number;
-  achievements: number;
-  streakDays: number;
+  streak: number;
+  rank: number;
+  isCurrentUser: boolean;
+}
+
+export interface WeeklyProgress {
+  date: string;
+  xp: number;
+  minutesStudied: number;
+  activitiesCompleted: number;
+}
+
+export interface DailyStreak {
+  date: string;
+  completed: boolean;
 }

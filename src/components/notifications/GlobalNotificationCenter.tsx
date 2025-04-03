@@ -1,20 +1,19 @@
 
-import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { 
+  Dialog,
+  DialogContent, 
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import NotificationItem from './NotificationItem';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Sheet,
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle 
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Bell, Check, Trash2 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Trash2, Check, Bell } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface GlobalNotificationCenterProps {
   open: boolean;
@@ -25,173 +24,158 @@ const GlobalNotificationCenter: React.FC<GlobalNotificationCenterProps> = ({
   open,
   onOpenChange
 }) => {
-  const { 
-    notifications, 
-    markAsRead, 
-    markAllAsRead, 
-    removeNotification, 
-    clearAll 
+  const [activeTab, setActiveTab] = useState('all');
+  
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
+    clearAll,
+    markAsRead,
+    removeNotification
   } = useNotifications();
-
-  // Filter notifications by read status
-  const unreadNotifications = notifications.filter(n => !n.read);
-  const readNotifications = notifications.filter(n => n.read);
-
-  // Handle marking a notification as read
-  const handleMarkAsRead = async (id: string) => {
-    await markAsRead(id);
+  
+  // Filter notifications based on active tab
+  const getFilteredNotifications = () => {
+    if (activeTab === 'all') {
+      return notifications;
+    } else {
+      return notifications.filter(notification => notification.type === activeTab);
+    }
   };
 
-  // Handle removing a notification
-  const handleRemove = async (id: string) => {
-    await removeNotification(id);
+  // Count notifications by type
+  const getTypeCount = (type: string) => {
+    return notifications.filter(notification => 
+      type === 'all' ? true : notification.type === type
+    ).length;
   };
-
-  // Handle clearing all notifications
-  const handleClearAll = async () => {
-    await clearAll();
-  };
-
-  // Handle marking all notifications as read
-  const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
+  
+  // Get unread count by type
+  const getUnreadCountByType = (type: string) => {
+    return notifications.filter(notification => 
+      (type === 'all' ? true : notification.type === type) && !notification.read
+    ).length;
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center">
-            <Bell className="h-5 w-5 mr-2" /> Notifications
-          </SheetTitle>
-          <SheetDescription>
-            Stay updated on your progress, achievements, and reminders.
-          </SheetDescription>
-          <div className="flex justify-between mt-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-              onClick={handleMarkAllAsRead}
-              disabled={unreadNotifications.length === 0}
-            >
-              <Check className="h-3 w-3 mr-1" /> Mark all as read
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-              onClick={handleClearAll}
-              disabled={notifications.length === 0}
-            >
-              <Trash2 className="h-3 w-3 mr-1" /> Clear all
-            </Button>
-          </div>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Notifications 
+            {unreadCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {unreadCount} unread
+              </Badge>
+            )}
+          </DialogTitle>
+          <DialogDescription className="flex justify-between">
+            <span>Stay updated with your Italian learning journey</span>
+            <div className="flex gap-2">
+              {unreadCount > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 text-xs"
+                  onClick={() => markAllAsRead()}
+                >
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                  Mark all read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 text-xs"
+                  onClick={() => clearAll()}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Clear all
+                </Button>
+              )}
+            </div>
+          </DialogDescription>
+        </DialogHeader>
         
-        <Tabs defaultValue="all" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unread">
-              Unread {unreadNotifications.length > 0 && `(${unreadNotifications.length})`}
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-5 mb-4">
+            <TabsTrigger value="all" className="relative">
+              All
+              {getUnreadCountByType('all') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-[10px] text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">
+                  {getUnreadCountByType('all')}
+                </span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="read">Read</TabsTrigger>
+            <TabsTrigger value="achievement" className="relative">
+              Achievements
+              {getUnreadCountByType('achievement') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-[10px] text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">
+                  {getUnreadCountByType('achievement')}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="streak" className="relative">
+              Streaks
+              {getUnreadCountByType('streak') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-[10px] text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">
+                  {getUnreadCountByType('streak')}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="reminder" className="relative">
+              Reminders
+              {getUnreadCountByType('reminder') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-[10px] text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">
+                  {getUnreadCountByType('reminder')}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="milestone" className="relative">
+              Milestones
+              {getUnreadCountByType('milestone') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-[10px] text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">
+                  {getUnreadCountByType('milestone')}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="all">
-            <ScrollArea className="h-[calc(100vh-220px)]">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Bell className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No notifications yet</p>
-                  <p className="text-sm">We'll notify you of important updates and reminders</p>
-                </div>
-              ) : (
-                <AnimatePresence initial={false}>
-                  {notifications.map((notification) => (
-                    <motion.div
-                      key={notification.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <NotificationItem
-                        notification={notification}
-                        onDismiss={() => handleRemove(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                      />
-                      <Separator />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="unread">
-            <ScrollArea className="h-[calc(100vh-220px)]">
-              {unreadNotifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Check className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No unread notifications</p>
-                  <p className="text-sm">You're all caught up!</p>
-                </div>
-              ) : (
-                <AnimatePresence initial={false}>
-                  {unreadNotifications.map((notification) => (
-                    <motion.div
-                      key={notification.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <NotificationItem
-                        notification={notification}
-                        onDismiss={() => handleRemove(notification.id)}
-                        onRead={() => handleMarkAsRead(notification.id)}
-                      />
-                      <Separator />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="read">
-            <ScrollArea className="h-[calc(100vh-220px)]">
-              {readNotifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Bell className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No read notifications</p>
-                  <p className="text-sm">Read notifications will appear here</p>
-                </div>
-              ) : (
-                <AnimatePresence initial={false}>
-                  {readNotifications.map((notification) => (
-                    <motion.div
-                      key={notification.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <NotificationItem
-                        notification={notification}
-                        onDismiss={() => handleRemove(notification.id)}
-                      />
-                      <Separator />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-            </ScrollArea>
-          </TabsContent>
+          <ScrollArea className="h-[400px] pr-4">
+            {getFilteredNotifications().length > 0 ? (
+              <div className="space-y-2">
+                {getFilteredNotifications().map((notification) => (
+                  <NotificationItem 
+                    key={notification.id}
+                    notification={notification}
+                    onRead={() => markAsRead(notification.id)}
+                    onRemove={() => removeNotification(notification.id)}
+                    onClick={() => {
+                      if (!notification.read) markAsRead(notification.id);
+                      if (notification.link) {
+                        window.location.href = notification.link;
+                        onOpenChange(false);
+                      }
+                    }}
+                    expanded
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Bell className="h-12 w-12 text-muted-foreground opacity-20 mb-3" />
+                <p className="text-muted-foreground text-sm">No notifications</p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  When you receive new notifications, they'll appear here
+                </p>
+              </div>
+            )}
+          </ScrollArea>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
