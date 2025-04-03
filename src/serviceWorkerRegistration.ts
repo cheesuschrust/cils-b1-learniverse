@@ -34,3 +34,23 @@ export function setupOfflineDetection(callback: (isOffline: boolean) => void) {
     window.removeEventListener('offline', updateOnlineStatus);
   };
 }
+
+// Add an offline UI component
+export function createOfflineUI() {
+  const offlineDiv = document.createElement('div');
+  offlineDiv.id = 'offline-notification';
+  offlineDiv.style.display = 'none';
+  offlineDiv.style.position = 'fixed';
+  offlineDiv.style.bottom = '20px';
+  offlineDiv.style.right = '20px';
+  offlineDiv.style.backgroundColor = '#ff5252';
+  offlineDiv.style.color = 'white';
+  offlineDiv.style.padding = '10px 20px';
+  offlineDiv.style.borderRadius = '4px';
+  offlineDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  offlineDiv.style.zIndex = '10000';
+  offlineDiv.textContent = 'You are offline. Some features may be limited.';
+  document.body.appendChild(offlineDiv);
+
+  return offlineDiv;
+}

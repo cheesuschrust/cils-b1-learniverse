@@ -11,7 +11,8 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
@@ -19,11 +20,26 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "theme_color": "#2563eb",
   "background_color": "#ffffff",
   "description": "Learn Italian for Citizenship Exam",
   "orientation": "portrait-primary",
-  "categories": ["education", "learning", "language"]
+  "categories": ["education", "learning", "language"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Go to your learning dashboard",
+      "url": "/dashboard"
+    },
+    {
+      "name": "Flashcards",
+      "short_name": "Flashcards",
+      "description": "Practice with flashcards",
+      "url": "/flashcards"
+    }
+  ]
 }

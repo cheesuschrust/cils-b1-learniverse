@@ -1,9 +1,10 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/EnhancedAuthContext';
 import { SkipToContent } from '@/components/accessibility/SkipToContent';
 import { KeyboardShortcutsModal } from '@/components/accessibility/KeyboardShortcutsModal';
+import { Spinner } from '@/components/ui/spinner';
 
 // Layout components
 import MainLayout from '@/components/layout/MainLayout';
@@ -15,12 +16,7 @@ import RegisterPage from '@/pages/auth/RegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
-
-// Protected pages
-import DashboardPage from '@/pages/DashboardPage';
-import UserProfilePage from '@/pages/profile/UserProfilePage';
-import UserPreferencesPage from '@/pages/settings/UserPreferencesPage';
-import SubscriptionPlansPage from '@/pages/subscription/SubscriptionPlansPage';
+import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 
 // Public pages
 import HomePage from '@/pages/HomePage';
@@ -30,6 +26,19 @@ import NotFoundPage from '@/pages/NotFoundPage';
 
 // Protected route component
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+
+// Lazy-loaded protected pages for better performance
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const UserProfilePage = lazy(() => import('@/pages/profile/UserProfilePage'));
+const UserPreferencesPage = lazy(() => import('@/pages/settings/UserPreferencesPage'));
+const SubscriptionPlansPage = lazy(() => import('@/pages/subscription/SubscriptionPlansPage'));
+
+// Loading fallback for lazy-loaded components
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <Spinner size="lg" />
+  </div>
+);
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -70,6 +79,7 @@ function App() {
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="verify-email" element={<VerifyEmailPage />} />
+          <Route path="callback" element={<AuthCallbackPage />} />
         </Route>
         
         {/* Legacy auth routes - redirect to new paths */}
@@ -78,13 +88,17 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         
-        {/* Protected routes */}
+        {/* Protected routes - using Suspense for lazy loading */}
         <Route path="/dashboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute offlineAccessible={true}>
             <MainLayout />
           </ProtectedRoute>
         }>
-          <Route index element={<DashboardPage />} />
+          <Route index element={
+            <Suspense fallback={<LoadingFallback />}>
+              <DashboardPage />
+            </Suspense>
+          } />
         </Route>
         
         {/* Profile & Settings */}
@@ -93,15 +107,23 @@ function App() {
             <MainLayout />
           </ProtectedRoute>
         }>
-          <Route index element={<UserProfilePage />} />
+          <Route index element={
+            <Suspense fallback={<LoadingFallback />}>
+              <UserProfilePage />
+            </Suspense>
+          } />
         </Route>
         
         <Route path="/settings" element={
-          <ProtectedRoute>
+          <ProtectedRoute offlineAccessible={true}>
             <MainLayout />
           </ProtectedRoute>
         }>
-          <Route index element={<UserPreferencesPage />} />
+          <Route index element={
+            <Suspense fallback={<LoadingFallback />}>
+              <UserPreferencesPage />
+            </Suspense>
+          } />
         </Route>
         
         {/* Subscription */}
@@ -110,8 +132,16 @@ function App() {
             <MainLayout />
           </ProtectedRoute>
         }>
-          <Route index element={<SubscriptionPlansPage />} />
-          <Route path="plans" element={<SubscriptionPlansPage />} />
+          <Route index element={
+            <Suspense fallback={<LoadingFallback />}>
+              <SubscriptionPlansPage />
+            </Suspense>
+          } />
+          <Route path="plans" element={
+            <Suspense fallback={<LoadingFallback />}>
+              <SubscriptionPlansPage />
+            </Suspense>
+          } />
         </Route>
         
         {/* Premium content (requires subscription) */}

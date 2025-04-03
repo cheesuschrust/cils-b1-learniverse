@@ -18,6 +18,7 @@ import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { QuizProvider } from '@/contexts/QuizContext';
 import { GamificationProvider } from '@/contexts/GamificationContext';
 import { registerServiceWorker } from './serviceWorkerRegistration';
+import OfflineAlert from '@/components/common/OfflineAlert';
 
 // Register service worker
 registerServiceWorker();
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                           <GamificationProvider>
                             <App />
                             <Toaster />
+                            <OfflineAlert />
                           </GamificationProvider>
                         </QuizProvider>
                       </NotificationsProvider>
