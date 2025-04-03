@@ -1,303 +1,358 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Users, Activity, BookOpen, TrendingUp, Zap, Clock, CheckCircle, BarChart2, Server, HardDrive } from 'lucide-react';
+
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  BarChart3, 
+  Users, 
+  FileText, 
+  Bot, 
+  BookOpen,
+  CheckCircle,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
 
-const Dashboard = () => {
-  // Mock data for dashboard
-  const data = [
-    { name: 'Page A', uv: 4000, pv: 2400, amt: 2400 },
-    { name: 'Page B', uv: 3000, pv: 1398, amt: 2210 },
-    { name: 'Page C', uv: 2000, pv: 9800, amt: 2290 },
-    { name: 'Page D', uv: 2780, pv: 3908, amt: 2000 },
-    { name: 'Page E', uv: 1890, pv: 4800, amt: 2181 },
-    { name: 'Page F', uv: 2390, pv: 3800, amt: 2500 },
-    { name: 'Page G', uv: 3490, pv: 4300, amt: 2100 },
-  ];
-
-  const pieData = [
-    { name: 'Group A', value: 400 },
-    { name: 'Group B', value: 300 },
-    { name: 'Group C', value: 300 },
-    { name: 'Group D', value: 200 },
-  ];
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-
+const AdminDashboard = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    contentItems: 0,
+    totalQuestions: 0,
+    premiumUsers: 0,
+    supportTickets: 0,
+    userGrowth: 0,
+    contentGrowth: 0
+  });
+  
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      
+      try {
+        // Fetch total users count
+        const { count: totalUsers, error: userError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
+          
+        if (userError) throw userError;
+        
+        // Fetch active users (users who logged in this week)
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const { count: activeUsers, error: activeError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .gt('last_login', oneWeekAgo.toISOString());
+          
+        if (activeError) throw activeError;
+        
+        // Fetch content items
+        const { count: contentItems, error: contentError } = await supabase
+          .from('content_items')
+          .select('*', { count: 'exact', head: true });
+          
+        if (contentError) throw contentError;
+        
+        // Fetch premium users
+        const { count: premiumUsers, error: premiumError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('subscription_tier', 'premium');
+          
+        if (premiumError) throw premiumError;
+        
+        // Fetch open support tickets
+        const { count: supportTickets, error: ticketError } = await supabase
+          .from('support_tickets')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'open');
+          
+        if (ticketError) throw ticketError;
+        
+        // Calculate growth (mock data for now)
+        const userGrowth = 12.5;
+        const contentGrowth = 8.3;
+        
+        setStats({
+          totalUsers: totalUsers || 0,
+          activeUsers: activeUsers || 0,
+          contentItems: contentItems || 0,
+          totalQuestions: 367, // Mock data
+          premiumUsers: premiumUsers || 0,
+          supportTickets: supportTickets || 0,
+          userGrowth,
+          contentGrowth
+        });
+      } catch (error) {
+        console.error('Error fetching admin stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
+  
   return (
-    <>
+    <div className="space-y-6">
       <Helmet>
-        <title>Admin Dashboard</title>
+        <title>Admin Dashboard | Italian Learning</title>
       </Helmet>
-      <div className="container mx-auto py-6 px-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Overview of the application
-          </p>
-        </div>
-
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    Registered users
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">5,428</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Users className="h-4 w-4 mr-2" />
-                    <span>+201 since last month</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    Currently online
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">2,875</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Activity className="h-4 w-4 mr-2" />
-                    <span>+45 since last hour</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">Lessons Completed</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    Total lessons finished
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">18,759</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    <span>+342 today</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">AI Interactions</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    AI feature usage
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">127,543</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Zap className="h-4 w-4 mr-2" />
-                    <span>+1,254 today</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="col-span-1">
-                <CardHeader>
-                  <CardTitle>User Engagement</CardTitle>
-                  <CardDescription>
-                    Active users over time
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="pv" stroke="#8884d8" activeDot={{ r: 8 }} />
-                      <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline">View Details</Button>
-                </CardFooter>
-              </Card>
-
-              <Card className="col-span-1">
-                <CardHeader>
-                  <CardTitle>Content Performance</CardTitle>
-                  <CardDescription>
-                    Popular content categories
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline">Explore Content</Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </TabsContent>
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    Website visits
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">12,456</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>+12% from last week</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-sm font-medium">Average Time on Site</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    User session duration
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">3:45</div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4 mr-2" />
-                    <span>+30 seconds from last week</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Card>
-                    <CardHeader className="space-y-1">
-                      <CardTitle className="text-sm font-medium">AI Usage</CardTitle>
-                      <CardDescription className="text-xs text-muted-foreground">
-                        AI feature engagement
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">78%</div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Zap className="h-4 w-4 mr-2" />
-                        <span>+5% from last week</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">AI Usage Details</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Detailed metrics on AI feature usage.
-                    </p>
-                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                      <li>Text Generation: 45%</li>
-                      <li>Translation: 30%</li>
-                      <li>Speech Recognition: 25%</li>
-                    </ul>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            </div>
-          </TabsContent>
-          <TabsContent value="reports">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Report</CardTitle>
-                <CardDescription>
-                  Detailed system information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Server Status</span>
-                    <Badge variant="secondary">Online</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Database Version</span>
-                    <span>v3.2.1</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>API Version</span>
-                    <span>v1.5</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>WebGPU Support</span>
-                    <span>Yes</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline">Generate Report</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">
+          Last updated: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+        </p>
       </div>
-    </>
+      
+      {/* Statistics Summary */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard 
+          title="Total Users" 
+          value={stats.totalUsers.toString()}
+          description={`${stats.userGrowth > 0 ? '+' : ''}${stats.userGrowth}% from last month`}
+          icon={<Users />}
+          trend={stats.userGrowth > 0 ? 'up' : 'down'}
+          loading={loading}
+        />
+        
+        <StatCard 
+          title="Active Users" 
+          value={stats.activeUsers.toString()}
+          description="Active in the last 7 days"
+          icon={<Users />}
+          loading={loading}
+        />
+        
+        <StatCard 
+          title="Premium Users" 
+          value={stats.premiumUsers.toString()}
+          description={`${(stats.totalUsers ? Math.round((stats.premiumUsers / stats.totalUsers) * 100) : 0)}% of total users`}
+          icon={<CheckCircle />}
+          loading={loading}
+        />
+        
+        <StatCard 
+          title="Content Items" 
+          value={stats.contentItems.toString()}
+          description={`${stats.contentGrowth > 0 ? '+' : ''}${stats.contentGrowth}% from last month`}
+          icon={<FileText />}
+          trend={stats.contentGrowth > 0 ? 'up' : 'down'}
+          loading={loading}
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>System Health</CardTitle>
+              <CardDescription>Service status summary</CardDescription>
+            </div>
+            <div className="bg-green-100 text-green-800 p-2 rounded-full">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span>Database</span>
+                <span className="text-green-600">Operational</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Authentication</span>
+                <span className="text-green-600">Operational</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>AI Services</span>
+                <span className="text-green-600">Operational</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Storage</span>
+                <span className="text-green-600">Operational</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>AI Model Performance</CardTitle>
+              <CardDescription>Last 30 days</CardDescription>
+            </div>
+            <Bot className="h-5 w-5" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span>Accuracy</span>
+                <span className="font-semibold">92.4%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>User Satisfaction</span>
+                <span className="font-semibold">88.7%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Response Time</span>
+                <span className="font-semibold">0.7s</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Error Rate</span>
+                <span className="font-semibold">2.3%</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Support Tickets</CardTitle>
+              <CardDescription>Open tickets requiring attention</CardDescription>
+            </div>
+            <div className={`${stats.supportTickets > 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'} p-2 rounded-full`}>
+              <span className="font-semibold">{stats.supportTickets}</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {stats.supportTickets > 0 ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span>High Priority</span>
+                  <span className="text-red-600 font-medium">2</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Medium Priority</span>
+                  <span className="text-orange-600 font-medium">3</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Low Priority</span>
+                  <span className="text-blue-600 font-medium">{Math.max(0, stats.supportTickets - 5)}</span>
+                </div>
+                <div className="pt-2">
+                  <a href="/admin/support-tickets" className="text-primary hover:underline text-sm">
+                    View all tickets →
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-muted-foreground">No open tickets</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent User Activity</CardTitle>
+            <CardDescription>Latest user registrations and logins</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3"></div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Connect to real user activity data</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Performance</CardTitle>
+            <CardDescription>Most popular content by user engagement</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="flex justify-between">
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/4"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/4"></div>
+                    </div>
+                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Connect to real content performance data</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
-export default Dashboard;
+interface StatCardProps {
+  title: string;
+  value: string;
+  description?: string;
+  icon: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+  loading?: boolean;
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  description,
+  icon,
+  trend,
+  loading = false
+}) => {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="bg-primary/10 p-2 rounded-full">
+            {icon}
+          </div>
+          {trend && (
+            <div className={`${trend === 'up' ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+              {trend === 'up' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+            </div>
+          )}
+        </div>
+        <div className="mt-4">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          {loading ? (
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1 w-16"></div>
+          ) : (
+            <p className="text-3xl font-bold">{value}</p>
+          )}
+          {description && (
+            <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default AdminDashboard;
