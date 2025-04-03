@@ -8,7 +8,7 @@ interface HeadphonesProps {
   strokeWidth?: number;
 }
 
-export const Headphones: React.FC<HeadphonesProps> = ({
+const Headphones: React.FC<HeadphonesProps> = ({
   className,
   size = 24,
   color = 'currentColor',

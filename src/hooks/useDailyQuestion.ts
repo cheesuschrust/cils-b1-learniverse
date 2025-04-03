@@ -203,8 +203,7 @@ export function useDailyQuestion(): UseDailyQuestionReturn {
           toast({
             title: `${data} Day Streak!`,
             description: "Keep up the great work with your daily practice!",
-            variant: "default",
-            className: "bg-gradient-to-r from-yellow-400 to-orange-500 text-white"
+            variant: "default"
           });
         }
       }
