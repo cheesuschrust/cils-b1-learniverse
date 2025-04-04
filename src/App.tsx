@@ -26,6 +26,23 @@ import WritingPage from '@/pages/WritingPage';
 import ListeningPage from '@/pages/ListeningPage';
 import SpeakingPage from '@/pages/SpeakingPage';
 import SettingsPage from '@/pages/SettingsPage';
+import SupportCenter from '@/pages/SupportCenter';
+import OnboardingPage from '@/pages/OnboardingPage';
+
+// Marketing Pages
+import Index from '@/pages/Index';
+import LandingPage from '@/pages/marketing/LandingPage';
+import FeaturesPage from '@/pages/marketing/FeaturesPage';
+import AboutPage from '@/pages/marketing/AboutPage';
+
+// Subscription Pages
+import SubscriptionPage from '@/pages/subscription/SubscriptionPage';
+import PricingPage from '@/pages/subscription/PricingPage';
+import SubscriptionPlansPage from '@/pages/subscription/SubscriptionPlansPage';
+import SubscriptionManagementPage from '@/pages/subscription/SubscriptionManagementPage';
+
+// Admin Pages
+import AdminDashboard from '@/pages/admin/AdminDashboard';
 
 function App() {
   return (
@@ -35,16 +52,28 @@ function App() {
           <GamificationProvider>
             <Router>
               <Routes>
+                {/* Public Marketing Pages */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/home" element={<LandingPage />} />
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
+                
                 {/* Auth Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/auth/login" element={<Login />} />
+                <Route path="/auth/register" element={<Register />} />
+                <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                <Route path="/auth/reset-password" element={<ResetPassword />} />
+                
+                {/* Onboarding */}
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                
+                {/* Support Center (public but with auth-enhanced features) */}
+                <Route path="/support-center" element={<SupportCenter />} />
                 
                 {/* Protected Routes */}
                 <Route element={<Layout />}>
                   <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<Dashboard />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/progress" element={<ProgressPage />} />
                     <Route path="/achievements" element={<Achievements />} />
@@ -56,6 +85,15 @@ function App() {
                     <Route path="/listening" element={<ListeningPage />} />
                     <Route path="/speaking" element={<SpeakingPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    
+                    {/* Subscription Management */}
+                    <Route path="/subscription" element={<SubscriptionPage />} />
+                    <Route path="/subscription/plans" element={<SubscriptionPlansPage />} />
+                    <Route path="/subscription/manage" element={<SubscriptionManagementPage />} />
+                    
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
                   </Route>
                 </Route>
                 
