@@ -6,14 +6,67 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { User, Globe, BellRing } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User, Globe, BellRing, MoonStar, Languages, Sparkles } from 'lucide-react';
+import { ConfidenceIndicator } from '@/components/ai/ConfidenceIndicator';
 
-const PersonalizationStep: React.FC = () => {
-  const [nickname, setNickname] = useState("");
-  const [primaryLanguage, setPrimaryLanguage] = useState("english");
-  const [goals, setGoals] = useState("");
-  const [reminders, setReminders] = useState(true);
-  const [themePreference, setThemePreference] = useState("light");
+interface PersonalizationStepProps {
+  data?: {
+    nickname?: string;
+    primaryLanguage?: string;
+    goals?: string;
+    reminders?: boolean;
+    themePreference?: string;
+    aiAssistance?: boolean;
+  };
+  onChange?: (data: any) => void;
+}
+
+const PersonalizationStep: React.FC<PersonalizationStepProps> = ({ data = {}, onChange }) => {
+  const [nickname, setNickname] = useState(data.nickname || "");
+  const [primaryLanguage, setPrimaryLanguage] = useState(data.primaryLanguage || "english");
+  const [goals, setGoals] = useState(data.goals || "");
+  const [reminders, setReminders] = useState(data.reminders !== undefined ? data.reminders : true);
+  const [themePreference, setThemePreference] = useState(data.themePreference || "light");
+  const [aiAssistance, setAiAssistance] = useState(data.aiAssistance !== undefined ? data.aiAssistance : true);
+
+  const handleChange = (field: string, value: any) => {
+    const updatedValues = {
+      nickname,
+      primaryLanguage,
+      goals,
+      reminders,
+      themePreference,
+      aiAssistance,
+      [field]: value
+    };
+    
+    if (onChange) {
+      onChange(updatedValues);
+    }
+
+    // Update the local state
+    switch (field) {
+      case 'nickname':
+        setNickname(value);
+        break;
+      case 'primaryLanguage':
+        setPrimaryLanguage(value);
+        break;
+      case 'goals':
+        setGoals(value);
+        break;
+      case 'reminders':
+        setReminders(value);
+        break;
+      case 'themePreference':
+        setThemePreference(value);
+        break;
+      case 'aiAssistance':
+        setAiAssistance(value);
+        break;
+    }
+  };
 
   return (
     <CardContent className="pt-6 space-y-6">
@@ -33,7 +86,7 @@ const PersonalizationStep: React.FC = () => {
               id="nickname"
               placeholder="How would you like to be called?"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e) => handleChange('nickname', e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
               We'll use this to personalize your learning experience
@@ -45,7 +98,7 @@ const PersonalizationStep: React.FC = () => {
               <Globe className="h-4 w-4" />
               Primary Language
             </Label>
-            <Select value={primaryLanguage} onValueChange={setPrimaryLanguage}>
+            <Select value={primaryLanguage} onValueChange={(value) => handleChange('primaryLanguage', value)}>
               <SelectTrigger id="primary-language">
                 <SelectValue placeholder="Select your primary language" />
               </SelectTrigger>
@@ -81,9 +134,18 @@ const PersonalizationStep: React.FC = () => {
             id="goals"
             placeholder="E.g., Preparing for citizenship exam, traveling to Italy, connecting with family..."
             value={goals}
-            onChange={(e) => setGoals(e.target.value)}
+            onChange={(e) => handleChange('goals', e.target.value)}
             rows={4}
           />
+          <div className="flex justify-between items-center mt-1">
+            <p className="text-sm text-muted-foreground">
+              Your goals help us customize learning materials
+            </p>
+            <Badge variant="outline" className="text-xs">
+              <ConfidenceIndicator value={goals.length > 20 ? 90 : goals.length > 10 ? 70 : 30} />
+              <span className="ml-1">CILS B1 Alignment</span>
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -103,13 +165,16 @@ const PersonalizationStep: React.FC = () => {
             <Switch
               id="notifications"
               checked={reminders}
-              onCheckedChange={setReminders}
+              onCheckedChange={(checked) => handleChange('reminders', checked)}
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="theme-preference">Interface Theme</Label>
-            <Select value={themePreference} onValueChange={setThemePreference}>
+            <Label htmlFor="theme-preference" className="flex items-center gap-2">
+              <MoonStar className="h-4 w-4" />
+              Interface Theme
+            </Label>
+            <Select value={themePreference} onValueChange={(value) => handleChange('themePreference', value)}>
               <SelectTrigger id="theme-preference">
                 <SelectValue placeholder="Select your preferred theme" />
               </SelectTrigger>
@@ -119,6 +184,23 @@ const PersonalizationStep: React.FC = () => {
                 <SelectItem value="system">System Default</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="flex items-center justify-between pt-2">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-assistance" className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                AI-Enhanced Learning
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Use AI to personalize study materials and track CILS alignment
+              </p>
+            </div>
+            <Switch
+              id="ai-assistance"
+              checked={aiAssistance}
+              onCheckedChange={(checked) => handleChange('aiAssistance', checked)}
+            />
           </div>
         </div>
       </div>

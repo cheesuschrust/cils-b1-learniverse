@@ -1,110 +1,75 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cva } from 'class-variance-authority';
-import { Shield, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
+import { CheckCircle, AlertCircle, HelpCircle, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ConfidenceIndicatorProps {
-  score: number;
+  value: number;
   showLabel?: boolean;
-  showIcon?: boolean;
+  showTooltip?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  tooltipText?: string;
+  variant?: 'default' | 'citizenship' | 'expert' | 'minimal';
   className?: string;
 }
 
-const badgeVariants = cva('', {
-  variants: {
-    confidence: {
-      high: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30',
-      medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30',
-      low: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30'
+const indicatorVariants = cva(
+  "flex items-center",
+  {
+    variants: {
+      size: {
+        sm: "text-xs gap-0.5",
+        md: "text-sm gap-1",
+        lg: "text-base gap-1.5",
+      },
+      variant: {
+        default: "",
+        citizenship: "text-amber-600",
+        expert: "text-emerald-600",
+        minimal: "opacity-80",
+      },
     },
-  },
-  defaultVariants: {
-    confidence: 'medium',
+    defaultVariants: {
+      size: "sm",
+      variant: "default",
+    },
   }
-});
+);
 
-const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
-  score,
-  showLabel = true,
-  showIcon = true,
-  size = 'md',
-  tooltipText,
-  className = ''
+export const ConfidenceIndicator: React.FC<ConfidenceIndicatorProps> = ({
+  value,
+  showLabel = false,
+  showTooltip = true,
+  size = 'sm',
+  variant = 'default',
+  className
 }) => {
-  // Ensure score is between 0-100
-  const normalizedScore = Math.max(0, Math.min(100, score));
-  
-  // Determine confidence level
-  const confidenceLevel = 
-    normalizedScore >= 80 ? 'high' :
-    normalizedScore >= 60 ? 'medium' :
-    'low';
-  
-  // Default tooltip text based on confidence level
-  const defaultTooltip = 
-    confidenceLevel === 'high' 
-      ? 'High confidence (80%+): The AI is very confident in this result.'
-      : confidenceLevel === 'medium'
-      ? 'Medium confidence (60-79%): The AI is reasonably confident, but there may be some uncertainty.'
-      : 'Low confidence (<60%): The AI is uncertain about this result. Consider reviewing it manually.';
-  
-  // Icon based on confidence level
-  const ConfidenceIcon = 
-    confidenceLevel === 'high' 
-      ? ShieldCheck
-      : confidenceLevel === 'medium' 
-      ? Shield
-      : ShieldAlert;
-  
-  // Size adjustments
-  const sizeClasses = 
-    size === 'sm' ? 'text-xs py-0.5 px-1.5' :
-    size === 'lg' ? 'text-sm py-1 px-3' :
-    'text-xs py-0.5 px-2';
-  
-  // Icon size
-  const iconSize = 
-    size === 'sm' ? 12 :
-    size === 'lg' ? 16 :
-    14;
+  const getConfidenceLevel = () => {
+    if (value >= 90) return { label: 'Expert', icon: <CheckCircle className="h-3.5 w-3.5" />, color: 'text-emerald-500' };
+    if (value >= 70) return { label: 'Good', icon: <Info className="h-3.5 w-3.5" />, color: 'text-blue-500' };
+    if (value >= 50) return { label: 'Adequate', icon: <HelpCircle className="h-3.5 w-3.5" />, color: 'text-amber-500' };
+    return { label: 'Needs Work', icon: <AlertCircle className="h-3.5 w-3.5" />, color: 'text-red-500' };
+  };
+
+  const confidence = getConfidenceLevel();
+  const tooltipText = `${value}% alignment with CILS B1 requirements`;
 
   return (
     <TooltipProvider>
-      <Tooltip>
+      <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
-          <div className={`flex items-center ${className}`}>
-            <Badge 
-              variant="outline" 
-              className={`flex items-center gap-1 ${sizeClasses} ${badgeVariants({ confidence: confidenceLevel })}`}
-            >
-              {showIcon && <ConfidenceIcon className="h-3 w-3" />}
-              {showLabel ? (
-                <>
-                  {confidenceLevel === 'high' && 'High'}
-                  {confidenceLevel === 'medium' && 'Medium'}
-                  {confidenceLevel === 'low' && 'Low'}
-                  {' confidence'}
-                </>
-              ) : (
-                <span>{Math.round(normalizedScore)}%</span>
-              )}
-            </Badge>
+          <div className={cn(indicatorVariants({ size, variant }), confidence.color, className)}>
+            {confidence.icon}
+            {showLabel && <span className="ml-1">{confidence.label}</span>}
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <div className="space-y-2 max-w-xs">
-            <p>{tooltipText || defaultTooltip}</p>
-            <div className="flex items-center gap-2">
-              <Progress value={normalizedScore} className="h-1" />
-              <span className="text-xs font-medium">{Math.round(normalizedScore)}%</span>
-            </div>
-          </div>
-        </TooltipContent>
+        {showTooltip && (
+          <TooltipContent side="top">
+            <p>{tooltipText}</p>
+          </TooltipContent>
+        )}
       </Tooltip>
     </TooltipProvider>
   );
