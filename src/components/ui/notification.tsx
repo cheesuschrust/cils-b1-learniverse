@@ -2,11 +2,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
-import { Check, AlertCircle, Info, Bell, Award } from 'lucide-react';
+import { Check, AlertCircle, Info, Bell, Award, Mic, Volume2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface NotificationProps extends React.HTMLAttributes<HTMLDivElement> {
-  type?: 'success' | 'error' | 'info' | 'warning' | 'achievement';
+  type?: 'success' | 'error' | 'info' | 'warning' | 'achievement' | 'speaking' | 'listening';
   title: string;
   description?: string;
   icon?: React.ReactNode;
@@ -36,6 +36,10 @@ const Notification: React.FC<NotificationProps> = ({
         return <AlertCircle className="h-4 w-4 text-amber-500" />;
       case 'achievement':
         return <Award className="h-4 w-4 text-amber-500" />;
+      case 'speaking':
+        return <Mic className="h-4 w-4 text-purple-500" />;
+      case 'listening':
+        return <Volume2 className="h-4 w-4 text-blue-500" />;
       case 'info':
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
@@ -52,6 +56,10 @@ const Notification: React.FC<NotificationProps> = ({
         return 'border-amber-200 bg-amber-50 text-amber-900';
       case 'achievement':
         return 'border-amber-200 bg-amber-50 text-amber-900';
+      case 'speaking':
+        return 'border-purple-200 bg-purple-50 text-purple-900';
+      case 'listening':
+        return 'border-blue-200 bg-blue-50 text-blue-900';
       case 'info':
       default:
         return 'border-blue-200 bg-blue-50 text-blue-900';
