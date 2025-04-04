@@ -1,5 +1,5 @@
 
-import { Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
@@ -37,8 +37,6 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="speaking" element={<SpeakingPage />} />
             <Route path="italian-citizenship-test" element={<ItalianCitizenshipTest />} />
-            
-            {/* Add more routes here */}
             
             {/* Fallback route */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
