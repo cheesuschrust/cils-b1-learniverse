@@ -400,11 +400,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase
         .from('security_audit_log')
-        .insert({
+        .insert([{
           ...data,
           user_id: user?.id,
           occurred_at: new Date()
-        });
+        }]);
         
       if (error) throw error;
       
@@ -418,32 +418,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Email settings
   const getEmailSettings = async () => {
     try {
-      // This should be an admin-only function
-      const { data: isAdmin } = await supabase.rpc('is_admin');
-      
-      if (!isAdmin) {
-        throw new Error('Unauthorized access');
-      }
+      if (!user) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
-        .from('admin_settings')
+        .from('email_settings')
         .select('*')
-        .eq('setting_key', 'email_settings')
+        .eq('user_id', user.id)
         .single();
         
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 is "no rows found" error, which is fine
-        throw error;
-      }
+      if (error && error.code !== 'PGRST116') throw error;
       
-      return data?.setting_value || { 
-        smtp_host: '',
-        smtp_port: 587,
-        smtp_user: '',
-        smtp_password: '',
-        from_email: '',
-        from_name: ''
-      };
+      return data || { notifications: true, marketing: false, reminders: true };
     } catch (error) {
       console.error('Error fetching email settings:', error);
       throw error;
@@ -452,19 +437,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const updateEmailSettings = async (data: any) => {
     try {
-      // This should be an admin-only function
-      const { data: isAdmin } = await supabase.rpc('is_admin');
-      
-      if (!isAdmin) {
-        throw new Error('Unauthorized access');
-      }
+      if (!user) throw new Error('User not authenticated');
       
       const { error } = await supabase
-        .from('admin_settings')
+        .from('email_settings')
         .upsert({
-          setting_key: 'email_settings',
-          setting_value: data,
-          updated_by: user?.id
+          user_id: user.id,
+          ...data,
+          updated_at: new Date()
         });
         
       if (error) throw error;
@@ -475,37 +455,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isLoading,
-      session,
-      isAuthenticated: !!user,
-      profile,
-      isPremium,
-      login,
-      loginWithGoogle,
-      signup,
-      logout,
-      updateProfile,
-      updatePassword,
-      resetPassword,
-      verifyEmail,
-      resendVerificationEmail,
-      getAllUsers,
-      createUser,
-      updateUser,
-      deleteUser,
-      getSystemLogs,
-      updateSystemLog,
-      addSystemLog,
-      getEmailSettings,
-      updateEmailSettings
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  
+  const value: AuthContextType = {
+    user,
+    isLoading,
+    session,
+    isAuthenticated: !!user,
+    profile,
+    isPremium,
+    login,
+    loginWithGoogle,
+    signup,
+    logout,
+    updateProfile,
+    updatePassword,
+    resetPassword,
+    verifyEmail,
+    resendVerificationEmail,
+    getAllUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    getSystemLogs,
+    updateSystemLog,
+    addSystemLog,
+    getEmailSettings,
+    updateEmailSettings
+  };
+  
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

@@ -1,162 +1,181 @@
 
 import { Helmet } from 'react-helmet-async';
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { SpeakingModule } from '@/components/speaking/SpeakingModule';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
-import { AuthGuard } from '@/components/common/AuthGuard';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Mic, MicOff, RefreshCw, Volume, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function SpeakingPage() {
-  const { toast } = useToast();
-  const { user, isPremium } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userStats, setUserStats] = useState<any>(null);
-
-  useEffect(() => {
-    const loadUserData = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Mock user stats loading
-        setTimeout(() => {
-          setUserStats({
-            speaking_score: 65,
-            practice_sessions: 12,
-            last_practice: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-          });
-          
-          setIsLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        toast({
-          title: 'Error',
-          description: 'Could not load your speaking data. Please try again later.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-      }
-    };
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [currentPrompt, setCurrentPrompt] = useState('Mi chiamo... e vengo da...');
+  
+  const prompts = [
+    'Mi chiamo... e vengo da...',
+    'Cosa ti piace fare nel tempo libero?',
+    'Racconta della tua famiglia',
+    'Descrivi la tua città',
+    'Cosa hai fatto lo scorso fine settimana?'
+  ];
+  
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+    setIsRecording(!isRecording);
+  };
+  
+  const startRecording = () => {
+    // In a real app, this would connect to the browser's speech recognition API
+    // For demonstration purposes, we'll just simulate recording
+    setFeedback(null);
+    console.log('Recording started...');
+  };
+  
+  const stopRecording = () => {
+    // Simulate speech recognition result
+    setTimeout(() => {
+      const sampleResponses = [
+        'Mi chiamo Marco e vengo da Roma.',
+        'Mi chiamo Sophia e vengo da Milano.',
+        'Mi chiamo Paolo e vengo da Firenze.'
+      ];
+      setTranscript(sampleResponses[Math.floor(Math.random() * sampleResponses.length)]);
+    }, 500);
     
-    loadUserData();
-  }, [toast, user]);
-
+    console.log('Recording stopped.');
+  };
+  
+  const evaluatePronunciation = () => {
+    // Simulate pronunciation evaluation
+    setFeedback('Buona pronuncia! Hai articolato bene le parole. Continua a praticare la fluidità.');
+  };
+  
+  const playPrompt = () => {
+    // In a real app, this would use text-to-speech
+    console.log('Playing prompt audio...');
+  };
+  
+  const getNewPrompt = () => {
+    const newPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+    setCurrentPrompt(newPrompt);
+    setTranscript('');
+    setFeedback(null);
+  };
+  
   return (
-    <AuthGuard>
+    <>
       <Helmet>
-        <title>Speaking Practice | ItalianMaster</title>
+        <title>Pratica di Conversazione | ItalianMaster</title>
       </Helmet>
       
-      <div className="container py-6 space-y-6 max-w-6xl">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Speaking Practice</h1>
+      <div className="container max-w-3xl py-8">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-2">Pratica di Conversazione</h1>
           <p className="text-muted-foreground">
-            Improve your Italian pronunciation and speaking skills with interactive exercises
+            Migliora la tua pronuncia e fluidità in italiano
           </p>
-          
-          {userStats && (
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="px-3 py-1">
-                Speaking Level: {userStats.speaking_score ? Math.floor(userStats.speaking_score / 20) + 1 : 1}
-              </Badge>
-              <Badge variant="outline" className="px-3 py-1">
-                Sessions: {userStats.practice_sessions}
-              </Badge>
-              {!isPremium() && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800">
-                  Free Account
-                </Badge>
-              )}
-            </div>
-          )}
         </div>
         
-        {isLoading ? (
-          <div className="flex items-center justify-center h-[200px]">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <Tabs defaultValue="practice" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="practice">Practice</TabsTrigger>
-              <TabsTrigger value="conversation">Conversation</TabsTrigger>
-              <TabsTrigger value="pronunciation">Pronunciation Drills</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="practice">
-              <SpeakingModule />
-            </TabsContent>
-            
-            <TabsContent value="conversation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Conversation Practice</CardTitle>
-                  <CardDescription>
-                    Practice real-life conversations in Italian with our AI conversation partner
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted p-8 rounded-lg text-center">
-                    <h3 className="text-lg font-medium mb-2">Premium Feature</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Upgrade to a premium account to access the AI conversation partner
-                    </p>
-                    <a href="/subscription" className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                      Upgrade to Premium
-                    </a>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Prompt di Conversazione</CardTitle>
+              <CardDescription>
+                Leggi e rispondi alla domanda ad alta voce
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-lg font-medium">{currentPrompt}</p>
+                <Button variant="ghost" size="icon" onClick={playPrompt}>
+                  <Volume className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button
+                  variant={isRecording ? "destructive" : "default"}
+                  className="flex-1"
+                  onClick={toggleRecording}
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="h-5 w-5 mr-2" />
+                      Ferma Registrazione
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-5 w-5 mr-2" />
+                      Inizia a Parlare
+                    </>
+                  )}
+                </Button>
+                
+                <Button variant="outline" onClick={getNewPrompt}>
+                  <RefreshCw className="h-5 w-5 mr-2" />
+                  Nuovo Prompt
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {transcript && (
+            <Card>
+              <CardHeader>
+                <CardTitle>La tua Risposta</CardTitle>
+                <CardDescription>
+                  Ecco cosa hai detto
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea 
+                  value={transcript} 
+                  onChange={(e) => setTranscript(e.target.value)} 
+                  rows={4}
+                  placeholder="La tua risposta apparirà qui..."
+                />
+                
+                <div className="flex justify-end">
+                  <Button onClick={evaluatePronunciation}>
+                    Valuta Pronuncia
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {feedback && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CardTitle>Feedback</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p>{feedback}</p>
+                
+                <div className="mt-4 bg-muted p-3 rounded-md border">
+                  <div className="flex items-start">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Suggerimento</p>
+                      <p className="text-sm text-muted-foreground">
+                        Ricorda di parlare lentamente e chiaramente. La pratica costante è la chiave per migliorare!
+                      </p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="pronunciation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pronunciation Drills</CardTitle>
-                  <CardDescription>
-                    Focused exercises to improve your Italian accent and pronunciation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Double Consonants</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">Practice properly pronouncing double consonants in Italian</p>
-                        <div className="mt-3 space-y-2">
-                          <div className="bg-muted p-2 rounded">bella vs. bela</div>
-                          <div className="bg-muted p-2 rounded">anno vs. ano</div>
-                          <div className="bg-muted p-2 rounded">fatto vs. fato</div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Rolled R Sound</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">Learn to properly roll your Rs in Italian words</p>
-                        <div className="mt-3 space-y-2">
-                          <div className="bg-muted p-2 rounded">Roma</div>
-                          <div className="bg-muted p-2 rounded">carro</div>
-                          <div className="bg-muted p-2 rounded">terra</div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-    </AuthGuard>
+    </>
   );
 }

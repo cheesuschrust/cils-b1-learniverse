@@ -1,398 +1,287 @@
 
+import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fetchUserProgress } from '@/integrations/supabase/client';
-import { Book, GraduationCap, Mic, BookOpen, Pen, Headphones, Star, Award, Clock, ArrowRight } from 'lucide-react';
-import { calculateCILSB1Readiness } from '@/lib/utils';
-import AuthGuard from '@/components/common/AuthGuard';
-
-const mockUserLevel = {
-  level: 'Intermediate (B1)',
-  progress: 68,
-  streak: 5,
-  totalXp: 2840,
-};
+import { 
+  BarChart, BookOpen, Calendar, CheckCircle2, 
+  Mic, GraduationCap, Book, Flag 
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const [userProgress, setUserProgress] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [readinessScore, setReadinessScore] = useState(0);
-
-  // Simulated section scores for CILS B1 readiness
-  const [sectionScores, setSectionScores] = useState({
-    'reading': 75,
-    'writing': 65,
-    'listening': 70,
-    'speaking': 60,
-    'grammar': 80,
-    'vocabulary': 85,
-    'culture': 55,
-    'citizenship': 50
-  });
-
-  useEffect(() => {
-    if (user) {
-      setIsLoading(true);
-      fetchUserProgress(user.id)
-        .then(data => {
-          setUserProgress(data);
-          
-          // Calculate readiness score from section scores
-          setReadinessScore(calculateCILSB1Readiness(sectionScores));
-        })
-        .catch(err => {
-          console.error('Error fetching user progress:', err);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
-  }, [user]);
-
   return (
-    <AuthGuard>
+    <>
       <Helmet>
         <title>Dashboard | ItalianMaster</title>
       </Helmet>
-      <div className="container py-8 max-w-6xl">
-        <div className="space-y-6">
-          {/* Header section */}
-          <div className="flex flex-col md:flex-row justify-between gap-4 md:items-end">
-            <div>
-              <h1 className="text-3xl font-bold">Ciao, {user?.firstName || 'Student'}!</h1>
-              <p className="text-muted-foreground">Continue your Italian language journey</p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button asChild>
-                <Link to="/flashcards">
-                  <Book className="mr-2 h-4 w-4" />
-                  Study Flashcards
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/progress">
-                  <GraduationCap className="mr-2 h-4 w-4" />
-                  View Progress
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* CILS B1 Readiness Card */}
+      
+      <div className="container py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Benvenuto, Studente!</h1>
+          <p className="text-muted-foreground">
+            Ecco i tuoi progressi e consigli per continuare a imparare.
+          </p>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* CILS B1 Progress Card */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center">
-                <Award className="mr-2 h-5 w-5 text-primary" />
-                CILS B1 Citizenship Exam Readiness
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <GraduationCap className="h-5 w-5 mr-2 text-primary" />
+                Preparazione CILS B1
               </CardTitle>
-              <CardDescription>
-                Track your progress toward the Italian citizenship language requirement
-              </CardDescription>
+              <CardDescription>Il tuo percorso per la certificazione</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Overall Readiness</span>
-                    <span className="text-sm font-medium">{readinessScore}%</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Progresso Complessivo</span>
+                    <Badge variant="outline">65%</Badge>
                   </div>
-                  <Progress value={readinessScore} />
+                  <Progress value={65} className="h-2" />
                 </div>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {Object.entries(sectionScores).map(([section, score]) => (
-                    <div key={section} className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground capitalize mb-1">{section}</div>
-                      <div className="text-lg font-semibold">{score}%</div>
-                      <Progress value={score} className="h-1.5 mt-1" />
+                <div className="grid gap-3 grid-cols-2">
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">Ascolto</span>
+                      <span className="text-xs">75%</span>
+                    </div>
+                    <Progress value={75} className="h-1.5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">Lettura</span>
+                      <span className="text-xs">80%</span>
+                    </div>
+                    <Progress value={80} className="h-1.5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">Scrittura</span>
+                      <span className="text-xs">60%</span>
+                    </div>
+                    <Progress value={60} className="h-1.5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">Parlato</span>
+                      <span className="text-xs">50%</span>
+                    </div>
+                    <Progress value={50} className="h-1.5" />
+                  </div>
+                </div>
+                
+                <Button asChild className="w-full">
+                  <Link to="/progress">Vedi Dettagli</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Citizenship Test Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Flag className="h-5 w-5 mr-2 text-primary" />
+                Test di Cittadinanza
+              </CardTitle>
+              <CardDescription>Preparazione per l'esame di cittadinanza</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-muted p-3 rounded-md space-y-1">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium">Ultimo Punteggio</p>
+                    <Badge variant="outline">3/5 corrette</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Completato il 1 Aprile 2025</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Progresso Materiale</span>
+                    <Badge variant="outline">60%</Badge>
+                  </div>
+                  <Progress value={60} className="h-2" />
+                </div>
+                
+                <Button asChild className="w-full">
+                  <Link to="/italian-citizenship-test">Fai un Test</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Speaking Practice Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Mic className="h-5 w-5 mr-2 text-primary" />
+                Pratica di Conversazione
+              </CardTitle>
+              <CardDescription>Migliora il tuo parlato italiano</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-muted p-3 rounded-md space-y-1">
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Ultimo Esercizio</p>
+                      <p className="text-xs text-muted-foreground">"Mi chiamo... e vengo da..."</p>
+                      <p className="text-xs text-green-600 font-medium">Buona pronuncia!</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Progressi Pronuncia</span>
+                    <Badge variant="outline">55%</Badge>
+                  </div>
+                  <Progress value={55} className="h-2" />
+                </div>
+                
+                <Button asChild className="w-full">
+                  <Link to="/speaking">Pratica Ora</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Streak Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Calendar className="h-5 w-5 mr-2 text-primary" />
+                La Tua Sequenza
+              </CardTitle>
+              <CardDescription>La tua attività di apprendimento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold">5</div>
+                    <div className="text-sm text-muted-foreground">Giorni consecutivi</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div 
+                      key={i}
+                      className={`h-8 rounded-md flex items-center justify-center text-xs font-medium ${
+                        i < 5 ? 'bg-primary/90 text-white' : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {['L', 'M', 'M', 'G', 'V', 'S', 'D'][i]}
                     </div>
                   ))}
                 </div>
                 
-                <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/italian-citizenship-test">
-                      Improve CILS readiness
-                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </div>
+                <Button variant="outline" className="w-full">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Vedi Calendario
+                </Button>
               </div>
             </CardContent>
           </Card>
-
-          {/* Activities Tabs */}
-          <Tabs defaultValue="learn">
-            <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4">
-              <TabsTrigger value="learn">Learn</TabsTrigger>
-              <TabsTrigger value="practice">Practice</TabsTrigger>
-              <TabsTrigger value="activities">Daily Activities</TabsTrigger>
-              <TabsTrigger value="recommended">Recommended</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="learn" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <BookOpen className="mr-2 h-4 w-4 text-primary" />
-                      Reading
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground">Improve your reading comprehension with Italian texts</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/reading">Start Reading</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <Pen className="mr-2 h-4 w-4 text-primary" />
-                      Writing
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground">Practice written Italian with guided exercises</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/writing">Start Writing</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <Mic className="mr-2 h-4 w-4 text-primary" />
-                      Speaking
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground">Improve your pronunciation and speaking skills</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/speaking">Start Speaking</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <Headphones className="mr-2 h-4 w-4 text-primary" />
-                      Listening
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground">Train your ear with Italian audio exercises</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/listening">Start Listening</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="practice" className="space-y-4">
-              {/* Practice mode content */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Flashcards</CardTitle>
-                    <CardDescription>Practice your vocabulary with spaced repetition</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-2xl font-bold">24</p>
-                        <p className="text-sm text-muted-foreground">cards due today</p>
-                      </div>
-                      <Badge variant="outline">B1 Level</Badge>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/flashcards">Study Now</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Daily Question</CardTitle>
-                    <CardDescription>Test your knowledge with a daily challenge</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-2xl font-bold">1</p>
-                        <p className="text-sm text-muted-foreground">question available</p>
-                      </div>
-                      <Badge variant="secondary">New</Badge>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" asChild>
-                      <Link to="/daily-question">Answer</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="activities" className="space-y-4">
-              {/* Activities content */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Star className="h-6 w-6 text-primary" />
+          
+          {/* Statistics Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <BarChart className="h-5 w-5 mr-2 text-primary" />
+                Statistiche di Apprendimento
+              </CardTitle>
+              <CardDescription>I tuoi dati di apprendimento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted p-3 rounded-md text-center">
+                    <div className="text-2xl font-bold">120</div>
+                    <div className="text-xs text-muted-foreground">Parole Imparate</div>
                   </div>
-                  <div>
-                    <p className="font-medium">Current Streak</p>
-                    <p className="text-2xl font-bold">{mockUserLevel.streak} days</p>
+                  <div className="bg-muted p-3 rounded-md text-center">
+                    <div className="text-2xl font-bold">35</div>
+                    <div className="text-xs text-muted-foreground">Quiz Completati</div>
+                  </div>
+                  <div className="bg-muted p-3 rounded-md text-center">
+                    <div className="text-2xl font-bold">12</div>
+                    <div className="text-xs text-muted-foreground">Ore di Studio</div>
+                  </div>
+                  <div className="bg-muted p-3 rounded-md text-center">
+                    <div className="text-2xl font-bold">85%</div>
+                    <div className="text-xs text-muted-foreground">Risposte Corrette</div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Clock className="mr-2 h-4 w-4" />
-                  Activity History
+                
+                <Button variant="outline" className="w-full">
+                  <BarChart className="h-4 w-4 mr-2" />
+                  Analisi Dettagliata
                 </Button>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg">Reading Goal</CardTitle>
-                      <Badge>5/15 min</Badge>
+            </CardContent>
+          </Card>
+          
+          {/* Resources Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Book className="h-5 w-5 mr-2 text-primary" />
+                Risorse Consigliate
+              </CardTitle>
+              <CardDescription>Materiali per continuare lo studio</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <ul className="space-y-2">
+                  <li className="bg-muted p-3 rounded-md">
+                    <div className="flex items-start">
+                      <BookOpen className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Grammatica italiana di base</p>
+                        <p className="text-xs text-muted-foreground">Rinforzo delle regole grammaticali</p>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <Progress value={33} className="h-2" />
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="ghost" size="sm" className="w-full" asChild>
-                      <Link to="/reading">Continue Reading</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
+                  </li>
+                  <li className="bg-muted p-3 rounded-md">
+                    <div className="flex items-start">
+                      <BookOpen className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Vocabolario CILS B1</p>
+                        <p className="text-xs text-muted-foreground">Parole e frasi per l'esame</p>
+                      </div>
+                    </div>
+                  </li>
+                  <li className="bg-muted p-3 rounded-md">
+                    <div className="flex items-start">
+                      <BookOpen className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Cultura italiana</p>
+                        <p className="text-xs text-muted-foreground">Storia e tradizioni italiane</p>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
                 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg">Speaking Goal</CardTitle>
-                      <Badge>0/10 min</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <Progress value={0} className="h-2" />
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="ghost" size="sm" className="w-full" asChild>
-                      <Link to="/speaking">Start Speaking</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg">Vocabulary Goal</CardTitle>
-                      <Badge>12/20 words</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <Progress value={60} className="h-2" />
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="ghost" size="sm" className="w-full" asChild>
-                      <Link to="/flashcards">Study Flashcards</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <Button variant="outline" className="w-full">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Tutte le Risorse
+                </Button>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="recommended" className="space-y-4">
-              {/* Recommended content based on level and progress */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recommended for CILS B1 Preparation</CardTitle>
-                  <CardDescription>Based on your recent progress and areas to improve</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    <li className="p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-full">
-                            <Mic className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          </div>
-                          <div>
-                            <p className="font-medium">Speaking Practice: Citizenship Questions</p>
-                            <p className="text-sm text-muted-foreground">Improve your speaking confidence for the citizenship interview</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">Priority</Badge>
-                      </div>
-                    </li>
-                    <li className="p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-amber-100 dark:bg-amber-900/20 p-2 rounded-full">
-                            <Pen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                          </div>
-                          <div>
-                            <p className="font-medium">Writing Exercise: Formal Letters</p>
-                            <p className="text-sm text-muted-foreground">Practice formal writing required for the B1 exam</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">Recommended</Badge>
-                      </div>
-                    </li>
-                    <li className="p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-green-100 dark:bg-green-900/20 p-2 rounded-full">
-                            <BookOpen className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div>
-                            <p className="font-medium">Italian Culture: Regional Differences</p>
-                            <p className="text-sm text-muted-foreground">Expand your cultural knowledge for the citizenship test</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">Supplementary</Badge>
-                      </div>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="ghost" size="sm" className="w-full">
-                    See All Recommendations <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </AuthGuard>
+    </>
   );
 }

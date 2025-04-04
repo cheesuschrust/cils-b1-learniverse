@@ -1,6 +1,4 @@
 
-import { toast } from 'sonner';
-
 type ToastOptions = {
   title: string;
   description?: string;
@@ -13,26 +11,12 @@ type ToastOptions = {
 
 export function useToast() {
   const showToast = ({ title, description, variant = 'default', action }: ToastOptions) => {
-    if (variant === 'destructive') {
-      toast.error(title, {
-        description,
-        action: action ? {
-          label: action.label,
-          onClick: action.onClick,
-        } : undefined,
-      });
-    } else {
-      toast(title, {
-        description,
-        action: action ? {
-          label: action.label,
-          onClick: action.onClick,
-        } : undefined,
-      });
-    }
+    console.log('Toast:', { title, description, variant, action });
+    // In a real implementation, this would show a toast notification
   };
 
   return {
     toast: showToast,
+    toasts: []
   };
 }

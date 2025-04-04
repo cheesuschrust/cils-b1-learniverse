@@ -1,193 +1,115 @@
 
 import { Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { 
-  Book, 
-  Headphones, 
-  Pen, 
-  Mic, 
-  Award, 
-  Home, 
-  Menu, 
-  X, 
-  LogOut,
-  User
-} from 'lucide-react';
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
+import {
+  Book,
+  Home,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Settings,
+  FileText,
+  Mic,
+  Flag
+} from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { useAuth } from '@/contexts/AuthContext';
 
-const MainLayout = () => {
+export default function MainLayout() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const { user, logout } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
 
-  const closeMenu = () => setIsOpen(false);
-
-  const handleLogout = async () => {
-    await logout();
-  };
-
-  const navigationItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: <Home className="h-5 w-5" /> },
-    { href: '/flashcards', label: 'Flashcards', icon: <Book className="h-5 w-5" /> },
-    { href: '/speaking', label: 'Speaking', icon: <Mic className="h-5 w-5" /> },
-    { href: '/writing', label: 'Writing', icon: <Pen className="h-5 w-5" /> },
-    { href: '/listening', label: 'Listening', icon: <Headphones className="h-5 w-5" /> },
-    { 
-      href: '/italian-citizenship-test', 
-      label: 'Citizenship Test', 
-      icon: <Award className="h-5 w-5" />,
-      badge: 'B1'
-    },
+  const navItems = [
+    { name: 'Dashboard', path: '/dashboard', icon: <Home className="w-5 h-5" /> },
+    { name: 'Speaking', path: '/speaking', icon: <Mic className="w-5 h-5" /> },
+    { name: 'Italian Citizenship Test', path: '/italian-citizenship-test', icon: <Flag className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Mobile Navigation */}
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild className="md:hidden">
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-40">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0">
-          <div className="flex flex-col h-full">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">ItalianMaster</h2>
-                <Button variant="ghost" size="icon" onClick={closeMenu}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <nav className="flex-1 overflow-auto p-2">
-              {navigationItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground mb-1"
-                  onClick={closeMenu}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <Badge variant="outline" className="ml-auto">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </a>
-              ))}
-            </nav>
-            
-            <div className="p-4 mt-auto border-t">
-              {user ? (
-                <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{user.firstName || user.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.isPremiumUser ? 'Premium Member' : 'Free Account'}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Log Out
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Button asChild className="w-full">
-                    <a href="/login">Log In</a>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b shadow-sm">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <Link to="/" className="flex items-center space-x-2">
+            <Book className="h-6 w-6 text-primary" />
+            <span className="font-bold text-xl">ItalianMaster</span>
+          </Link>
 
-      {/* Desktop Navigation */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r">
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-bold">ItalianMaster</h2>
-            <p className="text-xs text-muted-foreground">CILS B1 Prep</p>
-          </div>
-          
-          <nav className="flex-1 overflow-auto p-3 space-y-1">
-            {navigationItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-muted",
-                  location.pathname === item.href
-                    ? "bg-muted text-foreground font-medium"
-                    : "text-muted-foreground"
+                  "flex items-center space-x-1 font-medium transition-colors hover:text-primary",
+                  location.pathname === item.path ? "text-primary" : "text-gray-600"
                 )}
               >
                 {item.icon}
-                <span>{item.label}</span>
-                {item.badge && (
-                  <Badge variant="outline" className="ml-auto">
-                    {item.badge}
-                  </Badge>
-                )}
-              </a>
+                <span>{item.name}</span>
+              </Link>
             ))}
           </nav>
-          
-          <Separator />
-          
-          <div className="p-4">
-            {user ? (
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{user.firstName || user.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.isPremiumUser ? 'Premium Member' : 'Free Account'}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Log Out
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <Button asChild>
-                  <a href="/login">Log In</a>
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href="/signup">Sign Up</a>
-                </Button>
-              </div>
-            )}
+
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t">
+            <div className="container mx-auto px-4 py-3">
+              <nav className="flex flex-col space-y-3">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      "flex items-center space-x-3 p-2 rounded-md",
+                      location.pathname === item.path
+                        ? "bg-primary/5 text-primary"
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1">
+        <Outlet />
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t py-6">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-gray-500 text-sm">
+            &copy; {new Date().getFullYear()} ItalianMaster. All rights reserved.
           </div>
         </div>
-      </div>
+      </footer>
 
-      {/* Main Content Area */}
-      <div className="md:pl-64 w-full">
-        <main>
-          <Outlet />
-        </main>
-      </div>
+      <Toaster />
     </div>
   );
-};
-
-export default MainLayout;
+}
