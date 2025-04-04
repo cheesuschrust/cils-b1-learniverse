@@ -12,6 +12,8 @@ interface UseApiOptions<T> extends ApiRequestOptions {
   showErrorToast?: boolean;
   showSuccessToast?: boolean;
   successMessage?: string;
+  cacheKey?: string;
+  cacheTtl?: number; // Time to live in milliseconds
 }
 
 export function useApi<T = any>(
@@ -34,11 +36,41 @@ export function useApi<T = any>(
     showErrorToast = true,
     showSuccessToast = false,
     successMessage,
+    cacheKey,
+    cacheTtl = 5 * 60 * 1000, // 5 minutes default
     ...apiOptions
   } = options;
   
   const fetchData = useCallback(
     async (overrideOptions?: ApiRequestOptions) => {
+      // Check if we have a cached response
+      if (cacheKey) {
+        try {
+          const cachedResponse = localStorage.getItem(`api_cache_${cacheKey}`);
+          if (cachedResponse) {
+            const { data, timestamp } = JSON.parse(cachedResponse);
+            const isExpired = Date.now() - timestamp > cacheTtl;
+            
+            if (!isExpired) {
+              setResponse({
+                data,
+                error: null,
+                loading: false,
+                fromCache: true
+              });
+              
+              if (onSuccess) onSuccess(data);
+              
+              // If we're offline, don't try to fetch
+              if (!navigator.onLine) return { data, error: null };
+            }
+          }
+        } catch (error) {
+          console.warn('Error reading from cache:', error);
+          // Continue with the fetch if cache fails
+        }
+      }
+      
       setResponse(prev => ({ ...prev, loading: true }));
       
       try {
@@ -70,11 +102,31 @@ export function useApi<T = any>(
             });
           }
           
+          // Log error to monitoring service
+          errorMonitoring.captureError(result.error, {
+            context: `API Request: ${endpoint}`,
+            endpoint,
+            requestBody: apiOptions.body ? JSON.stringify(apiOptions.body) : undefined
+          });
+          
           return result;
         }
         
-        if (result.data && onSuccess) {
-          onSuccess(result.data);
+        // Cache successful responses if cacheKey is provided
+        if (cacheKey && result.data) {
+          try {
+            localStorage.setItem(`api_cache_${cacheKey}`, JSON.stringify({
+              data: result.data,
+              timestamp: Date.now()
+            }));
+          } catch (error) {
+            console.warn('Error writing to cache:', error);
+            // Continue even if caching fails
+          }
+        }
+        
+        if (result.data) {
+          if (onSuccess) onSuccess(result.data);
           
           if (showSuccessToast && successMessage) {
             toast({
@@ -87,286 +139,76 @@ export function useApi<T = any>(
         
         return result;
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const errorObj = error instanceof Error ? error : new Error(String(error));
         
         setResponse({
           data: null,
-          error: err,
+          error: errorObj,
           loading: false,
           fromCache: false
         });
         
-        if (onError) onError(err);
+        if (onError) onError(errorObj);
         
         if (showErrorToast) {
           toast({
             title: "Error",
-            description: err.message,
+            description: errorObj.message || "An unexpected error occurred",
             variant: "destructive"
           });
         }
         
-        errorMonitoring.captureError(err, undefined, 'api', { endpoint });
+        // Log error to monitoring service
+        errorMonitoring.captureError(errorObj, {
+          context: `API Request: ${endpoint}`,
+          endpoint,
+          requestBody: apiOptions.body ? JSON.stringify(apiOptions.body) : undefined
+        });
         
         return {
           data: null,
-          error: err,
+          error: errorObj,
           loading: false,
           fromCache: false
         };
       }
     },
-    [endpoint, apiOptions, user, onSuccess, onError, showErrorToast, showSuccessToast, successMessage, toast]
+    [endpoint, apiOptions, user, onSuccess, onError, showErrorToast, showSuccessToast, 
+     successMessage, toast, cacheKey, cacheTtl]
   );
   
-  // Function to manually trigger fetch with optional different options
-  const refetch = useCallback(
-    (overrideOptions?: ApiRequestOptions) => {
-      return fetchData(overrideOptions);
-    },
-    [fetchData]
-  );
-  
-  // Initial fetch effect
+  // Fetch data on mount if shouldFetch is true
   useEffect(() => {
     if (shouldFetch) {
       fetchData();
     }
   }, [shouldFetch, fetchData]);
   
+  // Utility function to clear cache for this endpoint
+  const clearCache = useCallback(() => {
+    if (cacheKey) {
+      localStorage.removeItem(`api_cache_${cacheKey}`);
+    }
+  }, [cacheKey]);
+  
+  // Re-fetch when coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      if (shouldFetch) {
+        fetchData();
+      }
+    };
+    
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [shouldFetch, fetchData]);
+  
   return {
     ...response,
-    refetch,
-    isLoading: response.loading,
-    isError: !!response.error,
-    isOffline: !navigator.onLine
+    refetch: fetchData,
+    clearCache
   };
 }
-
-export function useCreate<T = any, D = any>(
-  endpoint: string,
-  options: Omit<UseApiOptions<T>, 'method'> = {}
-) {
-  const [isCreating, setIsCreating] = useState(false);
-  const { toast } = useToast();
-  
-  const create = useCallback(
-    async (data: D) => {
-      setIsCreating(true);
-      
-      try {
-        const result = await apiRequest<T>(endpoint, {
-          method: 'POST',
-          body: data,
-          ...options
-        });
-        
-        if (result.error) {
-          if (options.onError) options.onError(result.error);
-          
-          if (options.showErrorToast !== false) {
-            toast({
-              title: "Error",
-              description: result.error.message,
-              variant: "destructive"
-            });
-          }
-          
-          setIsCreating(false);
-          return result;
-        }
-        
-        if (result.data && options.onSuccess) {
-          options.onSuccess(result.data);
-        }
-        
-        if (options.showSuccessToast && options.successMessage) {
-          toast({
-            title: "Success",
-            description: options.successMessage,
-            variant: "default"
-          });
-        }
-        
-        setIsCreating(false);
-        return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        
-        if (options.onError) options.onError(err);
-        
-        if (options.showErrorToast !== false) {
-          toast({
-            title: "Error",
-            description: err.message,
-            variant: "destructive"
-          });
-        }
-        
-        setIsCreating(false);
-        return {
-          data: null,
-          error: err,
-          loading: false,
-          fromCache: false
-        };
-      }
-    },
-    [endpoint, options, toast]
-  );
-  
-  return { create, isCreating };
-}
-
-export function useUpdate<T = any, D = any>(
-  endpoint: string,
-  options: Omit<UseApiOptions<T>, 'method'> = {}
-) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const { toast } = useToast();
-  
-  const update = useCallback(
-    async (id: string, data: D) => {
-      setIsUpdating(true);
-      
-      try {
-        const updateEndpoint = `${endpoint}/${id}`;
-        const result = await apiRequest<T>(updateEndpoint, {
-          method: 'PUT',
-          body: data,
-          ...options
-        });
-        
-        if (result.error) {
-          if (options.onError) options.onError(result.error);
-          
-          if (options.showErrorToast !== false) {
-            toast({
-              title: "Error",
-              description: result.error.message,
-              variant: "destructive"
-            });
-          }
-          
-          setIsUpdating(false);
-          return result;
-        }
-        
-        if (result.data && options.onSuccess) {
-          options.onSuccess(result.data);
-        }
-        
-        if (options.showSuccessToast && options.successMessage) {
-          toast({
-            title: "Success",
-            description: options.successMessage,
-            variant: "default"
-          });
-        }
-        
-        setIsUpdating(false);
-        return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        
-        if (options.onError) options.onError(err);
-        
-        if (options.showErrorToast !== false) {
-          toast({
-            title: "Error",
-            description: err.message,
-            variant: "destructive"
-          });
-        }
-        
-        setIsUpdating(false);
-        return {
-          data: null,
-          error: err,
-          loading: false,
-          fromCache: false
-        };
-      }
-    },
-    [endpoint, options, toast]
-  );
-  
-  return { update, isUpdating };
-}
-
-export function useDelete<T = any>(
-  endpoint: string,
-  options: Omit<UseApiOptions<T>, 'method'> = {}
-) {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
-  
-  const remove = useCallback(
-    async (id: string) => {
-      setIsDeleting(true);
-      
-      try {
-        const deleteEndpoint = `${endpoint}/${id}`;
-        const result = await apiRequest<T>(deleteEndpoint, {
-          method: 'DELETE',
-          ...options
-        });
-        
-        if (result.error) {
-          if (options.onError) options.onError(result.error);
-          
-          if (options.showErrorToast !== false) {
-            toast({
-              title: "Error",
-              description: result.error.message,
-              variant: "destructive"
-            });
-          }
-          
-          setIsDeleting(false);
-          return result;
-        }
-        
-        if (result.data && options.onSuccess) {
-          options.onSuccess(result.data);
-        }
-        
-        if (options.showSuccessToast && options.successMessage) {
-          toast({
-            title: "Success",
-            description: options.successMessage,
-            variant: "default"
-          });
-        }
-        
-        setIsDeleting(false);
-        return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        
-        if (options.onError) options.onError(err);
-        
-        if (options.showErrorToast !== false) {
-          toast({
-            title: "Error",
-            description: err.message,
-            variant: "destructive"
-          });
-        }
-        
-        setIsDeleting(false);
-        return {
-          data: null,
-          error: err,
-          loading: false,
-          fromCache: false
-        };
-      }
-    },
-    [endpoint, options, toast]
-  );
-  
-  return { remove, isDeleting };
-}
-
-export default useApi;
