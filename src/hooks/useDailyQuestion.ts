@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase-client';
-import { format, isAfter, isSameDay } from 'date-fns';
+import { format, isAfter, isSameDay, addDays, differenceInDays } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
 interface DailyQuestion {
@@ -15,9 +15,27 @@ interface DailyQuestion {
   difficulty: string;
   question_date: string;
   is_premium: boolean;
+  question_type: 'multiple_choice' | 'fill_blank' | 'reorder' | 'listening' | 'reading' | 'citizenship';
 }
 
-export const useDailyQuestion = () => {
+interface UseDailyQuestionReturn {
+  todaysQuestion: DailyQuestion | null;
+  isLoading: boolean;
+  hasCompletedToday: boolean;
+  streak: number;
+  lastCompletionDate: Date | null;
+  isCorrect: boolean | null;
+  selectedAnswer: string | null;
+  setSelectedAnswer: (answer: string | null) => void;
+  submitAnswer: (answer: string) => Promise<boolean>;
+  resetQuestion: () => Promise<void>;
+  refreshQuestion: () => Promise<void>;
+  questionsRemaining: number;
+  dailyLimit: number;
+  isLimitReached: boolean;
+}
+
+export const useDailyQuestion = (): UseDailyQuestionReturn => {
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -29,6 +47,9 @@ export const useDailyQuestion = () => {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [userTimezone, setUserTimezone] = useState<string>('UTC');
+  const [questionsRemaining, setQuestionsRemaining] = useState<number>(5);
+  const [dailyLimit, setDailyLimit] = useState<number>(5);
+  const [isLimitReached, setIsLimitReached] = useState<boolean>(false);
 
   // Get user's timezone
   useEffect(() => {
@@ -48,20 +69,159 @@ export const useDailyQuestion = () => {
       // Get today's date in the user's timezone
       const now = new Date();
       const today = format(utcToZonedTime(now, userTimezone), 'yyyy-MM-dd');
+      
+      // Check if user has reached daily limit (for free users)
+      if (user) {
+        const isPremium = await checkIsPremiumUser(user.id);
+        
+        // Get count of questions answered today
+        const { count, error: countError } = await supabase
+          .from('user_progress')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('last_activity', `${today}T00:00:00`)
+          .lt('last_activity', `${format(addDays(new Date(today), 1), 'yyyy-MM-dd')}T00:00:00`);
+        
+        if (countError) throw countError;
+        
+        const limit = isPremium ? 20 : 5; // Premium users get more questions
+        setDailyLimit(limit);
+        setQuestionsRemaining(Math.max(0, limit - (count || 0)));
+        setIsLimitReached((count || 0) >= limit && !isPremium);
+        
+        // If limit reached and not premium, don't fetch a question
+        if ((count || 0) >= limit && !isPremium) {
+          setIsLoading(false);
+          return;
+        }
+      }
 
-      // Fetch today's question from the database
+      // Fetch question categories from user progress to determine where they need help
+      let questionCategory = 'grammar'; // Default
+      let difficulty = 'intermediate'; // Default
+      
+      if (user) {
+        // Get user performance across categories
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('content_id, score')
+          .eq('user_id', user.id)
+          .order('last_activity', { ascending: false })
+          .limit(20);
+          
+        if (progressData && progressData.length > 0) {
+          // Get content details for these progress entries
+          const contentIds = progressData.map(p => p.content_id);
+          const { data: contentData } = await supabase
+            .from('learning_content')
+            .select('category_id, difficulty')
+            .in('id', contentIds);
+            
+          if (contentData && contentData.length > 0) {
+            // Calculate average scores by category
+            const categoryScores: Record<string, { total: number, count: number }> = {};
+            
+            for (let i = 0; i < progressData.length; i++) {
+              const progress = progressData[i];
+              const content = contentData.find(c => c.id === progress.content_id);
+              
+              if (content && content.category_id) {
+                if (!categoryScores[content.category_id]) {
+                  categoryScores[content.category_id] = { total: 0, count: 0 };
+                }
+                
+                categoryScores[content.category_id].total += progress.score || 0;
+                categoryScores[content.category_id].count += 1;
+              }
+            }
+            
+            // Find category with lowest average score
+            let lowestScore = 100;
+            let lowestCategory = '';
+            
+            Object.entries(categoryScores).forEach(([category, stats]) => {
+              const average = stats.total / stats.count;
+              if (average < lowestScore) {
+                lowestScore = average;
+                lowestCategory = category;
+              }
+            });
+            
+            if (lowestCategory) {
+              // Get category name from category_id
+              const { data: categoryData } = await supabase
+                .from('content_categories')
+                .select('name')
+                .eq('id', lowestCategory)
+                .single();
+                
+              if (categoryData) {
+                questionCategory = categoryData.name.toLowerCase();
+              }
+            }
+            
+            // Determine appropriate difficulty
+            const averageScore = progressData.reduce((sum, p) => sum + (p.score || 0), 0) / progressData.length;
+            if (averageScore < 60) difficulty = 'beginner';
+            else if (averageScore > 80) difficulty = 'advanced';
+            else difficulty = 'intermediate';
+          }
+        }
+      }
+
+      // Fetch today's question from the database with adaptive difficulty and category
       const { data: questionData, error: questionError } = await supabase
         .from('daily_questions')
         .select('*')
         .eq('question_date', today)
+        .eq('category', questionCategory)
+        .eq('difficulty', difficulty)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (questionError && questionError.code !== 'PGRST116') {
-        throw questionError;
+        // If no exact match for today, get a question from any date that matches category and difficulty
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('daily_questions')
+          .select('*')
+          .eq('category', questionCategory)
+          .eq('difficulty', difficulty)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (fallbackError && fallbackError.code !== 'PGRST116') {
+          throw fallbackError;
+        }
+        
+        if (fallbackData) {
+          setTodaysQuestion({ ...fallbackData, question_date: today });
+        } else {
+          // If still no match, get any question
+          const { data: anyData, error: anyError } = await supabase
+            .from('daily_questions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (anyError && anyError.code !== 'PGRST116') {
+            throw anyError;
+          }
+          
+          if (anyData) {
+            setTodaysQuestion({ ...anyData, question_date: today });
+          } else {
+            setTodaysQuestion(null);
+          }
+        }
+      } else if (questionData) {
+        setTodaysQuestion(questionData);
       }
 
       // If user is logged in, check if they have already completed today's question
-      if (user) {
+      if (user && todaysQuestion) {
         const { data: userStatsData, error: userStatsError } = await supabase
           .from('user_stats')
           .select('streak_days, last_activity_date')
@@ -88,12 +248,12 @@ export const useDailyQuestion = () => {
         }
 
         // If there's a today's question, check if the user has already answered it
-        if (questionData) {
+        if (todaysQuestion) {
           const { data: userAnswersData, error: userAnswersError } = await supabase
             .from('user_progress')
             .select('*')
             .eq('user_id', user.id)
-            .eq('content_id', questionData.id)
+            .eq('content_id', todaysQuestion.id)
             .single();
 
           if (userAnswersError && userAnswersError.code !== 'PGRST116') {
@@ -107,9 +267,6 @@ export const useDailyQuestion = () => {
           }
         }
       }
-
-      // Set today's question
-      setTodaysQuestion(questionData || null);
     } catch (error) {
       console.error('Error fetching daily question:', error);
       toast({
@@ -120,7 +277,19 @@ export const useDailyQuestion = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, toast, userTimezone]);
+  }, [user, toast, userTimezone, todaysQuestion]);
+
+  // Helper to check if user is premium
+  const checkIsPremiumUser = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('is_premium_user', { user_id: userId });
+      if (error) throw error;
+      return !!data;
+    } catch (e) {
+      console.error('Error checking premium status:', e);
+      return false;
+    }
+  };
 
   // Load the question on component mount and when user or timezone changes
   useEffect(() => {
@@ -158,6 +327,12 @@ export const useDailyQuestion = () => {
 
       if (progressError) throw progressError;
 
+      // Update question limit count
+      setQuestionsRemaining(prev => Math.max(0, prev - 1));
+      if (questionsRemaining <= 1 && !(await checkIsPremiumUser(user.id))) {
+        setIsLimitReached(true);
+      }
+
       // Update user stats
       const today = new Date();
       const { data: userStatsData, error: statsGetError } = await supabase
@@ -189,6 +364,21 @@ export const useDailyQuestion = () => {
           // If last activity was today, maintain streak
           else if (isSameDay(lastActivityDate, today)) {
             newStreak = userStatsData.streak_days || 1;
+          }
+          // If last activity was within 1-3 days ago and user is premium, maintain streak (streak protection)
+          else if (await checkIsPremiumUser(user.id)) {
+            const daysSinceLastActivity = differenceInDays(today, lastActivityDate);
+            if (daysSinceLastActivity > 0 && daysSinceLastActivity <= 3) {
+              newStreak = userStatsData.streak_days || 1;
+              // Notify user of streak protection
+              toast({
+                title: 'Streak Protected!',
+                description: 'As a premium user, your streak is protected for up to 3 days of inactivity.',
+                variant: 'default',
+              });
+            } else {
+              newStreak = 1; // Reset streak if more than 3 days
+            }
           }
           // Otherwise reset streak to 1
           else {
@@ -235,7 +425,13 @@ export const useDailyQuestion = () => {
           description: `You've maintained a ${newStreak}-day streak. Keep it up!`,
           variant: 'default',
         });
+        
+        // Check for streak achievements and award XP
+        checkAndAwardStreakAchievements(user.id, newStreak);
       }
+
+      // Award XP for completing the daily question
+      awardXpForDailyQuestion(user.id, isAnswerCorrect);
 
       return isAnswerCorrect;
     } catch (error) {
@@ -246,6 +442,89 @@ export const useDailyQuestion = () => {
         variant: 'destructive',
       });
       return false;
+    }
+  };
+
+  // Award XP for completing daily questions
+  const awardXpForDailyQuestion = async (userId: string, isCorrect: boolean) => {
+    try {
+      const baseXp = isCorrect ? 10 : 5; // Base XP for correct/incorrect
+      let bonusXp = 0;
+      
+      // Streak bonuses
+      if (streak >= 7) bonusXp += 5;
+      if (streak >= 30) bonusXp += 10;
+      
+      const totalXp = baseXp + bonusXp;
+      
+      // Update user's XP in the database
+      await supabase.rpc('add_user_xp', { 
+        user_id: userId, 
+        xp_amount: totalXp, 
+        activity_type: 'daily_question'
+      });
+      
+      // Show XP gained toast
+      toast({
+        title: 'XP Earned!',
+        description: `You earned ${totalXp} XP for completing today's question.`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error awarding XP:', error);
+    }
+  };
+
+  // Check for and award streak achievements
+  const checkAndAwardStreakAchievements = async (userId: string, currentStreak: number) => {
+    try {
+      const streakMilestones = [
+        { days: 7, name: 'Weekly Warrior', xp: 50 },
+        { days: 30, name: 'Monthly Master', xp: 100 },
+        { days: 100, name: 'Century Club', xp: 500 },
+        { days: 365, name: 'Year Long Legend', xp: 1000 },
+      ];
+      
+      for (const milestone of streakMilestones) {
+        if (currentStreak === milestone.days) {
+          // Check if achievement already exists
+          const { data: existingAchievement } = await supabase
+            .from('user_achievements')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('achievement_name', milestone.name)
+            .single();
+            
+          if (!existingAchievement) {
+            // Award new achievement
+            await supabase
+              .from('user_achievements')
+              .insert({
+                user_id: userId,
+                achievement_name: milestone.name,
+                achievement_type: 'streak',
+                description: `Maintain a study streak for ${milestone.days} days`,
+                metadata: { streak_days: milestone.days, xp_awarded: milestone.xp }
+              });
+              
+            // Award XP
+            await supabase.rpc('add_user_xp', { 
+              user_id: userId, 
+              xp_amount: milestone.xp, 
+              activity_type: 'achievement'
+            });
+            
+            // Show achievement notification
+            toast({
+              title: '🏆 Achievement Unlocked!',
+              description: `${milestone.name}: You've maintained a ${milestone.days}-day streak!`,
+              variant: 'default',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking achievements:', error);
     }
   };
 
@@ -260,7 +539,7 @@ export const useDailyQuestion = () => {
       return;
     }
 
-    const isPremium = user.isPremiumUser;
+    const isPremium = await checkIsPremiumUser(user.id);
     
     if (!isPremium) {
       toast({
@@ -294,6 +573,10 @@ export const useDailyQuestion = () => {
       setHasCompletedToday(false);
       setIsCorrect(null);
       setSelectedAnswer(null);
+      
+      // Increase questions remaining count
+      setQuestionsRemaining(prev => prev + 1);
+      setIsLimitReached(false);
 
       toast({
         title: 'Question Reset',
@@ -322,6 +605,9 @@ export const useDailyQuestion = () => {
     submitAnswer,
     resetQuestion,
     refreshQuestion: fetchTodaysQuestion,
+    questionsRemaining,
+    dailyLimit,
+    isLimitReached
   };
 };
 

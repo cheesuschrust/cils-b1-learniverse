@@ -1,10 +1,8 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ModeToggle } from '@/components/ui/mode-toggle';
-import { Menu, X, User, LogOut, Settings, BarChart2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,171 +11,142 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import { ModeToggle } from '@/components/theme-toggle';
+import { NotificationCenter } from '@/components/ui/notification-center';
+import { User, Settings, LogOut, Home, Award, BarChart4 } from 'lucide-react';
+import { useGamificationContext } from '@/contexts/GamificationContext';
+import XPPointsDisplay from '@/components/gamification/XPPointsDisplay';
 
-const Header = () => {
-  const { user, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const Header: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { getCurrentXP } = useGamificationContext();
   
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+  
+  const getInitials = (name: string | null): string => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
-    <header className="bg-background border-b sticky top-0 z-40">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="text-xl font-bold">
-              CILS B1 Learniverse
-            </Link>
-          </div>
+    <header className="border-b bg-background sticky top-0 z-40">
+      <div className="container flex h-16 items-center justify-between py-4">
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="font-bold text-xl">CILS Prep</span>
+          </Link>
           
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Features
+          <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
+            <Link 
+              to="/dashboard"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Dashboard
             </Link>
-            <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Pricing
+            <Link 
+              to="/daily-questions"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Daily Practice
             </Link>
-            <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              About
+            <Link 
+              to="/progress"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Progress
             </Link>
-            <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Contact
+            <Link 
+              to="/achievements"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Achievements
             </Link>
           </nav>
-          
-          {/* Right Side Navigation */}
-          <div className="flex items-center space-x-4">
-            <ModeToggle />
-            
-            {user ? (
-              <div className="flex items-center">
-                <Button variant="outline" asChild className="mr-2 hidden md:flex">
-                  <Link to="/app/dashboard">Dashboard</Link>
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <User className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.firstName} {user.lastName}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/app/dashboard">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <path d="M9 3v18" />
-                        </svg>
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/app/profile">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/app/analytics">
-                        <BarChart2 className="mr-2 h-4 w-4" />
-                        Analytics
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/app/settings">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild className="hidden md:flex">
-                  <Link to="/login">Log In</Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/signup">Sign Up</Link>
-                </Button>
-              </div>
-            )}
-            
-            {/* Mobile menu button */}
-            <div className="flex md:hidden">
-              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </Button>
-            </div>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="hidden md:block">
+            <XPPointsDisplay xp={getCurrentXP()} />
           </div>
+          
+          <NotificationCenter />
+          <ModeToggle />
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="relative h-8 w-8 rounded-full"
+                data-testid="user-menu-button"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.avatar_url || ''} />
+                  <AvatarFallback>{getInitials(user?.display_name)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.display_name || 'User'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={() => navigate('/')}
+              >
+                <Home className="mr-2 h-4 w-4" />
+                <span>Home</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={() => navigate('/profile')}
+              >
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={() => navigate('/achievements')}
+              >
+                <Award className="mr-2 h-4 w-4" />
+                <span>Achievements</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={() => navigate('/analytics')}
+              >
+                <BarChart4 className="mr-2 h-4 w-4" />
+                <span>Statistics</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={() => navigate('/settings')}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="cursor-pointer" 
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      
-      {/* Mobile Navigation Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-background border-t">
-          <div className="container mx-auto px-4 py-4 space-y-4">
-            <Link to="/features" className="block py-2 text-base font-medium" onClick={() => setMobileMenuOpen(false)}>
-              Features
-            </Link>
-            <Link to="/pricing" className="block py-2 text-base font-medium" onClick={() => setMobileMenuOpen(false)}>
-              Pricing
-            </Link>
-            <Link to="/about" className="block py-2 text-base font-medium" onClick={() => setMobileMenuOpen(false)}>
-              About
-            </Link>
-            <Link to="/contact" className="block py-2 text-base font-medium" onClick={() => setMobileMenuOpen(false)}>
-              Contact
-            </Link>
-            
-            {!user && (
-              <div className="space-y-2 pt-2 border-t">
-                <Button asChild variant="outline" className="w-full">
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
-                </Button>
-              </div>
-            )}
-            
-            {user && (
-              <div className="space-y-2 pt-2 border-t">
-                <Button asChild variant="outline" className="w-full">
-                  <Link to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link to="/app/profile" onClick={() => setMobileMenuOpen(false)}>Profile</Link>
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => {
-                  logout();
-                  setMobileMenuOpen(false);
-                }}>
-                  Log Out
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   );
 };
