@@ -1,25 +1,15 @@
 
 import * as React from "react";
 
-type ToastActionElement = React.ReactElement<unknown>;
-
-export type ToastProps = {
-  id?: string;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: ToastActionElement;
-  variant?: "default" | "destructive" | "success" | "warning" | "info";
-  duration?: number;
-};
-
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 1000;
+const TOAST_REMOVE_DELAY = 1000 * 60 * 60 * 24;
 
-type ToasterToast = ToastProps & {
+export type ToasterToast = {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
-  action?: ToastActionElement;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive" | "success" | "warning" | "info";
 };
 
 const actionTypes = {
@@ -31,7 +21,7 @@ const actionTypes = {
 
 let count = 0;
 
-function genId() {
+function generateId() {
   count = (count + 1) % Number.MAX_VALUE;
   return count.toString();
 }
@@ -46,14 +36,15 @@ type Action =
   | {
       type: ActionType["UPDATE_TOAST"];
       toast: Partial<ToasterToast>;
+      id: string;
     }
   | {
       type: ActionType["DISMISS_TOAST"];
-      toastId?: string;
+      id: string;
     }
   | {
       type: ActionType["REMOVE_TOAST"];
-      toastId?: string;
+      id: string;
     };
 
 interface State {
@@ -74,53 +65,39 @@ const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
+          t.id === action.id ? { ...t, ...action.toast } : t
         ),
       };
 
     case actionTypes.DISMISS_TOAST: {
-      const { toastId } = action;
+      const { id } = action;
 
-      if (toastId) {
-        toastTimeouts.forEach((_, id) => {
-          if (id === toastId) {
-            toastTimeouts.delete(id);
-          }
-        });
-
-        return {
-          ...state,
-          toasts: state.toasts.map((t) =>
-            t.id === toastId
-              ? {
-                  ...t,
-                  open: false,
-                }
-              : t
-          ),
-        };
+      if (toastTimeouts.has(id)) {
+        clearTimeout(toastTimeouts.get(id));
+        toastTimeouts.delete(id);
       }
 
       return {
         ...state,
-        toasts: state.toasts.map((t) => ({
-          ...t,
-          open: false,
-        })),
+        toasts: state.toasts.map((t) =>
+          t.id === id ? { ...t, open: false } : t
+        ),
       };
     }
 
     case actionTypes.REMOVE_TOAST:
-      if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        };
+      if (toastTimeouts.has(action.id)) {
+        clearTimeout(toastTimeouts.get(action.id));
+        toastTimeouts.delete(action.id);
       }
+
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+        toasts: state.toasts.filter((t) => t.id !== action.id),
       };
+
+    default:
+      return state;
   }
 };
 
@@ -138,15 +115,16 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
-  const id = genId();
+  const id = generateId();
 
-  const update = (props: ToastProps) =>
+  const update = (props: Toast) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
-      toast: { ...props, id },
+      id,
+      toast: props,
     });
 
-  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id });
+  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, id });
 
   dispatch({
     type: actionTypes.ADD_TOAST,
@@ -154,9 +132,6 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      onOpenChange: (open: boolean) => {
-        if (!open) dismiss();
-      },
     },
   });
 
@@ -183,7 +158,7 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: (id: string) => dispatch({ type: actionTypes.DISMISS_TOAST, id }),
   };
 }
 
