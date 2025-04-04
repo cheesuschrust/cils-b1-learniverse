@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,13 +56,11 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
   const [levelUpDetails, setLevelUpDetails] = useState<{newLevel: number, oldLevel: number}>({newLevel: 0, oldLevel: 0});
   
-  // Load user's XP and level on initial load
   useEffect(() => {
     const loadUserXPAndLevel = async () => {
       if (!user) return;
       
       try {
-        // Fetch XP from database
         const { data: xpData, error: xpError } = await supabase
           .rpc('get_user_xp', { user_id: user.id });
           
@@ -72,7 +69,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
         const xp = xpData || 0;
         setCurrentXP(xp);
         
-        // Calculate level based on XP
         const { level } = calculateLevelProgress(xp);
         setUserLevel(level);
         
@@ -84,7 +80,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     loadUserXPAndLevel();
   }, [user]);
   
-  // Load user achievements
   useEffect(() => {
     const loadAchievements = async () => {
       if (!user) return;
@@ -92,7 +87,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
       setIsLoadingAchievements(true);
       
       try {
-        // Fetch user achievements from database
         const { data: userAchievements, error: achievementsError } = await supabase
           .from('user_achievements')
           .select('*')
@@ -100,8 +94,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
           
         if (achievementsError) throw achievementsError;
         
-        // Fetch available achievements
-        // In a real app, this would come from a database table
         const availableAchievements: Achievement[] = [
           {
             id: 'first_lesson',
@@ -173,7 +165,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
           }
         ];
         
-        // Mark which achievements are unlocked
         const mappedAchievements = availableAchievements.map(achievement => {
           const userAchievement = userAchievements?.find(
             ua => ua.achievement_name === achievement.title || ua.achievement_type === achievement.id
@@ -200,35 +191,28 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     loadAchievements();
   }, [user]);
   
-  // Add XP to user
   const addXP = async (amount: number, source: string) => {
     if (!user || amount <= 0) return;
     
     try {
-      // Calculate old and new levels
       const oldLevel = userLevel;
       
-      // Add XP to database
       await supabase.rpc('add_user_xp', { 
         user_id: user.id, 
         xp_amount: amount, 
         activity_type: source 
       });
       
-      // Update local XP state
       const newXP = currentXP + amount;
       setCurrentXP(newXP);
       
-      // Calculate new level
       const { level: newLevel } = calculateLevelProgress(newXP);
       setUserLevel(newLevel);
       
-      // Check if user leveled up
       if (newLevel > oldLevel) {
         showLevelUp(newLevel, oldLevel);
       }
       
-      // Show toast for XP gain
       toast({
         title: `+${amount} XP`,
         description: `You earned XP from ${source}`,
@@ -240,16 +224,13 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     }
   };
   
-  // Update user streak
   const updateStreak = async (hasActivity: boolean) => {
     if (!user || !hasActivity) return;
     
     try {
-      // In a real app, this would update the streak in the database
-      // For now, we'll just show a toast
       toast({
         title: 'Streak Maintained',
-        description: 'You've maintained your daily streak!',
+        description: 'You\'ve maintained your daily streak!',
         variant: 'default',
       });
     } catch (error) {
@@ -257,15 +238,13 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     }
   };
   
-  // Unlock an achievement
   const unlockAchievement = async (achievementId: string) => {
     if (!user) return;
     
     const achievement = achievements.find(a => a.id === achievementId);
-    if (!achievement || achievement.unlockedAt) return; // Already unlocked or doesn't exist
+    if (!achievement || achievement.unlockedAt) return;
     
     try {
-      // Save achievement to database
       const { error } = await supabase
         .from('user_achievements')
         .insert({
@@ -277,17 +256,14 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
         
       if (error) throw error;
       
-      // Update local state
       setAchievements(achievements.map(a => 
         a.id === achievementId 
           ? { ...a, unlockedAt: new Date() } 
           : a
       ));
       
-      // Show achievement unlocked dialog
       showAchievementUnlock(achievement);
       
-      // Add XP for achievement
       addXP(achievement.points, 'Achievement Unlocked');
       
     } catch (error) {
@@ -295,35 +271,28 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     }
   };
   
-  // Display achievement unlock dialog
   const showAchievementUnlock = (achievement: Achievement) => {
     setCurrentAchievement(achievement);
     setShowAchievementDialog(true);
     
-    // Auto-hide after 5 seconds
     setTimeout(() => {
       setShowAchievementDialog(false);
     }, 5000);
   };
   
-  // Display level up dialog
   const showLevelUp = (newLevel: number, oldLevel: number) => {
     setLevelUpDetails({ newLevel, oldLevel });
     setShowLevelUpDialog(true);
     
-    // Auto-hide after 5 seconds
     setTimeout(() => {
       setShowLevelUpDialog(false);
     }, 5000);
   };
   
-  // Get user level
   const getUserLevel = () => userLevel;
   
-  // Get current XP
   const getCurrentXP = () => currentXP;
   
-  // Render achievement icon
   const renderAchievementIcon = (iconName: string) => {
     switch (iconName) {
       case 'trophy': return <Trophy className="h-6 w-6 text-amber-500" />;
@@ -351,7 +320,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     >
       {children}
       
-      {/* Achievement Unlocked Dialog */}
       <Dialog open={showAchievementDialog} onOpenChange={setShowAchievementDialog}>
         <DialogContent className="sm:max-w-md">
           <motion.div 
@@ -394,7 +362,6 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
         </DialogContent>
       </Dialog>
       
-      {/* Level Up Dialog */}
       <Dialog open={showLevelUpDialog} onOpenChange={setShowLevelUpDialog}>
         <DialogContent className="sm:max-w-md">
           <motion.div 

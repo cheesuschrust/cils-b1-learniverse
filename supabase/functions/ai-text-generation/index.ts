@@ -1,12 +1,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { env } from "@huggingface/transformers";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+// Use URL imports for Deno instead of npm style imports
+// Remove the @huggingface/transformers import that's causing issues
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Configure environment for optimized performance
-env.allowLocalModels = true;
-env.useBrowserCache = true;
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
