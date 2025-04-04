@@ -1,122 +1,123 @@
 
-import { type AIOptions, type AIProcessingOptions, type AIServiceOptions } from './ai';
-import { type AppLevel } from './config-types';
-import { type ItalianLevel, type ItalianTestSection } from './italian-types';
+import { ReactNode } from 'react';
 
-/**
- * Italian language levels aligned with CILS certification
- */
-export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+// AI Settings
+export interface AISettings {
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+  showFeedback?: boolean;
+}
 
-/**
- * Question generation parameters
- */
+export interface AISettingsProps {
+  settings: AISettings;
+  onSettingsChange: (settings: AISettings) => void;
+  onSave?: () => void;
+  onReset?: () => void;
+}
+
+// Notification Types
+export type NotificationType = 
+  'achievement' | 'streak' | 'milestone' | 'reminder' | 'system' |
+  'info' | 'success' | 'warning' | 'error' | 'speaking' | 'listening';
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface NotificationAction {
+  id: string;
+  label: string;
+  action: () => void;
+  variant?: 'default' | 'outline' | 'secondary' | 'destructive' | 'link' | 'success' | 'warning';
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  createdAt: Date;
+  read: boolean;
+  link?: string;
+  actionLabel?: string;
+  actionHandler?: () => void;
+  expires?: Date;
+  metadata?: Record<string, any>;
+}
+
+// AI Processing options
+export interface AIProcessingOptions {
+  includeInTraining?: boolean;
+  returnRawResponse?: boolean;
+  language?: 'english' | 'italian' | 'both';
+  contentType?: string;
+}
+
+// AI Content processor props
+export interface AIContentProcessorProps {
+  settings?: AISettings;
+  onContentProcessed?: (result: any) => void;
+  onError?: (error: Error) => void;
+  defaultLanguage?: string;
+  contentType?: string;
+}
+
+// Feedback data
+export interface FeedbackData {
+  rating: number;
+  comment?: string;
+  category: string;
+  userId?: string;
+  context?: Record<string, any>;
+}
+
+// Question generation params
 export interface QuestionGenerationParams {
   topics: string[];
-  contentTypes: string[];
-  difficulty: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   count: number;
+  contentTypes: string[];
   isCitizenshipFocused?: boolean;
 }
 
-/**
- * Result of AI generation
- */
-export interface AIGenerationResult {
-  questions: AIQuestion[];
-  error?: string;
+// Italian specific question generation params
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
-/**
- * AI generated question
- */
+export type ContentType = 
+  'flashcards' | 
+  'multiple-choice' | 
+  'listening' | 
+  'writing' | 
+  'speaking' |
+  'pdf' |
+  'document' |
+  'video' |
+  'audio' |
+  'image' |
+  'unknown';
+
 export interface AIQuestion {
   id: string;
   text: string;
   options?: string[];
   correctAnswer: string;
   explanation?: string;
-  type: ItalianTestSection;
-  difficulty: ItalianLevel;
-  questionType: 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
+  type: string;
+  difficulty: string;
+  questionType: string;
   isCitizenshipRelevant: boolean;
 }
 
-/**
- * AI Utils Context Type
- */
-export interface AIUtilsContextType {
-  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
-  isGenerating: boolean;
-  remainingCredits: number;
-  usageLimit: number;
-}
+export type AIGeneratedQuestion = AIQuestion;
 
-/**
- * User interface
- */
-export interface User {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
-  photoURL?: string;
-  isPremiumUser: boolean;
-}
-
-/**
- * Authentication response
- */
-export interface AuthResponse {
-  user: User | null;
-  error?: string;
-  token?: string;
-}
-
-/**
- * Login credentials
- */
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-/**
- * Registration data
- */
-export interface RegisterData {
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-/**
- * React component that accepts children
- */
-export interface ChildrenProps {
-  children: React.ReactNode;
-}
-
-/**
- * Progress tracking interface
- */
-export interface ProgressData {
-  skill: ItalianTestSection;
+// Answer results for citizenship test
+export interface AnswerResults {
   score: number;
-  maxScore: number;
-  lastUpdated: Date;
-  confidence: number;
-}
-
-/**
- * CILS B1 exam section progress
- */
-export interface CILSExamProgress {
-  section: ItalianTestSection;
-  score: number;
-  requiredScore: number;
-  completed: boolean;
-  lastAttempt?: Date;
+  section: string;
+  timeSpent?: number;
 }

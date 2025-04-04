@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAI } from '@/hooks/useAI';
 import { useAuth } from '@/contexts/EnhancedAuthContext';
@@ -239,7 +238,7 @@ export const CitizenshipContentProcessor: React.FC<CitizenshipContentProcessorPr
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <h3 className="font-medium">Content Type</h3>
-                    <ConfidenceIndicator score={processedData.analysis.confidence * 100} />
+                    <ConfidenceIndicator value={processedData.analysis.confidence * 100} />
                   </div>
                   
                   <div className="p-4 bg-muted rounded-md">

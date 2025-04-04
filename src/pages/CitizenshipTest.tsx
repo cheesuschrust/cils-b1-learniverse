@@ -7,12 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CitizenshipContentProcessor } from '@/components/CitizenshipContentProcessor';
 import CitizenshipReadinessComponent from '@/components/CitizenshipReadinessComponent';
 import { ItalianPracticeComponent } from '@/components/ItalianPracticeComponent';
-import { AnswerResults } from '@/types/core-types';
+import { AnswerResults } from '@/types/app-types';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
 
 const CitizenshipTest: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>('practice');
   const [readinessScore, setReadinessScore] = useState<number>(65);
+  const { user } = useAuth();
   
   const handleCompletePractice = (results: AnswerResults) => {
     // Update readiness score based on practice results
@@ -56,6 +58,7 @@ const CitizenshipTest: React.FC = () => {
                 level="intermediate"
                 isCitizenshipMode={true}
                 onComplete={handleCompletePractice}
+                userId={user?.id || 'guest'}
               />
             </CardContent>
           </Card>
