@@ -1,9 +1,8 @@
 
-import React from 'react';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
-import { Mic, HelpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle, Mic } from 'lucide-react';
 
 interface SpeakingConfidenceIndicatorProps {
   confidenceScore: number;
@@ -75,7 +74,7 @@ const SpeakingConfidenceIndicator: React.FC<SpeakingConfidenceIndicatorProps> = 
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-3 w-3 text-muted-foreground" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                <TooltipContent side="top">
                   <p>This indicator shows how closely your speaking proficiency aligns with CILS {cils_level} requirements.</p>
                   <p className="mt-1">Minimum threshold: {levelThreshold}%</p>
                 </TooltipContent>
@@ -109,4 +108,5 @@ const SpeakingConfidenceIndicator: React.FC<SpeakingConfidenceIndicatorProps> = 
   );
 };
 
+export { SpeakingConfidenceIndicator };
 export default SpeakingConfidenceIndicator;

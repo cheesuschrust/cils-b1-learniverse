@@ -1,18 +1,25 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { AIGeneratedQuestion, ItalianTestSection, ItalianLevel } from '@/types/italian-types';
 import { AlertCircle, Check, ArrowRight } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { trackProgress } from '@/integrations/supabase/client';
+import { ItalianTestSection, ItalianLevel } from '@/types/italian-types';
 
 interface QuestionAnsweringComponentProps {
-  questions: AIGeneratedQuestion[];
+  questions: {
+    id: string;
+    text: string;
+    options: string[];
+    correctAnswer: string;
+    explanation?: string;
+  }[];
   contentType: ItalianTestSection;
-  onComplete: (score: number) => void;
+  onComplete: (result: { score: number; timeSpent: number }) => void;
   difficultyLevel: ItalianLevel;
   userId?: string;
 }
@@ -44,87 +51,77 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
     
     return () => {
       if (startTime) {
-        const questionTime = Math.floor((Date.now() - startTime) / 1000);
-        setTimeSpent(prev => prev + questionTime);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setTimeSpent(prev => prev + elapsed);
       }
     };
   }, [currentQuestionIndex]);
   
-  // Reset state when questions change
-  useEffect(() => {
-    setCurrentQuestionIndex(0);
-    setSelectedAnswer('');
-    setHasAnswered(false);
-    setCorrectAnswers(0);
-    setShowExplanation(false);
-    setTimeSpent(0);
-    setStartTime(Date.now());
-  }, [questions]);
-  
-  const handleAnswerSelect = (value: string) => {
-    if (!hasAnswered) {
-      setSelectedAnswer(value);
-    }
-  };
-  
-  const handleSubmitAnswer = () => {
+  const handleAnswer = () => {
     if (!selectedAnswer) {
       toast({
         title: "Please select an answer",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
     
-    // Record time for this question
+    // Calculate time spent on this question
     if (startTime) {
-      const questionTime = Math.floor((Date.now() - startTime) / 1000);
-      setTimeSpent(prev => prev + questionTime);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setTimeSpent(prev => prev + elapsed);
+      setStartTime(null);
     }
     
-    // Check if answer is correct
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
       toast({
         title: "Correct!",
-        variant: "success"
+        description: "Well done!",
+        variant: "default",
       });
     } else {
       toast({
         title: "Incorrect",
         description: `The correct answer is: ${currentQuestion.correctAnswer}`,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
     
     setHasAnswered(true);
     setShowExplanation(true);
-    
-    // Log the answer (would connect to analytics in a real app)
-    console.log('User answer:', {
-      userId,
-      questionId: currentQuestion.id,
-      answer: selectedAnswer,
-      correct: isCorrect,
-      timeSpent: startTime ? Math.floor((Date.now() - startTime) / 1000) : 0,
-      contentType,
-      difficulty: difficultyLevel
-    });
   };
   
-  const handleNextQuestion = () => {
+  const handleNext = () => {
+    // Track progress if userId is provided
+    if (userId) {
+      trackProgress({
+        user_id: userId,
+        content_id: `${contentType}-question-${currentQuestion.id}`,
+        score: hasAnswered && selectedAnswer === currentQuestion.correctAnswer ? 100 : 0,
+        completed: true,
+        answers: {
+          selected: selectedAnswer,
+          correct: currentQuestion.correctAnswer
+        }
+      }).catch(console.error);
+    }
+    
     if (isLastQuestion) {
-      // Calculate final score as percentage
+      // Calculate final score
       const finalScore = Math.round((correctAnswers / totalQuestions) * 100);
       
-      // Call onComplete with score
-      onComplete(finalScore);
+      // Call onComplete with results
+      onComplete({
+        score: finalScore, 
+        timeSpent
+      });
       
       toast({
         title: "Quiz completed!",
-        description: `Your score: ${finalScore}%`,
+        description: `You scored ${finalScore}% (${correctAnswers}/${totalQuestions})`,
       });
     } else {
       // Move to next question
@@ -136,47 +133,46 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
     }
   };
   
-  if (!currentQuestion) {
-    return (
-      <div className="text-center py-8">
-        <p>No questions available for this section.</p>
-      </div>
-    );
-  }
-
-  // We need to handle questions that might use either text or question property
-  const questionText = currentQuestion.text || currentQuestion.question || "No question text available";
-  
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Question {currentQuestionIndex + 1} of {totalQuestions}
-          </h3>
-          <span className="text-sm font-medium text-muted-foreground">
-            {contentType.charAt(0).toUpperCase() + contentType.slice(1)} • {difficultyLevel}
-          </span>
-        </div>
-        <Progress value={((currentQuestionIndex + 1) / totalQuestions) * 100} className="h-1" />
-        <CardTitle className="text-lg mt-4">{questionText}</CardTitle>
-      </CardHeader>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-medium">
+          Question {currentQuestionIndex + 1} of {totalQuestions}
+        </span>
+        <span className="text-sm text-muted-foreground">
+          {correctAnswers} correct
+        </span>
+      </div>
+      <Progress 
+        value={(currentQuestionIndex / totalQuestions) * 100} 
+        className="h-2" 
+      />
       
-      <CardContent>
-        {currentQuestion.options && (
-          <RadioGroup value={selectedAnswer} className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
-              <div key={index} className={`flex items-center space-x-2 rounded-md border p-3 
-                ${hasAnswered && option === currentQuestion.correctAnswer ? 'bg-green-50 border-green-200' : ''} 
-                ${hasAnswered && selectedAnswer === option && option !== currentQuestion.correctAnswer ? 'bg-red-50 border-red-200' : ''}`}>
-                <RadioGroupItem 
-                  value={option} 
-                  id={`option-${index}`} 
-                  disabled={hasAnswered}
-                  onClick={() => handleAnswerSelect(option)} 
-                />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">{currentQuestion.text}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup 
+            value={selectedAnswer} 
+            onValueChange={setSelectedAnswer}
+            className="space-y-3"
+            disabled={hasAnswered}
+          >
+            {currentQuestion.options.map((option) => (
+              <div 
+                key={option} 
+                className={`flex items-center space-x-2 p-3 rounded-lg border ${
+                  hasAnswered && option === currentQuestion.correctAnswer
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : hasAnswered && option === selectedAnswer
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      : 'hover:bg-muted'
+                }`}
+              >
+                <RadioGroupItem value={option} id={option} />
                 <Label 
-                  htmlFor={`option-${index}`} 
+                  htmlFor={option} 
                   className="flex-grow cursor-pointer"
                 >
                   {option}
@@ -184,35 +180,41 @@ const QuestionAnsweringComponent: React.FC<QuestionAnsweringComponentProps> = ({
                 {hasAnswered && option === currentQuestion.correctAnswer && (
                   <Check className="h-4 w-4 text-green-500" />
                 )}
-                {hasAnswered && selectedAnswer === option && option !== currentQuestion.correctAnswer && (
+                {hasAnswered && option === selectedAnswer && option !== currentQuestion.correctAnswer && (
                   <AlertCircle className="h-4 w-4 text-red-500" />
                 )}
               </div>
             ))}
           </RadioGroup>
-        )}
-        
-        {showExplanation && currentQuestion.explanation && (
-          <div className="mt-4 p-3 rounded-md bg-muted/50">
-            <h4 className="font-medium mb-1">Explanation:</h4>
-            <p className="text-sm text-muted-foreground">{currentQuestion.explanation}</p>
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter className="flex justify-between">
-        {!hasAnswered ? (
-          <Button onClick={handleSubmitAnswer} className="w-full">
-            Submit Answer
-          </Button>
-        ) : (
-          <Button onClick={handleNextQuestion} className="w-full">
-            {isLastQuestion ? "Finish Quiz" : "Next Question"}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+          
+          {showExplanation && currentQuestion.explanation && (
+            <div className="mt-4 p-4 bg-muted rounded-lg text-sm">
+              <p className="font-medium mb-1">Explanation:</p>
+              <p>{currentQuestion.explanation}</p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          {!hasAnswered ? (
+            <Button 
+              onClick={handleAnswer} 
+              disabled={!selectedAnswer}
+              className="w-full"
+            >
+              Check Answer
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleNext} 
+              className="w-full"
+            >
+              {isLastQuestion ? 'Finish' : 'Next Question'} 
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 

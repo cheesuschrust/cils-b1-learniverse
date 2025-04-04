@@ -11,48 +11,53 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' })
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' })
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword']
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
-export function LoginForm() {
-  const { login } = useAuth();
+export function SignupForm() {
+  const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
-      password: ''
+      password: '',
+      confirmPassword: ''
     }
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const result = await login(values.email, values.password);
+      const result = await register(values.email, values.password);
       if (result.success) {
         toast({
-          title: 'Login successful',
-          description: 'Welcome back to ItalianMaster!',
+          title: 'Registration successful',
+          description: 'Welcome to ItalianMaster! Please check your email to verify your account.',
         });
         navigate('/dashboard');
       } else {
         toast({
-          title: 'Login failed',
-          description: result.error || 'Please check your credentials and try again',
+          title: 'Registration failed',
+          description: result.error || 'An error occurred during registration',
           variant: 'destructive'
         });
       }
     } catch (error) {
       toast({
-        title: 'Login failed',
+        title: 'Registration failed',
         description: 'An unexpected error occurred',
         variant: 'destructive'
       });
@@ -110,25 +115,40 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <div className="flex items-center justify-between">
-          <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-            Forgot password?
-          </Link>
-        </div>
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    {...field}
+                    disabled={isLoading}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
+              Signing up...
             </>
           ) : (
-            'Sign In'
+            'Sign Up'
           )}
         </Button>
         <div className="text-center text-sm">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-primary hover:underline">
-            Sign up
+          Already have an account?{' '}
+          <Link to="/login" className="text-primary hover:underline">
+            Sign in
           </Link>
         </div>
       </form>
@@ -136,4 +156,4 @@ export function LoginForm() {
   );
 }
 
-export default LoginForm;
+export default SignupForm;

@@ -1,32 +1,38 @@
 
-// This hook is a wrapper around the toast component
-import { Toast, ToastActionElement, ToastProps } from '@/components/ui/toast';
-import {
-  toast as showToast,
-  ToastOptions as SonnerToastOptions
-} from 'sonner';
+import { toast } from 'sonner';
 
-type ToastProps_ = Omit<ToastProps, 'children'> & { description?: React.ReactNode };
-
-export type ToastActionProps = {
-  altText: string;
-  onClick: () => void;
-  children?: React.ReactNode;
+type ToastOptions = {
+  title: string;
+  description?: string;
+  variant?: 'default' | 'destructive';
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 };
 
-export interface ToastOptions extends Omit<SonnerToastOptions, 'description'> {
-  description?: React.ReactNode;
-  action?: ToastActionElement;
+export function useToast() {
+  const showToast = ({ title, description, variant = 'default', action }: ToastOptions) => {
+    if (variant === 'destructive') {
+      toast.error(title, {
+        description,
+        action: action ? {
+          label: action.label,
+          onClick: action.onClick,
+        } : undefined,
+      });
+    } else {
+      toast(title, {
+        description,
+        action: action ? {
+          label: action.label,
+          onClick: action.onClick,
+        } : undefined,
+      });
+    }
+  };
+
+  return {
+    toast: showToast,
+  };
 }
-
-const toast = ({ description, action, ...props }: ToastProps_ & ToastOptions) => {
-  showToast(props.title, {
-    description,
-    action,
-    ...props,
-  });
-};
-
-export { toast, showToast };
-export type { ToastOptions };
-export const useToast = () => ({ toast });

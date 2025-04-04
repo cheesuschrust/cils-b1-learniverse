@@ -2,77 +2,56 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+/**
+ * Combines multiple class values into a single string
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
+/**
+ * Formats a date to a string
+ */
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
     day: 'numeric',
-  });
+    year: 'numeric',
+  }).format(date);
 }
 
-export function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+/**
+ * Wait for a specified time
+ */
+export function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export function capitalize(str: string): string {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (!text || text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-}
-
-export function getInitials(firstName: string, lastName?: string): string {
-  const first = firstName?.charAt(0) || '';
-  const last = lastName?.charAt(0) || '';
-  return (first + last).toUpperCase();
-}
-
-export function calculateTimeLeft(targetDate: Date | string): {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-} {
-  const difference = new Date(targetDate).getTime() - new Date().getTime();
-  
-  if (difference <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-  }
-
-  return {
-    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-    minutes: Math.floor((difference / 1000 / 60) % 60),
-    seconds: Math.floor((difference / 1000) % 60),
-  };
-}
-
-export function formatPercentage(value: number, precision = 1): string {
-  return `${value.toFixed(precision)}%`;
-}
-
+/**
+ * Debounce a function
+ */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  delay: number
 ): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+  return function(...args: Parameters<T>) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => func(...args), delay);
   };
 }
 
+/**
+ * Get random element from array
+ */
+export function getRandomElement<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Shuffle array
+ */
 export function shuffleArray<T>(array: T[]): T[] {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -80,4 +59,34 @@ export function shuffleArray<T>(array: T[]): T[] {
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
+}
+
+/**
+ * Compute CILS B1 readiness score based on section scores
+ * @param scores Record of scores by section
+ * @returns percentage of readiness
+ */
+export function calculateCILSB1Readiness(scores: Record<string, number>): number {
+  // CILS B1 requirements
+  const requirements: Record<string, number> = {
+    'reading': 70,
+    'writing': 70,
+    'listening': 70,
+    'speaking': 70,
+    'grammar': 65,
+    'vocabulary': 65,
+    'culture': 60,
+    'citizenship': 70
+  };
+  
+  let totalScore = 0;
+  let totalRequired = 0;
+  
+  Object.entries(requirements).forEach(([skill, requiredScore]) => {
+    const userScore = scores[skill] || 0;
+    totalScore += Math.min(userScore, requiredScore);
+    totalRequired += requiredScore;
+  });
+  
+  return Math.round((totalScore / totalRequired) * 100);
 }

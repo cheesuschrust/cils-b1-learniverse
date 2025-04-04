@@ -1,97 +1,122 @@
 
-import { User } from './user-types';
-import { AIProcessingOptions } from './ai';
+import { type AIOptions, type AIProcessingOptions, type AIServiceOptions } from './ai';
+import { type AppLevel } from './config-types';
+import { type ItalianLevel, type ItalianTestSection } from './italian-types';
 
-export interface ContentProcessorProps {
-  content: string;
-  language?: string;
-  options?: AIProcessingOptions;
-  showConfidence?: boolean;
-  isInteractive?: boolean;
-  onProcessed?: (result: any) => void;
-}
-
-export interface FeedbackData {
-  score: number;
-  feedback: string;
-  corrections: {
-    original: string;
-    suggestion: string;
-    explanation: string;
-  }[];
-  strengths: string[];
-  weaknesses: string[];
-}
-
-export interface AISettings {
-  modelSize: 'small' | 'medium' | 'large';
-  useGPU: boolean;
-  voiceEnabled: boolean;
-  autoTranslate: boolean;
-  feedbackLevel: 'basic' | 'detailed' | 'expert';
-  confidenceDisplay: boolean;
-  language: 'italian' | 'english' | 'both';
-  pronunciation: boolean;
-  grammar: boolean;
-  vocabulary: boolean;
-}
-
-export interface AISettingsProps {
-  settings: AISettings;
-  onSettingsChange: (settings: AISettings) => void;
-}
-
-export interface NotificationAction {
-  id: string;
-  label: string;
-  action: () => void;
-}
-
-export type NotificationType = 'success' | 'warning' | 'error' | 'default';
-export type NotificationPriority = 'high' | 'medium' | 'low';
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  timestamp: Date;
-  read: boolean;
-  priority: NotificationPriority;
-  actions?: NotificationAction[];
-  expires?: Date | null;
-  link?: string;
-  category?: string;
-}
-
+/**
+ * Italian language levels aligned with CILS certification
+ */
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ContentType = 'text' | 'audio' | 'video' | 'image' | 'quiz' | 'flashcard' | 'conversation';
-export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 
+/**
+ * Question generation parameters
+ */
+export interface QuestionGenerationParams {
+  topics: string[];
+  contentTypes: string[];
+  difficulty: string;
+  count: number;
+  isCitizenshipFocused?: boolean;
+}
+
+/**
+ * Result of AI generation
+ */
+export interface AIGenerationResult {
+  questions: AIQuestion[];
+  error?: string;
+}
+
+/**
+ * AI generated question
+ */
 export interface AIQuestion {
   id: string;
   text: string;
-  options: string[];
+  options?: string[];
   correctAnswer: string;
-  explanation: string;
-  type: string;
-  difficulty: DifficultyLevel;
+  explanation?: string;
+  type: ItalianTestSection;
+  difficulty: ItalianLevel;
+  questionType: 'multipleChoice' | 'flashcards' | 'writing' | 'speaking' | 'listening';
+  isCitizenshipRelevant: boolean;
 }
 
-export interface AIGenerationResult {
-  text: string;
-  confidence: number;
-  metadata?: {
-    tokens: number;
-    duration: number;
-    model: string;
-  };
+/**
+ * AI Utils Context Type
+ */
+export interface AIUtilsContextType {
+  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
 }
 
-export interface EnhancedErrorBoundaryProps {
-  fallback?: React.ReactNode;
-  onError?: (error: Error, info: React.ErrorInfo) => void;
-  onReset?: () => void;
-  resetKeys?: any[];
+/**
+ * User interface
+ */
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  photoURL?: string;
+  isPremiumUser: boolean;
+}
+
+/**
+ * Authentication response
+ */
+export interface AuthResponse {
+  user: User | null;
+  error?: string;
+  token?: string;
+}
+
+/**
+ * Login credentials
+ */
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+/**
+ * Registration data
+ */
+export interface RegisterData {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * React component that accepts children
+ */
+export interface ChildrenProps {
   children: React.ReactNode;
+}
+
+/**
+ * Progress tracking interface
+ */
+export interface ProgressData {
+  skill: ItalianTestSection;
+  score: number;
+  maxScore: number;
+  lastUpdated: Date;
+  confidence: number;
+}
+
+/**
+ * CILS B1 exam section progress
+ */
+export interface CILSExamProgress {
+  section: ItalianTestSection;
+  score: number;
+  requiredScore: number;
+  completed: boolean;
+  lastAttempt?: Date;
 }
