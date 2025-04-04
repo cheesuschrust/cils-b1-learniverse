@@ -1,113 +1,70 @@
 
-import { isValidDate } from './voice';
-
-/**
- * Review performance metrics
- */
-export interface ReviewPerformance {
-  accuracy: number;
-  speed: number;
-  consistency: number;
-  retention: number;
-  overall: number;
-}
-
-/**
- * Review session history record
- */
-export interface ReviewHistory {
-  date: Date;
-  cardsReviewed: number;
-  correctCount: number;
-  incorrectCount: number;
-  avgResponseTime: number;
-}
-
-/**
- * Flashcard additional metadata
- */
-export interface FlashcardMetadata {
-  source?: string;
-  notes?: string;
-  examples?: string[];
-  pronunciation?: string;
-  imageUrl?: string;
-  audioUrl?: string;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
-}
-
-/**
- * Flashcard model
- */
 export interface Flashcard {
   id: string;
   front: string;
   back: string;
-  level: number;
-  tags: string[];
-  nextReview: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  mastered: boolean;
   italian?: string;
   english?: string;
-  metadata?: FlashcardMetadata;
-  lastReviewed?: Date;
+  difficulty: number;
+  tags: string[];
+  lastReviewed: Date | null;
+  nextReview: Date | null;
+  createdAt: Date;
+  updatedAt?: Date;
   reviewHistory?: ReviewHistory[];
-  reviewCount?: number;
-  category?: string;
-  explanation?: string;
-  examples?: string[];
-  imageUrl?: string;
-  audioUrl?: string;
-  status?: 'new' | 'learning' | 'reviewing' | 'mastered';
-  streak?: number;
-  correctReviews?: number;
-  totalReviews?: number;
-  dueDate?: Date;
 }
 
-/**
- * Calculate review performance based on correct and total counts
- */
-export const calculateReviewPerformance = (correctCount: number, totalCount: number): number => {
-  if (totalCount === 0) return 0;
-  return (correctCount / totalCount) * 100;
-};
+export interface FlashcardMetadata {
+  id: string;
+  setId: string;
+  userId: string;
+  reviewCount: number;
+  correctReviews: number;
+  lastReviewResult: boolean;
+  mastered: boolean;
+  category?: string;
+  difficulty: number;
+}
 
-/**
- * Normalize flashcard data
- */
-export const normalizeFlashcard = (card: any): Flashcard => {
-  if (!card) return null as any;
-  
-  const front = card.front || card.italian || '';
-  const back = card.back || card.english || '';
+export interface ReviewHistory {
+  id: string;
+  flashcardId: string;
+  userId: string;
+  reviewDate: Date;
+  result: boolean;
+  responseTime: number;
+  confidence: number;
+}
+
+export interface ReviewPerformance {
+  score: number;
+  time: number;
+  date: Date;
+}
+
+export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
+  if (!answers || !answers.length) {
+    return { score: 0, time: 0, date: new Date() };
+  }
   
   return {
-    id: card.id || '',
-    front: front,
-    back: back,
-    level: card.level || 0,
-    tags: card.tags || [],
-    nextReview: card.nextReview || card.dueDate || new Date(),
-    createdAt: card.createdAt ? new Date(card.createdAt) : new Date(),
-    updatedAt: card.updatedAt ? new Date(card.updatedAt) : new Date(),
-    mastered: card.mastered || false,
-    italian: card.italian || front,
-    english: card.english || back,
-    category: card.category,
-    explanation: card.explanation,
-    examples: card.examples,
-    lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
-    reviewHistory: card.reviewHistory,
-    reviewCount: card.reviewCount,
-    imageUrl: card.imageUrl || card.metadata?.imageUrl,
-    audioUrl: card.audioUrl || card.metadata?.audioUrl,
-    status: card.status,
-    streak: card.streak,
-    correctReviews: card.correctReviews,
-    totalReviews: card.totalReviews,
-    dueDate: card.dueDate ? new Date(card.dueDate) : undefined
+    score: answers.filter(a => a.isCorrect).length / answers.length * 100,
+    time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
+    date: new Date(),
   };
-};
+}
+
+export function normalizeFlashcard(card: any): Flashcard {
+  if (!card) return null as any;
+  
+  return {
+    ...card,
+    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
+    lastReviewed: card.lastReviewed || null,
+    nextReview: card.nextReview || null,
+    front: card.front || card.italian || '',
+    back: card.back || card.english || '',
+    tags: card.tags || [],
+    createdAt: card.createdAt || new Date(),
+  };
+}

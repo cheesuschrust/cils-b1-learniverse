@@ -67,7 +67,7 @@ const GoalsStep: React.FC<GoalsStepProps> = ({
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-lg font-medium">What's your primary goal?</h3>
             {citizenshipGoal && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="citizenship" className="bg-green-50 text-green-700 border-green-200">
                 <Check className="h-3.5 w-3.5 mr-1" />
                 CILS B1 Required
               </Badge>

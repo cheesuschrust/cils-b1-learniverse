@@ -1,147 +1,86 @@
 
-import { isValidDate } from './voice';
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  photoURL?: string;
+  createdAt?: Date;
+  lastLogin?: Date;
+  isPremiumUser?: boolean;
+}
 
-/**
- * Legacy field names for backward compatibility
- */
+export interface UserSettings {
+  theme: string;
+  language: string;
+  notifications: boolean;
+  emailNotifications: boolean;
+  studyReminders: boolean;
+  showConfidence: boolean;
+  showPronunciation: boolean;
+}
+
+export interface UserRole {
+  id: string;
+  userId: string;
+  role: 'user' | 'admin' | 'moderator' | 'teacher';
+  createdAt: Date;
+}
+
+export interface UserPerformance {
+  userId: string;
+  totalXp: number;
+  level: number;
+  streak: number;
+  lastActive: Date;
+  skillScores: Record<string, number>;
+}
+
 export interface LegacyFields {
-  photo_url?: string;
-  display_name?: string;
+  uid?: string;
   first_name?: string;
   last_name?: string;
-  preferred_language?: string;
+  photo_url?: string;
+  display_name?: string;
+  is_verified?: boolean;
   created_at?: Date;
+  updated_at?: Date;
+  last_login?: Date;
+  last_active?: Date;
+  preferred_language?: string;
 }
 
-/**
- * User settings and preferences
- */
-export interface UserSettings {
-  theme: 'light' | 'dark' | 'system';
-  notifications: boolean;
-  reviewInterval: number;
-  dailyGoal: number;
-  audioEnabled: boolean;
-  autoAdvance: boolean;
-}
-
-/**
- * User performance metrics
- */
-export interface UserPerformance {
-  totalReviews: number;
-  correctStreak: number;
-  lastReviewDate?: Date;
-  averageAccuracy: number;
-  dailyStats?: {
-    date: string;
-    completed: number;
-    accuracy: number;
-  }[];
-}
-
-/**
- * User role in the system
- */
-export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
-
-/**
- * Complete user information
- */
-export interface User extends Partial<LegacyFields> {
-  uid: string;
-  id?: string;
-  email: string;
-  photoURL: string;
-  displayName: string;
-  firstName: string;
-  lastName: string;
-  createdAt: Date;
-  preferredLanguage?: 'english' | 'italian' | 'both';
-  settings: UserSettings;
-  lastActive?: Date;
-  isPremium?: boolean;
-  performance: UserPerformance;
-  role?: UserRole;
-  language?: 'english' | 'italian' | 'both' | 'en' | 'it';
-  isVerified?: boolean;
-  lastLogin?: Date;
-  status?: 'active' | 'inactive' | 'suspended';
-  subscription?: 'free' | 'premium' | 'trial';
-}
-
-/**
- * Normalized user object with default values
- */
-export const normalizeUser = (input: Record<string, any>): User => {
-  const parseDate = (date: any): Date => {
-    if (isValidDate(date)) return date;
-    if (!date) return new Date();
-    try {
-      const parsed = new Date(date);
-      return isValidDate(parsed) ? parsed : new Date();
-    } catch {
-      return new Date();
-    }
-  };
-
-  const defaultSettings: UserSettings = {
-    theme: 'system',
-    notifications: true,
-    reviewInterval: 24,
-    dailyGoal: 10,
-    audioEnabled: true,
-    autoAdvance: false
-  };
-
-  const defaultPerformance: UserPerformance = {
-    totalReviews: 0,
-    correctStreak: 0,
-    averageAccuracy: 0,
-    dailyStats: []
-  };
-
+export function normalizeUser(user: any): User {
+  if (!user) return null as any;
+  
   return {
-    uid: input.uid || input.id || '',
-    id: input.id || input.uid || '',
-    email: input.email || '',
-    photoURL: input.photoURL || input.photo_url || '',
-    displayName: input.displayName || input.display_name || '',
-    firstName: input.firstName || input.first_name || '',
-    lastName: input.lastName || input.last_name || '',
-    createdAt: parseDate(input.createdAt || input.created_at),
-    preferredLanguage: input.preferredLanguage || input.preferred_language || 'english',
-    settings: { ...defaultSettings, ...input.settings },
-    lastActive: parseDate(input.lastActive),
-    isPremium: Boolean(input.isPremium),
-    performance: { ...defaultPerformance, ...input.performance },
-    role: input.role || 'user',
-    language: input.language || input.preferredLanguage || 'english',
-    isVerified: Boolean(input.isVerified),
-    lastLogin: parseDate(input.lastLogin),
-    status: input.status || 'active',
-    subscription: input.subscription || 'free',
-
-    // Legacy fields preservation
-    ...(input.photo_url && { photo_url: input.photo_url }),
-    ...(input.display_name && { display_name: input.display_name }),
-    ...(input.first_name && { first_name: input.first_name }),
-    ...(input.last_name && { last_name: input.last_name }),
-    ...(input.created_at && { created_at: parseDate(input.created_at) })
+    id: user.id || user.uid || '',
+    email: user.email || '',
+    firstName: user.firstName || user.first_name || '',
+    lastName: user.lastName || user.last_name || '',
+    displayName: user.displayName || user.display_name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+    photoURL: user.photoURL || user.photo_url || '',
+    createdAt: user.createdAt || user.created_at || new Date(),
+    lastLogin: user.lastLogin || user.last_login || null,
+    isPremiumUser: user.isPremiumUser || user.is_premium || false
   };
-};
+}
 
-/**
- * Normalizes user records, ensuring consistent property naming
- */
-export const normalizeUserRecords = (users: any[]): User[] => {
+export function normalizeUserRecords(users: any[]): User[] {
   if (!users || !Array.isArray(users)) return [];
-  return users.map(user => normalizeUser(user));
-};
+  return users.map(normalizeUser);
+}
 
-/**
- * Convert legacy user object to current User format
- */
-export const convertLegacyUser = (user: any): User => {
-  return normalizeUser(user);
-};
+export function convertLegacyUser(legacyUser: LegacyFields): User {
+  return {
+    id: legacyUser.uid || '',
+    email: '',
+    firstName: legacyUser.first_name,
+    lastName: legacyUser.last_name,
+    displayName: legacyUser.display_name,
+    photoURL: legacyUser.photo_url,
+    createdAt: legacyUser.created_at,
+    lastLogin: legacyUser.last_login
+  };
+}

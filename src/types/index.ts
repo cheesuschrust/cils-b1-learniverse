@@ -1,96 +1,103 @@
 
-// Core type index file
-// Re-export all types with namespacing to prevent ambiguities
-
-import * as AppTypes from './app-types';
-import * as ItalianTypes from './italian-types';
-import * as VariantTypes from './variant-fixes';
-import * as InterfaceTypes from './interface-fixes';
-import * as TypeDefinitions from './type-definitions';
-import * as CoreTypes from './core-types';
-import * as AITypes from './ai';
-
-// Export all types through namespaces to prevent conflicts
-export { AppTypes, ItalianTypes, VariantTypes, InterfaceTypes, TypeDefinitions, CoreTypes, AITypes };
-
-// Export specific commonly used types directly
-// Italian types
-export type { 
-  ItalianLevel, 
-  ItalianTestSection, 
-  ItalianQuestionGenerationParams,
-  AIGeneratedQuestion,
-  AIGenerationResult,
-  CILSExamType,
-  UserProfile as ItalianUserProfile
-} from './italian-types';
-
-// App types
+// Re-export all types and utilities from the specialized modules
+// Export specific types from each module
 export type {
-  DifficultyLevel,
-  ContentType,
-  ButtonVariant,
-  AIQuestion,
-  EnhancedErrorBoundaryProps,
-  AIContentProcessorProps,
-  ProcessContentOptions,
-  ConfidenceIndicatorProps,
-  LevelBadgeProps,
-  AIUtilsContextType,
-  QuestionGenerationParams,
-  AIGenerationResult as AppAIGenerationResult,
-  UserProfile
-} from './app-types';
-
-// Interface fixes
-export type {
-  SpeakableWordProps,
-  Flashcard,
-  FlashcardComponentProps,
-  ReviewSchedule,
-  ReviewPerformance,
   User,
-  AISettings
-} from './interface-fixes';
+  UserSettings,
+  UserPerformance,
+  UserRole,
+  LegacyFields
+} from './user-types';
 
-// Variant fixes
-export type {
-  ExtendedAlertVariant,
-  ExtendedButtonVariant,
-  ExtendedSelectVariant,
-  ExtendedInputVariant,
-  ExtendedThemeVariant,
-  ContentType as VariantContentType
-} from './variant-fixes';
-
-// Core types from unified module
 export {
-  normalizeFlashcard,
-  calculateReviewPerformance,
-  isValidDate,
-  normalizeFields
-} from './core-types';
+  normalizeUser,
+  normalizeUserRecords,
+  convertLegacyUser
+} from './user-types';
 
-// AI types
 export type {
-  AIModel,
-  AIProvider,
-  AIServiceOptions,
-  AIPreference,
-  UseAIReturn,
-  AIService,
-  AIStatus,
+  Flashcard,
+  FlashcardMetadata,
+  ReviewHistory,
+  ReviewPerformance
+} from './flashcard-types';
+
+export {
+  calculateReviewPerformance,
+  normalizeFlashcard
+} from './flashcard-types';
+
+export type {
+  VoicePreference,
+  TextToSpeechOptions,
+  VoiceOptions,
+  SpeechState
+} from './voice';
+
+export {
+  isValidDate
+} from './voice';
+
+export type {
   AIOptions,
-  AIFeedbackSettings
+  AIModel,
+  AIStatus,
+  AIFeedbackSettings,
+  AIModelSize,
+  AIProcessingOptions,
+  QuestionGenerationParams
 } from './ai';
 
-// License types
 export type {
-  License,
-  LicenseType,
-  LicenseStatus,
-  RenewalStatus,
-  LicenseUserAssignment,
-  LicenseFeature,
-  LicenseInvoice
-} from './License';
+  ContentProcessorProps,
+  FeedbackData,
+  AISettings,
+  AISettingsProps,
+  NotificationAction,
+  NotificationType,
+  NotificationPriority,
+  Notification
+} from './app-types';
+
+export type {
+  SpeakableWordProps,
+  FlashcardComponentProps,
+  ReviewSchedule,
+  FlashcardSet,
+  FlashcardStats,
+  ImportFormat
+} from './interface-fixes';
+
+export type {
+  Achievement,
+  UserGamification,
+  WeeklyProgress,
+  WeeklyChallenge,
+  ChallengeRequirement,
+  Level,
+  DailyGoal,
+  Streak
+} from './gamification';
+
+export {
+  normalizeFields
+} from './utils';
+
+export type {
+  AIGeneratedQuestion,
+  ItalianLevel,
+  ItalianTestSection,
+  ItalianQuestionGenerationParams,
+  UseAIReturn
+} from './core-types';
+
+// Export default object for backwards compatibility
+export default {
+  normalizeUser,
+  normalizeUserRecords,
+  normalizeFlashcard,
+  convertLegacyUser,
+  normalizeFields,
+  calculateReviewPerformance,
+  isValidDate
+};

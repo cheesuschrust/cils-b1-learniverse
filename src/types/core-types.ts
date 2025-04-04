@@ -1,123 +1,94 @@
 
-// Define core type definitions used across the application
+// Re-export all types and utilities from the specialized modules
+// Import needed utilities and types
+export { isValidDate } from './voice';
+export { normalizeFields } from './utils';
 
-// User types
-export interface User {
-  id: string;
-  email: string;
-  isPremium?: boolean;
-  isPremiumUser?: boolean;
-  displayName?: string;
-  avatarUrl?: string;
-  createdAt?: string;
-}
+// Export specific types from the specialized modules
+export type {
+  VoicePreference,
+  TextToSpeechOptions,
+  VoiceOptions,
+  SpeechState
+} from './voice';
 
-// Learning content types
-export type ContentType = 'flashcards' | 'reading' | 'listening' | 'writing' | 'speaking' | 'grammar' | 'citizenship';
-export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ItalianTestSection = 'grammar' | 'vocabulary' | 'culture' | 'listening' | 'reading' | 'writing' | 'speaking' | 'citizenship';
+export type {
+  AIOptions,
+  AIModel,
+  AIStatus,
+  AIFeedbackSettings,
+  AIModelSize,
+  AIProcessingOptions,
+  QuestionGenerationParams
+} from './ai';
 
-// Exercise types
-export interface Exercise {
-  id: string;
-  title: string;
-  description?: string;
-  type: ContentType;
-  difficulty: DifficultyLevel;
-  content: any;
-  created_at?: string;
-  updated_at?: string;
-}
+export type {
+  User,
+  UserSettings,
+  UserPerformance,
+  UserRole,
+  LegacyFields
+} from './user-types';
 
-// Learning progress tracking
-export interface Progress {
-  userId: string;
-  contentId: string;
-  progress: number;
-  completed: boolean;
-  score?: number;
-  lastActivity: Date;
-}
+export {
+  normalizeUser,
+  normalizeUserRecords,
+  convertLegacyUser
+} from './user-types';
 
-// Analytics types for tracking user performance
-export interface PerformanceMetrics {
-  accuracy: number;
-  speed?: number;
-  consistency?: number;
-  retention?: number;
-}
+export type {
+  ReviewPerformance,
+  ReviewHistory,
+  FlashcardMetadata,
+  Flashcard
+} from './flashcard-types';
 
-// AI-related types
-export interface AIContentAnalysis {
-  contentType: ContentType;
-  confidence: number;
-  language: 'italian' | 'english' | 'mixed';
-  topics: string[];
-  complexity: DifficultyLevel;
-}
+export {
+  calculateReviewPerformance,
+  normalizeFlashcard
+} from './flashcard-types';
 
-export interface AIQuestion {
+export interface AIGeneratedQuestion {
   id: string;
   text: string;
-  options?: string[];
+  options: string[];
   correctAnswer: string;
-  explanation?: string;
-  type: 'multiple-choice' | 'open-ended' | 'true-false';
-  difficulty: DifficultyLevel;
+  explanation: string;
+  type: string;
+  difficulty: string;
+  questionType: string;
+  isCitizenshipRelevant: boolean;
 }
 
-export interface AIGenerationResult {
-  questions: AIQuestion[];
-  error?: string;
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianTestSection = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary' | 'culture' | 'citizenship';
+
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  topics: string[];
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count: number;
+  isCitizenshipFocused?: boolean;
 }
 
-export interface TranslationResult {
-  originalText: string;
-  translatedText: string;
-  sourceLanguage: string;
-  targetLanguage: string;
+export interface UseAIReturn {
+  processContent: (content: string, options?: AIProcessingOptions) => Promise<{label: string, score: number}[]>;
+  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGeneratedQuestion[]>;
+  analyzeGrammar: (text: string, language?: string) => Promise<any>;
+  translateText: (text: string, targetLanguage?: string) => Promise<string>;
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  evaluateWriting: (text: string, level?: string) => Promise<any>;
+  recognizeSpeech: (audioData: Blob) => Promise<{text: string, confidence: number}>;
+  isProcessing: boolean;
 }
 
-export interface AudioProcessingResult {
-  text: string;
-  confidence: number;
-  language: string;
-}
-
-// Document processing types
-export interface ProcessedDocument {
-  id: string;
-  title?: string;
-  content: string;
-  contentType: ContentType;
-  analysis: AIContentAnalysis;
-  questions?: AIQuestion[];
-  created_at: string;
-  created_by: string;
-}
-
-// Model training data types
-export interface TrainingData {
-  id: string;
-  inputText: string;
-  expectedOutput: string;
-  contentType: string;
-  difficulty: DifficultyLevel;
-  language: string;
-  created_at?: string;
-  created_by?: string;
-}
-
-export interface ModelPerformance {
-  id: string;
-  modelName: string;
-  version: string;
-  metrics: {
-    accuracy: number;
-    precision: number;
-    recall: number;
-    f1Score: number;
-  };
-  trainingDate: string;
-}
+// Export as default object for backwards compatibility
+export default {
+  normalizeUser,
+  normalizeUserRecords,
+  normalizeFlashcard,
+  convertLegacyUser,
+  normalizeFields,
+  calculateReviewPerformance,
+  isValidDate
+};

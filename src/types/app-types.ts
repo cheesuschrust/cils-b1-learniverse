@@ -1,157 +1,97 @@
 
-// Define application-specific types that build on core-types
+import { User } from './user-types';
+import { AIProcessingOptions } from './ai';
 
-import { DifficultyLevel, AIQuestion, AIGenerationResult } from './core-types';
-
-// Flashcard types
-export interface Flashcard {
-  id: string;
-  front: string; 
-  back: string;
-  italian?: string;
-  english?: string;
-  level: number;
-  difficulty: number;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-  set_id?: string;
-  tags?: string[];
-  nextReview?: Date;
-  last_reviewed?: Date;
-  mastered?: boolean;
-  progress?: any;
-  isDue?: boolean;
-}
-
-export interface FlashcardSet {
-  id: string;
-  name: string;
-  description: string;
-  language: string;
-  category?: string;
-  tags?: string[];
-  user_id?: string;
-  is_public: boolean;
-  is_favorite: boolean;
-  created_at: string;
-  updated_at: string;
-  cards?: Flashcard[];
-  dueCount?: number;
-  totalCards?: number;
-  lastStudied?: string;
-}
-
-// AI utilities context types
-export interface QuestionGenerationParams {
-  contentTypes: string[];
-  topics: string[];
-  difficulty: DifficultyLevel;
-  count: number;
-  isCitizenshipFocused?: boolean;
-}
-
-export interface AIUtilsContextType {
-  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
-  isGenerating: boolean;
-  remainingCredits: number;
-  usageLimit: number;
-}
-
-// Content processing types
 export interface ContentProcessorProps {
-  onProcessed?: (result: any) => void;
-  initialContent?: string;
-  initialContentType?: string;
-  userId?: string;
-}
-
-export interface ProcessingResult {
-  contentType: string;
-  confidence: number;
-  language: string;
-  topics: string[];
-  questions?: AIQuestion[];
-}
-
-// AI Assistant types
-export interface ChatMessage {
-  id: string;
   content: string;
-  isUser: boolean;
-  timestamp: Date;
-  translation?: string;
+  language?: string;
+  options?: AIProcessingOptions;
+  showConfidence?: boolean;
+  isInteractive?: boolean;
+  onProcessed?: (result: any) => void;
 }
 
-export interface ChatContext {
-  topic?: string;
-  language?: 'italian' | 'english' | 'both';
-  difficulty?: DifficultyLevel;
-  userLevel?: DifficultyLevel;
-}
-
-// AI Feedback types
-export interface FeedbackItem {
-  text: string;
-  explanation: string;
-  suggestion?: string;
-  severity: 'minor' | 'major' | 'critical';
-}
-
-export interface GrammarAnalysisResult {
+export interface FeedbackData {
   score: number;
   feedback: string;
-  grammarIssues: FeedbackItem[];
-  vocabularyFeedback?: string;
-  structureFeedback?: string;
-  overallScore: number;
+  corrections: {
+    original: string;
+    suggestion: string;
+    explanation: string;
+  }[];
+  strengths: string[];
+  weaknesses: string[];
 }
 
-// Speech analysis types
-export interface SpeechAnalysisResult {
-  transcribedText: string;
-  similarityScore: number;
-  feedback: string;
-  wordLevelAnalysis?: Array<{
-    word: string;
-    confidence: number;
-    startTime: number;
-    endTime: number;
-  }>;
+export interface AISettings {
+  modelSize: 'small' | 'medium' | 'large';
+  useGPU: boolean;
+  voiceEnabled: boolean;
+  autoTranslate: boolean;
+  feedbackLevel: 'basic' | 'detailed' | 'expert';
+  confidenceDisplay: boolean;
+  language: 'italian' | 'english' | 'both';
+  pronunciation: boolean;
+  grammar: boolean;
+  vocabulary: boolean;
 }
 
-// Model training types
-export interface TrainingExample {
-  input: string;
-  output: string;
+export interface AISettingsProps {
+  settings: AISettings;
+  onSettingsChange: (settings: AISettings) => void;
+}
+
+export interface NotificationAction {
+  id: string;
+  label: string;
+  action: () => void;
+}
+
+export type NotificationType = 'success' | 'warning' | 'error' | 'default';
+export type NotificationPriority = 'high' | 'medium' | 'low';
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  timestamp: Date;
+  read: boolean;
+  priority: NotificationPriority;
+  actions?: NotificationAction[];
+  expires?: Date | null;
+  link?: string;
+  category?: string;
+}
+
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ContentType = 'text' | 'audio' | 'video' | 'image' | 'quiz' | 'flashcard' | 'conversation';
+export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+
+export interface AIQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+  type: string;
+  difficulty: DifficultyLevel;
+}
+
+export interface AIGenerationResult {
+  text: string;
+  confidence: number;
   metadata?: {
-    difficulty: DifficultyLevel;
-    language: string;
-    contentType: string;
+    tokens: number;
+    duration: number;
+    model: string;
   };
 }
 
-// Content visualization types
-export interface ContentImpact {
-  contentId: string;
-  impactScore: number;
-  usageCount: number;
-  userProgress: number;
-  confidenceScore: number;
-}
-
-export interface UserContribution {
-  userId: string;
-  contributionCount: number;
-  qualityScore: number;
-  contentTypes: Record<string, number>;
-  lastContribution: Date;
-}
-
-// Health indicators
-export interface ContentHealthIndicator {
-  contentId: string;
-  score: number;
-  issues: string[];
-  recommendations: string[];
+export interface EnhancedErrorBoundaryProps {
+  fallback?: React.ReactNode;
+  onError?: (error: Error, info: React.ErrorInfo) => void;
+  onReset?: () => void;
+  resetKeys?: any[];
+  children: React.ReactNode;
 }
