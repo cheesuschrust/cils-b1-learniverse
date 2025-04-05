@@ -25,7 +25,7 @@
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
     "exactOptionalPropertyTypes": false,
-    "suppressImplicitAnyIndexErrors": true,
+    /* Removed suppressImplicitAnyIndexErrors as it's no longer supported */
 
     "baseUrl": ".",
     "paths": {
@@ -33,6 +33,6 @@
     },
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
+  /* Removed reference to tsconfig.node.json to avoid the noEmit conflict */
 }
