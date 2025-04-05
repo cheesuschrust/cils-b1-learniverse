@@ -10,6 +10,7 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   style?: React.CSSProperties;
   onClick?: () => any;
   asChild?: boolean;
+  children?: React.ReactNode;
 }
 
 export const badgeVariants = cva(

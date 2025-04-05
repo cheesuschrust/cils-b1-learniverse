@@ -11,24 +11,33 @@ export interface ReviewPerformance {
   streakDays?: number;
   reviewsByCategory?: Record<string, number>;
   accuracy?: number;
-  speed?: number;
-  consistency?: number;
-  retention?: number;
-  overall?: number;
 }
 
 export interface ReviewHistory {
+  id: string;
   date: Date;
-  performance: number;
+  score: number;
   timeSpent: number;
+  responseTime: number;
+  isCorrect: boolean;
+  difficulty: number;
+  interval: number;
+  nextReview: Date;
 }
 
 export interface FlashcardMetadata {
   source?: string;
-  contextSentence?: string;
-  notes?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  importance?: 'low' | 'medium' | 'high';
+  createdBy?: string;
+  level?: string;
+  priority?: number;
+  examples?: string[];
+  relatedCardIds?: string[];
+  pronunciation?: string;
+  audioUrl?: string;
+  imageUrl?: string;
+  conjugations?: Record<string, string>;
+  usage?: string[];
+  alternateTranslations?: string[];
 }
 
 export interface Flashcard {
@@ -43,79 +52,14 @@ export interface Flashcard {
   nextReview: Date | null;
   createdAt: Date;
   updatedAt?: Date;
-  reviewHistory?: any[];
-  level?: number;
+  reviewHistory?: ReviewHistory[];
+  metadata?: FlashcardMetadata;
   mastered?: boolean;
-  examples?: string[];
+  level?: number;
   explanation?: string;
-  category?: string;
-  imageUrl?: string;
-  audioUrl?: string;
-  dueDate?: Date;
 }
 
-export interface ReviewSchedule {
-  interval: number;
-  dueDate: Date;
-  difficulty: number;
-  dueToday?: number;
-  dueThisWeek?: number;
-  dueNextWeek?: number;
-  dueByDate?: Record<string, number>;
-  overdue?: number;
-  upcoming?: number;
-}
-
-export interface FlashcardSet {
-  id: string;
-  name: string;
-  description?: string;
-  language: string;
-  isPublic: boolean;
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  user_id?: string;
-  category?: string;
-  tags?: string[];
-  cards?: Flashcard[];
-  totalCards?: number;
-  masteredCards?: number;
-  difficulty?: string;
-  creator?: string;
-}
-
-export interface ImportFormat {
-  type: 'text' | 'json' | 'csv' | 'anki' | 'quizlet';
-  front?: string;
-  back?: string;
-  options?: any;
-  hasHeaders?: boolean;
-  delimiter?: string;
-  hasHeader?: boolean;
-  fieldMap?: Record<string, string>;
-}
-
-export interface FlashcardStats {
-  cardsDue: number;
-  newCards: number;
-  masteredCards: number;
-  totalReviews: number;
-  averageScore: number;
-  dailyStreak: number;
-  total?: number;
-  mastered?: number;
-  learning?: number;
-  toReview?: number;
-  avgMasteryTime?: number;
-  correctReviews?: number;
-}
-
-// Utility function to normalize a flashcard object
 export function normalizeFlashcard(card: any): Flashcard {
-  if (!card) return null as any;
-  
-  const now = new Date();
   return {
     id: card.id || uuidv4(),
     front: card.front || card.italian || '',
@@ -123,24 +67,33 @@ export function normalizeFlashcard(card: any): Flashcard {
     italian: card.italian || card.front || '',
     english: card.english || card.back || '',
     difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
-    tags: Array.isArray(card.tags) ? card.tags : [],
-    lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : null,
-    nextReview: card.nextReview ? new Date(card.nextReview) : null,
-    createdAt: card.createdAt ? new Date(card.createdAt) : now,
-    updatedAt: card.updatedAt ? new Date(card.updatedAt) : undefined,
-    reviewHistory: card.reviewHistory || [],
-    level: card.level !== undefined ? card.level : 0,
-    mastered: !!card.mastered,
-    examples: card.examples || [],
-    explanation: card.explanation || ''
+    tags: Array.isArray(card.tags) ? card.tags : card.tags ? [card.tags] : [],
+    lastReviewed: card.lastReviewed instanceof Date ? card.lastReviewed : 
+                  card.lastReviewed ? new Date(card.lastReviewed) : null,
+    nextReview: card.nextReview instanceof Date ? card.nextReview : 
+                card.nextReview ? new Date(card.nextReview) : null,
+    createdAt: card.createdAt instanceof Date ? card.createdAt : 
+              new Date(card.createdAt || Date.now()),
+    updatedAt: card.updatedAt instanceof Date ? card.updatedAt : 
+              card.updatedAt ? new Date(card.updatedAt) : undefined,
+    reviewHistory: Array.isArray(card.reviewHistory) ? card.reviewHistory : [],
+    mastered: card.mastered || false,
+    level: card.level || 0,
+    explanation: card.explanation || '',
   };
 }
 
-// Utility function to calculate review performance
 export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
+  const correctAnswers = answers.filter(a => a.isCorrect).length;
+  
   return {
-    score: answers.filter(a => a.isCorrect).length / answers.length * 100,
+    score: answers.length > 0 ? (correctAnswers / answers.length) * 100 : 0,
     time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
     date: new Date(),
+    totalReviews: answers.length,
+    correctReviews: correctAnswers,
+    efficiency: answers.length > 0 ? 
+      correctAnswers / (answers.reduce((sum, a) => sum + (a.attempts || 1), 0)) * 100 : 0,
+    accuracy: answers.length > 0 ? (correctAnswers / answers.length) * 100 : 0
   };
 }
