@@ -71,3 +71,9 @@ export interface LevelProgressBarProps {
   currentXP: number;
   nextLevelXP: number;
 }
+
+export interface LevelBadgeProps {
+  level: number;
+  showInfo?: boolean;
+  size?: 'sm' | 'default' | 'lg';
+}
