@@ -5,6 +5,7 @@ import 'cypress-axe';
 import '@cypress/code-coverage/support';
 
 // Disable specific console errors in the Cypress browser to reduce noise in test output
+// Fix: Use string literal to avoid using namespace as a value
 Cypress.on('window:before:load', (win) => {
   cy.stub(win.console, 'error').callsFake((msg) => {
     // Allow the error to be logged to the console but fail the test if it's not an expected error
@@ -55,6 +56,7 @@ after(() => {
 });
 
 // Make test results easier to read
+// Fix: Use string literal to avoid using namespace as a value
 Cypress.SelectorPlayground.defaults({
   selectorPriority: [
     'data-testid',

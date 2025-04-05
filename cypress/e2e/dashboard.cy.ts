@@ -52,7 +52,11 @@ describe('Dashboard Functionality', () => {
 
   it('should load dashboard with correct metrics', () => {
     cy.visit('/app/dashboard');
-    cy.wait(['@dashboardStats', '@wordOfDay', '@progressData', '@dueCards']);
+    // Fix: Changed from array of strings to individual strings
+    cy.wait('@dashboardStats');
+    cy.wait('@wordOfDay'); 
+    cy.wait('@progressData');
+    cy.wait('@dueCards');
     
     // Check main stats
     cy.get('[data-testid="learning-streak"]').should('contain', '5');

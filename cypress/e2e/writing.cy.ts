@@ -1,4 +1,3 @@
-
 describe('Writing Practice Page', () => {
   beforeEach(() => {
     cy.visit('/app/writing');
@@ -124,8 +123,8 @@ describe('Writing Practice Page', () => {
   });
 
   it('should handle keyboard shortcuts', () => {
-    // Focus on textarea
-    cy.get('textarea').focus();
+    // Focus on textarea - Fix: Changed from focus() to focused()
+    cy.get('textarea').focused();
     
     // Type text
     cy.get('textarea').type('Ciao');

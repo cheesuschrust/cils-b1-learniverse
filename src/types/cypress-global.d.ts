@@ -1,10 +1,11 @@
+
 /// <reference types="cypress" />
 /// <reference types="cypress-axe" />
 /// <reference types="@testing-library/cypress" />
 
 declare namespace Cypress {
   interface Chainable<Subject = any> {
-    // Existing commands from cypress.d.ts
+    // Custom commands
     tab(): Chainable<Element>;
     checkAllLinks(): Chainable<Element>;
     checkAccessibility(options?: any): Chainable<Element>;
@@ -19,7 +20,7 @@ declare namespace Cypress {
     injectAxe(): Chainable<Element>;
     checkA11y(options?: any): Chainable<Element>;
     
-    // Common Cypress commands
+    // Basic Cypress commands that need to be explicitly defined
     visit(url: string, options?: Partial<Cypress.VisitOptions>): Chainable<Element>;
     get(selector: string, options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>): Chainable<Element>;
     contains(content: string | number | RegExp, options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>): Chainable<Element>;
@@ -43,6 +44,24 @@ declare namespace Cypress {
     intercept(method: string, url: string | RegExp, response?: string | object): Chainable<Element>;
     intercept(alias: string, url: string | RegExp, response?: string | object): Chainable<Element>;
     
+    // Missing methods that caused the errors
+    should(chainer: string, value?: any): Chainable<Subject>;
+    should(chainers: string, value: any, match: any): Chainable<Subject>;
+    should(chainers: string, match: RegExp): Chainable<Subject>;
+    should(chainers: string, value: any, match: string): Chainable<Subject>;
+    should(fn: (currentSubject: Subject) => void): Chainable<Subject>;
+    
+    click(options?: Partial<Cypress.ClickOptions>): Chainable<Subject>;
+    type(text: string, options?: Partial<Cypress.TypeOptions>): Chainable<Subject>;
+    clear(options?: Partial<Cypress.ClearOptions>): Chainable<Subject>;
+    select(text: string | string[], options?: Partial<Cypress.SelectOptions>): Chainable<Subject>;
+    first(options?: object): Chainable<Subject>;
+    check(options?: Partial<Cypress.CheckOptions>): Chainable<Subject>;
+    focus(options?: Partial<Cypress.Loggable>): Chainable<Subject>;
+    as(alias: string): Chainable<Subject>;
+    each(fn: (currentElement: JQuery<HTMLElement>, index: number, elements: JQuery<HTMLElement>[]) => void): Chainable<JQuery<HTMLElement>>;
+    wrap<E>(element: E, options?: Partial<Cypress.Loggable>): Chainable<E>;
+
     // For React component testing
     mount(component: React.ReactNode, options?: any): Chainable<Element>;
     

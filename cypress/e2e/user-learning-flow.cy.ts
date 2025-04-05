@@ -1,4 +1,3 @@
-
 /**
  * End-to-end test for a complete user learning flow through the application
  * Tests the core learning path: Login -> Dashboard -> Flashcards -> Writing -> Multiple Choice
@@ -269,8 +268,8 @@ describe('User Learning Flow', () => {
     cy.contains('Writing').click();
     cy.checkA11y();
     
-    // Focus on the textarea
-    cy.get('textarea').focus();
+    // Focus on the textarea - Fix: Changed from focus() to focused()
+    cy.get('textarea').focused(); 
     cy.focused().should('have.prop', 'tagName').and('eq', 'TEXTAREA');
     
     // Type using keyboard
