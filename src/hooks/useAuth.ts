@@ -1,3 +1,3 @@
 
-// Importing from EnhancedAuthContext to re-export
+// Re-export from EnhancedAuthContext
 export { useAuth } from '@/contexts/EnhancedAuthContext';

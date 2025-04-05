@@ -1,173 +1,181 @@
-
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Check, X, Info, ArrowRight, ArrowLeft } from 'lucide-react';
 
-// Mock citizenship test questions 
-const mockQuestions = [
-  {
-    id: '1',
-    question: 'What is the capital of Italy?',
-    options: ['Milan', 'Rome', 'Naples', 'Florence'],
-    correctAnswer: 'Rome',
-    explanation: 'Rome is the capital city of Italy and serves as the administrative center of both the country and the Rome province.'
-  },
-  {
-    id: '2',
-    question: 'What is the official language of Italy?',
-    options: ['English', 'French', 'Italian', 'Spanish'],
-    correctAnswer: 'Italian',
-    explanation: 'Italian is the official language of Italy, derived from the Latin language and part of the Romance language family.'
-  },
-  {
-    id: '3',
-    question: 'Which of these is NOT one of the colors in the Italian flag?',
-    options: ['Green', 'Red', 'White', 'Blue'],
-    correctAnswer: 'Blue',
-    explanation: 'The Italian flag consists of three vertical stripes of equal dimensions, with green on the hoist side, white in the middle, and red on the outside.'
-  },
-  {
-    id: '4',
-    question: 'In what year did Italy become a unified nation?',
-    options: ['1815', '1848', '1861', '1945'],
-    correctAnswer: '1861',
-    explanation: 'Italy was unified in 1861 under King Victor Emmanuel II, following the efforts of Giuseppe Garibaldi and Count Camillo di Cavour.'
-  },
-  {
-    id: '5',
-    question: 'What is the type of government in Italy?',
-    options: ['Monarchy', 'Parliamentary Republic', 'Presidential Republic', 'Federal Republic'],
-    correctAnswer: 'Parliamentary Republic',
-    explanation: 'Italy is a parliamentary republic with a multi-party system and a president who serves as the head of state.'
-  }
-];
+interface Question {
+  id: string;
+  question_text: string;
+  options: { [key: string]: string };
+  correct_answer: string;
+  explanation: string | null;
+  category: string;
+}
 
 const CitizenshipTest = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const currentQuestion = mockQuestions[currentQuestionIndex];
-  
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswers({
-      ...selectedAnswers,
-      [currentQuestion.id]: answer
-    });
-  };
-  
-  const navigateNext = () => {
-    if (currentQuestionIndex < mockQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      submitTest();
-    }
-  };
-  
-  const navigatePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-  
-  const submitTest = () => {
-    setIsSubmitting(true);
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('category', 'citizenship')
+          .limit(10);
+          
+        if (error) throw error;
+        
+        if (data) {
+          const formattedQuestions = data.map(q => ({
+            id: q.id,
+            question_text: q.question,
+            options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
+            correct_answer: q.correct_answer,
+            explanation: q.explanation,
+            category: q.category
+          }));
+          
+          setQuestions(formattedQuestions);
+        }
+      } catch (error) {
+        console.error('Error fetching questions:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load citizenship test questions',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Simulate API call
-    setTimeout(() => {
-      setShowResults(true);
-      setIsSubmitting(false);
-      
-      const score = calculateScore();
-      const percentage = (score / mockQuestions.length) * 100;
-      
-      toast({
-        title: `Test completed: ${score}/${mockQuestions.length}`,
-        description: `You scored ${percentage.toFixed(0)}% on the citizenship test.`,
-        variant: percentage >= 60 ? 'default' : 'destructive',
+    fetchQuestions();
+  }, [toast]);
+
+  const handleSelectAnswer = (answer: string) => {
+    if (isAnswered) return;
+    
+    setSelectedAnswer(answer);
+    setIsAnswered(true);
+    
+    const currentQ = questions[currentQuestion];
+    const isAnswerCorrect = answer === currentQ.correct_answer;
+    setIsCorrect(isAnswerCorrect);
+    
+    if (isAnswerCorrect) {
+      setScore(prevScore => prevScore + 1);
+    }
+    
+    if (user) {
+      logAttempt(currentQ.id, answer, isAnswerCorrect);
+    }
+  };
+
+  const logAttempt = async (questionId: string, answer: string, isCorrect: boolean) => {
+    try {
+      await supabase.from('question_responses').insert({
+        user_id: user?.id,
+        question_id: questionId,
+        user_answer: answer,
+        is_correct: isCorrect,
+        time_spent: 0,
       });
-    }, 1500);
+    } catch (error) {
+      console.error('Error logging attempt:', error);
+    }
   };
-  
-  const calculateScore = () => {
-    return mockQuestions.reduce((score, question) => {
-      return selectedAnswers[question.id] === question.correctAnswer
-        ? score + 1
-        : score;
-    }, 0);
+
+  const handleNextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setSelectedAnswer(null);
+      setIsAnswered(false);
+    } else {
+      setShowResults(true);
+      
+      if (user) {
+        logTestCompletion();
+      }
+    }
   };
-  
-  const resetTest = () => {
-    setCurrentQuestionIndex(0);
-    setSelectedAnswers({});
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+    }
+  };
+
+  const logTestCompletion = async () => {
+    try {
+      await supabase.from('question_attempts').insert({
+        user_id: user?.id,
+        content_type: 'citizenship',
+        total_questions: questions.length,
+        correct_answers: score,
+        score_percentage: Math.round((score / questions.length) * 100),
+        time_spent: 0,
+      });
+      
+      await supabase.rpc('update_citizenship_progress', {
+        user_id: user?.id,
+        new_score: Math.round((score / questions.length) * 100)
+      });
+    } catch (error) {
+      console.error('Error logging test completion:', error);
+    }
+  };
+
+  const handleRestartTest = () => {
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setIsAnswered(false);
+    setScore(0);
     setShowResults(false);
   };
-  
-  if (showResults) {
-    const score = calculateScore();
-    const percentage = (score / mockQuestions.length) * 100;
-    
+
+  if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="flex items-center justify-center h-[70vh]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="container mx-auto py-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Test Results</CardTitle>
+            <CardTitle>Citizenship Test</CardTitle>
             <CardDescription>
-              Your citizenship test score
+              Prepare for your Italian citizenship test
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center py-4">
-              <div className="text-5xl font-bold mb-2">
-                {score}/{mockQuestions.length}
-              </div>
-              <div className="text-xl">
-                {percentage.toFixed(0)}%
-              </div>
-              <div className="mt-4 text-xl">
-                {percentage >= 60 ? (
-                  <span className="text-green-600 dark:text-green-400">Passed!</span>
-                ) : (
-                  <span className="text-red-600 dark:text-red-400">Failed</span>
-                )}
-              </div>
-            </div>
-            
-            <div className="space-y-6 mt-8">
-              <h3 className="text-xl font-semibold">Question Review</h3>
-              {mockQuestions.map((question, index) => (
-                <div key={question.id} className="border rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-full p-1 ${selectedAnswers[question.id] === question.correctAnswer ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                      {selectedAnswers[question.id] === question.correctAnswer ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <span className="h-5 w-5 flex items-center justify-center font-bold">✗</span>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Question {index + 1}: {question.question}</h4>
-                      <p className="text-sm mb-1">Your answer: {selectedAnswers[question.id] || "Not answered"}</p>
-                      <p className="text-sm text-green-600 dark:text-green-400 font-medium">Correct answer: {question.correctAnswer}</p>
-                      <p className="text-sm text-muted-foreground mt-2">{question.explanation}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <CardContent>
+            <p className="text-center py-8">No questions available at the moment.</p>
           </CardContent>
           <CardFooter>
-            <Button onClick={resetTest} className="w-full">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Restart Test
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Try Again
             </Button>
           </CardFooter>
         </Card>
@@ -175,69 +183,174 @@ const CitizenshipTest = () => {
     );
   }
 
-  return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Italian Citizenship Test</CardTitle>
-          <CardDescription>
-            Question {currentQuestionIndex + 1} of {mockQuestions.length}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-medium mb-4">{currentQuestion.question}</h3>
-              <RadioGroup
-                value={selectedAnswers[currentQuestion.id] || ""}
-                onValueChange={handleAnswerSelect}
-                className="space-y-3"
-              >
-                {currentQuestion.options.map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={option} />
-                    <Label htmlFor={option}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
+  if (showResults) {
+    const passPercentage = 60;
+    const userPercentage = Math.round((score / questions.length) * 100);
+    const passed = userPercentage >= passPercentage;
+    
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+            <CardDescription>
+              Your Italian citizenship test performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center py-4">
+              <h2 className="text-2xl font-bold mb-2">
+                {passed ? 'Congratulations!' : 'Keep Practicing!'}
+              </h2>
+              <p className="text-muted-foreground">
+                {passed 
+                  ? 'You passed the practice citizenship test!' 
+                  : 'You need more practice for the citizenship test.'}
+              </p>
             </div>
             
-            <div className="h-1 w-full bg-gray-200 rounded-full mt-6">
-              <div
-                className="h-1 bg-primary rounded-full"
-                style={{ width: `${((currentQuestionIndex + 1) / mockQuestions.length) * 100}%` }}
-              ></div>
+            <div className="flex items-center justify-center text-4xl font-bold gap-2">
+              <span>{score}</span>
+              <span className="text-muted-foreground text-lg">/</span>
+              <span className="text-muted-foreground text-lg">{questions.length}</span>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Score: {userPercentage}%</span>
+                <span>Passing: {passPercentage}%</span>
+              </div>
+              <Progress 
+                value={userPercentage} 
+                className="h-3"
+                indicatorClassName={passed ? "bg-green-600" : "bg-red-500"}
+              />
+            </div>
+            
+            <div className="bg-muted p-4 rounded-lg">
+              <h3 className="font-medium mb-2">Test Feedback:</h3>
+              <p className="text-sm">
+                {passed 
+                  ? 'You have demonstrated a good understanding of the Italian citizenship requirements. Continue practicing to ensure success in the actual test.' 
+                  : 'You need to improve your knowledge of Italian citizenship requirements. Focus on studying the areas where you struggled.'}
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter className="flex gap-4">
+            <Button onClick={handleRestartTest} className="flex-1">
+              Try Again
+            </Button>
+            <Button variant="outline" className="flex-1" asChild>
+              <a href="/resources">Study Resources</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentQ = questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+  return (
+    <div className="container mx-auto py-8">
+      <Card className="max-w-3xl mx-auto">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Citizenship Test</CardTitle>
+              <CardDescription>
+                Preparing you for the Italian citizenship exam
+              </CardDescription>
+            </div>
+            <div className="text-sm font-medium">
+              Question {currentQuestion + 1} of {questions.length}
             </div>
           </div>
+          <Progress value={progress} className="h-2" />
+        </CardHeader>
+        
+        <CardContent className="pt-6">
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-lg font-medium mb-2">{currentQ.question_text}</h3>
+            </div>
+            
+            <RadioGroup value={selectedAnswer || ''} className="space-y-3">
+              {Object.entries(currentQ.options).map(([key, option]) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <div 
+                    className={`border rounded-md p-4 flex-1 cursor-pointer hover:bg-muted transition-colors ${
+                      selectedAnswer === key 
+                        ? isCorrect 
+                          ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                          : 'border-red-500 bg-red-50 dark:bg-red-950/20' 
+                        : 'border-input'
+                    }`}
+                    onClick={() => handleSelectAnswer(key)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value={key} id={key} disabled={isAnswered} />
+                        <Label htmlFor={key} className="cursor-pointer">{option}</Label>
+                      </div>
+                      
+                      {isAnswered && selectedAnswer === key && (
+                        isCorrect ? (
+                          <Check className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <X className="h-5 w-5 text-red-500" />
+                        )
+                      )}
+                      
+                      {isAnswered && key === currentQ.correct_answer && selectedAnswer !== key && (
+                        <Check className="h-5 w-5 text-green-500" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </RadioGroup>
+            
+            {isAnswered && currentQ.explanation && (
+              <div className="bg-muted p-4 rounded-lg flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-sm">Explanation:</h4>
+                  <p className="text-sm mt-1">{currentQ.explanation}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
+        
         <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={navigatePrevious}
-            disabled={currentQuestionIndex === 0}
+          <Button 
+            variant="outline" 
+            onClick={handlePreviousQuestion}
+            disabled={currentQuestion === 0}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Previous
           </Button>
           
-          <Button
-            onClick={navigateNext}
-            disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : currentQuestionIndex < mockQuestions.length - 1 ? (
-              <>
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            ) : (
-              "Submit Test"
-            )}
-          </Button>
+          {isAnswered ? (
+            <Button onClick={handleNextQuestion}>
+              {currentQuestion < questions.length - 1 ? (
+                <>
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              ) : (
+                'View Results'
+              )}
+            </Button>
+          ) : (
+            <Button disabled>
+              Next
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </div>
