@@ -19,6 +19,8 @@ const badgeVariants = cva(
         warning: "border-transparent bg-yellow-500 text-white hover:bg-yellow-600",
         info: "border-transparent bg-blue-500 text-white hover:bg-blue-600",
         citizenship: "border-transparent bg-italian-red text-white hover:bg-italian-red/90",
+        green: "border-transparent bg-green-500 text-white hover:bg-green-600",
+        blue: "border-transparent bg-blue-500 text-white hover:bg-blue-600"
       },
       size: {
         default: "h-6 px-2.5 py-0.5 text-xs",

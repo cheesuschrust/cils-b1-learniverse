@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { Flashcard, ImportFormat } from '@/types/interface-fixes';
+import { Flashcard, ImportFormat } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ImportResult {
@@ -34,7 +34,7 @@ export function useFlashcardImporter() {
     try {
       if (format.type === 'json' || text.trim().startsWith('[') || text.trim().startsWith('{')) {
         return importFromJson(text);
-      } else if (format.type === 'csv' || format.type === 'txt') {
+      } else if (format.type === 'csv' || format.type === 'text') {
         return importFromCsv(text, format);
       } else {
         throw new Error(`Unsupported format: ${format.type}`);

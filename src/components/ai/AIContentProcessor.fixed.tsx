@@ -4,9 +4,10 @@ import { useAI } from '@/hooks/useAI';
 import { 
   AIGeneratedQuestion,
   AISettings,
+  ContentType,
   ItalianTestSection,
   ItalianQuestionGenerationParams
-} from '@/types/ai';  
+} from '@/types';  
 
 export interface AIContentProcessorProps {  
   content?: string;
@@ -22,7 +23,6 @@ export function AIContentProcessor({
   content = "",
   contentType = "reading",
   settings = {
-    model: "gpt-4o",
     temperature: 0.7,
     maxTokens: 1024,
     topP: 0.9,
@@ -49,26 +49,19 @@ export function AIContentProcessor({
       difficulty: settings.difficulty as any,
       topics: settings.focusAreas || [],
       count: 5, // Default to 5 questions
-      contentTypes: settings.contentTypes as ItalianTestSection[],
+      contentTypes: (settings.contentTypes as ItalianTestSection[]) || ['grammar'],
       isCitizenshipFocused: false
     };  
     
     try {
       const result = await generateQuestions(params);  
-
-      if (result && result.error) {  
-        setError(result.error);  
-        if (onError) {  
-          onError(new Error(result.error));  
-        }  
-      } else {  
-        setQuestions(result);
-        if (onContentGenerated) {  
-          onContentGenerated(result);  
-        }
-        if (onQuestionsGenerated) {
-          onQuestionsGenerated(result);
-        }
+      
+      setQuestions(result);
+      if (onContentGenerated) {  
+        onContentGenerated(result);  
+      }
+      if (onQuestionsGenerated) {
+        onQuestionsGenerated(result);
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error';

@@ -1,5 +1,5 @@
 
-import { User } from './user';
+import { ContentType } from '@/types/contentType';
 
 export type AIModelSize = 'small' | 'medium' | 'large';
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
@@ -14,8 +14,8 @@ export interface AIQuestion {
   explanation?: string;
   type: ContentType;
   difficulty: string;
-  questionType: 'multiple-choice' | 'fill-in-blank' | 'true-false' | 'short-answer' | 'matching';
-  isCitizenshipRelevant: boolean;
+  questionType?: 'multiple-choice' | 'fill-in-blank' | 'true-false' | 'short-answer' | 'matching';
+  isCitizenshipRelevant?: boolean;
 }
 
 export interface AIGeneratedQuestion extends AIQuestion {
@@ -31,12 +31,12 @@ export interface QuestionGenerationParams {
   contentTypes: ContentType[];
   difficulty: string;
   count: number;
-  topics?: string[];
+  topics: string[];
   isCitizenshipFocused?: boolean;
 }
 
 export interface ItalianQuestionGenerationParams {
-  contentTypes: ContentType[];
+  contentTypes: ContentType[] | ItalianTestSection[];
   difficulty: string;
   count: number;
   topics?: string[];
@@ -48,74 +48,7 @@ export interface AIProcessingOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
-}
-
-export interface AISettings {
-  enabled: boolean;
-  modelSize: AIModelSize;
-  processingOnDevice: boolean;
-  autoSpeakCorrections: boolean;
-  voiceEnabled: boolean;
-  voiceRate: number;
-  voicePitch: number;
-  confidenceThreshold: number;
-  features: {
-    grammarCorrection: boolean;
-    pronunciationFeedback: boolean;
-    vocabularySuggestions: boolean;
-    culturalContext: boolean;
-  }
-}
-
-export interface AISettingsContextType {
-  settings: AISettings;
-  updateSettings: (settings: Partial<AISettings>) => void;
-  isLoading: boolean;
-}
-
-export interface AIUtilsContextType {
-  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
-  processContent: (content: string, options?: AIProcessingOptions) => Promise<any>;
-  analyzeGrammar: (text: string, language?: string) => Promise<any>;
-  translateText: (text: string, targetLanguage?: string) => Promise<any>;
-  generateText: (prompt: string, options?: any) => Promise<any>;
-  evaluateWriting: (text: string, level?: string) => Promise<any>;
-  isGenerating: boolean;
-  remainingCredits: number;
-  usageLimit: number;
-  isAIEnabled: boolean;
-  speak?: (text: string, options?: any) => Promise<void>;
-  isSpeaking?: boolean;
-  status?: string;
-  isModelLoaded?: boolean;
-  compareTexts?: (text1: string, text2: string) => Promise<{ similarity: number, differences: string[] }>;
-  loadModel?: () => Promise<void>;
-  classifyText?: (text: string, categories: string[]) => Promise<{ category: string, confidence: number }>;
-  transcribeSpeech?: (audioData: Blob) => Promise<{ text: string, confidence: number }>;
-  processAudioStream?: (stream: MediaStream) => Promise<void>;
-  stopAudioProcessing?: () => void;
-  isTranscribing?: boolean;
-  hasActiveMicrophone?: boolean;
-  checkMicrophoneAccess?: () => Promise<boolean>;
-}
-
-export interface UseAIReturn {
-  processContent: (content: string, options?: AIProcessingOptions) => Promise<any>;
-  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGeneratedQuestion[]>;
-  analyzeGrammar: (text: string, language?: string) => Promise<any>;
-  translateText: (text: string, targetLanguage?: string) => Promise<any>;
-  generateText: (prompt: string, options?: any) => Promise<any>;
-  evaluateWriting: (text: string, level?: string) => Promise<any>;
-  lastResult: any;
-  isProcessing: boolean;
-  speak?: (text: string, options?: any) => Promise<void>;
-  isAIEnabled: boolean;
-  status?: string;
-  isModelLoaded?: boolean;
-  compareTexts?: (text1: string, text2: string) => Promise<{ similarity: number, differences: string[] }>;
-  loadModel?: () => Promise<void>;
-  classifyText?: (text: string, categories: string[]) => Promise<{ category: string, confidence: number }>;
-  transcribeSpeech?: (audioData: Blob) => Promise<{ text: string, confidence: number }>;
+  level?: string;
 }
 
 export interface TTSOptions {
@@ -146,8 +79,8 @@ export interface VoicePreference {
   autoPlay: boolean;
   voiceRate: number;
   voicePitch: number;
-  englishVoiceURI: string;
-  italianVoiceURI: string;
+  englishVoiceURI?: string;
+  italianVoiceURI?: string;
 }
 
 export interface AIContentProcessorProps {
@@ -156,3 +89,63 @@ export interface AIContentProcessorProps {
   isLoading?: boolean;
   content?: string;
 }
+
+export interface AIUtilsContextType {
+  generateQuestions: (params: QuestionGenerationParams) => Promise<AIGenerationResult>;
+  processContent: (content: string, options?: AIProcessingOptions) => Promise<any>;
+  analyzeGrammar: (text: string, language?: string) => Promise<any>;
+  translateText: (text: string, targetLanguage?: string) => Promise<any>;
+  generateText: (prompt: string, options?: any) => Promise<any>;
+  evaluateWriting: (text: string, level?: string) => Promise<any>;
+  isGenerating?: boolean;
+  isProcessing: boolean;
+  remainingCredits?: number;
+  usageLimit?: number;
+  isAIEnabled?: boolean;
+  speak?: (text: string, options?: any) => Promise<void>;
+  isSpeaking?: boolean;
+  status?: string;
+  isModelLoaded?: boolean;
+  compareTexts?: (text1: string, text2: string) => Promise<{ similarity: number, differences: string[] }>;
+  loadModel?: () => Promise<void>;
+  classifyText?: (text: string, categories: string[]) => Promise<{ category: string, confidence: number }>;
+  transcribeSpeech?: (audioData: Blob) => Promise<{ text: string, confidence: number }>;
+  processAudioStream?: (stream: MediaStream) => Promise<void>;
+  stopAudioProcessing?: () => void;
+  isTranscribing?: boolean;
+  hasActiveMicrophone?: boolean;
+  checkMicrophoneAccess?: () => Promise<boolean>;
+  generateContent?: (prompt: string, options?: any) => Promise<any>;
+  analyzeContent?: (content: string, contentType: string) => Promise<any>;
+}
+
+// Initialize default confidence scores for content types
+export const getInitialConfidenceScores = (): Record<ContentType, number> => {
+  return {
+    'grammar': 78,
+    'vocabulary': 82,
+    'writing': 69,
+    'speaking': 74,
+    'listening': 65,
+    'reading': 70,
+    'culture': 75
+  };
+};
+
+// Get user-friendly labels for content types
+export const getContentTypeLabels = (): Record<ContentType, string> => {
+  return {
+    'grammar': 'Grammar',
+    'vocabulary': 'Vocabulary',
+    'writing': 'Writing',
+    'speaking': 'Speaking',
+    'listening': 'Listening',
+    'reading': 'Reading',
+    'culture': 'Culture'
+  };
+};
+
+// Get content types that should be displayed in the UI
+export const getDisplayableContentTypes = (): ContentType[] => {
+  return ['grammar', 'vocabulary', 'writing', 'speaking', 'listening', 'reading', 'culture'];
+};

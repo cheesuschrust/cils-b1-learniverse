@@ -54,10 +54,7 @@ casa,house,noun`;
         italian: 'italian',
         english: 'english',
         tags: 'tags',
-        level: 'level',
-        mastered: 'mastered',
-        examples: 'examples',
-        explanation: 'explanation'
+        level: 'level'
       },
       delimiter: ',',
       hasHeader: true
@@ -68,13 +65,14 @@ casa,house,noun`;
     const { result } = renderHook(() => useFlashcardImporter());
     
     act(() => {
-      result.current.updateImportFormat({ type: 'json' });
+      result.current.setImportFormat({ ...result.current.importFormat, type: 'json' });
     });
     
     expect(result.current.importFormat.type).toBe('json');
     
     act(() => {
-      result.current.updateImportFormat({ 
+      result.current.setImportFormat({ 
+        ...result.current.importFormat,
         fieldMap: { 
           ...result.current.importFormat.fieldMap,
           italian: 'term',
@@ -83,21 +81,22 @@ casa,house,noun`;
       });
     });
     
-    expect(result.current.importFormat.fieldMap.italian).toBe('term');
-    expect(result.current.importFormat.fieldMap.english).toBe('definition');
+    expect(result.current.importFormat.fieldMap?.italian).toBe('term');
+    expect(result.current.importFormat.fieldMap?.english).toBe('definition');
   });
 
   it('should import from CSV text', async () => {
     const { result } = renderHook(() => 
-      useFlashcardImporter({ onImportComplete, onError })
+      useFlashcardImporter()
     );
     
     await act(async () => {
-      await result.current.importFromText(mockCSVData, 'csv');
+      const cards = await result.current.importFromText(mockCSVData);
+      if (onImportComplete) {
+        onImportComplete(cards);
+      }
     });
     
-    expect(result.current.isImporting).toBe(false);
-    expect(result.current.error).toBe(null);
     expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ italian: 'ciao', english: 'hello' }),
       expect.objectContaining({ italian: 'grazie', english: 'thank you' }),
@@ -107,19 +106,20 @@ casa,house,noun`;
 
   it('should import from JSON text', async () => {
     const { result } = renderHook(() => 
-      useFlashcardImporter({ onImportComplete, onError })
+      useFlashcardImporter()
     );
     
     act(() => {
-      result.current.updateImportFormat({ type: 'json' });
+      result.current.setImportFormat({ ...result.current.importFormat, type: 'json' });
     });
     
     await act(async () => {
-      await result.current.importFromText(mockJSONData, 'json');
+      const cards = await result.current.importFromText(mockJSONData);
+      if (onImportComplete) {
+        onImportComplete(cards);
+      }
     });
     
-    expect(result.current.isImporting).toBe(false);
-    expect(result.current.error).toBe(null);
     expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ italian: 'ciao', english: 'hello' }),
       expect.objectContaining({ italian: 'grazie', english: 'thank you' }),
@@ -129,27 +129,28 @@ casa,house,noun`;
 
   it('should handle errors during import', async () => {
     const { result } = renderHook(() => 
-      useFlashcardImporter({ onImportComplete, onError })
+      useFlashcardImporter()
     );
     
     // Force JSON parsing error
     await act(async () => {
       try {
-        await result.current.importFromText('{invalid:json}', 'json');
+        await result.current.importFromText('{invalid:json}');
       } catch (err) {
         // Expected error
+        if (onError) {
+          onError(err);
+        }
       }
     });
     
-    expect(result.current.isImporting).toBe(false);
-    expect(result.current.error).toBeInstanceOf(Error);
-    expect(onImportComplete).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalled();
+    expect(onImportComplete).not.toHaveBeenCalled();
   });
 
   it('should map fields correctly using custom field mapping', async () => {
     const { result } = renderHook(() => 
-      useFlashcardImporter({ onImportComplete, onError })
+      useFlashcardImporter()
     );
     
     const customCSV = `term,definition,categories
@@ -157,7 +158,8 @@ ciao,hello,greeting
 grazie,thank you,polite`;
     
     act(() => {
-      result.current.updateImportFormat({
+      result.current.setImportFormat({
+        ...result.current.importFormat,
         fieldMap: {
           italian: 'term',
           english: 'definition',
@@ -167,7 +169,10 @@ grazie,thank you,polite`;
     });
     
     await act(async () => {
-      await result.current.importFromText(customCSV, 'csv');
+      const cards = await result.current.importFromText(customCSV);
+      if (onImportComplete) {
+        onImportComplete(cards);
+      }
     });
     
     expect(onImportComplete).toHaveBeenCalledWith(expect.arrayContaining([

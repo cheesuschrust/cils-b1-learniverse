@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Flashcard, ImportFormat } from '@/types/interface-fixes';
+import { Flashcard, ImportFormat } from '@/types';
 import { useFlashcardImporter } from '@/hooks/useFlashcardImporter';
 import { Upload, AlertCircle, File, FileText, Table } from 'lucide-react';
 
@@ -41,20 +41,6 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
   
   // State for import options
   const [importType, setImportType] = useState<'file' | 'paste'>('file');
-  const [importFormat, setImportFormat] = useState<ImportFormat>({
-    type: 'csv',
-    delimiter: ',',
-    hasHeader: true,
-    encoding: 'utf-8',
-    fieldMap: {
-      italian: 'italian',
-      english: 'english',
-      tags: 'tags',
-      level: 'level'
-    }
-  });
-  
-  // File and text states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState('');
   
@@ -65,7 +51,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   
   // Import service
-  const { importFromText, importFromFile } = useFlashcardImporter();
+  const { importFromText, importFromFile, setImportFormat, importFormat } = useFlashcardImporter();
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,36 +65,43 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
       } else if (fileName.endsWith('.json')) {
         setImportFormat({ ...importFormat, type: 'json' });
       } else if (fileName.endsWith('.txt')) {
-        setImportFormat({ ...importFormat, type: 'txt' });
-      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        setImportFormat({ ...importFormat, type: 'xlsx' });
+        setImportFormat({ ...importFormat, type: 'text' });
       }
     }
   };
   
   // Handle format change
-  const handleFormatChange = (value: 'csv' | 'json' | 'txt' | 'xlsx' | 'anki' | 'quizlet' | 'excel') => {
+  const handleFormatChange = (value: string) => {
     setImportFormat({
       ...importFormat,
-      type: value === 'excel' ? 'xlsx' : value === 'anki' || value === 'quizlet' ? 'json' : value
+      type: value as 'csv' | 'json' | 'text' | 'anki' | 'quizlet'
     });
   };
   
   // Handle delimiter change
   const handleDelimiterChange = (value: string) => {
-    setImportFormat({ ...importFormat, delimiter: value });
+    setImportFormat({ 
+      ...importFormat, 
+      delimiter: value 
+    });
   };
   
   // Handle header change
   const handleHeaderChange = (value: string) => {
-    setImportFormat({ ...importFormat, hasHeader: value === 'true' });
+    setImportFormat({ 
+      ...importFormat, 
+      hasHeader: value === 'true' 
+    });
   };
   
   // Handle field mapping changes
   const handleFieldMapChange = (field: string, value: string) => {
     setImportFormat({
       ...importFormat,
-      fieldMap: { ...(importFormat.fieldMap || {}), [field]: value }
+      fieldMap: { 
+        ...(importFormat.fieldMap || {}), 
+        [field]: value 
+      }
     });
   };
   
@@ -146,9 +139,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
       } else if (fileName.endsWith('.json')) {
         setImportFormat({ ...importFormat, type: 'json' });
       } else if (fileName.endsWith('.txt')) {
-        setImportFormat({ ...importFormat, type: 'txt' });
-      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        setImportFormat({ ...importFormat, type: 'xlsx' });
+        setImportFormat({ ...importFormat, type: 'text' });
       }
     }
   };
@@ -165,9 +156,9 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
           throw new Error('File size exceeds 5MB limit');
         }
         
-        importedCards = await importFromFile(selectedFile, importFormat);
+        importedCards = await importFromFile(selectedFile);
       } else if (importType === 'paste' && pastedText) {
-        importedCards = await importFromText(pastedText, importFormat);
+        importedCards = await importFromText(pastedText);
       } else {
         throw new Error('No file selected or text pasted');
       }
@@ -218,184 +209,163 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
   
   // For CSV and delimited formats, show a preview of how the data will be parsed
   const renderFormatSpecificOptions = () => {
-    switch (importFormat.type) {
-      case 'csv':
-      case 'txt':
-        return (
-          <div className="space-y-4">
+    if (importFormat.type === 'csv' || importFormat.type === 'text') {
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Delimiter</Label>
+              <Select 
+                value={importFormat.delimiter || ','} 
+                onValueChange={handleDelimiterChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select delimiter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=",">Comma (,)</SelectItem>
+                  <SelectItem value=";">Semicolon (;)</SelectItem>
+                  <SelectItem value="\t">Tab</SelectItem>
+                  <SelectItem value="|">Pipe (|)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Has Header Row</Label>
+              <Select 
+                value={importFormat.hasHeader ? 'true' : 'false'} 
+                onValueChange={handleHeaderChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select option" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Yes</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Field Mapping</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Delimiter</Label>
+                <Label className="text-xs">Italian Field</Label>
                 <Select 
-                  value={importFormat.delimiter} 
-                  onValueChange={handleDelimiterChange}
+                  value={importFormat.fieldMap?.italian || 'italian'}
+                  onValueChange={(value) => handleFieldMapChange('italian', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select delimiter" />
+                    <SelectValue placeholder="Select field" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=",">Comma (,)</SelectItem>
-                    <SelectItem value=";">Semicolon (;)</SelectItem>
-                    <SelectItem value="\t">Tab</SelectItem>
-                    <SelectItem value="|">Pipe (|)</SelectItem>
+                    <SelectItem value="italian">italian</SelectItem>
+                    <SelectItem value="front">front</SelectItem>
+                    <SelectItem value="term">term</SelectItem>
+                    <SelectItem value="question">question</SelectItem>
+                    <SelectItem value="col1">Column 1</SelectItem>
+                    <SelectItem value="col2">Column 2</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <Label>Has Header Row</Label>
+                <Label className="text-xs">English Field</Label>
                 <Select 
-                  value={importFormat.hasHeader ? 'true' : 'false'} 
-                  onValueChange={handleHeaderChange}
+                  value={importFormat.fieldMap?.english || 'english'}
+                  onValueChange={(value) => handleFieldMapChange('english', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select option" />
+                    <SelectValue placeholder="Select field" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="true">Yes</SelectItem>
-                    <SelectItem value="false">No</SelectItem>
+                    <SelectItem value="english">english</SelectItem>
+                    <SelectItem value="back">back</SelectItem>
+                    <SelectItem value="definition">definition</SelectItem>
+                    <SelectItem value="answer">answer</SelectItem>
+                    <SelectItem value="col1">Column 1</SelectItem>
+                    <SelectItem value="col2">Column 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Tags Field (optional)</Label>
+                <Select 
+                  value={importFormat.fieldMap?.tags || 'tags'}
+                  onValueChange={(value) => handleFieldMapChange('tags', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tags">tags</SelectItem>
+                    <SelectItem value="category">category</SelectItem>
+                    <SelectItem value="type">type</SelectItem>
+                    <SelectItem value="col3">Column 3</SelectItem>
+                    <SelectItem value="none">No Tags</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Level Field (optional)</Label>
+                <Select 
+                  value={importFormat.fieldMap?.level || 'level'}
+                  onValueChange={(value) => handleFieldMapChange('level', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="level">level</SelectItem>
+                    <SelectItem value="difficulty">difficulty</SelectItem>
+                    <SelectItem value="col4">Column 4</SelectItem>
+                    <SelectItem value="none">No Level</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label>Field Mapping</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Italian Field</Label>
-                  <Select 
-                    value={importFormat.fieldMap?.italian || 'italian'}
-                    onValueChange={(value) => handleFieldMapChange('italian', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="italian">italian</SelectItem>
-                      <SelectItem value="front">front</SelectItem>
-                      <SelectItem value="term">term</SelectItem>
-                      <SelectItem value="question">question</SelectItem>
-                      <SelectItem value="col1">Column 1</SelectItem>
-                      <SelectItem value="col2">Column 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-xs">English Field</Label>
-                  <Select 
-                    value={importFormat.fieldMap?.english || 'english'}
-                    onValueChange={(value) => handleFieldMapChange('english', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="english">english</SelectItem>
-                      <SelectItem value="back">back</SelectItem>
-                      <SelectItem value="definition">definition</SelectItem>
-                      <SelectItem value="answer">answer</SelectItem>
-                      <SelectItem value="col1">Column 1</SelectItem>
-                      <SelectItem value="col2">Column 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-xs">Tags Field (optional)</Label>
-                  <Select 
-                    value={importFormat.fieldMap?.tags || 'tags'}
-                    onValueChange={(value) => handleFieldMapChange('tags', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tags">tags</SelectItem>
-                      <SelectItem value="category">category</SelectItem>
-                      <SelectItem value="type">type</SelectItem>
-                      <SelectItem value="col3">Column 3</SelectItem>
-                      <SelectItem value="none">No Tags</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-xs">Level Field (optional)</Label>
-                  <Select 
-                    value={importFormat.fieldMap?.level || 'level'}
-                    onValueChange={(value) => handleFieldMapChange('level', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select field" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="level">level</SelectItem>
-                      <SelectItem value="difficulty">difficulty</SelectItem>
-                      <SelectItem value="col4">Column 4</SelectItem>
-                      <SelectItem value="none">No Level</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            
-            <Alert>
-              <Table className="h-4 w-4" />
-              <AlertTitle>CSV Format Example</AlertTitle>
-              <AlertDescription className="text-xs font-mono">
-                italian,english,tags,level<br />
-                ciao,hello,"greeting,basic",1<br />
-                buongiorno,good morning,"greeting,formal",1
-              </AlertDescription>
-            </Alert>
           </div>
-        );
-        
-      case 'json':
-        return (
-          <Alert>
-            <FileText className="h-4 w-4" />
-            <AlertTitle>JSON Format Example</AlertTitle>
-            <AlertDescription className="text-xs font-mono">
-              [<br />
-              &nbsp;&nbsp;{"{"}<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"italian": "ciao",<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"english": "hello",<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"tags": ["greeting", "basic"],<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"level": 1<br />
-              &nbsp;&nbsp;{"}"},<br />
-              &nbsp;&nbsp;{"{"}<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"italian": "buongiorno",<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"english": "good morning",<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"tags": ["greeting", "formal"],<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;"level": 1<br />
-              &nbsp;&nbsp;{"}"}<br />
-              ]
-            </AlertDescription>
-          </Alert>
-        );
-        
-      case 'xlsx':
-        return (
+          
           <Alert>
             <Table className="h-4 w-4" />
-            <AlertTitle>Excel Format Requirements</AlertTitle>
-            <AlertDescription>
-              <p className="mb-2">Your Excel file should have these columns:</p>
-              <ul className="list-disc pl-5 text-xs">
-                <li>Column with Italian terms (header: italian, front, or term)</li>
-                <li>Column with English translations (header: english, back, or definition)</li>
-                <li>Optional: Column with tags (comma-separated)</li>
-                <li>Optional: Column with level (numeric)</li>
-              </ul>
+            <AlertTitle>CSV Format Example</AlertTitle>
+            <AlertDescription className="text-xs font-mono">
+              italian,english,tags,level<br />
+              ciao,hello,"greeting,basic",1<br />
+              buongiorno,good morning,"greeting,formal",1
             </AlertDescription>
           </Alert>
-        );
-        
-      default:
-        return null;
+        </div>
+      );
+    } else if (importFormat.type === 'json') {
+      return (
+        <Alert>
+          <FileText className="h-4 w-4" />
+          <AlertTitle>JSON Format Example</AlertTitle>
+          <AlertDescription className="text-xs font-mono">
+            [<br />
+            &nbsp;&nbsp;{"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"italian": "ciao",<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"english": "hello",<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"tags": ["greeting", "basic"],<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"level": 1<br />
+            &nbsp;&nbsp;{"}"},<br />
+            &nbsp;&nbsp;{"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"italian": "buongiorno",<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"english": "good morning",<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"tags": ["greeting", "formal"],<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;"level": 1<br />
+            &nbsp;&nbsp;{"}"}<br />
+            ]
+          </AlertDescription>
+        </Alert>
+      );
+    } else {
+      return null;
     }
   };
   
@@ -432,7 +402,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
                 id="file-upload"
                 type="file" 
                 className="hidden" 
-                accept=".csv,.json,.txt,.xlsx,.xls" 
+                accept=".csv,.json,.txt" 
                 onChange={handleFileChange}
               />
               
@@ -449,7 +419,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
                     {isDragging ? 'Drop your file here' : 'Drag & drop a file here, or click to browse'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Supports CSV, JSON, TXT, and Excel files
+                    Supports CSV, JSON, and plain text files
                   </p>
                 </>
               )}
@@ -474,7 +444,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
           <div className="space-y-2">
             <Label htmlFor="format-type">Format Type</Label>
             <Select 
-              value={importFormat.type === 'xlsx' ? 'excel' : importFormat.type} 
+              value={importFormat.type} 
               onValueChange={handleFormatChange}
             >
               <SelectTrigger>
@@ -483,8 +453,7 @@ const FlashcardImporter: React.FC<FlashcardImporterProps> = ({
               <SelectContent>
                 <SelectItem value="csv">CSV</SelectItem>
                 <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="txt">Plain Text</SelectItem>
-                <SelectItem value="excel">Excel</SelectItem>
+                <SelectItem value="text">Plain Text</SelectItem>
                 <SelectItem value="anki">Anki Export</SelectItem>
                 <SelectItem value="quizlet">Quizlet Export</SelectItem>
               </SelectContent>

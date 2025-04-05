@@ -1,7 +1,12 @@
 
 import { useCallback, useState } from 'react';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { AIProcessingOptions, ItalianQuestionGenerationParams, AIGeneratedQuestion } from '@/types';
+import { 
+  AIProcessingOptions, 
+  ItalianQuestionGenerationParams, 
+  AIGeneratedQuestion,
+  TTSOptions
+} from '@/types';
 
 export function useAI() {
   const {
@@ -55,7 +60,7 @@ export function useAI() {
     return result;
   }, [evaluateWritingAI]);
 
-  const speak = useCallback(async (text: string, options?: any) => {
+  const speak = useCallback(async (text: string, options?: string | TTSOptions) => {
     if (speakAI) {
       return await speakAI(text, options);
     }

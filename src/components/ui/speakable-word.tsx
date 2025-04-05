@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Volume, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAIUtils } from '@/contexts/AIUtilsContext.fixed';
+import { useAI } from '@/hooks/useAI';
 import { SpeakableWordProps } from '@/types';
 
 const SpeakableWord: React.FC<SpeakableWordProps> = ({
@@ -20,7 +20,7 @@ const SpeakableWord: React.FC<SpeakableWordProps> = ({
   iconOnly = false
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const { speak, isAIEnabled } = useAIUtils();
+  const { speak, isAIEnabled } = useAI();
 
   const handlePlay = async () => {
     if (!isAIEnabled || !speak || isPlaying || !word) return;

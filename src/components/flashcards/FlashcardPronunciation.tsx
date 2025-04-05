@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Mic, Play, Square, Volume2 } from 'lucide-react';
-import { useAIUtils } from '@/hooks/useAIUtils';
+import { useAI } from '@/hooks/useAI';
 
 interface FlashcardPronunciationProps {
   text: string;
@@ -12,7 +12,7 @@ interface FlashcardPronunciationProps {
 }
 
 const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, language = 'italian', onScoreUpdate }) => {
-  const { speak, recognizeSpeech, compareTexts } = useAIUtils();
+  const { speak, compareTexts, transcribeSpeech } = useAI();
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [userRecording, setUserRecording] = useState<string | null>(null);
@@ -26,7 +26,7 @@ const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, l
     
     setIsPlaying(true);
     try {
-      await speak(text, language);
+      await speak(text, { language });
     } finally {
       setIsPlaying(false);
     }
@@ -56,14 +56,22 @@ const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, l
       mediaRecorder.addEventListener('stop', async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
-        if (recognizeSpeech) {
+        if (transcribeSpeech) {
           try {
-            const transcribedText = await recognizeSpeech(audioBlob);
+            const transcriptionResult = await transcribeSpeech(audioBlob);
+            const transcribedText = typeof transcriptionResult === 'string' 
+              ? transcriptionResult 
+              : transcriptionResult.text;
+
             setUserRecording(transcribedText);
             
             // Compare with original text if compareTexts is available
             if (compareTexts) {
-              const similarity = await compareTexts(text.toLowerCase(), transcribedText.toLowerCase());
+              const comparisonResult = await compareTexts(text.toLowerCase(), transcribedText.toLowerCase());
+              const similarity = typeof comparisonResult === 'number' 
+                ? comparisonResult 
+                : comparisonResult.similarity;
+
               setSimilarityScore(similarity * 100);
               
               if (onScoreUpdate) {
