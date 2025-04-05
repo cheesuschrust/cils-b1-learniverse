@@ -53,6 +53,7 @@
     "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/user-event": "^14.6.1",
     "@tremor/react": "^3.12.2",
+    "@types/cypress-axe": "^0.8.0",
     "@types/mocha": "^10.0.1",
     "axe-core": "^4.10.3",
     "axios": "^1.8.4",
