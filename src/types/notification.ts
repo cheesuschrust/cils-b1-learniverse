@@ -13,9 +13,10 @@ export type NotificationType =
   | 'lesson' 
   | 'speaking' 
   | 'listening' 
-  | 'citizenship';
+  | 'citizenship'
+  | 'milestone';
 
-export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent' | 'normal';
 
 export interface NotificationAction {
   id: string;
@@ -32,11 +33,13 @@ export interface Notification {
   type: NotificationType;
   createdAt: Date;
   read: boolean;
+  isRead?: boolean;
   priority?: NotificationPriority;
   actions?: NotificationAction[];
   icon?: string;
   image?: string;
   expires?: Date;
+  expiresAt?: Date;
   userId?: string;
   category?: string;
   dismissible?: boolean;
@@ -56,6 +59,7 @@ export interface NotificationItemProps {
   onMarkAsRead?: () => void;
   onRemove?: () => void;
   onClick?: () => void;
+  onAction?: (actionId: string) => void;
   expanded?: boolean;
   showControls?: boolean;
 }
@@ -81,5 +85,10 @@ export interface NotificationsContextType {
   markAllAsRead: () => void;
   dismissNotification: (id: string) => void;
   dismissAllNotifications: () => void;
+  removeNotification?: (id: string) => void; 
+  clearAllNotifications?: () => void;
+  clearAll?: () => void;
+  scheduleReminder?: (reminder: Partial<Notification>, date: Date) => string;
+  cancelReminder?: (id: string) => void;
   getFileProcessingNotifications: () => Notification[];
 }

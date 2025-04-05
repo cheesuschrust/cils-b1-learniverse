@@ -7,7 +7,15 @@ export type ContentType =
   | 'speaking' 
   | 'listening' 
   | 'culture' 
-  | 'citizenship';
+  | 'citizenship'
+  | 'multiple-choice'
+  | 'flashcards'
+  | 'pdf'
+  | 'document'
+  | 'video'
+  | 'audio'
+  | 'image'
+  | 'unknown';
 
 export interface ContentFeatures {
   supportsAudio: boolean;
@@ -20,6 +28,7 @@ export interface ContentFeatures {
   sentenceCount?: number;
   questionMarks?: number;
   avgSentenceLength?: number;
+  paragraphCount?: number;
 }
 
 export const formatContentType = (contentType: ContentType): string => {
@@ -45,6 +54,19 @@ export const getContentTypeColor = (contentType: ContentType): string => {
       return 'bg-rose-100 text-rose-800';
     case 'citizenship':
       return 'bg-green-100 text-green-800';
+    case 'multiple-choice':
+      return 'bg-violet-100 text-violet-800';
+    case 'flashcards':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'pdf':
+    case 'document':
+      return 'bg-sky-100 text-sky-800';
+    case 'video':
+      return 'bg-red-100 text-red-800';
+    case 'audio':
+      return 'bg-orange-100 text-orange-800';
+    case 'image':
+      return 'bg-pink-100 text-pink-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }

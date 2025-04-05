@@ -39,10 +39,13 @@ export interface User {
   avatar_url?: string;
   first_name?: string;
   last_name?: string;
+  display_name?: string;
   preferredLanguage?: string;
   isPremiumUser?: boolean;
+  isPremium?: boolean;
   lastActive?: Date;
   createdAt?: Date;
+  profileImage?: string;
   metrics?: UserMetrics;
   dailyQuestionCounts?: Record<string, number>;
   subscription?: {

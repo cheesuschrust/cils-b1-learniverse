@@ -1,123 +1,107 @@
-/// <reference types="cypress" />
-/// <reference path="../../src/types/cypress-commands.d.ts" />
-import 'cypress-axe';
+// ***********************************************
+// This example commands.js shows you how to
+// create various custom commands and overwrite
+// existing commands.
+//
+// For more comprehensive examples of custom
+// commands please read more here:
+// https://on.cypress.io/custom-commands
+// ***********************************************
+//
+//
+// -- This is a parent command --
+// Cypress.Commands.add('login', (email, password) => { ... })
+//
+//
+// -- This is a child command --
+// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
+//
+//
+// -- This is a dual command --
+// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
+//
+//
+// -- This will overwrite an existing command --
+// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
+
 import { addMatchImageSnapshotCommand } from 'cypress-image-snapshot/command';
 
-// Initialize image snapshot command
 addMatchImageSnapshotCommand();
 
-// Custom command to check all links on a page
+Cypress.Commands.add('login', (email: string, password: string) => {
+  cy.visit('/auth');
+  cy.get('input[name="email"]').type(email);
+  cy.get('input[name="password"]').type(password);
+  cy.get('button[type="submit"]').click();
+  cy.url().should('include', '/dashboard');
+});
+
+Cypress.Commands.add('loginAsAdmin', () => {
+  cy.login('admin@example.com', 'adminPassword123!');
+  cy.url().should('include', '/admin/dashboard');
+});
+
 Cypress.Commands.add('checkAllLinks', () => {
-  // Get all <a> elements
-  cy.get('a').each((link) => {
-    const href = link.prop('href');
+  cy.get('a').each(($link) => {
+    const href = $link.prop('href');
     if (href && !href.includes('javascript:void') && !href.includes('mailto:') && !href.includes('tel:')) {
       cy.request({
         url: href,
         failOnStatusCode: false
       }).then((response) => {
-        // Log broken links but don't fail the test
-        if (response.status >= 400) {
-          cy.log(`⚠️ Broken link: ${href} (Status: ${response.status})`);
-        }
+        expect(response.status).to.be.lt(400);
       });
     }
   });
 });
 
-// Custom command to check accessibility
 Cypress.Commands.add('checkAccessibility', (options = {}) => {
   cy.injectAxe();
-  cy.checkA11y(null, {
-    runOnly: {
-      type: 'tag',
-      values: ['wcag2a', 'wcag2aa'],
-    },
-    ...options
-  }, null, true); // Log to console but don't fail
+  cy.checkA11y(options);
 });
 
-// Custom command to capture and compare screenshots
-Cypress.Commands.add('captureAndCompare', (name) => {
-  cy.matchImageSnapshot(name, {
-    customDiffConfig: { threshold: 0.1 }, // Allow small differences
-    failureThreshold: 0.03, // Allow 3% pixel difference
-    failureThresholdType: 'percent'
-  });
+Cypress.Commands.add('tab', () => {
+  const keyboardEventOptions = { keyCode: 9, which: 9, key: 'Tab', code: 'Tab', bubbles: true };
+  cy.focused().trigger('keydown', keyboardEventOptions);
+  return cy.document().trigger('keydown', keyboardEventOptions);
 });
 
-// Custom command to log in
-Cypress.Commands.add('login', (email, password) => {
-  cy.session([email, password], () => {
-    cy.visit('/login');
-    cy.get('input[name="email"]').type(email);
-    cy.get('input[name="password"]').type(password);
-    cy.get('button[type="submit"]').click();
-    cy.url().should('include', '/app');
-  });
+Cypress.Commands.add('captureAndCompare', (name: string) => {
+  cy.matchImageSnapshot(name);
 });
 
-// Custom command to log in as admin
-Cypress.Commands.add('loginAsAdmin', () => {
-  cy.login('admin@example.com', 'admin123');
-});
-
-// Custom command to test keyboard navigation
 Cypress.Commands.add('testKeyboardNavigation', () => {
-  // Find all focusable elements
-  cy.get('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])').each(($el) => {
-    cy.wrap($el).focus();
-    cy.focused().should('exist');
+  cy.get('body').focus();
+  let focusableElements: JQuery<HTMLElement>[] = [];
+  
+  cy.get('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])').each(($el) => {
+    if ($el.is(':visible') && !$el.attr('disabled')) {
+      focusableElements.push($el);
+    }
+  }).then(() => {
+    cy.log(`Found ${focusableElements.length} focusable elements`);
     
-    // Test that pressing Enter triggers the element
-    if ($el.is('button, a, [role="button"]')) {
-      cy.wrap($el).type('{enter}', { force: true });
+    for (let i = 0; i < Math.min(focusableElements.length, 10); i++) {
+      cy.tab().then(() => {
+        const focused = Cypress.$(document.activeElement);
+        expect(focused.length).to.equal(1);
+      });
     }
   });
 });
 
-// Custom command to test form validation
-Cypress.Commands.add('testFormValidation', (formSelector) => {
+Cypress.Commands.add('testFormValidation', (formSelector: string) => {
   cy.get(formSelector).within(() => {
-    // Submit empty form
-    cy.get('button[type="submit"]').click();
-    
-    // Check for validation errors
-    cy.get('[aria-invalid="true"]').should('exist');
-    
-    // Fill in form fields
-    cy.get('input, textarea, select').each(($input) => {
-      const type = $input.attr('type');
-      const name = $input.attr('name');
-      
-      if (type === 'text' || type === 'email' || type === 'password' || !type) {
-        cy.wrap($input).type('Test input');
-      } else if (type === 'checkbox' || type === 'radio') {
-        cy.wrap($input).check();
-      } else if ($input.is('select')) {
-        cy.wrap($input).select(1);
+    cy.get('input[required], select[required], textarea[required]').each(($input) => {
+      const inputType = $input.attr('type');
+      if (inputType === 'checkbox' || inputType === 'radio') {
+        // Skip checkboxes and radios
+        return;
       }
+      
+      cy.wrap($input).clear();
+      cy.get('button[type="submit"]').click();
+      cy.wrap($input).should('have.attr', 'aria-invalid', 'true');
     });
   });
 });
-
-// Add tab command for keyboard navigation
-Cypress.Commands.add('tab', () => {
-  cy.focused().trigger('keydown', { keyCode: 9, which: 9 });
-  return cy.document().its('activeElement');
-});
-
-// Declare global Cypress namespace to add custom commands
-declare global {
-  namespace Cypress {
-    interface Chainable {
-      checkAllLinks(): Chainable<Element>;
-      checkAccessibility(options?: any): Chainable<Element>;
-      captureAndCompare(name: string): Chainable<Element>;
-      login(email: string, password: string): Chainable<Element>;
-      loginAsAdmin(): Chainable<Element>;
-      testKeyboardNavigation(): Chainable<Element>;
-      testFormValidation(formSelector: string): Chainable<Element>;
-    }
-  }
-}

@@ -1,57 +1,50 @@
 
-import { v4 as uuidv4 } from 'uuid';
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+  italian: string;
+  english: string;
+  explanation?: string;
+  difficulty: string | number;
+  level: number;
+  mastered?: boolean;
+  tags: string[];
+  nextReview: Date;
+  lastReviewed: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  dueDate?: Date;
+}
+
+export interface FlashcardSet {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+  category: string;
+  difficulty: string;
+  isPublic: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  cards: Flashcard[];
+  totalCards?: number;
+  creator?: string;
+  masteredCards?: number;
+  isFavorite?: boolean;
+}
 
 export interface ReviewPerformance {
   score: number;
   time: number;
   date: Date;
-  totalReviews?: number;
-  correctReviews?: number;
+  speed?: number;
   efficiency?: number;
   streakDays?: number;
+  correctReviews?: number;
+  totalReviews?: number;
   reviewsByCategory?: Record<string, number>;
-  accuracy?: number;
-  speed?: number;
-  consistency?: number;
-  retention?: number;
-  overall?: number;
-}
-
-export interface ReviewHistory {
-  date: Date;
-  performance: number;
-  timeSpent: number;
-}
-
-export interface FlashcardMetadata {
-  source?: string;
-  contextSentence?: string;
-  notes?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  importance?: 'low' | 'medium' | 'high';
-}
-
-export interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  italian?: string;
-  english?: string;
-  difficulty: number;
-  tags: string[];
-  lastReviewed: Date | null;
-  nextReview: Date | null;
-  createdAt: Date;
-  updatedAt?: Date;
-  reviewHistory?: any[];
-  level?: number;
-  mastered?: boolean;
-  examples?: string[];
-  explanation?: string;
-  category?: string;
-  imageUrl?: string;
-  audioUrl?: string;
-  dueDate?: Date;
 }
 
 export interface ReviewSchedule {
@@ -62,89 +55,54 @@ export interface ReviewSchedule {
   dueThisWeek?: number;
   dueNextWeek?: number;
   dueByDate?: Record<string, number>;
-  overdue?: number;
-  upcoming?: number;
-}
-
-export interface FlashcardSet {
-  id: string;
-  name: string;
-  description?: string;
-  language: string;
-  isPublic: boolean;
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  userId?: string;
-  user_id?: string;
-  category?: string;
-  tags?: string[];
-  cards?: Flashcard[];
-  totalCards?: number;
-  masteredCards?: number;
-  difficulty?: string;
-  creator?: string;
-}
-
-export interface ImportFormat {
-  type: 'text' | 'json' | 'csv' | 'anki' | 'quizlet';
-  front?: string;
-  back?: string;
-  options?: any;
-  hasHeaders?: boolean;
-  delimiter?: string;
-  hasHeader?: boolean;
-  fieldMap?: Record<string, string>;
+  upcoming?: Flashcard[];
 }
 
 export interface FlashcardStats {
-  cardsDue: number;
-  newCards: number;
+  totalCards: number;
   masteredCards: number;
-  totalReviews: number;
-  averageScore: number;
-  dailyStreak: number;
-  total?: number;
   mastered?: number;
-  learning?: number;
-  toReview?: number;
-  avgMasteryTime?: number;
-  correctReviews?: number;
+  dueTodayCards: number;
+  averageReviewTime: number;
+  correctReviewPercentage: number;
+  lastActivity: Date | null;
+  mostDifficultTag: string | null;
 }
 
-// Utility function to normalize a flashcard object
-export function normalizeFlashcard(card: any): Flashcard {
-  if (!card) return null as any;
+export function normalizeFlashcard(data: any): Flashcard {
+  return {
+    id: data.id || '',
+    front: data.front || data.italian || '',
+    back: data.back || data.english || '',
+    italian: data.italian || data.front || '',
+    english: data.english || data.back || '',
+    difficulty: data.difficulty || 'intermediate',
+    level: data.level || 0,
+    tags: data.tags || [],
+    nextReview: data.nextReview ? new Date(data.nextReview) : new Date(),
+    lastReviewed: data.lastReviewed ? new Date(data.lastReviewed) : null,
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+    mastered: data.mastered || false,
+    explanation: data.explanation || ''
+  };
+}
+
+export function calculateReviewPerformance(reviews: any[]): ReviewPerformance {
+  if (!reviews || reviews.length === 0) {
+    return {
+      score: 0,
+      time: 0,
+      date: new Date()
+    };
+  }
+
+  const totalScore = reviews.reduce((sum, review) => sum + (review.score || 0), 0);
+  const totalTime = reviews.reduce((sum, review) => sum + (review.time || 0), 0);
   
-  const now = new Date();
   return {
-    id: card.id || uuidv4(),
-    front: card.front || card.italian || '',
-    back: card.back || card.english || '',
-    italian: card.italian || card.front || '',
-    english: card.english || card.back || '',
-    difficulty: typeof card.difficulty === 'number' ? card.difficulty : 1,
-    tags: Array.isArray(card.tags) ? card.tags : [],
-    lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : null,
-    nextReview: card.nextReview ? new Date(card.nextReview) : null,
-    createdAt: card.createdAt ? new Date(card.createdAt) : now,
-    updatedAt: card.updatedAt ? new Date(card.updatedAt) : undefined,
-    reviewHistory: card.reviewHistory || [],
-    level: card.level !== undefined ? card.level : 0,
-    mastered: !!card.mastered,
-    examples: card.examples || [],
-    explanation: card.explanation || ''
+    score: totalScore / reviews.length,
+    time: totalTime / reviews.length,
+    date: new Date()
   };
 }
-
-// Utility function to calculate review performance
-export function calculateReviewPerformance(answers: any[]): ReviewPerformance {
-  return {
-    score: answers.filter(a => a.isCorrect).length / answers.length * 100,
-    time: answers.reduce((sum, a) => sum + (a.timeSpent || 0), 0),
-    date: new Date(),
-  };
-}
-
-// Export types to be used throughout the app
-export type { Flashcard, FlashcardSet, ReviewPerformance, ReviewSchedule, FlashcardStats };

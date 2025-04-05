@@ -35,7 +35,7 @@ export const SpeakableWord: React.FC<SpeakableWordProps> = ({
     if (!isPlaying && word && speak) {
       setIsPlaying(true);
       try {
-        await speak(word, { language });
+        await speak({ text: word, language });
         if (onPlayComplete) {
           onPlayComplete();
         }

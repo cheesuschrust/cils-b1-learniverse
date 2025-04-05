@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Loader2 } from 'lucide-react';

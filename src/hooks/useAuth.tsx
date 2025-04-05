@@ -10,6 +10,6 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Re-export the provider for convenience
+// Re-export the context and types for convenience
 export { AuthContext };
 export type { AuthContextType };

@@ -1,3 +1,4 @@
+
 /// <reference types="cypress" />
 
 declare namespace Cypress {
@@ -22,6 +23,6 @@ declare namespace Cypress {
   interface CurrentTest {
     title: string
     titlePath: string[]
-    state: string
+    state?: string
   }
 }

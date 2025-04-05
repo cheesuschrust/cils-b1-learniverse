@@ -29,11 +29,23 @@ Cypress.on('window:before:load', (win) => {
   });
 });
 
-// Preserve cookies between tests
+// Store cookies between tests (using Cypress v10+ approach)
+// The old preserveOnce method is deprecated
 beforeEach(() => {
-  if (Cypress.Cookies.preserveOnce) {
-    Cypress.Cookies.preserveOnce('authToken', 'user', 'preferences');
+  // Get cookies from previous tests
+  const cookies = Cypress.env('cookies') || [];
+  if (cookies.length > 0) {
+    cookies.forEach(cookie => {
+      cy.setCookie(cookie.name, cookie.value);
+    });
   }
+});
+
+afterEach(() => {
+  // Save cookies for next test
+  cy.getCookies().then(cookies => {
+    Cypress.env('cookies', cookies);
+  });
 });
 
 // Global after hook for all tests
