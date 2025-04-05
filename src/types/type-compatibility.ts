@@ -5,8 +5,8 @@
 import { UserRole, User } from './user';
 import { UserSettings } from './user-types';
 import { Notification, NotificationType, NotificationAction } from './notification';
-import { AIModel, AIStatus, AIPreference } from './ai';
-import { Flashcard, FlashcardSet } from './flashcard';
+import { AIModel, AIStatus, AIPreferences } from './ai';
+import { Flashcard, FlashcardSet } from './flashcard-types';
 import { License, LicenseType, LicenseStatus, RenewalStatus } from './license';
 import { AdUnit, AdSettings, AdNetwork } from './ad';
 import { Question, QuestionSet } from './question';
@@ -136,7 +136,8 @@ export const normalizeFlashcard = (card: any): Flashcard => {
     mastered: card.mastered || false,
     italian: card.italian,
     english: card.english,
-    difficulty: card.difficulty || 0
+    difficulty: card.difficulty || 0,
+    lastReviewed: card.lastReviewed || null
   };
 };
 

@@ -27,6 +27,7 @@ export interface ContentFeatures {
   freeResponse: boolean;
   wordCount?: number;
   questionMarks?: number;
+  sentenceCount?: number;
 }
 
 // Map to determine which features are available for each content type

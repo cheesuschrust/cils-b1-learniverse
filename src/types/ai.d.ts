@@ -32,6 +32,24 @@ export interface AISettings {
   contentTypes?: string[];
   focusAreas?: string[];
   modelSize?: string;
+  processingOnDevice?: boolean;
+  autoSpeakCorrections?: boolean;
+  voiceEnabled?: boolean;
+  voiceRate?: number;
+  voicePitch?: number;
+  confidenceThreshold?: number;
+  enabled?: boolean;
+  features?: {
+    grammarCorrection: boolean;
+    pronunciationFeedback: boolean;
+    vocabularySuggestions: boolean;
+    culturalContext: boolean;
+    contentGeneration: boolean;
+    errorCorrection: boolean;
+    pronunciationHelp: boolean;
+    personalization: boolean;
+  };
+  assistantName?: string;
 }
 
 export interface AIServiceOptions {
@@ -65,6 +83,10 @@ export interface UseAIReturn {
   loadModel?: () => Promise<boolean>;
   isModelLoaded?: boolean;
   status?: any;
+  isGenerating?: boolean;
+  remainingCredits?: number;
+  usageLimit?: number;
+  isSpeaking?: boolean;
 }
 
 export interface AIModelSize {
@@ -113,3 +135,12 @@ export type QuestionGenerationParams = {
   count: number;
   isCitizenshipFocused?: boolean;
 };
+
+export interface TextToSpeechOptions {
+  text: string;
+  voice?: string;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+  lang?: string;
+}
