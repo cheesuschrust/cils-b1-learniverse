@@ -1,19 +1,33 @@
 
 import React, { useState } from 'react';  
-import { useAIUtils } from '../../hooks/useAIUtils';  
-import { 
-  AIContentProcessorProps,
-  AIContentSettings
-} from '../../types/app-types';  
+import { useAI } from '@/hooks/useAI';  
 import { 
   AIGeneratedQuestion,
-  ItalianTestSection
-} from '../../types/italian-types';
+  AISettings,
+  ItalianTestSection,
+  ItalianQuestionGenerationParams
+} from '@/types/ai';  
+
+export interface AIContentProcessorProps {  
+  content?: string;
+  contentType?: string;
+  defaultLanguage?: string;
+  settings?: AISettings;
+  onContentGenerated?: (content: any) => void;  
+  onError?: (error: Error) => void;
+  onQuestionsGenerated?: (questions: AIGeneratedQuestion[]) => void;
+}
 
 export function AIContentProcessor({  
   content = "",
   contentType = "reading",
   settings = {
+    model: "gpt-4o",
+    temperature: 0.7,
+    maxTokens: 1024,
+    topP: 0.9,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
     language: "italian",
     difficulty: "intermediate",
     contentTypes: ["grammar"],
@@ -23,7 +37,7 @@ export function AIContentProcessor({
   onError,
   onQuestionsGenerated = () => {}
 }: AIContentProcessorProps) {  
-  const { generateQuestions, isGenerating } = useAIUtils();  
+  const { generateQuestions, isProcessing } = useAI();  
   const [questions, setQuestions] = useState<AIGeneratedQuestion[]>([]);  
   const [error, setError] = useState<string | null>(null);  
 
@@ -31,38 +45,36 @@ export function AIContentProcessor({
     setError(null);  
     
     // Create properly typed params object by adapting to Italian types  
-    const params = {  
-      italianLevel: settings.difficulty as any,
-      testSection: settings.contentTypes[0] as ItalianTestSection,
-      isCitizenshipFocused: false,
-      topics: settings.focusAreas,
+    const params: ItalianQuestionGenerationParams = {  
+      difficulty: settings.difficulty as any,
+      topics: settings.focusAreas || [],
       count: 5, // Default to 5 questions
-      contentTypes: settings.contentTypes as ItalianTestSection[]
+      contentTypes: settings.contentTypes as ItalianTestSection[],
+      isCitizenshipFocused: false
     };  
     
     try {
       const result = await generateQuestions(params);  
 
-      if (result.error) {  
+      if (result && result.error) {  
         setError(result.error);  
         if (onError) {  
-          onError(result.error);  
+          onError(new Error(result.error));  
         }  
       } else {  
-        const typedQuestions = result.questions as unknown as AIGeneratedQuestion[];
-        setQuestions(typedQuestions);
+        setQuestions(result);
         if (onContentGenerated) {  
-          onContentGenerated(typedQuestions);  
+          onContentGenerated(result);  
         }
         if (onQuestionsGenerated) {
-          onQuestionsGenerated(typedQuestions);
+          onQuestionsGenerated(result);
         }
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error';
       setError(errorMessage);
       if (onError) {
-        onError(errorMessage);
+        onError(new Error(errorMessage));
       }
     }  
   };  
@@ -74,7 +86,7 @@ export function AIContentProcessor({
       <div className="settings-summary">  
         <p>Language: {settings.language}</p>  
         <p>Level: {settings.difficulty}</p>  
-        <p>Content Types: {settings.contentTypes.join(', ')}</p>  
+        <p>Content Types: {settings.contentTypes?.join(', ')}</p>  
         {settings.focusAreas && settings.focusAreas.length > 0 && (  
           <p>Focus Areas: {settings.focusAreas.join(', ')}</p>  
         )}  
@@ -82,10 +94,10 @@ export function AIContentProcessor({
       
       <button   
         onClick={handleGenerate}   
-        disabled={isGenerating}  
+        disabled={isProcessing}  
         className="generate-button"  
       >  
-        {isGenerating ? 'Generating...' : 'Generate Content'}  
+        {isProcessing ? 'Generating...' : 'Generate Content'}  
       </button>  
       
       {error && (  

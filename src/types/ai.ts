@@ -61,6 +61,7 @@ export interface AIPreferences {
   autoTranslate: boolean;
   feedbackLevel: 'basic' | 'detailed' | 'expert';
   enabled?: boolean;
+  modelSize?: string;
 }
 
 /**
@@ -118,6 +119,7 @@ export interface AISettingsProps {
   onReset?: () => void;
   availableModels?: string[];
   isLoading?: boolean;
+  settings?: AISettings;
 }
 
 /**
@@ -142,61 +144,10 @@ export interface AIContentSettings {
 }
 
 /**
- * AI service interface
- */
-export interface AIServiceInterface {
-  processContent: (content: string, options?: AIProcessingOptions) => Promise<any>;
-  generateQuestions: (params: any) => Promise<any>;
-  evaluateResponse: (response: string, expectedAnswer: string, options?: any) => Promise<any>;
-  translateText: (text: string, targetLanguage: string) => Promise<string>;
-  getLanguageLevel: (text: string) => Promise<string>;
-  correctGrammar: (text: string) => Promise<{corrected: string, explanation: string}>;
-  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
-  classifyText?: (text: string, categories: string[]) => Promise<{category: string, confidence: number}>;
-  generateFlashcards?: (content: string, options?: any) => Promise<any>;
-  processDocument?: (document: string | File, options?: any) => Promise<any>;
-  generateSpeech?: (text: string, options?: any) => Promise<any>;
-  recognizeSpeech?: (audio: Blob) => Promise<any>;
-  comparePronunciation?: (spoken: string, expected: string) => Promise<any>;
-  analyzeGrammar?: (text: string, language?: string) => Promise<any>;
-  abortRequest?: () => void;
-}
-
-/**
- * Hook return type for using AI services
- */
-export interface UseAIReturn {
-  processContent: (content: string, options?: AIProcessingOptions) => Promise<any>;
-  generateQuestions: (params: any) => Promise<any>;
-  evaluateResponse?: (response: string, expectedAnswer: string, options?: any) => Promise<any>;
-  translateText?: (text: string, targetLanguage: string) => Promise<string>;
-  getLanguageLevel?: (text: string) => Promise<string>;
-  correctGrammar?: (text: string) => Promise<{corrected: string, explanation: string}>;
-  speak?: (text: string, options?: any) => Promise<void>;
-  isAIEnabled?: boolean;
-  isProcessing: boolean;
-  compareTexts?: (text1: string, text2: string) => Promise<{similarity: number, differences: string[]}>;
-  classifyText?: (text: string, categories: string[]) => Promise<{category: string, confidence: number}>;
-  generateText?: (prompt: string, options?: AIServiceOptions) => Promise<string>;
-  transcribeSpeech?: (audioData: Blob) => Promise<{text: string, confidence: number}>;
-  status?: AIStatus;
-  isModelLoaded?: boolean;
-  isSpeaking?: boolean;
-  processAudioStream?: (options?: any) => Promise<any>;
-  stopAudioProcessing?: () => void;
-  isTranscribing?: boolean;
-  hasActiveMicrophone?: boolean;
-  checkMicrophoneAccess?: () => Promise<boolean>;
-  analyzeGrammar?: (text: string, language?: string) => Promise<any>;
-  loadModel?: () => Promise<void>;
-  getConfidenceScore?: (text: string, expected: string) => Promise<number>;
-}
-
-/**
  * AI generation result
  */
 export interface AIGenerationResult {
-  questions: any[];
+  questions: AIGeneratedQuestion[];
   error?: string;
 }
 
@@ -210,6 +161,13 @@ export interface AIUtilsContextType {
   remainingCredits: number;
   usageLimit: number;
   analyzeContent?: (content: any) => Promise<any>;
+  isAIEnabled?: boolean;
+  isSpeaking?: boolean;
+  processAudioStream?: (options?: any) => Promise<any>;
+  stopAudioProcessing?: () => void;
+  isTranscribing?: boolean;
+  hasActiveMicrophone?: boolean;
+  checkMicrophoneAccess?: () => Promise<boolean>;
 }
 
 /**
@@ -229,3 +187,20 @@ export interface AIQuestion {
 }
 
 export type AIGeneratedQuestion = AIQuestion;
+
+export type ItalianTestSection = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary' | 'culture' | 'citizenship';
+
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  topics: string[];
+  contentTypes: ItalianTestSection[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  count: number;
+  isCitizenshipFocused?: boolean;
+}
+
+export interface ContentType {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+}

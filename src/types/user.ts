@@ -71,10 +71,10 @@ export interface User {
   isAdmin?: boolean;
   isPremium?: boolean;
   isPremiumUser?: boolean;
+  display_name?: string;
   
   // Legacy support fields
   first_name?: string;
   last_name?: string;
   photo_url?: string;
-  display_name?: string;
 }

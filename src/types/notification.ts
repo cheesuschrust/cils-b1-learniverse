@@ -29,6 +29,7 @@ export interface Notification {
   expires?: Date;
   metadata?: Record<string, any>;
   actions?: NotificationAction[];
+  icon?: ReactNode;
 }
 
 export interface NotificationsContextType {
@@ -39,6 +40,7 @@ export interface NotificationsContextType {
   markAllAsRead: () => void;
   clearAll: () => void;
   dismissNotification: (id: string) => void;
+  removeNotification: (id: string) => void;
   getFileProcessingNotifications: () => Notification[];
   scheduleReminder?: (reminder: Omit<Notification, 'id' | 'createdAt' | 'read' | 'type'>, date: Date) => string;
   cancelReminder?: (id: string) => void;
@@ -49,7 +51,10 @@ export interface NotificationItemProps {
   onDismiss?: (id: string) => void;
   onRead?: (id: string) => void;
   onAction?: (actionId: string, notificationId: string) => void;
+  onRemove?: (id: string) => void;
   showControls?: boolean;
+  onClick?: () => void;
+  expanded?: boolean;
 }
 
 export interface NotificationCenterProps {

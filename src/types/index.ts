@@ -5,6 +5,9 @@ export * from './component';
 export * from './core-types';
 export * from './notification';
 export * from './ai';
+export * from './achievement';
+export * from './user';
+export * from './flashcard-types';
 
 export interface FlashcardComponentProps {
   card: any;
@@ -20,6 +23,7 @@ export interface FlashcardComponentProps {
   showHints?: boolean;
   onKnown?: () => void;
   onUnknown?: () => void;
+  iconOnly?: boolean;
 }
 
 export interface LevelBadgeProps {

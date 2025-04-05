@@ -1,11 +1,11 @@
 
 import React, { createContext, useContext, useState } from 'react';  
-import {   
-  AIUtilsContextType,   
-  QuestionGenerationParams,   
+import { 
+  AIUtilsContextType, 
   AIGenerationResult,
-  AIQuestion  
-} from '../types/app-types';  
+  AIQuestion,
+  QuestionGenerationParams
+} from '@/types/ai';  
 
 // Create the context with proper typing  
 const AIUtilsContext = createContext<AIUtilsContextType | undefined>(undefined);  
@@ -29,7 +29,9 @@ export function AIUtilsProvider({ children }: { children: React.ReactNode }) {
           correctAnswer: 'Roma',  
           explanation: 'Roma è la capitale dell\'Italia dal 1871.',  
           type: 'culture',  
-          difficulty: 'B1'  
+          difficulty: 'B1',
+          questionType: 'multiple-choice',
+          isCitizenshipRelevant: false
         }  
       ];  
       
@@ -57,7 +59,8 @@ export function AIUtilsProvider({ children }: { children: React.ReactNode }) {
     generateQuestions,  
     isGenerating,  
     remainingCredits,  
-    usageLimit  
+    usageLimit,
+    isAIEnabled: true
   };  
 
   return <AIUtilsContext.Provider value={value}>{children}</AIUtilsContext.Provider>;  
