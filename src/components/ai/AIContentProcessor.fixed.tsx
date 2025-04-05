@@ -56,12 +56,17 @@ export function AIContentProcessor({
     try {
       const result = await generateQuestions(params);  
       
-      setQuestions(result);
-      if (onContentGenerated) {  
-        onContentGenerated(result);  
-      }
-      if (onQuestionsGenerated) {
-        onQuestionsGenerated(result);
+      // Ensure we're setting an array of questions
+      if (Array.isArray(result)) {
+        setQuestions(result);
+        if (onContentGenerated) {  
+          onContentGenerated(result);  
+        }
+        if (onQuestionsGenerated) {
+          onQuestionsGenerated(result);
+        }
+      } else {
+        throw new Error("Invalid response format");
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error';

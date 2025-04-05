@@ -45,51 +45,40 @@ const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, l
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
-      // Listen for data available event
-      mediaRecorder.addEventListener('dataavailable', (event) => {
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
-      });
+      };
       
-      // Listen for stop event to process recording
-      mediaRecorder.addEventListener('stop', async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         
         if (transcribeSpeech) {
           try {
-            const transcriptionResult = await transcribeSpeech(audioBlob);
-            const transcribedText = typeof transcriptionResult === 'string' 
-              ? transcriptionResult 
-              : transcriptionResult.text;
-
+            const { text: transcribedText } = await transcribeSpeech(audioBlob);
             setUserRecording(transcribedText);
             
-            // Compare with original text if compareTexts is available
             if (compareTexts) {
-              const comparisonResult = await compareTexts(text.toLowerCase(), transcribedText.toLowerCase());
-              const similarity = typeof comparisonResult === 'number' 
-                ? comparisonResult 
-                : comparisonResult.similarity;
-
-              setSimilarityScore(similarity * 100);
+              const { similarity } = await compareTexts(text, transcribedText);
+              const score = Math.round(similarity * 100);
+              setSimilarityScore(score);
               
               if (onScoreUpdate) {
-                onScoreUpdate(similarity * 100);
+                onScoreUpdate(score);
               }
             }
           } catch (error) {
-            console.error('Error processing recording:', error);
-            alert('Error processing your recording. Please try again.');
+            console.error('Error processing speech:', error);
           }
         }
-      });
+      };
       
       mediaRecorder.start();
       setIsRecording(true);
     } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Error accessing microphone. Please check permissions and try again.');
+      console.error('Error accessing microphone:', error);
+      alert('Error accessing microphone. Please check permissions.');
     }
   };
   
@@ -97,88 +86,85 @@ const FlashcardPronunciation: React.FC<FlashcardPronunciationProps> = ({ text, l
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      setIsRecording(false);
       
-      // Stop all tracks in the stream
+      // Stop all audio tracks
       if (mediaRecorderRef.current.stream) {
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       }
-      
-      setIsRecording(false);
     }
   };
   
   return (
-    <div className="flashcard-pronunciation p-4 border rounded-lg shadow-sm">
-      <h4 className="font-medium mb-4">Practice Pronunciation</h4>
+    <div className="flex flex-col space-y-4 p-4 border rounded-md bg-muted/20">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Practice Pronunciation</h3>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePlay}
+          disabled={isPlaying}
+          className="flex items-center gap-2"
+        >
+          {isPlaying ? <Volume2 className="animate-pulse" /> : <Play size={16} />}
+          <span>{isPlaying ? 'Playing...' : 'Listen'}</span>
+        </Button>
+      </div>
       
-      <div className="flex flex-col gap-4">
-        {/* Original pronunciation */}
-        <div className="flex items-center gap-2">
-          <Button 
-            onClick={handlePlay} 
-            disabled={isPlaying}
-            variant="outline"
-            size="sm"
+      <div className="text-center italic text-lg my-2 p-2 bg-muted/30 rounded">
+        {text}
+      </div>
+      
+      <div className="flex justify-center gap-2">
+        {isRecording ? (
+          <Button
+            variant="destructive"
+            onClick={handleStopRecording}
+            className="flex items-center gap-2"
           >
-            {isPlaying ? 'Playing...' : 'Listen'} <Volume2 className="ml-2 h-4 w-4" />
+            <Square size={16} />
+            <span>Stop Recording</span>
           </Button>
-          <span className="text-sm text-gray-500">Listen to correct pronunciation</span>
-        </div>
-        
-        {/* Recording controls */}
-        <div className="flex items-center gap-2">
-          {!isRecording ? (
-            <Button
-              onClick={handleStartRecording}
-              variant="outline"
-              size="sm"
-              className="bg-red-50 hover:bg-red-100"
-            >
-              Record <Mic className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleStopRecording}
-              variant="outline"
-              size="sm"
-              className="bg-red-500 text-white hover:bg-red-600"
-            >
-              Stop <Square className="ml-2 h-4 w-4" />
-            </Button>
-          )}
-          <span className="text-sm text-gray-500">
-            {isRecording ? 'Recording in progress...' : 'Record your pronunciation'}
-          </span>
-        </div>
-        
-        {/* Results */}
-        {userRecording && (
-          <div className="mt-4">
-            <div className="text-sm font-medium mb-2">Your pronunciation:</div>
-            <div className="p-3 bg-gray-50 rounded text-sm italic">"{userRecording}"</div>
-            
-            {similarityScore !== null && (
-              <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Accuracy</span>
-                  <span>{Math.round(similarityScore)}%</span>
-                </div>
-                <Progress value={similarityScore} className="h-2" />
-                
-                <div className="mt-3 text-sm">
-                  {similarityScore >= 80 ? (
-                    <span className="text-green-600">Excellent pronunciation!</span>
-                  ) : similarityScore >= 60 ? (
-                    <span className="text-yellow-600">Good pronunciation. Keep practicing!</span>
-                  ) : (
-                    <span className="text-red-600">Try again to improve your pronunciation.</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+        ) : (
+          <Button
+            variant="default"
+            onClick={handleStartRecording}
+            className="flex items-center gap-2"
+          >
+            <Mic size={16} />
+            <span>Record Your Voice</span>
+          </Button>
         )}
       </div>
+      
+      {userRecording && (
+        <div className="space-y-2 mt-2">
+          <div className="p-2 bg-muted/30 rounded text-center">
+            <p className="font-medium">You said:</p>
+            <p className="italic">{userRecording}</p>
+          </div>
+          
+          {similarityScore !== null && (
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span>Accuracy</span>
+                <span className="font-semibold">{similarityScore}%</span>
+              </div>
+              <Progress value={similarityScore} className="h-2" />
+              
+              <div className="mt-2 text-sm">
+                {similarityScore >= 85 ? (
+                  <p className="text-green-600">Excellent pronunciation!</p>
+                ) : similarityScore >= 60 ? (
+                  <p className="text-yellow-600">Good effort, keep practicing!</p>
+                ) : (
+                  <p className="text-red-600">Try listening again and repeating slowly.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

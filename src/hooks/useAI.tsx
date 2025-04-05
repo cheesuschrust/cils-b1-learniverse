@@ -5,8 +5,9 @@ import {
   AIProcessingOptions, 
   ItalianQuestionGenerationParams, 
   AIGeneratedQuestion,
-  TTSOptions
-} from '@/types';
+  TTSOptions,
+  AIGenerationResult
+} from '@/types/ai';
 
 export function useAI() {
   const {
@@ -24,7 +25,18 @@ export function useAI() {
     compareTexts: compareTextsAI,
     loadModel: loadModelAI,
     classifyText: classifyTextAI,
-    transcribeSpeech: transcribeSpeechAI
+    transcribeSpeech: transcribeSpeechAI,
+    isGenerating,
+    remainingCredits,
+    usageLimit,
+    isSpeaking,
+    processAudioStream: processAudioStreamAI,
+    stopAudioProcessing: stopAudioProcessingAI,
+    isTranscribing,
+    hasActiveMicrophone,
+    checkMicrophoneAccess: checkMicrophoneAccessAI,
+    generateContent: generateContentAI,
+    analyzeContent: analyzeContentAI
   } = useAIUtils();
   
   const [lastResult, setLastResult] = useState<any>(null);
@@ -37,7 +49,7 @@ export function useAI() {
 
   const generateQuestions = useCallback(async (params: ItalianQuestionGenerationParams) => {
     const result = await generateQuestionsAI(params);
-    return result as AIGeneratedQuestion[];
+    return result.questions as AIGeneratedQuestion[];
   }, [generateQuestionsAI]);
 
   const analyzeGrammar = useCallback(async (text: string, language?: string) => {
@@ -93,6 +105,39 @@ export function useAI() {
     return { text: '', confidence: 0 };
   }, [transcribeSpeechAI]);
 
+  const processAudioStream = useCallback(async (stream: MediaStream) => {
+    if (processAudioStreamAI) {
+      return await processAudioStreamAI(stream);
+    }
+  }, [processAudioStreamAI]);
+
+  const stopAudioProcessing = useCallback(() => {
+    if (stopAudioProcessingAI) {
+      stopAudioProcessingAI();
+    }
+  }, [stopAudioProcessingAI]);
+
+  const checkMicrophoneAccess = useCallback(async () => {
+    if (checkMicrophoneAccessAI) {
+      return await checkMicrophoneAccessAI();
+    }
+    return false;
+  }, [checkMicrophoneAccessAI]);
+
+  const generateContent = useCallback(async (prompt: string, options?: any) => {
+    if (generateContentAI) {
+      return await generateContentAI(prompt, options);
+    }
+    return { content: "" };
+  }, [generateContentAI]);
+
+  const analyzeContent = useCallback(async (content: string, contentType: string) => {
+    if (analyzeContentAI) {
+      return await analyzeContentAI(content, contentType);
+    }
+    return { analysis: {} };
+  }, [analyzeContentAI]);
+
   return {
     processContent,
     generateQuestions,
@@ -109,7 +154,18 @@ export function useAI() {
     compareTexts,
     loadModel,
     classifyText,
-    transcribeSpeech
+    transcribeSpeech,
+    isGenerating,
+    remainingCredits,
+    usageLimit,
+    isSpeaking,
+    processAudioStream,
+    stopAudioProcessing,
+    isTranscribing,
+    hasActiveMicrophone,
+    checkMicrophoneAccess,
+    generateContent,
+    analyzeContent
   };
 }
 

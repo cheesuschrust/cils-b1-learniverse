@@ -8,13 +8,18 @@ export * from './ai';
 export * from './achievement';
 export * from './user';
 export * from './flashcard-types';
+export * from './contentType';
+export * from './AISettingsProps';
+export * from './BadgeProps';
 
 // Ensure no conflicting exports from the above interfaces.
 // Explicitly export common used types that might otherwise conflict
-export { Flashcard } from './flashcard-types';
-export { ReviewPerformance } from './core-types';
-export { User } from './user';
-export { AISettings } from './ai';
+export type { Flashcard } from './flashcard-types';
+export type { ReviewPerformance } from './core-types';
+export type { User } from './user';
+export type { AISettings } from './ai';
+export type { ContentType } from './contentType';
+export type { ItalianTestSection } from './ai';
 
 // Define interface props for components
 export interface FlashcardComponentProps {
@@ -53,25 +58,4 @@ export interface SpeakableWordProps {
   iconOnly?: boolean;
 }
 
-// Define Content Type
-export type ContentType = 
-  | 'grammar' 
-  | 'vocabulary' 
-  | 'culture' 
-  | 'listening' 
-  | 'reading' 
-  | 'writing' 
-  | 'speaking'
-  | 'multiple-choice'
-  | 'flashcards';
-
-// Define Italian Test Section
-export type ItalianTestSection = 
-  | 'grammar' 
-  | 'vocabulary' 
-  | 'culture' 
-  | 'listening' 
-  | 'reading' 
-  | 'writing' 
-  | 'speaking'
-  | 'citizenship';
+export type { NotificationType, NotificationPriority, NotificationAction, Notification } from './notification';

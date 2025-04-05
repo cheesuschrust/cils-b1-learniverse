@@ -2,12 +2,11 @@
 import { AISettings } from './ai';
 
 export interface AISettingsProps {
-  initialSettings?: AISettings;
-  onSettingsChange?: (settings: AISettings) => void;
-  onClose?: () => void;
+  settings: AISettings;
+  onSettingsChange: (settings: AISettings) => void;
   onSave?: () => void;
   onReset?: () => void;
+  onClose?: () => void;
   availableModels?: string[];
   isLoading?: boolean;
-  settings?: AISettings;
 }

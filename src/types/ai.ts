@@ -3,7 +3,6 @@ import { ContentType } from '@/types/contentType';
 
 export type AIModelSize = 'small' | 'medium' | 'large';
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
-export type ContentType = 'grammar' | 'vocabulary' | 'culture' | 'listening' | 'reading' | 'writing' | 'speaking';
 export type ItalianLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export interface AIQuestion {
@@ -12,7 +11,7 @@ export interface AIQuestion {
   options?: string[];
   correctAnswer: string;
   explanation?: string;
-  type: ContentType;
+  type: ContentType | ItalianTestSection;
   difficulty: string;
   questionType?: 'multiple-choice' | 'fill-in-blank' | 'true-false' | 'short-answer' | 'matching';
   isCitizenshipRelevant?: boolean;
@@ -28,18 +27,18 @@ export interface AIGenerationResult {
 }
 
 export interface QuestionGenerationParams {
-  contentTypes: ContentType[];
+  contentTypes: (ContentType | ItalianTestSection)[];
   difficulty: string;
   count: number;
   topics: string[];
   isCitizenshipFocused?: boolean;
 }
 
-export interface ItalianQuestionGenerationParams {
-  contentTypes: ContentType[] | ItalianTestSection[];
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  contentTypes: ItalianTestSection[];
   difficulty: string;
   count: number;
-  topics?: string[];
+  topics: string[];
   isCitizenshipFocused?: boolean;
 }
 
@@ -84,10 +83,14 @@ export interface VoicePreference {
 }
 
 export interface AIContentProcessorProps {
-  contentType: ContentType;
+  contentType: ContentType | ItalianTestSection;
   onQuestionsGenerated: (generatedQuestions: AIQuestion[]) => void;
   isLoading?: boolean;
   content?: string;
+  settings?: AISettings;
+  onContentGenerated?: (content: any) => void;
+  onError?: (error: Error) => void;
+  defaultLanguage?: string;
 }
 
 export interface AIUtilsContextType {
@@ -102,7 +105,7 @@ export interface AIUtilsContextType {
   remainingCredits?: number;
   usageLimit?: number;
   isAIEnabled?: boolean;
-  speak?: (text: string, options?: any) => Promise<void>;
+  speak?: (text: string, options?: TTSOptions | string) => Promise<void>;
   isSpeaking?: boolean;
   status?: string;
   isModelLoaded?: boolean;
@@ -119,8 +122,52 @@ export interface AIUtilsContextType {
   analyzeContent?: (content: string, contentType: string) => Promise<any>;
 }
 
+// AI Settings interface that combines all properties needed
+export interface AISettings {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  showFeedback?: boolean;
+  modelSize?: string;
+  processingOnDevice?: boolean;
+  autoSpeakCorrections?: boolean;
+  voiceEnabled?: boolean;
+  voiceRate?: number;
+  voicePitch?: number;
+  confidenceThreshold?: number;
+  enabled?: boolean;
+  features?: {
+    grammarCorrection: boolean;
+    pronunciationFeedback: boolean;
+    vocabularySuggestions: boolean;
+    culturalContext: boolean;
+    contentGeneration: boolean;
+    errorCorrection: boolean;
+    pronunciationHelp: boolean;
+    personalization: boolean;
+  };
+  language?: string;
+  difficulty?: string;
+  contentTypes?: string[];
+  focusAreas?: string[];
+  assistantName?: string;
+}
+
+export type ItalianTestSection = 
+  | 'grammar' 
+  | 'vocabulary' 
+  | 'culture' 
+  | 'listening' 
+  | 'reading' 
+  | 'writing' 
+  | 'speaking'
+  | 'citizenship';
+
 // Initialize default confidence scores for content types
-export const getInitialConfidenceScores = (): Record<ContentType, number> => {
+export const getInitialConfidenceScores = (): Record<string, number> => {
   return {
     'grammar': 78,
     'vocabulary': 82,
@@ -128,12 +175,14 @@ export const getInitialConfidenceScores = (): Record<ContentType, number> => {
     'speaking': 74,
     'listening': 65,
     'reading': 70,
-    'culture': 75
+    'culture': 75,
+    'multiple-choice': 78,
+    'flashcards': 82
   };
 };
 
 // Get user-friendly labels for content types
-export const getContentTypeLabels = (): Record<ContentType, string> => {
+export const getContentTypeLabels = (): Record<string, string> => {
   return {
     'grammar': 'Grammar',
     'vocabulary': 'Vocabulary',
@@ -141,11 +190,13 @@ export const getContentTypeLabels = (): Record<ContentType, string> => {
     'speaking': 'Speaking',
     'listening': 'Listening',
     'reading': 'Reading',
-    'culture': 'Culture'
+    'culture': 'Culture',
+    'multiple-choice': 'Multiple Choice',
+    'flashcards': 'Flashcards'
   };
 };
 
 // Get content types that should be displayed in the UI
-export const getDisplayableContentTypes = (): ContentType[] => {
-  return ['grammar', 'vocabulary', 'writing', 'speaking', 'listening', 'reading', 'culture'];
+export const getDisplayableContentTypes = (): (ContentType | ItalianTestSection)[] => {
+  return ['grammar', 'vocabulary', 'writing', 'speaking', 'listening', 'reading', 'culture', 'multiple-choice', 'flashcards'];
 };

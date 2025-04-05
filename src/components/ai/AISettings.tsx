@@ -5,15 +5,17 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AISettingsProps } from '@/types/app-types';
+import { AISettings, AISettingsProps } from '@/types';
 
-const AISettings: React.FC<AISettingsProps> = ({
+const AISettingsComponent: React.FC<AISettingsProps> = ({
   settings,
   onSettingsChange,
-  availableModels,
+  onSave,
+  onReset,
+  availableModels = ['gpt-4o-mini', 'gpt-4o', 'mistral-small', 'claude-instant'],
   isLoading = false
 }) => {
-  const [formState, setFormState] = useState(settings);
+  const [formState, setFormState] = useState<AISettings>(settings);
 
   const handleChange = (field: string, value: any) => {
     const newSettings = {
@@ -29,7 +31,16 @@ const AISettings: React.FC<AISettingsProps> = ({
     const newSettings = {
       ...formState,
       features: {
-        ...formState.features,
+        ...(formState.features || {
+          grammarCorrection: true,
+          pronunciationFeedback: true,
+          vocabularySuggestions: true,
+          culturalContext: true,
+          contentGeneration: true,
+          errorCorrection: true,
+          pronunciationHelp: true,
+          personalization: true
+        }),
         [feature]: value
       }
     };
@@ -79,7 +90,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               min={0}
               max={1}
               step={0.1}
-              value={[formState.temperature]}
+              value={[formState.temperature || 0.7]}
               onValueChange={([value]) => handleChange('temperature', value)}
               disabled={isLoading}
             />
@@ -95,7 +106,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               min={100}
               max={2000}
               step={100}
-              value={[formState.maxTokens]}
+              value={[formState.maxTokens || 1000]}
               onValueChange={([value]) => handleChange('maxTokens', value)}
               disabled={isLoading}
             />
@@ -143,7 +154,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               <Label htmlFor="contentGeneration" className="cursor-pointer">Content Generation</Label>
               <Switch
                 id="contentGeneration"
-                checked={formState.features.contentGeneration}
+                checked={formState.features?.contentGeneration ?? true}
                 onCheckedChange={(value) => handleFeatureChange('contentGeneration', value)}
                 disabled={isLoading}
               />
@@ -153,7 +164,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               <Label htmlFor="errorCorrection" className="cursor-pointer">Error Correction</Label>
               <Switch
                 id="errorCorrection"
-                checked={formState.features.errorCorrection}
+                checked={formState.features?.errorCorrection ?? true}
                 onCheckedChange={(value) => handleFeatureChange('errorCorrection', value)}
                 disabled={isLoading}
               />
@@ -163,7 +174,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               <Label htmlFor="pronunciationHelp" className="cursor-pointer">Pronunciation Help</Label>
               <Switch
                 id="pronunciationHelp"
-                checked={formState.features.pronunciationHelp}
+                checked={formState.features?.pronunciationHelp ?? true}
                 onCheckedChange={(value) => handleFeatureChange('pronunciationHelp', value)}
                 disabled={isLoading}
               />
@@ -173,7 +184,7 @@ const AISettings: React.FC<AISettingsProps> = ({
               <Label htmlFor="personalization" className="cursor-pointer">Personalization</Label>
               <Switch
                 id="personalization"
-                checked={formState.features.personalization}
+                checked={formState.features?.personalization ?? true}
                 onCheckedChange={(value) => handleFeatureChange('personalization', value)}
                 disabled={isLoading}
               />
@@ -185,4 +196,4 @@ const AISettings: React.FC<AISettingsProps> = ({
   );
 };
 
-export default AISettings;
+export default AISettingsComponent;
