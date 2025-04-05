@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/EnhancedAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,11 +62,11 @@ const Login = () => {
       if (success) {
         toast({
           title: "Login successful",
-          description: "Welcome back to CILS B2 Cittadinanza Question of the Day!",
+          description: "Welcome back to CILS B1 Cittadinanza!",
         });
         
         // Navigate to the dashboard
-        navigate("/dashboard");
+        navigate("/");
       } else {
         toast({
           title: "Login failed",

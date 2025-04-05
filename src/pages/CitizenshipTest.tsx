@@ -32,7 +32,7 @@ const CitizenshipTest: React.FC = () => {
           </p>
         </div>
         
-        <Button onClick={() => navigate('/dashboard')}>
+        <Button onClick={() => navigate('/')}>
           Back to Dashboard
         </Button>
       </div>

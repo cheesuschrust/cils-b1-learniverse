@@ -19,6 +19,54 @@ export interface AISettingsProps {
   onReset?: () => void;
 }
 
+// User types
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  avatar_url?: string;
+  role?: string;
+  isPremiumUser?: boolean;
+  created_at?: string;
+  lastActive?: Date;
+  subscription?: 'free' | 'premium' | 'pro';
+  status?: 'active' | 'inactive' | 'suspended';
+  preferences?: UserPreferences;
+  dailyQuestionCounts?: {
+    flashcards: number;
+    multipleChoice: number;
+    listening: number;
+    writing: number;
+    speaking: number;
+  };
+  metrics?: {
+    totalQuestions: number;
+    correctAnswers: number;
+    streak: number;
+  };
+}
+
+export interface UserPreferences {
+  theme: "light" | "dark" | "system";
+  notifications: boolean;
+  emailNotifications: boolean;
+  language: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  onboardingCompleted: boolean;
+  fontSize?: number;
+  notificationsEnabled?: boolean;
+  animationsEnabled?: boolean;
+  voiceSpeed?: number;
+  autoPlayAudio?: boolean;
+  showProgressMetrics?: boolean;
+  aiEnabled?: boolean;
+  aiModelSize?: string;
+  aiProcessingOnDevice?: boolean;
+  confidenceScoreVisible?: boolean;
+}
+
 // Notification Types
 export type NotificationType = 
   'achievement' | 'streak' | 'milestone' | 'reminder' | 'system' |
@@ -120,4 +168,41 @@ export interface AnswerResults {
   score: number;
   section: string;
   timeSpent?: number;
+}
+
+// Flashcard types
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string; 
+  italian: string;
+  english: string;
+  tags?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  difficulty: number;
+  mastered: boolean;
+  level?: number;
+  lastReviewed?: Date;
+  nextReview?: Date;
+  examples?: string[];
+  explanation?: string;
+}
+
+export interface FlashcardSet {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  language: string;
+  isPublic: boolean;
+  isFavorite: boolean;
+  user_id?: string;
+}
+
+export interface FlashcardComponentProps {
+  card: Flashcard;
 }

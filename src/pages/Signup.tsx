@@ -1,16 +1,16 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Mail, User, Key, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Mail, User, Lock, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form,
   FormControl,
@@ -18,18 +18,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/ui/form';
 
 // Validation schema
 const signupSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  acceptTerms: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions to create an account"
-  })
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -40,7 +36,6 @@ const Signup = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Define form with validation
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -48,7 +43,6 @@ const Signup = () => {
       lastName: "",
       email: "",
       password: "",
-      acceptTerms: false
     },
   });
 
@@ -56,24 +50,19 @@ const Signup = () => {
     try {
       setIsLoading(true);
       
-      const success = await signup(
-        data.email, 
-        data.password, 
-        data.firstName, 
-        data.lastName
-      );
+      const success = await signup(data.email, data.password, data.firstName, data.lastName);
       
       if (success) {
         toast({
-          title: "Signup successful",
-          description: "Your account has been created successfully!",
+          title: "Sign up successful",
+          description: "Welcome to CILS B1 Cittadinanza!",
         });
         
         // Navigate to the dashboard
-        navigate("/dashboard");
+        navigate("/");
       } else {
         toast({
-          title: "Signup failed",
+          title: "Sign up failed",
           description: "There was an error creating your account. Please try again.",
           variant: "destructive"
         });
@@ -82,7 +71,7 @@ const Signup = () => {
       console.error("Signup error:", error);
       
       toast({
-        title: "Signup failed",
+        title: "Sign up failed",
         description: error.message || "There was an error creating your account. Please try again.",
         variant: "destructive"
       });
@@ -96,7 +85,7 @@ const Signup = () => {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
         <CardDescription>
-          Enter your information to create your account
+          Enter your information to create an account
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,22 +97,35 @@ const Signup = () => {
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First name</FormLabel>
+                    <FormLabel className="flex items-center">
+                      <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                      First Name
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="John" {...field} />
+                      <Input
+                        placeholder="John"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last name</FormLabel>
+                    <FormLabel className="flex items-center">
+                      <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Last Name
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Doe" {...field} />
+                      <Input
+                        placeholder="Doe"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -158,7 +160,7 @@ const Signup = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">
-                    <Key className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <Lock className="w-4 h-4 mr-2 text-muted-foreground" />
                     Password
                   </FormLabel>
                   <FormControl>
@@ -169,26 +171,6 @@ const Signup = () => {
                     />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="acceptTerms"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I accept the <Link to="/terms" className="text-primary hover:underline">terms and conditions</Link>
-                    </FormLabel>
-                  </div>
                 </FormItem>
               )}
             />
@@ -234,7 +216,7 @@ const Signup = () => {
         <p className="text-sm text-center w-full">
           Already have an account?{" "}
           <Link to="/login" className="text-primary hover:underline font-medium">
-            Sign in
+            Log in
           </Link>
         </p>
       </CardFooter>
