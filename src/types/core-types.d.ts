@@ -32,17 +32,23 @@ export interface AIProcessingOptions {
   language?: "english" | "italian" | "both";
 }
 
-export interface ItalianQuestionGenerationParams {
+export interface QuestionGenerationParams {
+  topics: string[];
   contentTypes: ItalianTestSection[];
   difficulty: ItalianLevel;
   count: number;
-  topics?: string[];
   isCitizenshipFocused?: boolean;
   testSection?: ItalianTestSection;
   italianLevel?: ItalianLevel;
 }
 
-export type QuestionGenerationParams = ItalianQuestionGenerationParams;
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  topics: string[];
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count: number;
+  isCitizenshipFocused?: boolean;
+}
 
 export interface AISettings {
   language?: "english" | "italian" | "both";
@@ -50,6 +56,13 @@ export interface AISettings {
   contentTypes?: ItalianTestSection[];
   focusAreas?: string[];
   modelSize?: string;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  showFeedback?: boolean;
 }
 
 export interface VoiceOptions {
@@ -57,6 +70,13 @@ export interface VoiceOptions {
   pitch?: number;
   volume?: number;
   voiceURI?: string;
+}
+
+export interface AIServiceOptions {
+  temperature?: number;
+  maxTokens?: number;
+  modelType?: string;
+  language?: "english" | "italian" | "both";
 }
 
 export interface AIServiceInterface {
@@ -68,6 +88,9 @@ export interface AIServiceInterface {
   generateQuestions: (params: QuestionGenerationParams) => Promise<AIGeneratedQuestion[]>;
   processSpokenInput: (audioData: Blob) => Promise<{ text: string; confidence: number }>;
   isProcessing: boolean;
+  loadModel?: () => Promise<boolean>;
+  isModelLoaded?: boolean;
+  status?: any;
 }
 
 // Export utility functions

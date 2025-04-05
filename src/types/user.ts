@@ -22,6 +22,12 @@ export interface UserPreferences {
   aiProcessingOnDevice?: boolean;
   confidenceScoreVisible?: boolean;
   bio?: string;
+  reminders?: boolean;
+  themePreference?: string;
+  aiAssistance?: boolean;
+  showConfidence?: boolean;
+  showPronunciation?: boolean;
+  studyReminders?: boolean;
 }
 
 export interface DailyQuestionCounts {

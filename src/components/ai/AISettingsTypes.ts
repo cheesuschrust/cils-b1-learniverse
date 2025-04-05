@@ -11,6 +11,15 @@ export interface AISettings {
   prioritizeSpeed: boolean;
   enableLocalModel: boolean;
   localModelPath?: string;
+  modelSize?: string;
+  language?: string;
+  difficulty?: string;
+  contentTypes?: string[];
+  focusAreas?: string[];
+  showFeedback?: boolean;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
 }
 
 export interface AIAccessConfig {
@@ -44,31 +53,49 @@ export interface AIUsageMetrics {
   quotaLimit: number;
 }
 
-// Initialize default confidence scores for content types
-export const getInitialConfidenceScores = (): Record<ContentType, number> => {
+// Helper to get displayable content types
+export const getDisplayableContentTypes = (): ContentType[] => {
+  return ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening', 'grammar', 'vocabulary', 'culture', 'reading', 'pdf', 'document', 'video', 'audio', 'image', 'unknown'];
+};
+
+// Initialize default confidence scores for displayable content types
+export const getInitialConfidenceScores = (): Partial<Record<ContentType, number>> => {
   return {
     'multiple-choice': 78,
     'flashcards': 82,
     'writing': 69,
     'speaking': 74,
-    'listening': 65
+    'listening': 65,
+    'grammar': 77,
+    'vocabulary': 80,
+    'culture': 65,
+    'reading': 70,
+    'pdf': 60,
+    'document': 60,
+    'video': 72,
+    'audio': 68,
+    'image': 55,
   };
 };
 
 // Get user-friendly labels for content types
-export const getContentTypeLabels = (): Record<ContentType, string> => {
+export const getContentTypeLabels = (): Partial<Record<ContentType, string>> => {
   return {
     'multiple-choice': 'Multiple Choice',
     'flashcards': 'Flashcards',
     'writing': 'Writing',
     'speaking': 'Speaking',
-    'listening': 'Listening'
+    'listening': 'Listening',
+    'grammar': 'Grammar',
+    'vocabulary': 'Vocabulary',
+    'culture': 'Culture',
+    'reading': 'Reading',
+    'pdf': 'PDF Documents',
+    'document': 'Documents',
+    'video': 'Video Content',
+    'audio': 'Audio Content',
+    'image': 'Images'
   };
-};
-
-// Get content types that should be displayed in the UI
-export const getDisplayableContentTypes = (): ContentType[] => {
-  return ['multiple-choice', 'flashcards', 'writing', 'speaking', 'listening'];
 };
 
 // Default AI settings

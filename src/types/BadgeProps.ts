@@ -11,4 +11,7 @@ export interface BadgeProps
   children?: React.ReactNode;
   asChild?: boolean;
   size?: "default" | "sm" | "lg";
+  key?: string | number;
+  onClick?: () => void;
+  style?: React.CSSProperties;
 }

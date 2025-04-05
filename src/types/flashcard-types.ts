@@ -10,6 +10,11 @@ export interface ReviewPerformance {
   efficiency?: number;
   streakDays?: number;
   reviewsByCategory?: Record<string, number>;
+  accuracy?: number;
+  speed?: number;
+  consistency?: number;
+  retention?: number;
+  overall?: number;
 }
 
 export interface ReviewHistory {
@@ -43,6 +48,10 @@ export interface Flashcard {
   mastered?: boolean;
   examples?: string[];
   explanation?: string;
+  category?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  dueDate?: Date;
 }
 
 export interface ReviewSchedule {
@@ -54,6 +63,7 @@ export interface ReviewSchedule {
   dueNextWeek?: number;
   dueByDate?: Record<string, number>;
   overdue?: number;
+  upcoming?: number;
 }
 
 export interface FlashcardSet {
@@ -94,6 +104,11 @@ export interface FlashcardStats {
   averageScore: number;
   dailyStreak: number;
   total?: number;
+  mastered?: number;
+  learning?: number;
+  toReview?: number;
+  avgMasteryTime?: number;
+  correctReviews?: number;
 }
 
 // Utility function to normalize a flashcard object

@@ -49,6 +49,8 @@ export interface UserGamification {
   longestStreak?: number;
   totalCorrectAnswers?: number;
   totalCompletedReviews?: number;
+  lastActivityDate?: Date;
+  currentStreak?: number;
 }
 
 export interface Level {
