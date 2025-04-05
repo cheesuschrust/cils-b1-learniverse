@@ -26,6 +26,8 @@ export interface Notification {
   expires?: Date;
   metadata?: Record<string, any>;
   actions?: NotificationAction[];
+  isRead?: boolean; // For backward compatibility
+  icon?: string;     // For backward compatibility
 }
 
 export interface NotificationsContextType {
@@ -39,13 +41,20 @@ export interface NotificationsContextType {
   unreadCount: number;
   getFileProcessingNotifications: () => Notification[];
   clearAllNotifications: () => void;
+  scheduleReminder?: (date: Date, notification: Omit<Notification, "id" | "createdAt" | "read">) => string;
+  cancelReminder?: (id: string) => void;
 }
 
 export interface NotificationItemProps {
   notification: Notification;
   onDismiss: (id: string) => void;
   onActionClick?: (id: string) => void;
-  onMarkAsRead: (id: string) => void;
+  onMarkAsRead?: (id: string) => void;
+  onRead?: (id: string) => void;
+  showControls?: boolean;
+  expanded?: boolean;
+  onClick?: () => void;
+  onRemove?: (id: string) => void;
 }
 
 export interface NotificationCenterProps {

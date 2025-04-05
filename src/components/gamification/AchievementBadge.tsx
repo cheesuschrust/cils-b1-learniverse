@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Star, Trophy, Award, Check, CheckCircle, Flame } from 'lucide-react';
-import { Achievement } from '@/types/gamification';
-import { Badge } from '@/components/ui/badge';
+import { Achievement } from '@/types/achievement';
+import { Badge } from '@/components/ui/badge-fixed';
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +24,7 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
   showTooltip = true,
   className
 }) => {
-  const isUnlocked = achievement.unlockedAt !== undefined;
+  const isUnlocked = achievement.unlocked || achievement.unlockedAt !== undefined;
   
   // Get appropriate icon based on achievement category and id
   const renderIcon = () => {
@@ -125,7 +126,7 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
               "px-4 py-2",
               isUnlocked ? getBadgeColor() : "bg-gray-200 dark:bg-gray-800"
             )}>
-              <div className="font-bold">{achievement.title}</div>
+              <div className="font-bold">{achievement.title || achievement.name}</div>
               <div className="text-xs">{achievement.description}</div>
             </div>
             
@@ -134,17 +135,17 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
                 <div className="text-xs flex flex-col gap-1">
                   <div className="flex justify-between">
                     <span>Status:</span>
-                    <Badge variant="secondary" className="absolute -top-1 -right-1 bg-green-500 hover:bg-green-600">
+                    <Badge variant="success" className="absolute -top-1 -right-1 bg-green-500 hover:bg-green-600">
                       <span>Unlocked</span>
                     </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>Earned:</span>
-                    <span>{formatDate(achievement.unlockedAt)}</span>
+                    <span>{formatDate(achievement.unlockedAt || achievement.earnedAt || achievement.date)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>XP Awarded:</span>
-                    <span>+{achievement.points}</span>
+                    <span>+{achievement.points || 0}</span>
                   </div>
                 </div>
               ) : (
@@ -155,11 +156,11 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span>Progress:</span>
-                    <span>{achievement.currentValue || 0}/{achievement.requiredValue} ({progressPercent}%)</span>
+                    <span>{achievement.currentValue || 0}/{achievement.requiredValue || achievement.threshold} ({progressPercent}%)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>XP Reward:</span>
-                    <span>+{achievement.points}</span>
+                    <span>+{achievement.points || 5}</span>
                   </div>
                 </div>
               )}

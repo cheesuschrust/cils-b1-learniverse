@@ -78,6 +78,7 @@ export interface User {
   isPremium?: boolean;
   isPremiumUser?: boolean;
   display_name?: string;
+  token?: string;  // Added for API calls
   
   // Legacy support fields
   first_name?: string;

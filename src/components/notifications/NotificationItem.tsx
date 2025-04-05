@@ -24,7 +24,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onDismiss,
   onRead,
-  showControls = true
+  onMarkAsRead,
+  showControls = true,
+  expanded = false,
+  onClick,
+  onRemove
 }) => {
   const handleDismiss = () => {
     if (onDismiss) {
@@ -33,7 +37,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   };
   
   const handleRead = () => {
-    if (onRead && !notification.read) {
+    if (onMarkAsRead && !notification.read) {
+      onMarkAsRead(notification.id);
+    } else if (onRead && !notification.read) {
       onRead(notification.id);
     }
   };
@@ -45,6 +51,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     
     // Mark as read after clicking an action
     handleRead();
+  };
+
+  const handleRemove = () => {
+    if (onRemove) {
+      onRemove(notification.id);
+    } else if (onDismiss) {
+      onDismiss(notification.id);
+    }
   };
   
   const formatDate = (date: Date): string => {
@@ -114,9 +128,12 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         !notification.read ? "bg-muted/40" : "",
         showControls ? "hover:bg-muted/60" : ""
       )}
-      onClick={handleRead}
+      onClick={() => {
+        handleRead();
+        if (onClick) onClick();
+      }}
     >
-      <CardContent className="p-4">
+      <CardContent className={cn("p-4", expanded && "pb-2")}>
         <div className="flex items-start gap-3">
           <div className="mt-0.5 shrink-0">
             {getNotificationIcon()}
@@ -144,7 +161,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                         variant={action.variant || "default"}
                         size="sm"
                         className="h-7 px-2 text-xs"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           action.action();
                           handleRead();
                         }}
@@ -160,7 +178,10 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                     variant="outline"
                     size="sm"
                     className="h-7 px-2 text-xs"
-                    onClick={handleActionClick}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleActionClick();
+                    }}
                   >
                     {notification.actionLabel}
                     {notification.link && <ExternalLink className="ml-1 h-3 w-3" />}
@@ -189,7 +210,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                       className="h-7 w-7 text-muted-foreground"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDismiss();
+                        handleRemove();
                       }}
                     >
                       <Trash className="h-3.5 w-3.5" />

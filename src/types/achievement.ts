@@ -16,6 +16,9 @@ export interface Achievement {
   currentValue?: number;
   earnedAt?: Date;
   level?: number;
+  unlockedAt?: Date;
+  requiredValue?: number;
+  category?: string;
 }
 
 export interface WeeklyChallenge {

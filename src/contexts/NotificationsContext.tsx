@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase-client';
 import { Notification, NotificationType, NotificationPriority, NotificationsContextType } from '@/types/notification';
 
@@ -71,7 +71,7 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
   }, []);
   
   // Add a notification
-  const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+  const addNotification = (notification: Omit<Notification, "id" | "createdAt" | "read">) => {
     const newNotification: Notification = {
       ...notification,
       id: uuidv4(),
@@ -102,6 +102,21 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     }
   };
   
+  // Remove a notification (alias for dismissNotification for compatibility)
+  const removeNotification = (id: string) => {
+    dismissNotification(id);
+  };
+
+  // Clear all notifications
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    
+    // In a real app, also clear from database
+    if (user) {
+      localStorage.removeItem(`notifications_${user.id}`);
+    }
+  };
+  
   // Mark a notification as read
   const markAsRead = (id: string) => {
     setNotifications(prev =>
@@ -128,17 +143,9 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     }
   };
   
-  // Clear all notifications
+  // Clear all notifications (alias for compatibility)
   const clearAll = () => {
-    setNotifications([]);
-    
-    // In a real app, also clear from database
-    if (user) {
-      // Database clear logic would go here
-      
-      // Clear from localStorage
-      localStorage.removeItem(`notifications_${user.id}`);
-    }
+    clearAllNotifications();
   };
   
   // Get notifications related to file processing
@@ -147,6 +154,31 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
       n.metadata?.type === 'file-processing' || 
       n.type === 'system' && n.message.toLowerCase().includes('file')
     );
+  };
+
+  // Schedule a reminder
+  const scheduleReminder = (date: Date, notification: Omit<Notification, "id" | "createdAt" | "read">) => {
+    const id = uuidv4();
+    
+    const timeoutMs = date.getTime() - new Date().getTime();
+    if (timeoutMs <= 0) {
+      // If the date is in the past, add notification immediately
+      addNotification(notification);
+      return id;
+    }
+    
+    // Schedule the notification
+    setTimeout(() => {
+      addNotification(notification);
+    }, timeoutMs);
+    
+    return id;
+  };
+  
+  // Cancel a scheduled reminder (not fully implemented without a proper reminder system)
+  const cancelReminder = (id: string) => {
+    // This would cancel a scheduled reminder in a real implementation
+    console.log(`Reminder ${id} would be cancelled if this was fully implemented`);
   };
   
   return (
@@ -158,8 +190,12 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
         markAllAsRead,
         clearAll,
         dismissNotification,
+        removeNotification,
         unreadCount,
-        getFileProcessingNotifications
+        getFileProcessingNotifications,
+        clearAllNotifications,
+        scheduleReminder,
+        cancelReminder
       }}
     >
       {children}

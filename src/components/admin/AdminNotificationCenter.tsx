@@ -119,7 +119,7 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onRead={() => markAsRead(notification.id)}
+                    onMarkAsRead={() => markAsRead(notification.id)}
                     showControls
                   />
                 ))}
@@ -139,7 +139,7 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onRead={() => markAsRead(notification.id)}
+                    onMarkAsRead={() => markAsRead(notification.id)}
                     showControls
                   />
                 ))}
@@ -158,7 +158,7 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onRead={() => markAsRead(notification.id)}
+                    onMarkAsRead={() => markAsRead(notification.id)}
                     showControls
                   />
                 ))}
@@ -175,7 +175,7 @@ const AdminNotificationCenter: React.FC = () => {
                   key={notification.id}
                   notification={notification}
                   onDismiss={() => dismissNotification(notification.id)}
-                  onRead={() => markAsRead(notification.id)}
+                  onMarkAsRead={() => markAsRead(notification.id)}
                   showControls
                 />
               ))}
