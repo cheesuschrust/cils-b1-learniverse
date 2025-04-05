@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAI } from '@/hooks/useAI';
+import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { SpeakableWordProps } from '@/types';
 
 export const SpeakableWord: React.FC<SpeakableWordProps> = ({
@@ -24,7 +24,7 @@ export const SpeakableWord: React.FC<SpeakableWordProps> = ({
   iconOnly = false,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const { speak, isAIEnabled } = useAI();
+  const { speak, isAIEnabled } = useAIUtils();
 
   const handleClick = async () => {
     if (onClick) {

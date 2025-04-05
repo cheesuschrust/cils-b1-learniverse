@@ -20,7 +20,7 @@ const SystemTester: React.FC = () => {
   
   const [progress, setProgress] = useState(0);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const { loadModel } = useAI(); // Using loadModel instead of prepareModel since it's available
+  const { loadModel } = useAI(); 
   const { toast } = useToast();
   
   const runTests = async () => {
@@ -46,7 +46,7 @@ const SystemTester: React.FC = () => {
     
     try {
       // Check if AI model can be loaded
-      await loadModel('default');
+      await loadModel();
       await simulateTest('aiModel', 50);
     } catch (error) {
       setTestResults(prev => ({

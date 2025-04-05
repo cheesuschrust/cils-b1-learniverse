@@ -1,15 +1,19 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useAIUtils } from '@/contexts/AIUtilsContext';
 import { 
-  AIProcessingOptions, 
-  ItalianQuestionGenerationParams, 
+  AIProcessingOptions,
+  ItalianQuestionGenerationParams,
   AIGeneratedQuestion,
+  TextToSpeechOptions,
   TTSOptions,
   AIGenerationResult
-} from '@/types/ai';
+} from '@/types/ai-types';
 
 export function useAI() {
+  const aiUtils = useAIUtils();
+  
+  // Rename or destructure all the fields for clarity
   const {
     processContent: processContentAI,
     generateQuestions: generateQuestionsAI,
@@ -18,18 +22,18 @@ export function useAI() {
     generateText: generateTextAI,
     evaluateWriting: evaluateWritingAI,
     isProcessing,
-    speak: speakAI,
+    isGenerating,
+    remainingCredits,
+    usageLimit,
     isAIEnabled,
+    speak: speakAI,
+    isSpeaking,
     status,
     isModelLoaded,
     compareTexts: compareTextsAI,
     loadModel: loadModelAI,
     classifyText: classifyTextAI,
     transcribeSpeech: transcribeSpeechAI,
-    isGenerating,
-    remainingCredits,
-    usageLimit,
-    isSpeaking,
     processAudioStream: processAudioStreamAI,
     stopAudioProcessing: stopAudioProcessingAI,
     isTranscribing,
@@ -37,14 +41,11 @@ export function useAI() {
     checkMicrophoneAccess: checkMicrophoneAccessAI,
     generateContent: generateContentAI,
     analyzeContent: analyzeContentAI
-  } = useAIUtils();
-  
-  const [lastResult, setLastResult] = useState<any>(null);
+  } = aiUtils;
 
+  // Wrap all functions to maintain consistent naming
   const processContent = useCallback(async (content: string, options?: AIProcessingOptions) => {
-    const result = await processContentAI(content, options);
-    setLastResult(result);
-    return result;
+    return await processContentAI(content, options);
   }, [processContentAI]);
 
   const generateQuestions = useCallback(async (params: ItalianQuestionGenerationParams) => {
@@ -53,26 +54,22 @@ export function useAI() {
   }, [generateQuestionsAI]);
 
   const analyzeGrammar = useCallback(async (text: string, language?: string) => {
-    const result = await analyzeGrammarAI(text, language);
-    return result;
+    return await analyzeGrammarAI(text, language);
   }, [analyzeGrammarAI]);
 
   const translateText = useCallback(async (text: string, targetLanguage?: string) => {
-    const result = await translateTextAI(text, targetLanguage);
-    return result;
+    return await translateTextAI(text, targetLanguage);
   }, [translateTextAI]);
 
   const generateText = useCallback(async (prompt: string, options?: any) => {
-    const result = await generateTextAI(prompt, options);
-    return result;
+    return await generateTextAI?.(prompt, options) || '';
   }, [generateTextAI]);
 
   const evaluateWriting = useCallback(async (text: string, level?: string) => {
-    const result = await evaluateWritingAI(text, level);
-    return result;
+    return await evaluateWritingAI(text, level);
   }, [evaluateWritingAI]);
 
-  const speak = useCallback(async (text: string, options?: string | TTSOptions) => {
+  const speak = useCallback(async (text: string | TextToSpeechOptions, options?: string | TTSOptions) => {
     if (speakAI) {
       return await speakAI(text, options);
     }
@@ -138,6 +135,7 @@ export function useAI() {
     return { analysis: {} };
   }, [analyzeContentAI]);
 
+  // Return all the functions and properties with consistent naming
   return {
     processContent,
     generateQuestions,
@@ -145,7 +143,6 @@ export function useAI() {
     translateText,
     generateText,
     evaluateWriting,
-    lastResult,
     isProcessing,
     speak,
     isAIEnabled,

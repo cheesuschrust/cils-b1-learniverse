@@ -1,50 +1,96 @@
 
-// Re-export all types from specific type files
-export * from './interface-fixes';
-export * from './component';
-export * from './core-types';
-export * from './notification';
-export * from './ai';
-export * from './achievement';
-export * from './user';
-export * from './flashcard-types';
-export * from './contentType';
-export * from './AISettingsProps';
-export * from './BadgeProps';
+// Import and re-export all types from specific type files
+import { User, UserRole, UserPreferences, normalizeUser, normalizeUserRecords } from './unified-user';
+import { 
+  NotificationType, 
+  NotificationPriority, 
+  NotificationAction, 
+  Notification 
+} from './notification';
+import { 
+  Flashcard, 
+  FlashcardSet, 
+  ReviewPerformance, 
+  ReviewSchedule,
+  FlashcardStats,
+  normalizeFlashcard,
+  calculateReviewPerformance
+} from './flashcard-unified';
+import { 
+  ContentType, 
+  ContentFeatures 
+} from './contentType';
+import {
+  AISettings
+} from './ai-settings';
+import {
+  ItalianTestSection,
+  ItalianLevel,
+  AIQuestion,
+  AIGeneratedQuestion,
+  ItalianQuestionGenerationParams,
+  QuestionGenerationParams,
+  VoiceOptions,
+  VoicePreference
+} from './ai-types';
+import {
+  Achievement,
+  WeeklyChallenge,
+  UserGamification,
+  Level,
+  LevelProgressBarProps,
+  LevelBadgeProps
+} from './gamification';
 
-// Ensure no conflicting exports from the above interfaces.
-// Explicitly export common used types that might otherwise conflict
-export type { Flashcard } from './flashcard-types';
-export type { ReviewPerformance } from './core-types';
-export type { User } from './user';
-export type { AISettings } from './ai';
-export type { ContentType } from './contentType';
-export type { ItalianTestSection } from './ai';
+// Export all types
+export {
+  // User types
+  User,
+  UserRole,
+  UserPreferences,
+  normalizeUser,
+  normalizeUserRecords,
+  
+  // Notification types
+  NotificationType,
+  NotificationPriority,
+  NotificationAction,
+  Notification,
+  
+  // Flashcard types
+  Flashcard,
+  FlashcardSet,
+  ReviewPerformance,
+  ReviewSchedule,
+  FlashcardStats,
+  normalizeFlashcard,
+  calculateReviewPerformance,
+  
+  // Content types
+  ContentType,
+  ContentFeatures,
+  
+  // AI types
+  AISettings,
+  ItalianTestSection,
+  ItalianLevel,
+  AIQuestion,
+  AIGeneratedQuestion,
+  ItalianQuestionGenerationParams,
+  QuestionGenerationParams,
+  VoiceOptions,
+  VoicePreference,
+  
+  // Gamification types
+  Achievement,
+  WeeklyChallenge,
+  UserGamification,
+  Level,
+  LevelProgressBarProps,
+  LevelBadgeProps
+};
 
-// Define interface props for components
-export interface FlashcardComponentProps {
-  card: any;
-  onUpdate?: (card: any) => void;
-  onDelete?: (id: string) => void;
-  showActions?: boolean;
-  onRating?: (rating: number) => void;
-  onSkip?: () => void;
-  flipped?: boolean;
-  onFlip?: () => void;
-  showPronunciation?: boolean;
-  className?: string;
-  showHints?: boolean;
-  onKnown?: () => void;
-  onUnknown?: () => void;
-  iconOnly?: boolean;
-}
-
-export interface LevelBadgeProps {
-  level: number;
-  showInfo?: boolean;
-  size?: string; // Optional size for better flexibility
-}
-
+// Define additional interface props for components
 export interface SpeakableWordProps {
   word: string;
   language?: string;
@@ -53,9 +99,20 @@ export interface SpeakableWordProps {
   tooltipContent?: string;
   onPlayComplete?: () => void;
   autoPlay?: boolean;
-  size?: string; // Ensuring uniformity
+  size?: string; // Optional size for better flexibility
   onClick?: () => void;
   iconOnly?: boolean;
 }
 
-export type { NotificationType, NotificationPriority, NotificationAction, Notification } from './notification';
+export interface BadgeProps {
+  text: string;
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'citizenship';
+  className?: string;
+  icon?: React.ReactNode;
+  size?: 'sm' | 'default' | 'lg';
+}
+
+export interface AISettingsProps {
+  settings: AISettings;
+  onSettingsChange: (settings: Partial<AISettings>) => void;
+}

@@ -1,52 +1,59 @@
 
+export type AchievementType = 'streak' | 'completion' | 'mastery' | 'exploration' | 'special';
+
 export interface Achievement {
   id: string;
+  type: AchievementType;
   name: string;
   description: string;
   icon: string;
-  category: string;
-  unlockedAt?: Date | null;
-  progress?: number;
+  threshold: number;
+  progress: number;
+  unlocked: boolean;
+  date?: Date;
+  title?: string;
+  points?: number;
+  currentValue?: number;
+  earnedAt?: Date;
+  level?: number;
+  unlockedAt?: Date;
   requiredValue?: number;
-  isHidden?: boolean;
-}
-
-export interface UserGamification {
-  userId: string;
-  level: number;
-  xp: number;
-  streak: number;
-  streakFreezeUsed: boolean;
-  lastActivity: Date;
-  achievements: Achievement[];
-  badges: string[];
-  nextLevelXp: number;
-  currentLevelXp: number;
-}
-
-export interface WeeklyProgress {
-  date: string;
-  xp: number;
-  minutesStudied: number;
-  activitiesCompleted: number;
+  category?: string;
 }
 
 export interface WeeklyChallenge {
   id: string;
   title: string;
   description: string;
-  xpReward: number;
   startDate: Date;
   endDate: Date;
-  requirements: ChallengeRequirement[];
-  progress: number;
   isCompleted: boolean;
+  reward: number;
+  type: string;
+  category: string;
+  progress: number;
+  currentProgress?: number;
+  goal?: number;
+  completed?: boolean;
+  completedAt?: Date;
 }
 
-export interface ChallengeRequirement {
-  type: 'activity_count' | 'xp_earned' | 'streak_days' | 'perfect_score' | 'minutes_studied';
-  target: number;
-  current: number;
+export interface UserGamification {
+  userId: string;
+  xp: number;
+  level: number;
+  streak: number;
+  lastActivity: Date;
+  achievements: Achievement[];
+  weeklyChallenge?: WeeklyChallenge;
+  streakDays?: number;
+  lifetimeXp?: number;
+  weeklyXp?: number;
+  longestStreak?: number;
+  totalCorrectAnswers?: number;
+  totalCompletedReviews?: number;
+  lastActivityDate?: Date;
+  currentStreak?: number;
 }
 
 export interface Level {
@@ -59,16 +66,52 @@ export interface Level {
   benefits: string[];
 }
 
-export interface DailyGoal {
-  target: number;
-  current: number;
-  type: 'xp' | 'minutes' | 'activities';
-  completedDays: string[];
+export interface LevelProgressBarProps {
+  level: number;
+  currentXP: number;
+  nextLevelXP: number;
 }
 
-export interface Streak {
-  current: number;
-  longest: number;
-  lastMaintained: Date;
-  freezesAvailable: number;
+export interface LevelBadgeProps {
+  level: number;
+  showInfo?: boolean;
+  size?: 'sm' | 'default' | 'lg';
+}
+
+export interface GamificationContextType {
+  userGamification: UserGamification | null;
+  levels: Level[];
+  isLoading: boolean;
+  awardXP: (amount: number, reason?: string) => Promise<void>;
+  awardAchievement: (achievementId: string) => Promise<void>;
+  getCurrentLevel: (xp: number) => Level;
+  getNextLevel: (xp: number) => Level;
+  refreshGamification: () => Promise<void>;
+  getCurrentStreak?: () => number;
+  lastActivity?: Date;
+}
+
+// Utility functions
+export function createAchievement(
+  id: string,
+  type: AchievementType,
+  name: string,
+  description: string,
+  icon: string,
+  threshold: number,
+  title?: string,
+  points?: number
+): Achievement {
+  return {
+    id,
+    type,
+    name,
+    description,
+    icon,
+    threshold,
+    progress: 0,
+    unlocked: false,
+    title,
+    points
+  };
 }

@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -9,12 +9,21 @@ import {
   signOut, 
   getCurrentUser
 } from '@/integrations/supabase/client';
+import { UnifiedUser } from '@/types/unified-user';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   userRole: string;
+  loading?: boolean;
+  isPremium?: boolean;
+  displayName?: string;
+  updateProfile?: (data: any) => Promise<boolean>;
+  updatePassword?: (password: string) => Promise<boolean>;
+  resetPassword?: (email: string) => Promise<boolean>;
+  verifyEmail?: (token: string) => Promise<boolean>;
+  resendVerificationEmail?: (email: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string) => Promise<boolean>;
@@ -32,15 +41,15 @@ const defaultContext: AuthContextType = {
   logout: async () => {},
 };
 
-const AuthContext = createContext<AuthContextType>(defaultContext);
-
-export const useAuth = () => useContext(AuthContext);
+export const AuthContext = createContext<AuthContextType>(defaultContext);
 
 export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState('user');
   const { toast } = useToast();
+  const [displayName, setDisplayName] = useState<string>('');
+  const [isPremium, setIsPremium] = useState<boolean>(false);
 
   useEffect(() => {
     // Set up auth state listener first
@@ -48,6 +57,12 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       (event, session) => {
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Set display name and premium status when user is available
+        if (session?.user) {
+          setDisplayName(session.user.email || 'User');
+          setIsPremium(false); // Default value, will be updated from database
+        }
       }
     );
 
@@ -55,7 +70,13 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const initializeAuth = async () => {
       try {
         const currentUser = await getCurrentUser();
-        setUser(currentUser ? supabase.auth.getUser().then(({ data }) => data.user) : null);
+        if (currentUser) {
+          const userData = await supabase.auth.getUser();
+          setUser(userData.data.user);
+          setDisplayName(userData.data.user?.email || 'User');
+        } else {
+          setUser(null);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
@@ -87,6 +108,7 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       // Set user data
       setUser(data.user);
+      setDisplayName(data.user?.email || 'User');
       return true;
     } catch (error: any) {
       toast({
@@ -117,6 +139,7 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Set user data
       if (data.user) {
         setUser(data.user);
+        setDisplayName(data.user.email || 'User');
         
         toast({
           title: 'Welcome!',
@@ -148,6 +171,8 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setIsLoading(true);
       await signOut();
       setUser(null);
+      setDisplayName('');
+      setIsPremium(false);
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out',
@@ -184,6 +209,121 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  // Stub methods for other auth operations
+  const resetPassword = async (email: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      
+      if (error) {
+        toast({
+          title: 'Password reset failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Password reset email sent',
+        description: 'Please check your email for the password reset link',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Password reset failed',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const updatePassword = async (password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) {
+        toast({
+          title: 'Password update failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been successfully updated',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Password update failed',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const updateProfile = async (data: Partial<UnifiedUser>): Promise<boolean> => {
+    try {
+      // Basic data that can be updated through auth API
+      const { error } = await supabase.auth.updateUser({
+        email: data.email,
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          displayName: data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+          avatar: data.photoURL || data.avatar
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: 'Profile update failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      // Also update profile in database if we have more fields
+      // Code would be added here to update user_profiles table
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated',
+      });
+      
+      // Update local state
+      if (data.displayName) {
+        setDisplayName(data.displayName);
+      }
+      
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Profile update failed',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const verifyEmail = async (token: string): Promise<boolean> => {
+    // In a real implementation, this would verify the email token
+    return Promise.resolve(true);
+  };
+
+  const resendVerificationEmail = async (email: string): Promise<boolean> => {
+    // In a real implementation, this would resend the verification email
+    return Promise.resolve(true);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -191,10 +331,18 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isAuthenticated: !!user,
         isLoading,
         userRole,
+        loading: isLoading,
         login,
         loginWithGoogle,
         signup,
         logout,
+        resetPassword,
+        updatePassword,
+        updateProfile,
+        verifyEmail,
+        resendVerificationEmail,
+        displayName,
+        isPremium
       }}
     >
       {children}
