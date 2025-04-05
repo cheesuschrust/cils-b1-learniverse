@@ -1,78 +1,75 @@
 
-import { AIModel, AIModelSize } from '@/types/ai';
+import { AIModel } from "@/types/ai";
 
-interface ModelMapping {
-  [key: string]: AIModel;
-}
-
-/**
- * Maps external AI model names to our internal model types
- */
-export const mapExternalModelToInternal = (externalModel: string): AIModel => {
-  const modelMap: ModelMapping = {
-    // OpenAI models
-    'gpt-3.5-turbo': 'small',
-    'gpt-3.5-turbo-16k': 'small',
-    'gpt-4o-mini': 'small',
-    'gpt-4': 'large',
-    'gpt-4o': 'medium',
-    
-    // Claude models
-    'claude-instant': 'medium',
-    'claude-2': 'large',
-    
-    // Mistral models
-    'mistral-tiny': 'small',
-    'mistral-small': 'small',
-    'mistral-medium': 'medium',
-    'mistral-large': 'large',
-    
-    // Default to medium model if unknown
-    'default': 'medium',
-  };
+// Map to standardize AI model names across different providers
+export const modelMap: Record<string, string> = {
+  // OpenAI models
+  "gpt-4o-mini": "small",
+  "gpt-4o": "medium",
+  "gpt-4.5-turbo": "large",
   
-  return modelMap[externalModel] || modelMap.default;
+  // Anthropic models
+  "claude-instant": "small",
+  "claude-2": "medium",
+  "claude-3": "large",
+  
+  // Local models
+  "llama-7b": "small",
+  "llama-13b": "medium",
+  "llama-70b": "large",
 };
 
-/**
- * Get the appropriate model name for the provider based on the desired size
- */
-export function getModelForProvider(provider: string, size: AIModelSize): AIModel {
-  const providerModelMap: Record<string, Record<AIModelSize, AIModel>> = {
-    'openai': {
-      'small': 'gpt-4o-mini',
-      'medium': 'gpt-4o',
-      'large': 'gpt-4'
-    },
-    'anthropic': {
-      'small': 'gpt-4o-mini',  // Fallback if no small model
-      'medium': 'claude-instant',
-      'large': 'claude-2'
-    },
-    'mistral': {
-      'small': 'mistral-small',
-      'medium': 'mistral-medium',
-      'large': 'mistral-large'
-    },
-    'default': {
-      'small': 'gpt-3.5-turbo',
-      'medium': 'gpt-4o',
-      'large': 'gpt-4'
+// Map model names to their capabilities
+export const modelCapabilities: Record<string, string[]> = {
+  "small": [
+    "text generation",
+    "translation",
+    "basic grammar correction"
+  ],
+  "medium": [
+    "text generation",
+    "translation",
+    "grammar correction",
+    "content summarization",
+    "language assessment"
+  ],
+  "large": [
+    "text generation",
+    "translation",
+    "advanced grammar correction",
+    "content summarization",
+    "language assessment",
+    "flashcard generation",
+    "question generation"
+  ]
+};
+
+// Get standardized model size
+export function getModelSize(modelName: string): string {
+  return modelMap[modelName] || "medium";
+}
+
+// Check if a model supports a specific capability
+export function modelSupports(modelName: string, capability: string): boolean {
+  const size = getModelSize(modelName);
+  return modelCapabilities[size]?.includes(capability) || false;
+}
+
+// Get all models of a specific size
+export function getModelsBySize(size: string): string[] {
+  return Object.entries(modelMap)
+    .filter(([_, modelSize]) => modelSize === size)
+    .map(([model]) => model);
+}
+
+// Get recommended model for a specific capability
+export function getRecommendedModel(capability: string): string {
+  // Find the smallest model that supports the capability
+  for (const size of ["small", "medium", "large"]) {
+    if (modelCapabilities[size]?.includes(capability)) {
+      const models = getModelsBySize(size);
+      return models[0] || "gpt-4o";
     }
-  };
-  
-  const providerMap = providerModelMap[provider] || providerModelMap.default;
-  return providerMap[size];
+  }
+  return "gpt-4o"; // Default to a medium model
 }
-
-// Alias functions for backward compatibility
-export const adaptModelToSize = mapExternalModelToInternal;
-export const adaptSizeToModel = getModelForProvider;
-
-// Export default for module compatibility
-export default {
-  mapExternalModelToInternal,
-  getModelForProvider,
-  adaptModelToSize,
-  adaptSizeToModel
-};

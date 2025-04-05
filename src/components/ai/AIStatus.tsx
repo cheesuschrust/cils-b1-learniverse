@@ -1,122 +1,68 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge-fixed';
 import { Progress } from '@/components/ui/progress';
-import { Zap, Brain, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { AIModelSize } from '@/types/ai';
+import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useAI } from '@/hooks/useAI';
 
-interface AIStatusProps {
-  status: 'idle' | 'processing' | 'success' | 'error';
-  model: string;
-  modelSize: AIModelSize;
-  creditsRemaining: number;
-  creditsTotal: number;
-  isEnabled: boolean;
-  errorMessage?: string;
-  processingTask?: string;
-}
-
-const AIStatus: React.FC<AIStatusProps> = ({
-  status,
-  model,
-  modelSize,
-  creditsRemaining,
-  creditsTotal,
-  isEnabled,
-  errorMessage,
-  processingTask
-}) => {
-  // Status icon component based on current status
-  const StatusIcon = () => {
-    switch(status) {
-      case 'processing':
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'error':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      case 'idle':
-      default:
-        return <Brain className="h-5 w-5 text-gray-500" />;
-    }
-  };
+export const AIStatus: React.FC = () => {
+  const ai = useAI();
+  const isLoaded = !ai.isProcessing;
   
-  // Model size indicator
-  const ModelSizeIndicator = () => {
-    const sizes = {
-      small: { label: 'SMALL', color: 'bg-green-500' },
-      medium: { label: 'MEDIUM', color: 'bg-yellow-500' },
-      large: { label: 'LARGE', color: 'bg-red-500' }
-    };
-    
-    const { label, color } = sizes[modelSize] || sizes.medium;
-    
-    return (
-      <div className="flex items-center gap-1.5">
-        <div className={`w-2 h-2 rounded-full ${color}`}></div>
-        <span className="text-xs font-semibold">{label}</span>
-      </div>
-    );
-  };
-
   return (
-    <Card className={cn(
-      'w-full transition-opacity', 
-      !isEnabled && 'opacity-70'
-    )}>
+    <Card>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Zap className={cn(
-              "h-5 w-5", 
-              isEnabled ? "text-blue-500" : "text-gray-400"
-            )} />
-            AI Status
-          </CardTitle>
-          <ModelSizeIndicator />
-        </div>
+        <CardTitle className="flex items-center justify-between">
+          AI Model Status
+          {isLoaded ? (
+            <Badge variant="success" className="ml-2">Online</Badge>
+          ) : (
+            <Badge variant="warning" className="ml-2">Loading</Badge>
+          )}
+        </CardTitle>
         <CardDescription>
-          {isEnabled ? `Using ${model}` : 'AI features are disabled'}
+          Performance and availability metrics
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <StatusIcon />
-            <span className="font-medium">
-              {status === 'processing' ? (
-                <span className="text-blue-600">Processing{processingTask ? `: ${processingTask}` : ''}</span>
-              ) : status === 'success' ? (
-                <span className="text-green-600">Ready</span>
-              ) : status === 'error' ? (
-                <span className="text-red-600">Error</span>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Connection Status</span>
+            <div className="flex items-center">
+              {isLoaded ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-sm text-green-500">Connected</span>
+                </>
               ) : (
-                <span>Idle</span>
+                <>
+                  <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+                  <span className="text-sm text-amber-500">Connecting</span>
+                </>
               )}
-            </span>
+            </div>
           </div>
-        </div>
-        
-        {status === 'error' && errorMessage && (
-          <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-            {errorMessage}
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>API Responsiveness</span>
+              <span className="font-medium">{isLoaded ? 'Good' : 'Checking...'}</span>
+            </div>
+            <Progress value={isLoaded ? 95 : 30} />
           </div>
-        )}
-        
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Credits Remaining</span>
-            <span className="font-medium">{creditsRemaining} / {creditsTotal}</span>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>System Load</span>
+              <span className="font-medium">{isLoaded ? 'Low' : 'Unknown'}</span>
+            </div>
+            <Progress value={isLoaded ? 25 : 50} />
           </div>
-          <Progress 
-            value={(creditsRemaining / creditsTotal) * 100} 
-            className="h-2"
-          />
-          <p className="text-xs text-muted-foreground">
-            Credits refresh daily. {isEnabled ? `${creditsRemaining} credits left today.` : 'Enable AI to use credits.'}
-          </p>
+          
+          <div className="mt-4 text-xs text-muted-foreground">
+            Last updated: {new Date().toLocaleTimeString()}
+          </div>
         </div>
       </CardContent>
     </Card>

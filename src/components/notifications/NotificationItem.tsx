@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,17 +9,19 @@ import { cn } from '@/lib/utils';
 interface NotificationItemProps {
   notification: Notification;
   onRead: () => void;
-  onRemove: () => void;
+  onDismiss: () => void;
   onClick?: () => void;
   expanded?: boolean;
+  showControls?: boolean;
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onRead,
-  onRemove,
+  onDismiss,
   onClick,
-  expanded = false
+  expanded = false,
+  showControls = false
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [isExpanded, setIsExpanded] = useState(expanded);
@@ -114,7 +115,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                 className="h-7 w-7"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onRemove();
+                  onDismiss();
                 }}
               >
                 <Trash2 className="h-4 w-4" />

@@ -1,18 +1,18 @@
 
-export type NotificationType = 
-  | 'achievement' 
-  | 'streak' 
-  | 'system' 
-  | 'reminder'
-  | 'milestone';
+import { ReactNode } from 'react';
 
-export type NotificationPriority = 'low' | 'medium' | 'high';
+// Notification Types
+export type NotificationType = 
+  'achievement' | 'streak' | 'milestone' | 'reminder' | 'system' |
+  'info' | 'success' | 'warning' | 'error' | 'speaking' | 'listening';
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
 
 export interface NotificationAction {
   id: string;
   label: string;
   action: () => void;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  variant?: 'default' | 'outline' | 'secondary' | 'destructive' | 'link' | 'success' | 'warning';
 }
 
 export interface Notification {
@@ -23,26 +23,20 @@ export interface Notification {
   priority: NotificationPriority;
   createdAt: Date;
   read: boolean;
-  icon?: string;
   link?: string;
+  actionLabel?: string;
+  actionHandler?: () => void;
   expires?: Date;
-  actions?: NotificationAction[];
   metadata?: Record<string, any>;
 }
 
-export interface ScheduledNotification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  scheduledFor: Date;
-  metadata?: Record<string, any>;
-}
-
-export interface NotificationFilter {
-  type?: NotificationType;
-  priority?: NotificationPriority;
-  read?: boolean;
-  fromDate?: Date;
-  toDate?: Date;
+export interface NotificationsContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearAll: () => void;
+  dismissNotification: (id: string) => void;
+  getFileProcessingNotifications: () => Notification[];
 }

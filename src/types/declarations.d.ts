@@ -17,12 +17,14 @@ declare module "*.webp";
 // Fix badge component type issues
 declare module "@/components/ui/badge" {
   import { VariantProps } from "class-variance-authority";
-  import { badgeVariants } from "@/components/ui/badge";
+  import { badgeVariants } from "@/components/ui/badge-fixed";
   
   export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, 
     VariantProps<typeof badgeVariants> {
-    variant?: "default" | "secondary" | "destructive" | "outline";
+    variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "citizenship";
     className?: string;
+    children?: React.ReactNode;
+    asChild?: boolean;
   }
   
   export function Badge(props: BadgeProps): JSX.Element;
