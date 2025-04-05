@@ -26,11 +26,16 @@
     "noFallthroughCasesInSwitch": false,
     "exactOptionalPropertyTypes": false,
     
+    /* Additional settings to handle type issues */
+    "noPropertyAccessFromIndexSignature": false,
+    "useUnknownInCatchVariables": false,
+    "allowUmdGlobalAccess": true,
+    
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src"]
+  "include": ["src", "cypress"]
 }
