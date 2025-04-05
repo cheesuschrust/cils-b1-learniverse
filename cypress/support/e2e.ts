@@ -6,7 +6,7 @@ import '@cypress/code-coverage/support';
 
 // Disable specific console errors in the Cypress browser to reduce noise in test output
 Cypress.on('window:before:load', (win) => {
-  cy.stub(win.console, 'error').callsFake((msg) => {
+  cy.stub(win.console, 'error').callsFake((msg: string) => {
     // Allow the error to be logged to the console but fail the test if it's not an expected error
     if (
       !msg.includes('ResizeObserver') && // Common React warning
@@ -19,7 +19,7 @@ Cypress.on('window:before:load', (win) => {
   });
 
   // Suppress specific warnings as well
-  cy.stub(win.console, 'warn').callsFake((msg) => {
+  cy.stub(win.console, 'warn').callsFake((msg: string) => {
     if (
       !msg.includes('React does not recognize the') && // React prop warnings
       !msg.includes('You provided a `checked` prop to a form field') // Form field warnings
@@ -35,7 +35,7 @@ beforeEach(() => {
   // Get cookies from previous tests
   const cookies = Cypress.env('cookies') || [];
   if (cookies.length > 0) {
-    cookies.forEach(cookie => {
+    cookies.forEach((cookie: Cypress.Cookie) => {
       cy.setCookie(cookie.name, cookie.value);
     });
   }
@@ -43,7 +43,7 @@ beforeEach(() => {
 
 afterEach(() => {
   // Save cookies for next test
-  cy.getCookies().then(cookies => {
+  cy.getCookies().then((cookies) => {
     Cypress.env('cookies', cookies);
   });
 });

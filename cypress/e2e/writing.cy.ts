@@ -124,8 +124,8 @@ describe('Writing Practice Page', () => {
   });
 
   it('should handle keyboard shortcuts', () => {
-    // Focus on textarea - Change focus() to focused() to match Cypress's API
-    cy.get('textarea').focused();
+    // Focus on textarea
+    cy.get('textarea').focus();
     
     // Type text
     cy.get('textarea').type('Ciao');

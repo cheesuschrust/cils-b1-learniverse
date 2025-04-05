@@ -1,3 +1,4 @@
+
 // ***********************************************
 // This example commands.js shows you how to
 // create various custom commands and overwrite
@@ -97,3 +98,21 @@ Cypress.Commands.add('testFormValidation', (formSelector: string) => {
     });
   });
 });
+
+// Declare the Cypress namespace for custom commands
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      login(email: string, password: string): Chainable<Element>;
+      loginAsAdmin(): Chainable<Element>;
+      checkAllLinks(): Chainable<Element>;
+      checkAccessibility(options?: any): Chainable<Element>;
+      tab(): Chainable<JQuery<HTMLElement>>;
+      captureAndCompare(name: string): Chainable<Element>;
+      testKeyboardNavigation(): Chainable<Element>;
+      testFormValidation(formSelector: string): Chainable<Element>;
+    }
+  }
+}
+
+export {};
