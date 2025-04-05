@@ -19,6 +19,10 @@ export const badgeVariants = cva(
         warning: "border-transparent bg-yellow-500 text-white hover:bg-yellow-600",
         info: "border-transparent bg-blue-500 text-white hover:bg-blue-600",
         citizenship: "border-transparent bg-green-50 text-green-700 border-green-200",
+        blue: "border-transparent bg-blue-500 text-white hover:bg-blue-600",
+        green: "border-transparent bg-green-500 text-white hover:bg-green-600",
+        link: "text-primary underline-offset-4 hover:underline",
+        ghost: "border-transparent hover:bg-muted hover:text-muted-foreground",
       },
     },
     defaultVariants: {
@@ -30,7 +34,7 @@ export const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
-  variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "citizenship";
+  variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "citizenship" | "blue" | "green" | "link" | "ghost";
   className?: string;
   children?: React.ReactNode;
   asChild?: boolean;

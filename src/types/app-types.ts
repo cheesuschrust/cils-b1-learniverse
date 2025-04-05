@@ -1,4 +1,3 @@
-
 import { ReactNode } from 'react';
 
 // AI Settings
@@ -10,6 +9,10 @@ export interface AISettings {
   frequencyPenalty: number;
   presencePenalty: number;
   showFeedback?: boolean;
+  language?: string;
+  difficulty?: string;
+  contentTypes?: string[];
+  focusAreas?: string[];
 }
 
 export interface AISettingsProps {
@@ -17,6 +20,26 @@ export interface AISettingsProps {
   onSettingsChange: (settings: AISettings) => void;
   onSave?: () => void;
   onReset?: () => void;
+}
+
+// AI Content processor props
+export interface AIContentProcessorProps {
+  settings?: AISettings;
+  onContentProcessed?: (result: any) => void;
+  onError?: (error: Error) => void;
+  defaultLanguage?: string;
+  contentType?: string;
+  content?: string;
+  onContentGenerated?: (content: string) => void;
+  onQuestionsGenerated?: (questions: any[]) => void;
+}
+
+// AI Content settings
+export interface AIContentSettings {
+  language: string;
+  difficulty: string;
+  contentTypes: string[];
+  focusAreas: string[];
 }
 
 // User types
@@ -101,15 +124,6 @@ export interface AIProcessingOptions {
   includeInTraining?: boolean;
   returnRawResponse?: boolean;
   language?: 'english' | 'italian' | 'both';
-  contentType?: string;
-}
-
-// AI Content processor props
-export interface AIContentProcessorProps {
-  settings?: AISettings;
-  onContentProcessed?: (result: any) => void;
-  onError?: (error: Error) => void;
-  defaultLanguage?: string;
   contentType?: string;
 }
 

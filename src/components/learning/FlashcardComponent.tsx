@@ -1,228 +1,226 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge-fixed';
+import { Edit, Trash, RotateCw, Check, X, Volume } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FlashcardComponentProps } from '@/types/interface-fixes';
+import { FlashcardComponentProps } from '@/types';
 import SpeakableWord from './SpeakableWord';
 
 const FlashcardComponent: React.FC<FlashcardComponentProps> = ({
   card,
+  onUpdate,
+  onDelete,
+  showActions = true,
   onRating,
   onSkip,
   flipped = false,
   onFlip,
-  showPronunciation = true,
-  showActions = true,
-  className,
+  showPronunciation = false,
+  className = '',
   showHints = false,
   onKnown,
   onUnknown,
-  onUpdate,
-  onDelete
 }) => {
   const [isFlipped, setIsFlipped] = useState(flipped);
-  const [initialLoad, setInitialLoad] = useState(true);
-
-  useEffect(() => {
-    if (!initialLoad) {
-      setIsFlipped(flipped);
-    }
-    setInitialLoad(false);
-  }, [flipped, initialLoad]);
 
   const handleFlip = () => {
-    const newFlippedState = !isFlipped;
-    setIsFlipped(newFlippedState);
     if (onFlip) {
       onFlip();
+    } else {
+      setIsFlipped(!isFlipped);
     }
   };
 
-  const handleRating = (rating: number) => {
-    if (onRating) {
-      onRating(rating);
-    }
-  };
-
-  const handleSkip = () => {
-    if (onSkip) {
-      onSkip();
-    }
-  };
-
-  const handleKnown = () => {
-    if (onKnown) {
-      onKnown();
-    }
-  };
-
-  const handleUnknown = () => {
-    if (onUnknown) {
-      onUnknown();
-    }
-  };
-
-  const handleEdit = () => {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (onUpdate) {
       onUpdate(card);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (onDelete) {
       onDelete(card.id);
     }
   };
 
+  const handleRating = (rating: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRating) {
+      onRating(rating);
+    }
+  };
+
+  const handleSkip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSkip) {
+      onSkip();
+    }
+  };
+
+  const handleKnown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onKnown) {
+      onKnown();
+    }
+  };
+
+  const handleUnknown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onUnknown) {
+      onUnknown();
+    }
+  };
+
+  // Determine which content to display
+  const frontContent = card.front || card.italian || '';
+  const backContent = card.back || card.english || '';
+  
+  // Get any language tags for the card
+  const languageTags = card.tags?.filter(tag => 
+    ['italian', 'english', 'beginner', 'intermediate', 'advanced'].includes(tag.toLowerCase())
+  );
+
   return (
-    <div className={cn("w-full max-w-md mx-auto", className)}>
-      <Card
-        className={cn(
-          "w-full h-56 md:h-64 perspective-1000 cursor-pointer relative",
-          isFlipped ? "flashcard-flipped" : ""
-        )}
-        onClick={handleFlip}
-      >
-        <div className="w-full h-full relative transform-style-3d transition-transform duration-500">
-          {/* Front side */}
-          <CardContent
-            className={cn(
-              "absolute w-full h-full backface-hidden p-6 flex flex-col justify-between",
-              !isFlipped ? "z-10" : "z-0 rotate-y-180"
-            )}
-          >
-            <div className="flex justify-between items-start">
-              <Badge variant="outline" className="text-xs font-normal">
-                {card.tags && card.tags.length > 0 ? card.tags[0] : "Vocabulary"}
-              </Badge>
+    <Card 
+      className={cn(
+        "border shadow-md cursor-pointer transition-all duration-300 transform-gpu perspective-1000", 
+        isFlipped ? "rotate-y-180" : "",
+        className
+      )}
+      onClick={handleFlip}
+    >
+      <div className={cn(
+        "relative h-full w-full transition-all duration-500 transform-gpu backface-hidden",
+        isFlipped ? "rotate-y-180 absolute inset-0" : ""
+      )}>
+        <CardContent className={cn(
+          "p-6 pt-8 h-full flex flex-col space-y-4",
+          isFlipped ? "hidden" : ""
+        )}>
+          <div className="flex justify-between items-start">
+            <div className="flex flex-wrap gap-2">
               {card.level !== undefined && (
-                <Badge variant={card.mastered ? "success" : "secondary"} className="text-xs">
+                <Badge variant={card.mastered ? "success" : "secondary"}>
                   Level {card.level}
                 </Badge>
               )}
+              {languageTags?.map(tag => (
+                <Badge key={tag} variant="outline">{tag}</Badge>
+              ))}
             </div>
-            
-            <div className="text-center flex-grow flex flex-col justify-center">
-              <h3 className="text-2xl font-bold mb-2">{card.front || card.italian}</h3>
-              
-              {showPronunciation && (
-                <div className="flex justify-center mt-2">
-                  <SpeakableWord 
-                    word={card.front || card.italian || ''}
-                    language="italian"
-                    showTooltip={true}
-                    tooltipContent="Listen to pronunciation"
-                  />
-                </div>
-              )}
-              
-              {showHints && card.examples && card.examples.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2 italic">
-                  Example: {card.examples[0]}
-                </p>
-              )}
-            </div>
-            
-            <div className="text-center text-sm text-muted-foreground">
-              Click to reveal translation
-            </div>
-          </CardContent>
-
-          {/* Back side */}
-          <CardContent
-            className={cn(
-              "absolute w-full h-full backface-hidden p-6 bg-muted/30 rotate-y-180 flex flex-col justify-between",
-              isFlipped ? "z-10" : "z-0"
+            {showActions && (
+              <div className="flex space-x-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleEdit}
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive"
+                  onClick={handleDelete}
+                >
+                  <Trash className="h-4 w-4" />
+                  <span className="sr-only">Delete</span>
+                </Button>
+              </div>
             )}
-          >
-            <div className="flex justify-between items-start">
-              <Badge variant="outline" className="text-xs font-normal">
-                Translation
-              </Badge>
-            </div>
-            
-            <div className="text-center flex-grow flex flex-col justify-center">
-              <h3 className="text-2xl font-bold mb-2">{card.back || card.english}</h3>
-              
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center flex flex-col items-center">
+              <h3 className="text-2xl font-bold mb-2">{frontContent}</h3>
               {showPronunciation && (
-                <div className="flex justify-center mt-2">
-                  <SpeakableWord 
-                    word={card.back || card.english || ''}
-                    language="english"
-                    showTooltip={true}
-                    tooltipContent="Listen to pronunciation"
-                  />
+                <SpeakableWord 
+                  word={frontContent} 
+                  language="italian"
+                  size="large"
+                />
+              )}
+              {showHints && card.examples && card.examples.length > 0 && (
+                <div className="mt-4 text-sm text-muted-foreground">
+                  <p>Example: {card.examples[0]}</p>
                 </div>
               )}
-              
-              {card.explanation && (
-                <p className="text-sm mt-4 text-muted-foreground">
-                  {card.explanation}
-                </p>
-              )}
             </div>
-            
-            <div className="text-center text-sm text-muted-foreground">
-              Click to see the word again
-            </div>
-          </CardContent>
-        </div>
-      </Card>
-
-      {showActions && (
-        <div className="mt-4 flex justify-between items-center">
-          <Button variant="outline" size="sm" onClick={handleUnknown}>
-            Don't Know
-          </Button>
-
-          <div className="flex space-x-1">
-            {[1, 2, 3, 4, 5].map((rating) => (
-              <Button
-                key={rating}
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRating(rating);
-                }}
-                className="w-8 h-8 p-0"
-              >
-                {rating}
-              </Button>
-            ))}
           </div>
-
-          <Button variant="outline" size="sm" onClick={handleSkip}>
-            Skip
+          
+          <div className="flex justify-center space-x-2">
+            {onSkip && (
+              <Button variant="outline" size="sm" onClick={handleSkip}>
+                Skip
+              </Button>
+            )}
+            {onRating && (
+              <div className="space-x-2">
+                <Button variant="destructive" size="sm" onClick={handleRating(1)}>
+                  Hard
+                </Button>
+                <Button variant="default" size="sm" onClick={handleRating(3)}>
+                  Good
+                </Button>
+                <Button variant="success" size="sm" onClick={handleRating(5)}>
+                  Easy
+                </Button>
+              </div>
+            )}
+            {onKnown && onUnknown && (
+              <div className="space-x-2">
+                <Button variant="destructive" size="sm" onClick={handleUnknown}>
+                  <X className="h-4 w-4 mr-1" />
+                  Don't Know
+                </Button>
+                <Button variant="success" size="sm" onClick={handleKnown}>
+                  <Check className="h-4 w-4 mr-1" />
+                  Know It
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+        
+        <CardContent className={cn(
+          "p-6 pt-8 h-full flex flex-col",
+          !isFlipped ? "hidden" : ""
+        )}>
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <h3 className="text-2xl font-bold mb-4">{backContent}</h3>
+            {showPronunciation && (
+              <SpeakableWord 
+                word={backContent} 
+                language="english"
+                size="large"
+              />
+            )}
+            
+            {card.explanation && (
+              <div className="mt-4 text-sm text-muted-foreground max-w-md">
+                <p className="font-semibold">Explanation:</p>
+                <p>{card.explanation}</p>
+              </div>
+            )}
+          </div>
+          
+          <Button 
+            variant="outline" 
+            className="mt-4 self-center"
+            onClick={handleFlip}
+          >
+            <RotateCw className="mr-2 h-4 w-4" />
+            Flip Card
           </Button>
-        </div>
-      )}
-      
-      {showActions && (onUpdate || onDelete) && (
-        <div className="mt-2 flex justify-end space-x-2">
-          {onUpdate && (
-            <Button variant="ghost" size="sm" onClick={handleEdit}>
-              Edit
-            </Button>
-          )}
-          {onDelete && (
-            <Button variant="ghost" size="sm" onClick={handleDelete}>
-              Delete
-            </Button>
-          )}
-        </div>
-      )}
-      
-      {showActions && onKnown && (
-        <div className="mt-2 flex justify-center">
-          <Button variant="default" size="sm" onClick={handleKnown}>
-            Know
-          </Button>
-        </div>
-      )}
-    </div>
+        </CardContent>
+      </div>
+    </Card>
   );
 };
 

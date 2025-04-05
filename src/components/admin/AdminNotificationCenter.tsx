@@ -7,10 +7,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { Bell, CheckCircle, Clock, Download, Filter, History, Search, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge-fixed';
 import NotificationItem from '@/components/notifications/NotificationItem';
 import { cn } from '@/lib/utils';
-import { Notification } from '@/contexts/NotificationsContext';
+import { Notification, NotificationType } from '@/types/notification';
 
 const AdminNotificationCenter: React.FC = () => {
   const { 
@@ -22,13 +22,21 @@ const AdminNotificationCenter: React.FC = () => {
     dismissNotification 
   } = useNotifications();
   
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter notifications
   const filteredNotifications = notifications.filter(notification => {
     // Apply type filter
-    if (filter !== 'all' && notification.type !== filter) {
+    if (filter !== 'all' && filter !== 'unread') {
+      if (filter === 'system' && notification.type !== 'system') {
+        return false;
+      } else if (filter === 'unread' && notification.read) {
+        return false;
+      }
+    }
+    
+    if (filter === 'unread' && notification.read) {
       return false;
     }
     
@@ -144,7 +152,7 @@ const AdminNotificationCenter: React.FC = () => {
             {/* System notifications */}
             <div className="divide-y">
               {filteredNotifications
-                .filter(notification => notification.type === 'system')
+                .filter(notification => notification.type === 'system' as NotificationType)
                 .map(notification => (
                   <NotificationItem
                     key={notification.id}

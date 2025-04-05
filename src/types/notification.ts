@@ -28,6 +28,7 @@ export interface Notification {
   actionHandler?: () => void;
   expires?: Date;
   metadata?: Record<string, any>;
+  actions?: NotificationAction[];
 }
 
 export interface NotificationsContextType {
@@ -39,4 +40,28 @@ export interface NotificationsContextType {
   clearAll: () => void;
   dismissNotification: (id: string) => void;
   getFileProcessingNotifications: () => Notification[];
+  scheduleReminder?: (reminder: Omit<Notification, 'id' | 'createdAt' | 'read' | 'type'>, date: Date) => string;
+  cancelReminder?: (id: string) => void;
+}
+
+export interface NotificationItemProps {
+  notification: Notification;
+  onDismiss?: (id: string) => void;
+  onRead?: (id: string) => void;
+  onAction?: (actionId: string, notificationId: string) => void;
+  showControls?: boolean;
+}
+
+export interface NotificationCenterProps {
+  initialTab?: string;
+  className?: string;
+}
+
+export interface GlobalNotificationCenterProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export interface NotificationBellProps {
+  onClick?: () => void;
 }

@@ -8,7 +8,7 @@ export interface UserPreferences {
   language: string;
   notifications: boolean;
   onboardingCompleted: boolean;
-  emailNotifications?: boolean; // Added for compatibility
+  emailNotifications?: boolean;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   fontSize?: number;
   notificationsEnabled?: boolean;
@@ -43,19 +43,20 @@ export interface UserMetrics {
 export interface User {
   id: string;
   email: string;
-  firstName: string;
+  firstName?: string;
   lastName?: string;
-  role: UserRole;
+  role?: UserRole;
   isVerified?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  preferences: UserPreferences;
-  dailyQuestionCounts: DailyQuestionCounts;
+  createdAt?: Date;
+  updatedAt?: Date;
+  preferences?: UserPreferences;
+  dailyQuestionCounts?: DailyQuestionCounts;
   
   // Additional properties referenced in the codebase
   displayName?: string;
   photoURL?: string;
   avatar?: string;
+  avatar_url?: string;
   profileImage?: string;
   name?: string;
   username?: string;
@@ -68,6 +69,8 @@ export interface User {
   subscription?: 'free' | 'premium' | 'trial';
   metrics?: UserMetrics;
   isAdmin?: boolean;
+  isPremium?: boolean;
+  isPremiumUser?: boolean;
   
   // Legacy support fields
   first_name?: string;

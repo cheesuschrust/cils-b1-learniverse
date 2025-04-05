@@ -25,6 +25,7 @@ export interface FlashcardComponentProps {
 export interface LevelBadgeProps {
   level: number;
   showInfo?: boolean;
+  size?: string;
 }
 
 export interface SpeakableWordProps {

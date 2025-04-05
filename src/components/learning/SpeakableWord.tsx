@@ -1,109 +1,101 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Volume2 } from 'lucide-react';
-import { SpeakableWordProps } from '@/types/interface-fixes';
-import { useToast } from '@/hooks/use-toast';
-import { useAIUtils } from '@/hooks/useAIUtils';
+import { Volume } from 'lucide-react';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useAI } from '@/hooks/useAI';
+import { SpeakableWordProps } from '@/types';
 
-const SpeakableWord: React.FC<SpeakableWordProps> = ({
+export const SpeakableWord: React.FC<SpeakableWordProps> = ({
   word,
   language = 'italian',
   className = '',
-  showTooltip = false,
+  showTooltip = true,
   tooltipContent = 'Listen to pronunciation',
   onPlayComplete,
   autoPlay = false,
-  size = 'md',
+  size = 'default',
   onClick,
-  iconOnly = false
+  iconOnly = false,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const { toast } = useToast();
-  const { speak, isAIEnabled } = useAIUtils();
-  
-  const handlePlay = async () => {
-    if (isPlaying) return;
-    
-    if (!isAIEnabled) {
-      toast({
-        title: "Speech unavailable",
-        description: "Text-to-speech is currently disabled",
-        variant: "warning",
-      });
+  const { speak, isAIEnabled } = useAI();
+
+  const handleClick = async () => {
+    if (onClick) {
+      onClick();
       return;
     }
     
-    try {
+    if (!isPlaying && word) {
       setIsPlaying(true);
-      
-      if (onClick) {
-        onClick();
+      try {
+        await speak(word, { language });
+        if (onPlayComplete) {
+          onPlayComplete();
+        }
+      } catch (error) {
+        console.error('Error playing audio:', error);
+      } finally {
+        setIsPlaying(false);
       }
-      
-      await speak(word, language);
-      
-      if (onPlayComplete) {
-        onPlayComplete();
-      }
-    } catch (error) {
-      console.error("Error playing audio:", error);
-      toast({
-        title: "Playback error",
-        description: "Failed to play the pronunciation",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPlaying(false);
     }
   };
-  
-  // Auto-play on mount if enabled
+
   React.useEffect(() => {
-    if (autoPlay && word && !isPlaying) {
-      handlePlay();
+    if (autoPlay && word) {
+      handleClick();
     }
-  }, [autoPlay, word]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [word, autoPlay]);
+
+  const buttonSizeClass = 
+    size === 'small' ? 'h-7 w-7 p-0' : 
+    size === 'large' ? 'h-10 w-10 p-0' : 
+    'h-9 w-9 p-0';
   
-  const sizeClasses = {
-    sm: 'h-5 w-5',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  };
-  
-  const iconSizeClass = sizeClasses[size as keyof typeof sizeClasses] || sizeClasses.md;
-  
-  const renderButton = () => (
+  const iconSizeClass = 
+    size === 'small' ? 'h-3.5 w-3.5' : 
+    size === 'large' ? 'h-5 w-5' : 
+    'h-4 w-4';
+
+  const button = (
     <Button
       type="button"
       variant="ghost"
-      size="sm"
-      className={`p-1 ${className}`}
-      onClick={handlePlay}
-      disabled={isPlaying}
+      className={`${buttonSizeClass} rounded-full ${className}`}
+      onClick={handleClick}
+      disabled={isPlaying || !isAIEnabled}
     >
-      <Volume2 className={iconSizeClass} />
-      {!iconOnly && <span className="ml-1">{word}</span>}
+      <Volume className={`${iconSizeClass} ${isPlaying ? 'animate-pulse' : ''}`} />
+      <span className="sr-only">Play pronunciation</span>
     </Button>
   );
-  
-  if (showTooltip) {
-    return (
+
+  if (iconOnly) {
+    return button;
+  }
+
+  return showTooltip ? (
+    <div className="flex items-center">
+      {!iconOnly && <span className="mr-1">{word}</span>}
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {renderButton()}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltipContent}</p>
-          </TooltipContent>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>{tooltipContent}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-    );
-  }
-  
-  return renderButton();
+    </div>
+  ) : (
+    <div className="flex items-center">
+      {!iconOnly && <span className="mr-1">{word}</span>}
+      {button}
+    </div>
+  );
 };
 
 export default SpeakableWord;

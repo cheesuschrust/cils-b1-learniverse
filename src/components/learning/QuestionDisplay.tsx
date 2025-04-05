@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ interface QuestionDisplayProps {
   onAnswer: (answer: any, isCorrect: boolean) => void;
   onNext?: () => void;
   showFeedback?: boolean;
+  showPronunciation?: boolean;
 }
 
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
@@ -22,6 +22,7 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   onAnswer,
   onNext,
   showFeedback = true,
+  showPronunciation = false,
 }) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -295,9 +296,13 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
         <div className="space-y-4">
           <div className="mb-4 flex items-center gap-2">
             <p className="text-lg">{question.text}</p>
-            {question.sectionType === "listening" && (
-              <SpeakableWord word={question.text} language="it" iconOnly />
-            )}
+            {showPronunciation && 
+              <SpeakableWord 
+                word={question.text} 
+                language="it" 
+                iconOnly={true} 
+              />
+            }
           </div>
           
           {renderQuestionContent()}

@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge-fixed';
+import { Check, Clock, ArrowRight, Info, AlertTriangle } from 'lucide-react';
 import { useGamificationContext } from '@/contexts/GamificationContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Clock, CheckCircle, XCircle, RefreshCw, Award } from 'lucide-react';
@@ -43,7 +44,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
   const { toast } = useToast();
   const { addNotification } = useNotifications();
   
-  // Sample questions - in a real app these would come from an API or database
   const sampleQuestions: Question[] = [
     {
       id: 'q1',
@@ -84,24 +84,20 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
     const loadDailyQuestion = async () => {
       setLoading(true);
       try {
-        // Check if user has already answered today's question
         const lastAnsweredStr = localStorage.getItem(`lastAnswered_${userId || 'guest'}`);
         
         if (lastAnsweredStr) {
           const lastAnswered = new Date(lastAnsweredStr);
           const today = new Date();
           
-          // Check if last answered is today
           if (lastAnswered.toDateString() === today.toDateString()) {
             setAnswered(true);
             
-            // Calculate time until midnight
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(0, 0, 0, 0);
             setNextAvailable(tomorrow);
             
-            // Get saved answer from localStorage
             const savedResult = localStorage.getItem(`lastResult_${userId || 'guest'}`);
             if (savedResult) {
               setCorrect(savedResult === 'correct');
@@ -109,8 +105,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
           }
         }
         
-        // In a real app, fetch question from an API based on user's progress
-        // For now, select a random question
         const randomIndex = Math.floor(Math.random() * sampleQuestions.length);
         setQuestion(sampleQuestions[randomIndex]);
       } catch (error) {
@@ -128,7 +122,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
     loadDailyQuestion();
   }, [userId, toast]);
   
-  // Update countdown timer
   useEffect(() => {
     if (!nextAvailable) return;
     
@@ -165,30 +158,21 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
     setCorrect(isCorrect);
     setAnswered(true);
     
-    // Save to localStorage to prevent repeating today
     localStorage.setItem(`lastAnswered_${userId || 'guest'}`, new Date().toISOString());
     localStorage.setItem(`lastResult_${userId || 'guest'}`, isCorrect ? 'correct' : 'incorrect');
     
-    // Calculate next available time (midnight)
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
     setNextAvailable(tomorrow);
     
     if (isCorrect) {
-      // Award XP for correct answer
       addXP(question.points, 'daily question');
-      
-      // Update streak
       updateStreak(true);
-      
-      // Show success toast
       toast({
         title: 'Correct!',
         description: `You've earned ${question.points} XP.`,
       });
-      
-      // Add notification
       addNotification({
         title: "Daily Question Completed",
         message: `You correctly answered today's question and earned ${question.points} XP!`,
@@ -196,23 +180,18 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
         priority: "medium"
       });
     } else {
-      // Still update streak for participation
       updateStreak(true);
-      
-      // Show toast with explanation
       toast({
         title: 'Not quite right',
         description: 'Keep practicing! You still get streak credit for participating.',
       });
     }
     
-    // Call onComplete callback if provided
     if (onComplete) {
       onComplete();
     }
   };
   
-  // If the user already answered today's question
   if (answered) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -270,7 +249,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
     );
   }
   
-  // Show loading state
   if (loading || !question) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -285,7 +263,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
     );
   }
   
-  // Show the daily question
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -325,7 +302,6 @@ const DailyQuestion: React.FC<DailyQuestionProps> = ({ userId, onComplete }) => 
           variant="outline"
           onClick={() => {
             setSelectedOption(null);
-            // In a real app, this would fetch a different question
           }}
         >
           Skip
