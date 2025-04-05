@@ -1,3 +1,4 @@
+
 describe('Writing Practice Page', () => {
   beforeEach(() => {
     cy.visit('/app/writing');
@@ -123,7 +124,7 @@ describe('Writing Practice Page', () => {
   });
 
   it('should handle keyboard shortcuts', () => {
-    // Focus on textarea - Fix: Changed from focus() to focused()
+    // Focus on textarea - Change focus() to focused() to match Cypress's API
     cy.get('textarea').focused();
     
     // Type text

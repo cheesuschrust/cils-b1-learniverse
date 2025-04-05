@@ -1,3 +1,4 @@
+
 /// <reference types="cypress" />
 
 declare namespace Cypress {
@@ -20,7 +21,7 @@ declare namespace Cypress {
     should(chainers: string, value: any, match: any): Chainable<JQuery<HTMLElement>>
     should(chainers: string, match: RegExp): Chainable<JQuery<HTMLElement>>
     should(chainers: string, value: any, match: string): Chainable<JQuery<HTMLElement>>
-    should(fn: (currentSubject: JQuery<HTMLElement>) => void): Chainable<JQuery<HTMLElement>>
+    should<S = any>(fn: (currentSubject: JQuery<HTMLElement>) => void): Chainable<JQuery<HTMLElement>>
     
     click(options?: Partial<Cypress.ClickOptions>): Chainable<JQuery<HTMLElement>>
     type(text: string, options?: Partial<Cypress.TypeOptions>): Chainable<JQuery<HTMLElement>>
@@ -29,9 +30,19 @@ declare namespace Cypress {
     first(options?: object): Chainable<JQuery<HTMLElement>>
     check(options?: Partial<Cypress.CheckOptions>): Chainable<JQuery<HTMLElement>>
     focus(options?: Partial<Cypress.Loggable>): Chainable<JQuery<HTMLElement>>
+    focused(): Chainable<JQuery<HTMLElement>>
     as(alias: string): Chainable<JQuery<HTMLElement>>
     each(fn: (currentElement: JQuery<HTMLElement>, index: number, elements: JQuery<HTMLElement>[]) => void): Chainable<JQuery<HTMLElement>>
     wrap<E>(element: E, options?: Partial<Cypress.Loggable>): Chainable<E>
+    trigger(eventName: string, options?: object): Chainable<JQuery<HTMLElement>>
+    request(url: string | object): Chainable<Response>
+    request(method: string, url: string, body?: any): Chainable<Response>
+    fixture(path: string, options?: { encoding: string }): Chainable<any>
+    document(): Chainable<Document>
+    stub(): Chainable<sinon.SinonStub>
+    getCookies(): Chainable<Cypress.Cookie[]>
+    setCookie(name: string, value: string, options?: Partial<Cypress.SetCookieOptions>): Chainable<null>
+    log(message: string): Chainable<null>
   }
 
   interface Cookies {

@@ -43,6 +43,15 @@ declare namespace Cypress {
     intercept(url: string | RegExp, response?: string | object): Chainable<Element>;
     intercept(method: string, url: string | RegExp, response?: string | object): Chainable<Element>;
     intercept(alias: string, url: string | RegExp, response?: string | object): Chainable<Element>;
+    request(url: string | object): Chainable<Response>;
+    request(method: string, url: string, body?: any): Chainable<Response>;
+    fixture(path: string, options?: { encoding: string }): Chainable<any>;
+    document(): Chainable<Document>;
+    stub(): Chainable<sinon.SinonStub>;
+    getCookies(): Chainable<Cypress.Cookie[]>;
+    setCookie(name: string, value: string, options?: Partial<Cypress.SetCookieOptions>): Chainable<null>;
+    log(message: string): Chainable<null>;
+    task(event: string, arg?: any, options?: Partial<Cypress.Loggable & Cypress.Timeoutable>): Chainable<any>;
     
     // Missing methods that caused the errors
     should(chainer: string, value?: any): Chainable<Subject>;
@@ -57,16 +66,14 @@ declare namespace Cypress {
     select(text: string | string[], options?: Partial<Cypress.SelectOptions>): Chainable<Subject>;
     first(options?: object): Chainable<Subject>;
     check(options?: Partial<Cypress.CheckOptions>): Chainable<Subject>;
-    focus(options?: Partial<Cypress.Loggable>): Chainable<Subject>;
+    focus(): Chainable<Subject>;
     as(alias: string): Chainable<Subject>;
     each(fn: (currentElement: JQuery<HTMLElement>, index: number, elements: JQuery<HTMLElement>[]) => void): Chainable<JQuery<HTMLElement>>;
     wrap<E>(element: E, options?: Partial<Cypress.Loggable>): Chainable<E>;
-
+    trigger(eventName: string, options?: object): Chainable<Subject>;
+    
     // For React component testing
     mount(component: React.ReactNode, options?: any): Chainable<Element>;
-    
-    // Task execution
-    task(event: string, arg?: any, options?: Partial<Cypress.Loggable & Cypress.Timeoutable>): Chainable<any>;
   }
 
   interface Cookies {
@@ -88,3 +95,8 @@ declare namespace Cypress {
     [key: string]: any;
   }
 }
+
+// For proper typing of cy global
+declare const cy: Cypress.Chainable;
+declare const expect: Chai.ExpectStatic;
+declare const assert: Chai.AssertStatic;
