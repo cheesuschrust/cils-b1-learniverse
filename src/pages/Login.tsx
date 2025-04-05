@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/EnhancedAuthContext";
 import { Button } from "@/components/ui/button";
@@ -31,10 +31,9 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   
   // Define form with validation
   const form = useForm<LoginFormValues>({
@@ -48,8 +47,6 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      setIsLoading(true);
-      
       // Save or remove email from localStorage based on rememberMe
       if (data.rememberMe) {
         localStorage.setItem("rememberedEmail", data.email);
@@ -67,23 +64,9 @@ const Login = () => {
         
         // Navigate to the dashboard
         navigate("/");
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Please check your credentials and try again.",
-          variant: "destructive"
-        });
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      
-      toast({
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -113,6 +96,7 @@ const Login = () => {
                       type="email"
                       placeholder="john.doe@example.com"
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
                   <FormMessage />
@@ -140,6 +124,7 @@ const Login = () => {
                       type="password"
                       placeholder="••••••••"
                       {...field}
+                      disabled={isLoading}
                     />
                   </FormControl>
                   <FormMessage />
