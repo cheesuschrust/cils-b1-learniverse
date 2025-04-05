@@ -1,5 +1,5 @@
-
 /// <reference types="cypress" />
+/// <reference path="../../src/types/cypress-commands.d.ts" />
 import 'cypress-axe';
 import { addMatchImageSnapshotCommand } from 'cypress-image-snapshot/command';
 
@@ -99,6 +99,12 @@ Cypress.Commands.add('testFormValidation', (formSelector) => {
       }
     });
   });
+});
+
+// Add tab command for keyboard navigation
+Cypress.Commands.add('tab', () => {
+  cy.focused().trigger('keydown', { keyCode: 9, which: 9 });
+  return cy.document().its('activeElement');
 });
 
 // Declare global Cypress namespace to add custom commands

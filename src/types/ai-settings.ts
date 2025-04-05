@@ -1,5 +1,5 @@
 
-import { ItalianTestSection } from './ai';
+import { ItalianTestSection } from './ai-types';
 
 export interface AISettings {
   model?: string;
@@ -44,4 +44,8 @@ export interface AISettings {
 export interface AISettingsProps {
   settings: AISettings;
   onSettingsChange: (settings: Partial<AISettings>) => void;
+  onSave?: () => void;
+  onReset?: () => void;
+  availableModels?: string[];
+  isLoading?: boolean;
 }

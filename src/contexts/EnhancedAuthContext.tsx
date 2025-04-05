@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -28,6 +28,7 @@ export interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  register?: (email: string, password: string) => Promise<boolean>;
 }
 
 const defaultContext: AuthContextType = {
@@ -42,6 +43,15 @@ const defaultContext: AuthContextType = {
 };
 
 export const AuthContext = createContext<AuthContextType>(defaultContext);
+
+// Export the useAuth hook directly
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

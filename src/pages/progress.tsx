@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, BookOpen, MessageSquare, Headphones, Edit, Lightbulb, FileText } from 'lucide-react';
+import { Download, BookOpen, MessageSquare, Edit, Lightbulb, FileText, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import SkillBreakdown from '@/components/progress/SkillBreakdown';
-import Headphones from '@/components/icons/Headphones';
+import { Headphones as HeadphonesIcon } from '@/components/icons/Headphones';
+
+// Rename to prevent duplicate identifier
+const Headphones = HeadphonesIcon;
 
 const ProgressPage: React.FC = () => {
   const { user } = useAuth();

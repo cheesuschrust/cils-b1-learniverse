@@ -1,125 +1,88 @@
 
-import { ThemeOption } from './user';
-
-export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
-export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending';
-export type UserSubscription = 'free' | 'premium' | 'enterprise' | 'educational' | 'trial';
-export type LanguagePreference = 'english' | 'italian' | 'both';
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
-
 export interface UserPreferences {
-  theme: ThemeOption;
-  language: string;
+  theme: 'light' | 'dark' | 'system';
   notifications: boolean;
+  emailNotifications: boolean;
+  language: string;
+  difficulty: string;
   onboardingCompleted: boolean;
-  emailNotifications?: boolean;
-  difficulty?: Difficulty;
-  fontSize?: number;
-  notificationsEnabled?: boolean;
-  animationsEnabled?: boolean;
-  preferredLanguage?: string;
-  voiceSpeed?: number;
-  autoPlayAudio?: boolean;
-  showProgressMetrics?: boolean;
-  aiEnabled?: boolean;
-  aiModelSize?: string;
-  aiProcessingOnDevice?: boolean;
-  confidenceScoreVisible?: boolean;
-  bio?: string;
 }
 
-export interface DailyQuestionCounts {
-  flashcards: number;
-  multipleChoice: number;
-  speaking: number;
-  writing: number;
-  listening: number;
-  [key: string]: number;
-}
+export type UserRole = 'user' | 'admin' | 'teacher' | 'premium' | 'institution';
 
 export interface UserMetrics {
-  totalQuestions: number;
-  correctAnswers: number;
-  streak: number;
-  [key: string]: any;
+  lessonCompleted?: number;
+  questionsAnswered?: number;
+  correctAnswers?: number;
+  timeSpent?: number;
+  lastActivity?: Date;
+  streak?: number;
 }
 
-export interface UnifiedUser {
+export interface User {
   id: string;
   email: string;
+  emailVerified?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  role?: UserRole;
+  status?: 'active' | 'inactive' | 'banned' | 'pending';
+  // Additional fields used across the application
   firstName?: string;
   lastName?: string;
   displayName?: string;
-  photoURL?: string;
-  avatar?: string;
-  profileImage?: string;
-  username?: string;
-  role?: UserRole;
-  isVerified?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-  lastLogin?: Date;
-  lastActive?: Date;
-  status?: UserStatus;
-  subscription?: UserSubscription;
-  isPremiumUser?: boolean;
-  isPremium?: boolean;
   phoneNumber?: string;
   address?: string;
-  preferredLanguage?: LanguagePreference;
-  preferences?: UserPreferences;
-  dailyQuestionCounts?: DailyQuestionCounts;
-  metrics?: UserMetrics;
-  isAdmin?: boolean;
+  username?: string;
+  photoURL?: string;
+  avatar?: string;
   avatar_url?: string;
-  display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  preferredLanguage?: string;
+  isPremiumUser?: boolean;
+  lastActive?: Date;
+  createdAt?: Date;
+  metrics?: UserMetrics;
+  dailyQuestionCounts?: Record<string, number>;
+  subscription?: {
+    type: string;
+    status: string;
+    expiresAt: string;
+    features: string[];
+    limits: {
+      daily: number;
+      monthly: number;
+    }
+  };
+  preferences?: UserPreferences;
   token?: string;
 }
 
-// Helper functions to normalize user objects
-export function normalizeUser(user: any): UnifiedUser {
-  if (!user) return null as any;
-  
+export function normalizeUser(userData: any): User {
   return {
-    id: user.id || user.uid || '',
-    email: user.email || '',
-    firstName: user.firstName || user.first_name || '',
-    lastName: user.lastName || user.last_name || '',
-    displayName: user.displayName || user.display_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-    photoURL: user.photoURL || user.photo_url || user.avatar || user.profileImage || user.avatar_url || '',
-    role: (user.role || 'user') as UserRole,
-    createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : new Date(),
-    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : new Date(),
-    preferences: user.preferences || {
-      theme: 'light',
-      language: 'en',
+    id: userData.id || userData.uid || '',
+    email: userData.email || '',
+    emailVerified: userData.emailVerified || userData.email_verified || false,
+    created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
+    updated_at: userData.updated_at || userData.updatedAt,
+    role: userData.role || 'user',
+    // Map additional fields
+    firstName: userData.firstName || userData.first_name || '',
+    lastName: userData.lastName || userData.last_name || '',
+    displayName: userData.displayName || userData.display_name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email,
+    photoURL: userData.photoURL || userData.photo_url || userData.avatar_url || '',
+    preferences: userData.preferences || {
+      theme: 'system',
       notifications: true,
-      onboardingCompleted: true
-    },
-    dailyQuestionCounts: user.dailyQuestionCounts || {
-      flashcards: 0,
-      multipleChoice: 0,
-      speaking: 0,
-      writing: 0,
-      listening: 0
-    },
-    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    subscription: user.subscription || 'free',
-    status: user.status || 'active',
-    metrics: user.metrics || {
-      totalQuestions: 0,
-      correctAnswers: 0,
-      streak: 0
-    },
-    isPremiumUser: user.isPremiumUser || user.is_premium || user.isPremium || (user.subscription && user.subscription !== 'free') || false,
-    preferredLanguage: user.preferredLanguage || user.preferred_language || 'english'
+      emailNotifications: false,
+      language: 'english',
+      difficulty: 'intermediate',
+      onboardingCompleted: false
+    }
   };
 }
 
-export function normalizeUserRecords(users: any[]): UnifiedUser[] {
-  if (!users || !Array.isArray(users)) return [];
+export function normalizeUserRecords(users: any[]): User[] {
   return users.map(normalizeUser);
 }
-
-// Export types to be used throughout the app
-export type User = UnifiedUser;

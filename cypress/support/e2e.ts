@@ -31,7 +31,9 @@ Cypress.on('window:before:load', (win) => {
 
 // Preserve cookies between tests
 beforeEach(() => {
-  Cypress.Cookies.preserveOnce('authToken', 'user', 'preferences');
+  if (Cypress.Cookies.preserveOnce) {
+    Cypress.Cookies.preserveOnce('authToken', 'user', 'preferences');
+  }
 });
 
 // Global after hook for all tests
@@ -69,8 +71,10 @@ beforeEach(() => {
 // Report test results
 afterEach(() => {
   const test = Cypress.currentTest;
-  const message = test.state === 'passed' 
-    ? `✅ TEST PASSED: ${test.title}` 
-    : `❌ TEST FAILED: ${test.title}`;
-  cy.task('log', message);
+  if (test && typeof test === 'object') {
+    const message = test.state === 'passed' 
+      ? `✅ TEST PASSED: ${test.title}` 
+      : `❌ TEST FAILED: ${test.title}`;
+    cy.task('log', message);
+  }
 });

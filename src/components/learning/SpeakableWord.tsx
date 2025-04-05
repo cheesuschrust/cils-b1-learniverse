@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Volume } from 'lucide-react';
 import { 
@@ -32,7 +32,7 @@ export const SpeakableWord: React.FC<SpeakableWordProps> = ({
       return;
     }
     
-    if (!isPlaying && word) {
+    if (!isPlaying && word && speak) {
       setIsPlaying(true);
       try {
         await speak(word, { language });
@@ -47,8 +47,8 @@ export const SpeakableWord: React.FC<SpeakableWordProps> = ({
     }
   };
 
-  React.useEffect(() => {
-    if (autoPlay && word) {
+  useEffect(() => {
+    if (autoPlay && word && speak) {
       handleClick();
     }
   }, [word, autoPlay]);

@@ -1,22 +1,13 @@
 
 export type ContentType = 
-  | 'flashcards' 
-  | 'multiple-choice' 
-  | 'listening' 
+  | 'grammar' 
+  | 'vocabulary' 
+  | 'reading' 
   | 'writing' 
-  | 'speaking'
-  | 'pdf'
-  | 'document'
-  | 'video'
-  | 'audio'
-  | 'image'
-  | 'csv'
-  | 'grammar'
-  | 'vocabulary'
-  | 'culture'
-  | 'reading'
-  | 'citizenship'
-  | string;
+  | 'speaking' 
+  | 'listening' 
+  | 'culture' 
+  | 'citizenship';
 
 export interface ContentFeatures {
   supportsAudio: boolean;
@@ -24,158 +15,37 @@ export interface ContentFeatures {
   supportsInteractive: boolean;
   requiresInternet: boolean;
   isDownloadable: boolean;
-  isEditable: boolean;
-  isPrintable: boolean;
-  recommendedDifficulty?: string;
-  wordCount?: number;
+  level: string;
+  wordCount?: number; 
   sentenceCount?: number;
-  paragraphCount?: number;
+  questionMarks?: number;
+  avgSentenceLength?: number;
 }
 
-// Map of content types to their standard features
-export const contentFeaturesMap: Record<ContentType, Partial<ContentFeatures>> = {
-  'flashcards': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'multiple-choice': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'listening': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: true,
-    isDownloadable: false,
-    isEditable: false,
-    isPrintable: false
-  },
-  'writing': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'speaking': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: true,
-    isDownloadable: false,
-    isEditable: false,
-    isPrintable: false
-  },
-  'pdf': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: false,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: false,
-    isPrintable: true
-  },
-  'document': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: false,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'video': {
-    supportsAudio: true,
-    supportsVideo: true,
-    supportsInteractive: false,
-    requiresInternet: true,
-    isDownloadable: true,
-    isEditable: false,
-    isPrintable: false
-  },
-  'audio': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: false,
-    requiresInternet: true,
-    isDownloadable: true,
-    isEditable: false,
-    isPrintable: false
-  },
-  'image': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: false,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: false,
-    isPrintable: true
-  },
-  'csv': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: false,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'grammar': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'vocabulary': {
-    supportsAudio: true,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'culture': {
-    supportsAudio: true,
-    supportsVideo: true,
-    supportsInteractive: true,
-    requiresInternet: true,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'reading': {
-    supportsAudio: false,
-    supportsVideo: false,
-    supportsInteractive: true,
-    requiresInternet: false,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
-  },
-  'citizenship': {
-    supportsAudio: true,
-    supportsVideo: true,
-    supportsInteractive: true,
-    requiresInternet: true,
-    isDownloadable: true,
-    isEditable: true,
-    isPrintable: true
+export const formatContentType = (contentType: ContentType): string => {
+  const formatted = contentType.charAt(0).toUpperCase() + contentType.slice(1);
+  return formatted;
+};
+
+export const getContentTypeColor = (contentType: ContentType): string => {
+  switch (contentType) {
+    case 'grammar':
+      return 'bg-blue-100 text-blue-800';
+    case 'vocabulary':
+      return 'bg-emerald-100 text-emerald-800';
+    case 'reading':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'writing':
+      return 'bg-purple-100 text-purple-800';
+    case 'speaking':
+      return 'bg-amber-100 text-amber-800';
+    case 'listening':
+      return 'bg-cyan-100 text-cyan-800';
+    case 'culture':
+      return 'bg-rose-100 text-rose-800';
+    case 'citizenship':
+      return 'bg-green-100 text-green-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
   }
 };

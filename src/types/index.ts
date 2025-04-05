@@ -5,7 +5,11 @@ import {
   NotificationType, 
   NotificationPriority, 
   NotificationAction, 
-  Notification 
+  Notification,
+  NotificationItemProps,
+  NotificationCenterProps,
+  GlobalNotificationCenterProps,
+  NotificationsContextType 
 } from './notification';
 import { 
   Flashcard, 
@@ -18,10 +22,13 @@ import {
 } from './flashcard-unified';
 import { 
   ContentType, 
-  ContentFeatures 
+  ContentFeatures,
+  formatContentType,
+  getContentTypeColor
 } from './contentType';
 import {
-  AISettings
+  AISettings,
+  AISettingsProps
 } from './ai-settings';
 import {
   ItalianTestSection,
@@ -31,7 +38,10 @@ import {
   ItalianQuestionGenerationParams,
   QuestionGenerationParams,
   VoiceOptions,
-  VoicePreference
+  VoicePreference,
+  AIUtilsContextType,
+  UseAIReturn,
+  AIProcessingOptions
 } from './ai-types';
 import {
   Achievement,
@@ -43,19 +53,21 @@ import {
 } from './gamification';
 
 // Export all types
-export {
+export type {
   // User types
   User,
   UserRole,
   UserPreferences,
-  normalizeUser,
-  normalizeUserRecords,
   
   // Notification types
   NotificationType,
   NotificationPriority,
   NotificationAction,
   Notification,
+  NotificationItemProps,
+  NotificationCenterProps,
+  GlobalNotificationCenterProps,
+  NotificationsContextType,
   
   // Flashcard types
   Flashcard,
@@ -63,8 +75,6 @@ export {
   ReviewPerformance,
   ReviewSchedule,
   FlashcardStats,
-  normalizeFlashcard,
-  calculateReviewPerformance,
   
   // Content types
   ContentType,
@@ -72,6 +82,7 @@ export {
   
   // AI types
   AISettings,
+  AISettingsProps,
   ItalianTestSection,
   ItalianLevel,
   AIQuestion,
@@ -80,6 +91,9 @@ export {
   QuestionGenerationParams,
   VoiceOptions,
   VoicePreference,
+  AIUtilsContextType,
+  UseAIReturn,
+  AIProcessingOptions,
   
   // Gamification types
   Achievement,
@@ -88,6 +102,15 @@ export {
   Level,
   LevelProgressBarProps,
   LevelBadgeProps
+};
+
+export {
+  normalizeUser,
+  normalizeUserRecords,
+  normalizeFlashcard,
+  calculateReviewPerformance,
+  formatContentType,
+  getContentTypeColor
 };
 
 // Define additional interface props for components
@@ -110,9 +133,4 @@ export interface BadgeProps {
   className?: string;
   icon?: React.ReactNode;
   size?: 'sm' | 'default' | 'lg';
-}
-
-export interface AISettingsProps {
-  settings: AISettings;
-  onSettingsChange: (settings: Partial<AISettings>) => void;
 }

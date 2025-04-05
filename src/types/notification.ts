@@ -22,6 +22,7 @@ export interface NotificationAction {
   label: string;
   action: string | (() => void);
   url?: string;
+  variant?: string;
 }
 
 export interface Notification {
@@ -41,15 +42,22 @@ export interface Notification {
   dismissible?: boolean;
   persistent?: boolean;
   data?: Record<string, any>;
+  // Additional properties that appear in the codebase
+  actionHandler?: () => void;
+  actionLabel?: string;
+  link?: string;
+  metadata?: any;
 }
 
 export interface NotificationItemProps {
   notification: Notification;
   onDismiss: () => void;
-  onRead: () => void;
+  onRead?: () => void;
+  onMarkAsRead?: () => void;
   onRemove?: () => void;
   onClick?: () => void;
   expanded?: boolean;
+  showControls?: boolean;
 }
 
 export interface NotificationCenterProps {
@@ -63,4 +71,15 @@ export interface NotificationCenterProps {
 export interface GlobalNotificationCenterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+export interface NotificationsContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  addNotification: (notification: Partial<Notification>) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  dismissNotification: (id: string) => void;
+  dismissAllNotifications: () => void;
+  getFileProcessingNotifications: () => Notification[];
 }

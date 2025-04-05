@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -119,8 +118,8 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onMarkAsRead={() => markAsRead(notification.id)}
-                    showControls
+                    onRead={() => markAsRead(notification.id)}
+                    showControls={true}
                   />
                 ))}
               </div>
@@ -139,8 +138,8 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onMarkAsRead={() => markAsRead(notification.id)}
-                    showControls
+                    onRead={() => markAsRead(notification.id)}
+                    showControls={true}
                   />
                 ))}
             </div>
@@ -158,8 +157,8 @@ const AdminNotificationCenter: React.FC = () => {
                     key={notification.id}
                     notification={notification}
                     onDismiss={() => dismissNotification(notification.id)}
-                    onMarkAsRead={() => markAsRead(notification.id)}
-                    showControls
+                    onRead={() => markAsRead(notification.id)}
+                    showControls={true}
                   />
                 ))}
             </div>
@@ -175,8 +174,8 @@ const AdminNotificationCenter: React.FC = () => {
                   key={notification.id}
                   notification={notification}
                   onDismiss={() => dismissNotification(notification.id)}
-                  onMarkAsRead={() => markAsRead(notification.id)}
-                  showControls
+                  onRead={() => markAsRead(notification.id)}
+                  showControls={true}
                 />
               ))}
             </div>
