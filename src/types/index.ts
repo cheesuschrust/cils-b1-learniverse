@@ -9,10 +9,11 @@ export * from './user';
 export * from './flashcard-types';  
 
 // Ensure no conflicting exports from the above interfaces.  
+// Explicitly export common used types that might otherwise conflict  
 export { Flashcard } from './flashcard-types';  
 export { ReviewPerformance } from './core-types';  
 export { User } from './user';  
-export { AISettings } from './ai'; // Adjusted based on the error logs.  
+export { AISettings } from './ai';   
 
 // Define interface props for components  
 export interface FlashcardComponentProps {  
@@ -35,7 +36,7 @@ export interface FlashcardComponentProps {
 export interface LevelBadgeProps {  
     level: number;  
     showInfo?: boolean;  
-    size?: string; // Added optional size for better flexibility  
+    size?: string; // Optional size for better flexibility  
 }  
 
 export interface SpeakableWordProps {  
