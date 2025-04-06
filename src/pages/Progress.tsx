@@ -1,747 +1,753 @@
 
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import ProgressChart from '@/components/progress/ProgressChart';
-import ProgressSummary from '@/components/progress/ProgressSummary';
-import SkillBreakdown from '@/components/progress/SkillBreakdown';
-import ProgressCard from '@/components/ui/ProgressCard';
-import { BookOpen, Pen, Mic, Award, BookMarked, Download, FileText, Clock, Calendar } from 'lucide-react';
-import { Headphones } from '@/components/icons';
-import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Download, BookOpen, MessageSquare, Edit, Lightbulb, FileText, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Progress } from '@/components/ui/progress';
+import SkillBreakdown from '@/components/progress/SkillBreakdown';
+import { Headphones as HeadphonesIcon } from '@/components/icons/Headphones';
 
-export interface ProgressData {
-  date: string;
-  listening: number;
-  reading: number;
-  writing: number;
-  speaking: number;
-  grammar?: number;
-  vocabulary?: number;
-  overall: number;
-}
+// Rename to prevent duplicate identifier
+const Headphones = HeadphonesIcon;
 
-interface ExamSection {
-  name: string;
-  score: number;
-  icon: React.ReactNode;
-  description: string;
-  timeAllowed: number; // minutes
-  passingScore: number;
-  items: number;
-}
-
-export default function ProgressPage() {
+const ProgressPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [progressData, setProgressData] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<ProgressData[]>([]);
-  
-  const targetScore = 70; // CILS B1 typically requires 70% or higher to pass
-  
-  // CILS B1 exam structure
-  const examSections: ExamSection[] = [
-    {
-      name: 'Listening Comprehension',
-      score: chartData.length > 0 ? chartData[chartData.length - 1]?.listening || 0 : 0,
-      icon: <Headphones className="h-4 w-4 text-primary" />,
-      description: 'Understanding spoken Italian in everyday situations',
-      timeAllowed: 30, // minutes
-      passingScore: 70,
-      items: 30
+  const [timeRange, setTimeRange] = useState('month');
+  const [isLoading, setIsLoading] = useState(true);
+  const [progressData, setProgressData] = useState<any>({
+    skills: [],
+    daily: [],
+    overview: {
+      questionsAnswered: 0,
+      correctPercentage: 0,
+      timeSpent: 0,
+      completedActivities: 0
     },
-    {
-      name: 'Reading Comprehension',
-      score: chartData.length > 0 ? chartData[chartData.length - 1]?.reading || 0 : 0,
-      icon: <BookOpen className="h-4 w-4 text-primary" />,
-      description: 'Understanding written Italian in everyday situations',
-      timeAllowed: 50, // minutes
-      passingScore: 70,
-      items: 35
-    },
-    {
-      name: 'Writing Production',
-      score: chartData.length > 0 ? chartData[chartData.length - 1]?.writing || 0 : 0,
-      icon: <Pen className="h-4 w-4 text-primary" />,
-      description: 'Producing written Italian for everyday communication',
-      timeAllowed: 60, // minutes
-      passingScore: 70,
-      items: 2
-    },
-    {
-      name: 'Speaking Production',
-      score: chartData.length > 0 ? chartData[chartData.length - 1]?.speaking || 0 : 0,
-      icon: <Mic className="h-4 w-4 text-primary" />,
-      description: 'Communicating orally in Italian in everyday situations',
-      timeAllowed: 10, // minutes
-      passingScore: 70,
-      items: 3
+    readiness: {
+      overall: 0,
+      citizenship: 0,
+      language: 0
     }
-  ];
-  
-  // Function to fetch user progress data
-  const fetchProgressData = async () => {
-    if (!user?.id) return;
+  });
+
+  useEffect(() => {
+    if (user) {
+      loadProgressData();
+    }
+  }, [user, timeRange]);
+
+  const loadProgressData = async () => {
+    setIsLoading(true);
     
-    setLoading(true);
     try {
-      // Fetch user progress data from Supabase
-      const { data: progressData, error } = await supabase
+      // Fetch user stats from database
+      const { data: userStats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (statsError) throw statsError;
+      
+      // Fetch user progress entries
+      const { data: progressEntries, error: progressError } = await supabase
         .from('user_progress')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (progressError) throw progressError;
       
-      // Process the data for our charts
-      if (progressData && progressData.length > 0) {
-        // Process the raw data into chart format
-        const processedChartData = processProgressData(progressData);
-        setChartData(processedChartData);
+      // Calculate skill scores
+      const skillScores = {
+        Reading: (userStats?.reading_score || 0) * 100,
+        Writing: (userStats?.writing_score || 0) * 100,
+        Speaking: (userStats?.speaking_score || 0) * 100,
+        Listening: (userStats?.listening_score || 0) * 100,
+        Grammar: 0,
+        Vocabulary: 0,
+        Citizenship: 0,
+        Culture: 0
+      };
+      
+      // Process progress entries to calculate scores for other skills
+      if (progressEntries && progressEntries.length > 0) {
+        const categoryCounts: Record<string, number> = {};
+        const categoryScores: Record<string, number> = {};
+        
+        progressEntries.forEach(entry => {
+          const contentType = entry.content_type;
+          if (!contentType) return;
+          
+          if (!categoryCounts[contentType]) {
+            categoryCounts[contentType] = 0;
+            categoryScores[contentType] = 0;
+          }
+          
+          categoryCounts[contentType]++;
+          categoryScores[contentType] += entry.score || 0;
+        });
+        
+        // Calculate average scores
+        Object.keys(categoryCounts).forEach(category => {
+          if (categoryCounts[category] > 0) {
+            const average = categoryScores[category] / categoryCounts[category];
+            
+            if (category === 'grammar') skillScores.Grammar = average;
+            if (category === 'vocabulary') skillScores.Vocabulary = average;
+            if (category === 'citizenship') skillScores.Citizenship = average;
+            if (category === 'culture') skillScores.Culture = average;
+          }
+        });
       }
       
-      setProgressData(progressData || []);
+      // Create daily activity data (last 30 days)
+      const dailyData: any[] = [];
+      const daysToShow = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 90;
+      
+      for (let i = 0; i < daysToShow; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        const entriesForDay = progressEntries?.filter(entry => {
+          const entryDate = new Date(entry.created_at).toISOString().split('T')[0];
+          return entryDate === dateString;
+        });
+        
+        const correct = entriesForDay?.reduce((sum, entry) => sum + (entry.score || 0), 0) || 0;
+        const total = entriesForDay?.length || 0;
+        const score = total > 0 ? (correct / total) * 100 : 0;
+        
+        dailyData.unshift({
+          date: dateString,
+          score: Math.round(score),
+          activities: total
+        });
+      }
+      
+      // Calculate overall readiness
+      const skillsArray = Object.entries(skillScores).map(([name, score]) => ({
+        name,
+        score: Math.round(score),
+        passingScore: 60,
+        icon: getSkillIcon(name.toLowerCase()),
+        lastImprovement: getLastImprovementDate(name.toLowerCase(), progressEntries),
+        color: getSkillColor(name.toLowerCase())
+      }));
+      
+      const overallReadiness = calculateOverallReadiness(skillsArray);
+      const citizenshipReadiness = calculateCitizenshipReadiness(skillsArray);
+      const languageReadiness = calculateLanguageReadiness(skillsArray);
+      
+      // Calculate overview stats
+      const totalQuestions = userStats?.questions_answered || 0;
+      const correctAnswers = userStats?.correct_answers || 0;
+      const correctPercentage = totalQuestions > 0 
+        ? (correctAnswers / totalQuestions) * 100 
+        : 0;
+      
+      const totalTimeSpent = progressEntries?.reduce((sum, entry) => sum + (entry.time_spent || 0), 0) || 0;
+      const completedActivities = progressEntries?.filter(entry => entry.completed).length || 0;
+      
+      setProgressData({
+        skills: skillsArray,
+        daily: dailyData,
+        overview: {
+          questionsAnswered: totalQuestions,
+          correctPercentage,
+          timeSpent: totalTimeSpent,
+          completedActivities
+        },
+        readiness: {
+          overall: overallReadiness,
+          citizenship: citizenshipReadiness,
+          language: languageReadiness
+        }
+      });
+      
     } catch (error) {
-      console.error('Error fetching progress data:', error);
+      console.error('Error loading progress data:', error);
       toast({
-        title: "Error fetching progress data",
-        description: "Could not load your progress data. Please try again later.",
-        variant: "destructive"
+        title: 'Failed to load progress data',
+        description: 'Please try again later',
+        variant: 'destructive'
       });
     } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Process raw progress data into chart format
-  const processProgressData = (data: any[]): ProgressData[] => {
-    // Group by date (day)
-    const groupedByDate = data.reduce((acc: any, session: any) => {
-      const date = new Date(session.created_at).toISOString().split('T')[0];
-      if (!acc[date]) {
-        acc[date] = {
-          sessions: [],
-          scores: {
-            listening: [],
-            reading: [],
-            writing: [],
-            speaking: [],
-            grammar: [],
-            vocabulary: [],
-          }
-        };
-      }
-      
-      // Add score to the appropriate category
-      if (session.content_type && session.score !== null) {
-        if (acc[date].scores[session.content_type]) {
-          acc[date].scores[session.content_type].push(session.score);
-        }
-      }
-      
-      acc[date].sessions.push(session);
-      return acc;
-    }, {});
-    
-    // Calculate averages for each date and type
-    return Object.keys(groupedByDate).map(date => {
-      const dayData = groupedByDate[date];
-      
-      // Calculate average score for each content type
-      const listening = calculateAverage(dayData.scores.listening);
-      const reading = calculateAverage(dayData.scores.reading);
-      const writing = calculateAverage(dayData.scores.writing);
-      const speaking = calculateAverage(dayData.scores.speaking);
-      const grammar = calculateAverage(dayData.scores.grammar);
-      const vocabulary = calculateAverage(dayData.scores.vocabulary);
-      
-      // Calculate overall score
-      const allScores = [
-        ...dayData.scores.listening,
-        ...dayData.scores.reading,
-        ...dayData.scores.writing,
-        ...dayData.scores.speaking,
-        ...dayData.scores.grammar,
-        ...dayData.scores.vocabulary
-      ];
-      const overall = calculateAverage(allScores);
-      
-      return {
-        date,
-        listening,
-        reading,
-        writing,
-        speaking,
-        grammar,
-        vocabulary,
-        overall
-      };
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  };
-  
-  const calculateAverage = (scores: number[]): number => {
-    if (!scores || scores.length === 0) return 0;
-    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
-  };
-
-  // Calculate time spent by content type
-  const calculateTotalTimeByType = (data: any[], type: string): number => {
-    if (!data || data.length === 0) return 0;
-    return data
-      .filter(item => item.content_type?.toLowerCase().includes(type.toLowerCase()))
-      .reduce((sum, item) => sum + (item.time_spent || 0), 0);
-  };
-
-  // Calculate total questions by content type
-  const calculateTotalQuestionsByType = (data: any[], type: string): number => {
-    if (!data || data.length === 0) return 0;
-    return data
-      .filter(item => item.content_type?.toLowerCase().includes(type.toLowerCase()))
-      .length;
-  };
-  
-  // Generate performance analysis text
-  const getPerformanceAnalysis = (score: number, target: number, area: string): string => {
-    if (score >= target + 15) {
-      return `Your performance in ${area} is excellent. You're well above the required level for the CILS B1 exam.`;
-    } else if (score >= target) {
-      return `Your performance in ${area} meets the required standard for the CILS B1 exam, but more practice would help solidify your skills.`;
-    } else if (score >= target - 10) {
-      return `You're close to the required level for ${area}, but need more focused practice to ensure you pass this section of the CILS B1 exam.`;
-    } else {
-      return `This is an area that needs significant improvement. We recommend focused daily practice on ${area.toLowerCase()} skills.`;
+      setIsLoading(false);
     }
   };
 
-  // Get skill breakdown data for the SkillBreakdown component
-  const getSkillBreakdownData = () => {
-    const latestData = chartData.length > 0 ? chartData[chartData.length - 1] : null;
+  const calculateOverallReadiness = (skills: any[]) => {
+    if (skills.length === 0) return 0;
     
-    if (!latestData) return [];
-    
-    return [
-      {
-        name: 'Listening',
-        score: latestData.listening,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('listening'),
-        icon: <Headphones className="h-4 w-4" />,
-        status: getStatus(latestData.listening),
-        recommendations: [
-          'Practice with Italian podcasts and audio lessons daily',
-          'Focus on understanding different accents and speech speeds',
-          'Take notes while listening to improve comprehension'
-        ]
-      },
-      {
-        name: 'Reading',
-        score: latestData.reading,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('reading'),
-        icon: <BookOpen className="h-4 w-4" />,
-        status: getStatus(latestData.reading),
-        recommendations: [
-          'Read authentic Italian texts from newspapers and magazines',
-          'Practice skimming and scanning techniques',
-          'Focus on understanding context from keywords'
-        ]
-      },
-      {
-        name: 'Writing',
-        score: latestData.writing,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('writing'),
-        icon: <Pen className="h-4 w-4" />,
-        status: getStatus(latestData.writing),
-        recommendations: [
-          'Practice writing short texts daily on common topics',
-          'Focus on proper verb conjugation and grammar',
-          'Study common formal letter structures'
-        ]
-      },
-      {
-        name: 'Speaking',
-        score: latestData.speaking,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('speaking'),
-        icon: <Mic className="h-4 w-4" />,
-        status: getStatus(latestData.speaking),
-        recommendations: [
-          'Practice speaking for at least 10 minutes daily',
-          'Record yourself speaking and analyze your pronunciation',
-          'Focus on common B1 exam speaking topics'
-        ]
-      },
-      {
-        name: 'Grammar',
-        score: latestData.grammar || 0,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('grammar'),
-        icon: <FileText className="h-4 w-4" />,
-        status: getStatus(latestData.grammar || 0),
-        recommendations: [
-          'Review verb tenses needed for B1 level',
-          'Practice using connectors to join sentences',
-          'Focus on agreement of articles and adjectives'
-        ]
-      },
-      {
-        name: 'Vocabulary',
-        score: latestData.vocabulary || 0,
-        targetScore: targetScore,
-        recentImprovement: getRecentImprovement('vocabulary'),
-        icon: <BookMarked className="h-4 w-4" />,
-        status: getStatus(latestData.vocabulary || 0),
-        recommendations: [
-          'Learn 10 new words related to citizenship daily',
-          'Use flashcards for spaced repetition practice',
-          'Practice using new vocabulary in sentences'
-        ]
-      }
-    ];
+    const sum = skills.reduce((total, skill) => total + skill.score, 0);
+    return Math.round(sum / skills.length);
   };
-  
-  // Get status (passed, needs-improvement, critical) based on score
-  const getStatus = (score: number): 'passed' | 'needs-improvement' | 'critical' => {
-    if (score >= targetScore) return 'passed';
-    if (score >= targetScore - 15) return 'needs-improvement';
-    return 'critical';
-  };
-  
-  // Calculate improvement over the last two data points
-  const getRecentImprovement = (field: keyof ProgressData): number => {
-    if (chartData.length < 2) return 0;
+
+  const calculateCitizenshipReadiness = (skills: any[]) => {
+    const relevantSkills = skills.filter(skill => 
+      ['Citizenship', 'Culture'].includes(skill.name));
     
-    const latestValue = chartData[chartData.length - 1][field] as number || 0;
-    const previousValue = chartData[chartData.length - 2][field] as number || 0;
+    if (relevantSkills.length === 0) return 0;
     
-    return latestValue > previousValue ? latestValue - previousValue : 0;
+    const sum = relevantSkills.reduce((total, skill) => total + skill.score, 0);
+    return Math.round(sum / relevantSkills.length);
   };
-  
-  // Export progress data as CSV
-  const exportProgressData = () => {
-    if (chartData.length === 0) {
-      toast({
-        title: "No data to export",
-        description: "Complete some activities first to generate progress data.",
-        variant: "destructive"
-      });
-      return;
+
+  const calculateLanguageReadiness = (skills: any[]) => {
+    const relevantSkills = skills.filter(skill => 
+      ['Reading', 'Writing', 'Speaking', 'Listening', 'Grammar', 'Vocabulary'].includes(skill.name));
+    
+    if (relevantSkills.length === 0) return 0;
+    
+    const sum = relevantSkills.reduce((total, skill) => total + skill.score, 0);
+    return Math.round(sum / relevantSkills.length);
+  };
+
+  const getSkillIcon = (skillName: string) => {
+    switch (skillName) {
+      case 'reading':
+        return <BookOpen className="h-4 w-4 text-blue-500" />;
+      case 'writing':
+        return <Edit className="h-4 w-4 text-purple-500" />;
+      case 'speaking':
+        return <MessageSquare className="h-4 w-4 text-green-500" />;
+      case 'listening':
+        return <Headphones className="h-4 w-4 text-amber-500" />;
+      case 'grammar':
+        return <FileText className="h-4 w-4 text-red-500" />;
+      case 'vocabulary':
+        return <BookOpen className="h-4 w-4 text-indigo-500" />;
+      case 'citizenship':
+        return <Lightbulb className="h-4 w-4 text-emerald-500" />;
+      case 'culture':
+        return <Lightbulb className="h-4 w-4 text-cyan-500" />;
+      default:
+        return <BookOpen className="h-4 w-4" />;
     }
+  };
+
+  const getSkillColor = (skillName: string) => {
+    switch (skillName) {
+      case 'reading':
+        return 'bg-blue-100 text-blue-500';
+      case 'writing':
+        return 'bg-purple-100 text-purple-500';
+      case 'speaking':
+        return 'bg-green-100 text-green-500';
+      case 'listening':
+        return 'bg-amber-100 text-amber-500';
+      case 'grammar':
+        return 'bg-red-100 text-red-500';
+      case 'vocabulary':
+        return 'bg-indigo-100 text-indigo-500';
+      case 'citizenship':
+        return 'bg-emerald-100 text-emerald-500';
+      case 'culture':
+        return 'bg-cyan-100 text-cyan-500';
+      default:
+        return 'bg-gray-100 text-gray-500';
+    }
+  };
+
+  const getLastImprovementDate = (skillName: string, entries: any[]) => {
+    if (!entries || entries.length === 0) return null;
     
-    // Create CSV content
-    let csvContent = "Date,Listening,Reading,Writing,Speaking,Grammar,Vocabulary,Overall\n";
+    const relevantEntries = entries.filter(entry => entry.content_type === skillName && entry.score >= 70);
+    if (relevantEntries.length === 0) return null;
     
-    chartData.forEach(item => {
-      csvContent += `${item.date},${item.listening},${item.reading},${item.writing},${item.speaking},${item.grammar || 0},${item.vocabulary || 0},${item.overall}\n`;
-    });
+    const mostRecent = new Date(relevantEntries[0].created_at);
+    return mostRecent.toLocaleDateString();
+  };
+
+  const handleExportData = () => {
+    // Create CSV data from progress information
+    const csvContent = [
+      'Date,Category,Score,Time Spent',
+      ...(progressData.daily.map((day: any) => 
+        `${day.date},Overall,${day.score},N/A`
+      ))
+    ].join('\n');
     
-    // Create a blob and download link
+    // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'CILS_Progress_Report.csv');
+    link.setAttribute('download', 'cils_progress_report.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast({
+      title: 'Progress report exported',
+      description: 'Your progress data has been downloaded as a CSV file',
+      variant: 'default'
+    });
   };
   
-  // Calculate current overall score
-  const currentOverallScore = chartData.length > 0 
-    ? chartData[chartData.length - 1].overall 
-    : 0;
-  
-  useEffect(() => {
-    fetchProgressData();
-  }, [user]);
-  
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          <p className="mt-4 text-muted-foreground">Loading your progress data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Layout>
-      <div className="container py-6 space-y-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Your Progress</h1>
-            <p className="text-muted-foreground">
-              Track your progress towards CILS B1 Citizenship exam readiness
-            </p>
-          </div>
-          
-          <Button 
-            variant="outline" 
-            className="gap-2"
-            onClick={exportProgressData}
-          >
-            <Download className="h-4 w-4" />
+    <div className="container py-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Your Progress</h1>
+          <p className="text-muted-foreground">Track your CILS exam preparation journey</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={handleExportData}>
+            <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
         </div>
+      </div>
+      
+      {/* Readiness Score Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Overall Readiness</CardTitle>
+            <CardDescription>Your exam readiness score</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center">
+              <div className="text-4xl font-bold mb-2">{progressData.readiness.overall}%</div>
+              <Progress 
+                value={progressData.readiness.overall} 
+                max={100}
+                className="w-full h-2"
+                fill={progressData.readiness.overall >= 60 ? "bg-green-500" : "bg-amber-500"}
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {progressData.readiness.overall >= 80 
+                  ? "Excellent! You're well-prepared."
+                  : progressData.readiness.overall >= 60
+                    ? "Good progress. Keep practicing!"
+                    : "More practice needed to improve readiness."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Language Proficiency</CardTitle>
+            <CardDescription>Italian language readiness</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center">
+              <div className="text-4xl font-bold mb-2">{progressData.readiness.language}%</div>
+              <Progress 
+                value={progressData.readiness.language} 
+                max={100}
+                className="w-full h-2"
+                fill={progressData.readiness.language >= 60 ? "bg-green-500" : "bg-amber-500"}
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {progressData.readiness.language >= 80 
+                  ? "Excellent language skills!"
+                  : progressData.readiness.language >= 60
+                    ? "Good language proficiency. Keep practicing!"
+                    : "More language practice recommended."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Citizenship Knowledge</CardTitle>
+            <CardDescription>Citizenship test readiness</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center">
+              <div className="text-4xl font-bold mb-2">{progressData.readiness.citizenship}%</div>
+              <Progress 
+                value={progressData.readiness.citizenship} 
+                max={100}
+                className="w-full h-2"
+                fill={progressData.readiness.citizenship >= 60 ? "bg-green-500" : "bg-amber-500"}
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {progressData.readiness.citizenship >= 80 
+                  ? "Excellent citizenship knowledge!"
+                  : progressData.readiness.citizenship >= 60
+                    ? "Good progress on citizenship content."
+                    : "More citizenship study recommended."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex justify-between items-center mb-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="details">Detailed Progress</TabsTrigger>
-            <TabsTrigger value="exam-info">CILS B1 Requirements</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+            <TabsTrigger value="trends">Progress Trends</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Overall Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-[250px] w-full" />
-                    </div>
-                  ) : (
-                    <div className="h-[250px]">
-                      <ProgressSummary 
-                        overall={currentOverallScore} 
-                        targetScore={targetScore}
-                        sections={examSections}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-[60px] w-full" />
-                      <Skeleton className="h-[60px] w-full" />
-                      <Skeleton className="h-[60px] w-full" />
-                    </div>
-                  ) : progressData && progressData.length > 0 ? (
-                    <div className="space-y-3">
-                      {progressData.slice(0, 3).map((session: any, index) => (
-                        <div key={index} className="flex items-center justify-between border-b pb-2">
-                          <div>
-                            <p className="font-medium capitalize">{session.content_type?.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(session.created_at).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">{session.score}%</p>
-                            <p className="text-sm text-muted-foreground">
-                              {session.time_spent} min
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <p>No activity recorded yet.</p>
-                      <p className="text-sm mt-1">Complete practice exercises to see your progress.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          {activeTab === 'trends' && (
+            <div className="space-x-2">
+              <Button 
+                variant={timeRange === 'week' ? "secondary" : "outline"} 
+                size="sm"
+                onClick={() => setTimeRange('week')}
+              >
+                Week
+              </Button>
+              <Button 
+                variant={timeRange === 'month' ? "secondary" : "outline"} 
+                size="sm"
+                onClick={() => setTimeRange('month')}
+              >
+                Month
+              </Button>
+              <Button 
+                variant={timeRange === 'quarter' ? "secondary" : "outline"} 
+                size="sm"
+                onClick={() => setTimeRange('quarter')}
+              >
+                3 Months
+              </Button>
             </div>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Progress Over Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <Skeleton className="h-[300px] w-full" />
-                ) : (
-                  <div className="h-[300px]">
-                    {chartData.length > 0 ? (
-                      <ProgressChart data={chartData} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">No progress data available yet</p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Complete practice activities to see your progress over time
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {examSections.map((section) => (
-                <ProgressCard
-                  key={section.name}
-                  title={section.name}
-                  value={section.score}
-                  maxValue={100}
-                  icon={section.icon}
-                  color={section.score >= targetScore ? "bg-green-500" : "bg-amber-500"}
-                />
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SkillBreakdown skills={getSkillBreakdownData()} />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Study Recommendations</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    {getSkillBreakdownData()
-                      .filter(skill => skill.status !== 'passed')
-                      .slice(0, 3)
-                      .map((skill, index) => (
-                        <div key={index} className="flex gap-3 items-start">
-                          <div className="bg-amber-100 p-1.5 rounded-full mt-0.5">
-                            <Lightbulb className="h-4 w-4 text-amber-600" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{skill.name} Focus Needed</p>
-                            <p className="text-sm text-muted-foreground">{skill.recommendations?.[0]}</p>
-                          </div>
-                        </div>
-                      ))
-                    }
-                    
-                    {getSkillBreakdownData().every(skill => skill.status === 'passed') && (
-                      <div className="flex gap-3 items-start">
-                        <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
-                          <Award className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Excellent Progress!</p>
-                          <p className="text-sm text-muted-foreground">
-                            You're doing great in all areas. Continue practicing to maintain your skills.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {chartData.length === 0 && (
-                      <div className="flex gap-3 items-start">
-                        <div className="bg-blue-100 p-1.5 rounded-full mt-0.5">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Start Your Journey</p>
-                          <p className="text-sm text-muted-foreground">
-                            Complete your first practice exercises to get personalized recommendations.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button variant="outline" className="w-full mt-4">
-                    View Study Plan
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="details" className="space-y-6">
+          )}
+        </div>
+        
+        <TabsContent value="overview" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Detailed Progress Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-8">
-                  {examSections.map((section) => (
-                    <div key={section.name} className="space-y-2">
-                      <div className="flex items-center gap-2 border-b pb-2 mb-4">
-                        {section.icon}
-                        <h3 className="text-lg font-medium">{section.name}</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card>
-                          <CardHeader className="py-2">
-                            <CardTitle className="text-sm font-medium">Current Score</CardTitle>
-                          </CardHeader>
-                          <CardContent className="py-2">
-                            <div className="text-2xl font-bold">{section.score}%</div>
-                            <p className="text-xs text-muted-foreground">
-                              {section.score >= targetScore ? 'Passing' : 'Need Improvement'}
-                            </p>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card>
-                          <CardHeader className="py-2">
-                            <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
-                          </CardHeader>
-                          <CardContent className="py-2">
-                            <div className="text-2xl font-bold">
-                              {loading ? 
-                                <Skeleton className="h-7 w-16" /> : 
-                                `${calculateTotalTimeByType(progressData, section.name.toLowerCase().split(' ')[0])} min`
-                              }
-                            </div>
-                            <p className="text-xs text-muted-foreground">Total practice time</p>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card>
-                          <CardHeader className="py-2">
-                            <CardTitle className="text-sm font-medium">Questions Answered</CardTitle>
-                          </CardHeader>
-                          <CardContent className="py-2">
-                            <div className="text-2xl font-bold">
-                              {loading ? 
-                                <Skeleton className="h-7 w-16" /> : 
-                                calculateTotalQuestionsByType(progressData, section.name.toLowerCase().split(' ')[0])
-                              }
-                            </div>
-                            <p className="text-xs text-muted-foreground">Total practice questions</p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium mb-1">Performance Analysis</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {getPerformanceAnalysis(section.score, targetScore, section.name)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="exam-info" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>CILS B1 Citizenship Exam Requirements</CardTitle>
+                <CardTitle>Activity Summary</CardTitle>
+                <CardDescription>Your learning activities</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <BookMarked className="h-5 w-5 text-primary" />
-                    Exam Overview
-                  </h3>
-                  <p className="mt-2">
-                    The CILS (Certificazione di Italiano come Lingua Straniera) B1 Citizenship exam
-                    is required for obtaining Italian citizenship. It tests your ability to communicate
-                    effectively in everyday situations in Italian.
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Questions Answered</p>
+                    <p className="text-2xl font-bold">{progressData.overview.questionsAnswered}</p>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Accuracy Rate</p>
+                    <p className="text-2xl font-bold">{progressData.overview.correctPercentage.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Time Spent</p>
+                    <p className="text-2xl font-bold">{Math.round(progressData.overview.timeSpent / 60)} mins</p>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Activities Completed</p>
+                    <p className="text-2xl font-bold">{progressData.overview.completedActivities}</p>
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {examSections.map((section) => (
-                    <Card key={section.name} className="bg-muted/50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-md flex items-center gap-2">
-                          {section.icon}
-                          {section.name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pt-0">
-                        <p className="text-sm">{section.description}</p>
-                        
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Time:</p>
-                            <p className="font-medium">{section.timeAllowed} minutes</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Questions:</p>
-                            <p className="font-medium">{section.items} {section.items === 1 ? 'item' : 'items'}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Pass Score:</p>
-                            <p className="font-medium">{section.passingScore}%</p>
-                          </div>
+                <div className="flex flex-col">
+                  <h4 className="font-medium mb-2">Recent Activities</h4>
+                  <div className="space-y-2">
+                    {progressData.daily.slice(0, 5).map((day: any, index: number) => (
+                      day.activities > 0 ? (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                          <span>{new Date(day.date).toLocaleDateString()}</span>
+                          <Badge variant="outline">
+                            {day.activities} {day.activities === 1 ? 'activity' : 'activities'}
+                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      ) : null
+                    )).filter(Boolean).slice(0, 3)}
+                    {progressData.daily.slice(0, 5).filter((day: any) => day.activities > 0).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No recent activities found.</p>
+                    )}
+                  </div>
                 </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
-                    <Award className="h-5 w-5 text-primary" />
-                    Assessment Structure
-                  </h3>
+              </CardContent>
+            </Card>
+            
+            <SkillBreakdown 
+              skills={progressData.skills}
+              onSkillSelect={(skill) => {
+                // Redirect to practice page for that skill
+                console.log(`Practice ${skill}`);
+              }}
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="skills" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {progressData.skills.map((skill: any) => (
+              <Card key={skill.name} className="overflow-hidden">
+                <CardHeader className={`${skill.color.replace('bg-', 'bg-opacity-20 ')} border-b`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={skill.color}>
+                        {skill.icon}
+                      </div>
+                      <CardTitle className="text-lg">{skill.name}</CardTitle>
+                    </div>
+                    <Badge variant={skill.score >= 60 ? "outline" : "secondary"} className={skill.score >= 60 ? "text-green-600" : ""}>
+                      {skill.score >= 60 ? "Passing" : "Needs work"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-2xl font-bold">{skill.score}%</span>
+                    <span className="text-sm text-muted-foreground">Passing: {skill.passingScore}%</span>
+                  </div>
+                  
+                  <Progress 
+                    value={skill.score} 
+                    max={100}
+                    className="mb-6 h-2"
+                    fill={skill.score >= skill.passingScore ? "bg-green-500" : "bg-amber-500"}
+                  />
                   
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-medium">Listening</h4>
+                      <h4 className="text-sm font-medium mb-1">CILS B1 Requirements</h4>
                       <p className="text-sm text-muted-foreground">
-                        The listening section includes multiple audio clips of diverse difficulty and complexity.
-                        You'll listen to dialogues, announcements, and conversations, then answer multiple-choice
-                        questions about the content.
+                        {getSkillRequirements(skill.name)}
                       </p>
                     </div>
                     
                     <div>
-                      <h4 className="font-medium">Reading</h4>
+                      <h4 className="text-sm font-medium mb-1">Personal Recommendation</h4>
                       <p className="text-sm text-muted-foreground">
-                        The reading section tests your ability to understand written texts such as
-                        newspaper articles, advertisements, instructions, and personal communications.
-                        Questions include multiple-choice, true/false, and matching exercises.
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">Writing</h4>
-                      <p className="text-sm text-muted-foreground">
-                        The writing section typically includes two tasks: writing a personal message or letter
-                        (about 80-100 words) and writing an expository text (about 120 words) on a familiar topic.
-                        You'll be assessed on content, organization, vocabulary, and grammar.
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">Speaking</h4>
-                      <p className="text-sm text-muted-foreground">
-                        The speaking test is usually conducted with an examiner and includes a brief
-                        presentation about yourself, a discussion based on an image or prompt, and a
-                        simulated conversation scenario. You'll be evaluated on pronunciation, fluency,
-                        accuracy, and communicative effectiveness.
+                        {getPersonalRecommendation(skill.name, skill.score)}
                       </p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="bg-muted p-4 rounded-lg">
-                  <h4 className="font-medium">Passing Requirements</h4>
-                  <p className="text-sm mt-1">
-                    To pass the CILS B1 Citizenship exam, you must achieve at least 70% in each of the
-                    four sections (listening, reading, writing, and speaking). If you fail one section,
-                    you can retake just that section within one year.
-                  </p>
+                  
+                  <div className="mt-6">
+                    <Button variant="outline" className="w-full" onClick={() => console.log(`Practice ${skill.name}`)}>
+                      Practice {skill.name}
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="trends" className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Progress Over Time</CardTitle>
+              <CardDescription>
+                {timeRange === 'week' ? 'Your progress over the past week' :
+                 timeRange === 'month' ? 'Your progress over the past month' :
+                 'Your progress over the past 3 months'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={progressData.daily}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 30 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getDate()}/${date.getMonth() + 1}`;
+                      }}
+                      interval={timeRange === 'week' ? 0 : timeRange === 'month' ? 2 : 7}
+                    />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip
+                      formatter={(value: any) => [`${value}%`, 'Score']}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                    />
+                    <Bar 
+                      dataKey="score" 
+                      fill="#8884d8" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Skill Distribution</CardTitle>
+                <CardDescription>Balance of your skills across areas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={progressData.skills}
+                        dataKey="score"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {progressData.skills.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={getColorForSkill(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => [`${value}%`, 'Score']} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </Layout>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Recommendations</CardTitle>
+                <CardDescription>Personalized suggestions to improve</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  {generateStudyRecommendations(progressData.skills).map((rec, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-muted rounded-md">
+                      <div className={`p-2 rounded-full ${getSkillColor(rec.skill.toLowerCase())}`}>
+                        {getSkillIcon(rec.skill.toLowerCase())}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{rec.title}</h4>
+                        <p className="text-sm text-muted-foreground">{rec.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-}
+};
+
+const getSkillRequirements = (skill: string) => {
+  const requirements: Record<string, string> = {
+    'Reading': 'Ability to understand simple texts on familiar topics. Reading comprehension score of 60% or higher required to pass.',
+    'Writing': 'Ability to write simple connected text on familiar topics. Writing assessment score of 60% required.',
+    'Speaking': 'Ability to communicate in simple and routine tasks requiring basic information exchange. Speaking assessment score of 60% required.',
+    'Listening': 'Ability to understand phrases and expressions related to immediate relevance. Listening comprehension score of 60% required.',
+    'Grammar': 'Competence in Italian grammar structures. Assessment score of 60% required.',
+    'Vocabulary': 'Knowledge of common Italian vocabulary. Assessment score of 60% required.',
+    'Citizenship': 'Understanding of Italian citizenship requirements and process. Assessment score of 70% required.',
+    'Culture': 'Knowledge of Italian culture, customs and society. Assessment score of 60% required.'
+  };
+  
+  return requirements[skill] || 'Information not available for this skill.';
+};
+
+const getPersonalRecommendation = (skill: string, score: number) => {
+  if (score < 40) {
+    return 'Focus intensively on this area. Start with fundamentals and practice daily.';
+  } else if (score < 60) {
+    return 'Needs significant improvement. Regular practice and structured learning recommended.';
+  } else if (score < 80) {
+    return 'Good progress, but continued practice needed. Focus on areas of weakness.';
+  } else {
+    return 'Excellent level achieved. Maintain with regular practice and advanced concepts.';
+  }
+};
+
+const getColorForSkill = (skill: string) => {
+  const colors: Record<string, string> = {
+    'Reading': '#3b82f6',
+    'Writing': '#8b5cf6',
+    'Speaking': '#22c55e',
+    'Listening': '#f59e0b',
+    'Grammar': '#ef4444',
+    'Vocabulary': '#6366f1',
+    'Citizenship': '#10b981',
+    'Culture': '#06b6d4'
+  };
+  
+  return colors[skill] || '#64748b';
+};
+
+const generateStudyRecommendations = (skills: any[]) => {
+  // Sort skills by score (ascending)
+  const sortedSkills = [...skills].sort((a, b) => a.score - b.score);
+  
+  // Generate recommendations for the lowest 3 skills
+  return sortedSkills.slice(0, 3).map(skill => {
+    const recommendations: Record<string, { title: string; description: string; skill: string }> = {
+      'Reading': {
+        title: 'Improve Reading Comprehension',
+        description: 'Practice with Italian news articles and short stories. Focus on understanding context clues.',
+        skill: 'Reading'
+      },
+      'Writing': {
+        title: 'Strengthen Writing Skills',
+        description: 'Practice writing short paragraphs about daily activities. Focus on proper grammar and vocabulary.',
+        skill: 'Writing'
+      },
+      'Speaking': {
+        title: 'Enhance Speaking Fluency',
+        description: 'Practice speaking with our conversation exercises. Focus on pronunciation and natural flow.',
+        skill: 'Speaking'
+      },
+      'Listening': {
+        title: 'Develop Listening Skills',
+        description: 'Listen to Italian audio clips daily. Focus on identifying key phrases and meanings.',
+        skill: 'Listening'
+      },
+      'Grammar': {
+        title: 'Master Grammar Fundamentals',
+        description: 'Review verb conjugations and sentence structures. Complete targeted grammar exercises.',
+        skill: 'Grammar'
+      },
+      'Vocabulary': {
+        title: 'Expand Your Vocabulary',
+        description: 'Learn new words with our flashcard system. Focus on common citizenship terms.',
+        skill: 'Vocabulary'
+      },
+      'Citizenship': {
+        title: 'Strengthen Citizenship Knowledge',
+        description: 'Review key citizenship concepts and requirements. Take practice citizenship tests.',
+        skill: 'Citizenship'
+      },
+      'Culture': {
+        title: 'Deepen Cultural Understanding',
+        description: 'Learn about Italian customs, traditions, and social norms through our cultural modules.',
+        skill: 'Culture'
+      }
+    };
+    
+    return recommendations[skill.name] || {
+      title: `Improve ${skill.name} Skills`,
+      description: 'Focus on targeted practice in this area to improve your overall score.',
+      skill: skill.name
+    };
+  });
+};
+
+export default ProgressPage;
