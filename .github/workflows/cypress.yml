@@ -52,14 +52,14 @@ jobs:
       
       - name: Upload Cypress screenshots  
         if: failure()  
-        uses: actions/upload-artifact@v2  # Changed to v2  
+        uses: actions/upload-artifact@v3  # Changed to v3 
         with:  
           name: cypress-screenshots-${{ matrix.containers }}  
           path: cypress/screenshots  
       
       - name: Upload Cypress videos  
         if: always()  
-        uses: actions/upload-artifact@v2  # Changed to v2  
+        uses: actions/upload-artifact@v3  # Changed to v3 
         with:  
           name: cypress-videos-${{ matrix.containers }}  
           path: cypress/videos  
