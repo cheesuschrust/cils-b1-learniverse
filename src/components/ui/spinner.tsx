@@ -1,34 +1,48 @@
 
 import React from "react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Loader } from "lucide-react";
 
-interface SpinnerProps {
+export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Size of the spinner
+   * @default "md"
+   */
   size?: "sm" | "md" | "lg";
-  className?: string;
+  
+  /**
+   * Whether to show the spinner with a transparent background
+   * @default false
+   */
+  transparent?: boolean;
 }
 
-export const Spinner = ({
-  size = "md", 
-  className
-}: SpinnerProps) => {
-  const getSizeClass = () => {
-    switch (size) {
-      case "sm":
-        return "h-4 w-4";
-      case "lg":
-        return "h-8 w-8";
-      case "md":
-      default:
-        return "h-6 w-6";
-    }
-  };
+const sizeClasses = {
+  sm: "h-4 w-4",
+  md: "h-6 w-6",
+  lg: "h-8 w-8"
+};
 
+export const Spinner: React.FC<SpinnerProps> = ({
+  className,
+  size = "md",
+  transparent = false,
+  ...props
+}) => {
   return (
-    <Loader2 className={cn(
-      "animate-spin text-primary",
-      getSizeClass(),
-      className
-    )} />
+    <div
+      role="status"
+      aria-label="Loading"
+      className={cn("flex items-center justify-center", className)}
+      {...props}
+    >
+      <Loader className={cn(
+        "animate-spin text-primary",
+        sizeClasses[size],
+        transparent ? "opacity-70" : ""
+      )} />
+    </div>
   );
 };
+
+export default Spinner;

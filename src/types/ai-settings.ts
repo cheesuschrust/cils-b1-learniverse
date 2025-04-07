@@ -1,51 +1,25 @@
 
-import { ItalianTestSection } from './ai-types';
+export type AIModelType = 'local' | 'cloud' | 'hybrid';
 
-export interface AISettings {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  topP?: number;
-  frequencyPenalty?: number;
-  presencePenalty?: number;
-  showFeedback?: boolean;
-  modelSize?: string;
-  processingOnDevice?: boolean;
-  autoSpeakCorrections?: boolean;
-  voiceEnabled?: boolean;
-  voiceRate?: number;
-  voicePitch?: number;
-  confidenceThreshold?: number;
-  enabled?: boolean;
-  assistantName?: string;
-  useGPU?: boolean;
-  autoTranslate?: boolean;
-  feedbackLevel?: string;
-  confidenceDisplay?: boolean;
-  language?: string;
-  pronunciation?: boolean;
-  grammar?: boolean;
-  vocabulary?: boolean;
-  features?: {
-    grammarCorrection?: boolean;
-    pronunciationFeedback?: boolean;
-    vocabularySuggestions?: boolean;
-    culturalContext?: boolean;
-    contentGeneration?: boolean;
-    errorCorrection?: boolean;
-    pronunciationHelp?: boolean;
-    personalization?: boolean;
-  };
-  difficulty?: string;
-  contentTypes?: string[];
-  focusAreas?: string[];
-}
+export type AIOptions = {
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+};
 
-export interface AISettingsProps {
-  settings: AISettings;
-  onSettingsChange: (settings: Partial<AISettings>) => void;
-  onSave?: () => void;
-  onReset?: () => void;
-  availableModels?: string[];
-  isLoading?: boolean;
-}
+export type AIStatus = {
+  isModelLoaded: boolean;
+  isOnline: boolean;
+  error: string | null;
+  availableModels: string[];
+};
+
+export type AIFeedbackSettings = {
+  provideHints: boolean;
+  explainErrors: boolean;
+  suggestImprovements: boolean;
+  translationFeedback: boolean;
+};
+
+export type AIModelSize = 'small' | 'medium' | 'large';

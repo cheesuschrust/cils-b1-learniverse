@@ -1,7 +1,5 @@
 
 import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { Slot } from "@radix-ui/react-slot";
 import {
   Controller,
   ControllerProps,
@@ -14,46 +12,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
-import { cva, type VariantProps } from "class-variance-authority";
-
-// Define message variants for error/success states
-const messageVariants = cva(
-  "text-sm mt-1.5", 
-  {
-    variants: {
-      variant: {
-        default: "text-muted-foreground",
-        error: "text-destructive",
-        success: "text-green-600 dark:text-green-400",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
-
-export interface MessageProps
-  extends React.HTMLAttributes<HTMLParagraphElement>,
-    VariantProps<typeof messageVariants> {}
-
-const FormMessage = React.forwardRef<HTMLParagraphElement, MessageProps>(
-  ({ className, variant, children, ...props }, ref) => {
-    return (
-      <p
-        ref={ref}
-        className={cn(messageVariants({ variant }), className)}
-        {...props}
-      >
-        {variant === "error" && (
-          <AlertCircle className="inline-block mr-1 h-3 w-3" />
-        )}
-        {children}
-      </p>
-    );
-  }
-);
-FormMessage.displayName = "FormMessage";
 
 const Form = FormProvider;
 
@@ -127,11 +85,9 @@ const FormItem = React.forwardRef<
 FormItem.displayName = "FormItem";
 
 const FormLabel = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & {
-    required?: boolean;
-  }
->(({ className, required, children, ...props }, ref) => {
+  React.ElementRef<typeof Label>,
+  React.ComponentPropsWithoutRef<typeof Label>
+>(({ className, ...props }, ref) => {
   const { error, formItemId } = useFormField();
 
   return (
@@ -140,22 +96,19 @@ const FormLabel = React.forwardRef<
       className={cn(error && "text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    >
-      {children}
-      {required && <span className="text-destructive ml-1">*</span>}
-    </Label>
+    />
   );
 });
 FormLabel.displayName = "FormLabel";
 
 const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
-  React.ComponentPropsWithoutRef<typeof Slot>
+  React.ElementRef<"div">,
+  React.ComponentPropsWithoutRef<"div">
 >(({ ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
   return (
-    <Slot
+    <div
       ref={ref}
       id={formItemId}
       aria-describedby={
@@ -187,44 +140,30 @@ const FormDescription = React.forwardRef<
 });
 FormDescription.displayName = "FormDescription";
 
-const FormSuccess = React.forwardRef<HTMLParagraphElement, MessageProps>(
-  ({ className, children, ...props }, ref) => {
-    return (
-      <FormMessage
-        ref={ref}
-        variant="success"
-        className={cn(className)}
-        {...props}
-      >
-        {children}
-      </FormMessage>
-    );
+const FormMessage = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, children, ...props }, ref) => {
+  const { error, formMessageId } = useFormField();
+  const body = error ? String(error?.message) : children;
+
+  if (!body) {
+    return null;
   }
-);
-FormSuccess.displayName = "FormSuccess";
 
-const FormError = React.forwardRef<HTMLParagraphElement, MessageProps>(
-  ({ className, children, ...props }, ref) => {
-    const { error } = useFormField();
-    const body = error ? String(error?.message) : children;
-
-    if (!body) {
-      return null;
-    }
-
-    return (
-      <FormMessage
-        ref={ref}
-        variant="error"
-        className={cn(className)}
-        {...props}
-      >
-        {body}
-      </FormMessage>
-    );
-  }
-);
-FormError.displayName = "FormError";
+  return (
+    <p
+      ref={ref}
+      id={formMessageId}
+      className={cn("flex items-center gap-1 text-sm font-medium text-destructive", className)}
+      {...props}
+    >
+      <AlertCircle className="h-3.5 w-3.5" />
+      {body}
+    </p>
+  );
+});
+FormMessage.displayName = "FormMessage";
 
 export {
   useFormField,
@@ -235,6 +174,4 @@ export {
   FormDescription,
   FormMessage,
   FormField,
-  FormError,
-  FormSuccess,
 };
