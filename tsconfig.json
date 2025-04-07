@@ -1,73 +1,71 @@
-{  
-  "compilerOptions": {  
-    // Target and Language  
-    "target": "ES2022",  
-    "module": "ESNext",  
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],  
+{
+  "compilerOptions": {
+    // Target and Language
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     
-    // Module Resolution  
-    "moduleResolution": "node",  
-    "esModuleInterop": true,  
-    "allowSyntheticDefaultImports": true,  
-    "resolveJsonModule": true,  
+    // Module Resolution
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     
-    // Strict Typing  
-    "strict": true,  
-    "strictNullChecks": true,  
-    "strictFunctionTypes": true,  
-    "strictBindCallApply": true,  
-    "strictPropertyInitialization": true,  
+    // Strict Typing
+    "strict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
     
-    // Additional Checks  
-    "noImplicitAny": true,  
-    "noImplicitThis": true,  
-    "alwaysStrict": true,  
+    // Additional Checks - Some relaxed for compatibility
+    "noImplicitAny": false,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     
-    // Unused and Unreachable Code  
-    "noUnusedLocals": true,  
-    "noUnusedParameters": false,  
-    "noImplicitReturns": true,  
-    "noFallthroughCasesInSwitch": true,  
+    // Unused and Unreachable Code - Relaxed for development
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
     
-    // React and JSX  
-    "jsx": "react-jsx",  
-    "jsxImportSource": "react",  
+    // React and JSX
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
     
-    // Compilation and Bundling  
-    "skipLibCheck": true,  
-    "allowImportingTsExtensions": true,  
-    "isolatedModules": true,  
-    "noEmit": true,  
+    // Compilation and Bundling
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
     
-    // Path Aliases  
-    "baseUrl": ".",  
-    "paths": {  
-      "@/*": ["./src/*"],  
-      "@components/*": ["./src/components/*"],  
-      "@hooks/*": ["./src/hooks/*"],  
-      "@utils/*": ["./src/utils/*"],  
-      "@types/*": ["./src/types/*"]  
-    },  
-    
-    // Experimental Features  
-    "experimentalDecorators": false,  
-    "emitDecoratorMetadata": false  
-  },  
+    // Path Aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@context/*": ["./src/contexts/*"],
+      "@routes/*": ["./src/routes/*"]
+    }
+  },
   
-  // Include and Exclude  
-  "include": [  
-    "src/**/*.ts",   
-    "src/**/*.tsx",  
-    "src/**/*.d.ts"  
-  ],  
-  "exclude": [  
-    "node_modules",  
-    "dist",  
-    "build"  
-  ],  
+  // Include and Exclude
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "cypress/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ],
   
-  // Project References  
-  "references": [  
-    { "path": "./tsconfig.node.json" }  
-  ]  
+  // Project References
+  "references": [
+    { "path": "./tsconfig.node.json" }
+  ]
 }

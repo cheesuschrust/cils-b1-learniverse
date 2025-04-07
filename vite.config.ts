@@ -2,13 +2,12 @@
 import { defineConfig } from 'vite';  
 import react from '@vitejs/plugin-react';  
 import * as path from 'path';  
-import { componentTagger } from "lovable-tagger";  
 
 export default defineConfig(({ mode }) => ({  
   plugins: [  
     react(),  
-    mode === 'development' && componentTagger(),  
-  ].filter(Boolean),  
+    // Removed the componentTagger() as it was causing issues with Vite 6
+  ],
   
   // Server Configuration  
   server: {  
@@ -40,8 +39,8 @@ export default defineConfig(({ mode }) => ({
       '@hookform/resolvers',  
       'class-variance-authority',  
       'clsx',  
-      'lucide-react',  
-      'shadcn-ui'  
+      'lucide-react',
+      // Removed 'shadcn-ui' as it's not actually a package
     ],  
     force: true  
   },  
@@ -68,8 +67,8 @@ export default defineConfig(({ mode }) => ({
   // Testing Configuration  
   test: {  
     globals: true,  
-    environment: 'jsdom',  
-    setupFiles: './src/test/setup.ts',  
+    environment: 'jsdom',
+    setupFiles: ['./src/tests/setup.ts'], // Fixed path to look in tests folder
     coverage: {  
       provider: 'v8',  
       reporter: ['text', 'json', 'html']  
