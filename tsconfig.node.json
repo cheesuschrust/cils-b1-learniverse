@@ -3,7 +3,7 @@
     // Core Compilation Settings  
     "target": "ES2022",  
     "module": "ESNext",  
-    "moduleResolution": "bundler",  
+    "moduleResolution": "bundler",
     
     // Project Reference Settings  
     "composite": true,  
@@ -27,7 +27,7 @@
 
     // Output Control  
     "isolatedModules": true,  
-    "noEmit": true,  
+    "noEmit": false,  // Changed from true to false
 
     // Library Support  
     "lib": ["ES2023", "DOM", "DOM.Iterable"]  
