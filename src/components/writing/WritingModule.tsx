@@ -3,49 +3,47 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Spinner from '@/components/ui/spinner';
 import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/lib/supabase-client';
+import { Textarea } from '@/components/ui/textarea';
 
-interface WritingPrompt {
+interface WritingExercise {
   id: string;
   title: string;
-  instructions: string;
-  wordLimit: number;
-  minWords: number;
-  example?: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  prompt: string;
+  examples?: string[];
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-  timeEstimate: number;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  timeEstimate: number; // in minutes
   points: number;
-  topics: string[];
+  wordLimit?: number;
+  criteria?: string[];
 }
 
 const WritingModule: React.FC = () => {
-  const [prompts, setPrompts] = useState<WritingPrompt[]>([]);
-  const [selectedPrompt, setSelectedPrompt] = useState<WritingPrompt | null>(null);
-  const [userResponse, setUserResponse] = useState('');
-  const [wordCount, setWordCount] = useState(0);
+  const [exercises, setExercises] = useState<WritingExercise[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<WritingExercise | null>(null);
+  const [userResponse, setUserResponse] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('prompts');
+  const [activeTab, setActiveTab] = useState('exercises');
   const [writingProgress, setWritingProgress] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
+  const { hasReachedLimit, getLimit, incrementUsage } = useFeatureLimits();
 
   useEffect(() => {
-    const fetchPrompts = async () => {
+    const fetchExercises = async () => {
       try {
         setIsLoading(true);
         
-        // Using Supabase client to fetch writing prompts
+        // Using Supabase client to fetch writing exercises
         const { data, error } = await supabase
           .from('learning_content')
           .select('*')
@@ -54,22 +52,21 @@ const WritingModule: React.FC = () => {
           
         if (error) throw error;
         
-        // Transform data if necessary
-        const transformedData: WritingPrompt[] = data.map((item: any) => ({
+        // Transform data to match our WritingExercise interface
+        const transformedData: WritingExercise[] = data.map((item: any) => ({
           id: item.id,
           title: item.title,
-          instructions: item.content.instructions,
-          wordLimit: item.content.wordLimit || 200,
-          minWords: item.content.minWords || 50,
-          example: item.content.example,
-          difficulty: item.difficulty || 'intermediate',
+          prompt: item.content.prompt,
+          examples: item.content.examples || [],
           level: item.content.level || 'B1',
+          difficulty: item.difficulty || 'intermediate',
           timeEstimate: item.content.timeEstimate || 20,
           points: item.content.points || 10,
-          topics: item.content.topics || [],
+          wordLimit: item.content.wordLimit || 150,
+          criteria: item.content.criteria || []
         }));
         
-        setPrompts(transformedData);
+        setExercises(transformedData);
         
         // Fetch user progress for the writing module
         if (user) {
@@ -85,10 +82,10 @@ const WritingModule: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching writing prompts:', error);
+        console.error('Error fetching writing exercises:', error);
         toast({
-          title: "Error loading prompts",
-          description: "Failed to load writing prompts. Please try again later.",
+          title: "Error loading exercises",
+          description: "Failed to load writing exercises. Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -96,20 +93,10 @@ const WritingModule: React.FC = () => {
       }
     };
 
-    fetchPrompts();
+    fetchExercises();
   }, [user, toast]);
 
-  useEffect(() => {
-    // Count words in user response
-    if (userResponse) {
-      const words = userResponse.trim().split(/\s+/).filter(word => word.length > 0);
-      setWordCount(words.length);
-    } else {
-      setWordCount(0);
-    }
-  }, [userResponse]);
-
-  const handleSelectPrompt = (prompt: WritingPrompt) => {
+  const handleSelectExercise = (exercise: WritingExercise) => {
     if (hasReachedLimit('writingExercises')) {
       toast({
         title: "Daily limit reached",
@@ -119,118 +106,115 @@ const WritingModule: React.FC = () => {
       return;
     }
     
-    setSelectedPrompt(prompt);
+    setSelectedExercise(exercise);
     setUserResponse('');
-    setWordCount(0);
     setSubmitted(false);
     setFeedback(null);
     setActiveTab('exercise');
     incrementUsage('writingExercises');
   };
 
+  const handleResponseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setUserResponse(text);
+    
+    // Count words
+    const words = text.trim().split(/\s+/);
+    setWordCount(text.trim().length > 0 ? words.length : 0);
+  };
+
   const handleSubmit = async () => {
-    if (!selectedPrompt || !user) return;
+    if (!selectedExercise) return;
     
-    if (wordCount < selectedPrompt.minWords) {
-      toast({
-        title: "Not enough words",
-        description: `Please write at least ${selectedPrompt.minWords} words.`,
-        variant: "warning",
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
+    setSubmitted(true);
     
     try {
-      // In a complete implementation, this would call an AI service for feedback
-      // For now, we'll simulate a response
-
-      // Simulated AI feedback - in a real app, you'd call an API or edge function
+      // In a real implementation, this would send the response to an AI service
+      // for evaluation and feedback
+      
+      // Simulate AI feedback with a timeout
       setTimeout(() => {
         const simulatedFeedback = `
-          <h3>Feedback on your writing</h3>
-          <p>Your writing demonstrates a good understanding of the topic. Here are some specific points:</p>
-          <ul>
-            <li><strong>Strengths:</strong> Good vocabulary use, clear structure, relevant content.</li>
-            <li><strong>Areas for improvement:</strong> Work on verb conjugations, article agreement, and sentence variety.</li>
-          </ul>
-          <p>Overall Score: 75/100</p>
-          <p>This is at the B1 level. Continue practicing!</p>
+          Your response shows good understanding of the topic. 
+          
+          Strengths:
+          - Clear structure
+          - Good vocabulary usage
+          - Relevant points
+          
+          Areas to improve:
+          - Watch out for agreement errors
+          - Consider using more connectors
+          - Add more specific examples
+          
+          Overall score: B1 level achieved
         `;
         
         setFeedback(simulatedFeedback);
-        setSubmitted(true);
-        
-        // Update user progress
-        updateProgress(75);
-      }, 2000);
-    } catch (error) {
-      console.error('Error submitting writing:', error);
-      toast({
-        title: "Error submitting writing",
-        description: "Failed to submit your writing. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const updateProgress = async (score: number) => {
-    if (!user || !selectedPrompt) return;
-    
-    try {
-      const { data: existingProgress, error: fetchError } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('content_id', selectedPrompt.id)
-        .single();
-        
-      const progressData = {
-        user_id: user.id,
-        content_id: selectedPrompt.id,
-        content_type: 'writing',
-        score: score,
-        completed: true,
-        answers: { text: userResponse },
-        progress_percentage: score
-      };
+      }, 1500);
       
-      if (fetchError || !existingProgress) {
-        // Create new progress entry
-        await supabase
-          .from('user_progress')
-          .insert([progressData]);
-      } else {
-        // Update existing progress if the new score is better
-        if (score > existingProgress.score) {
-          await supabase
+      // Update user progress
+      if (user) {
+        try {
+          const { data: existingProgress, error: fetchError } = await supabase
             .from('user_progress')
-            .update(progressData)
-            .eq('id', existingProgress.id);
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('content_id', selectedExercise.id)
+            .single();
+            
+          const progressData = {
+            user_id: user.id,
+            content_id: selectedExercise.id,
+            content_type: 'writing',
+            score: 75, // Simulated score, in a real implementation would come from AI evaluation
+            completed: true,
+            answers: [userResponse],
+            progress_percentage: 75
+          };
+          
+          if (fetchError || !existingProgress) {
+            // Create new progress entry
+            await supabase
+              .from('user_progress')
+              .insert([progressData]);
+          } else {
+            // Update existing progress if the new score is better
+            if (75 > existingProgress.score) {
+              await supabase
+                .from('user_progress')
+                .update(progressData)
+                .eq('id', existingProgress.id);
+            }
+          }
+          
+          // Update overall writing progress
+          const { data: allProgress, error: allProgressError } = await supabase
+            .from('user_progress')
+            .select('score')
+            .eq('user_id', user.id)
+            .eq('content_type', 'writing');
+            
+          if (!allProgressError && allProgress && allProgress.length > 0) {
+            const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
+            setWritingProgress(averageScore);
+            
+            await supabase
+              .from('user_stats')
+              .update({ writing_score: averageScore })
+              .eq('user_id', user.id);
+          }
+        } catch (error) {
+          console.error('Error updating progress:', error);
         }
       }
-      
-      // Update overall writing progress
-      const { data: allProgress, error: allProgressError } = await supabase
-        .from('user_progress')
-        .select('score')
-        .eq('user_id', user.id)
-        .eq('content_type', 'writing');
-        
-      if (!allProgressError && allProgress && allProgress.length > 0) {
-        const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
-        setWritingProgress(averageScore);
-        
-        await supabase
-          .from('user_stats')
-          .update({ writing_score: averageScore })
-          .eq('user_id', user.id);
-      }
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.error('Error submitting writing response:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit your writing response. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -260,35 +244,31 @@ const WritingModule: React.FC = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="prompts">Prompts</TabsTrigger>
-          <TabsTrigger value="exercise" disabled={!selectedPrompt}>Current Exercise</TabsTrigger>
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="prompts" className="space-y-4">
+        <TabsContent value="exercises" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {prompts.length > 0 ? (
-              prompts.map((prompt) => (
-                <Card key={prompt.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+            {exercises.length > 0 ? (
+              exercises.map((exercise) => (
+                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{prompt.title}</CardTitle>
+                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
                     <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Level: {prompt.level}</span>
-                      <span>{prompt.timeEstimate} min</span>
+                      <span>Level: {exercise.level}</span>
+                      <span>{exercise.timeEstimate} min</span>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="line-clamp-2 text-sm mb-4">{prompt.instructions.substring(0, 100)}...</p>
-                    <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
-                      <span>Words: {prompt.minWords}-{prompt.wordLimit}</span>
-                      <span>{prompt.points} points</span>
-                    </div>
-                    <Button onClick={() => handleSelectPrompt(prompt)}>Start Exercise</Button>
+                    <p className="line-clamp-2 text-sm mb-4">{exercise.prompt.substring(0, 100)}...</p>
+                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
                   </CardContent>
                 </Card>
               ))
             ) : (
               <div className="col-span-full text-center py-10">
-                <p className="text-muted-foreground">No writing prompts available.</p>
+                <p className="text-muted-foreground">No writing exercises available.</p>
               </div>
             )}
           </div>
@@ -311,45 +291,57 @@ const WritingModule: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="exercise">
-          {selectedPrompt && (
+          {selectedExercise && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>{selectedPrompt.title}</CardTitle>
+                  <CardTitle>{selectedExercise.title}</CardTitle>
                   <div className="flex gap-2 text-sm text-muted-foreground">
-                    <span>Level: {selectedPrompt.level}</span>
+                    <span>Level: {selectedExercise.level}</span>
                     <span>•</span>
-                    <span>{selectedPrompt.timeEstimate} minutes</span>
+                    <span>{selectedExercise.timeEstimate} minutes</span>
                     <span>•</span>
-                    <span>Words: {selectedPrompt.minWords}-{selectedPrompt.wordLimit}</span>
+                    <span>Word limit: {selectedExercise.wordLimit}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="p-4 bg-muted/50 rounded-md">
-                    <p className="font-medium mb-2">Instructions:</p>
-                    <p className="whitespace-pre-line">{selectedPrompt.instructions}</p>
+                    <p className="whitespace-pre-line">{selectedExercise.prompt}</p>
                   </div>
                   
-                  {selectedPrompt.example && (
-                    <div className="p-4 border border-border rounded-md">
-                      <p className="font-medium mb-2">Example:</p>
-                      <p className="whitespace-pre-line text-sm">{selectedPrompt.example}</p>
+                  {selectedExercise.examples && selectedExercise.examples.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-md font-medium">Examples:</h3>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {selectedExercise.examples.map((example, index) => (
+                          <li key={index} className="text-sm text-muted-foreground">{example}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {selectedExercise.criteria && selectedExercise.criteria.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-md font-medium">Evaluation Criteria:</h3>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {selectedExercise.criteria.map((criterion, index) => (
+                          <li key={index} className="text-sm text-muted-foreground">{criterion}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <label htmlFor="writing-response" className="font-medium">Your Response:</label>
-                      <span className={`text-sm ${wordCount < selectedPrompt.minWords ? 'text-red-500' : wordCount > selectedPrompt.wordLimit ? 'text-amber-500' : 'text-green-500'}`}>
-                        {wordCount} / {selectedPrompt.wordLimit} words
+                      <h3 className="text-md font-medium">Your Response:</h3>
+                      <span className={`text-sm ${wordCount > (selectedExercise.wordLimit || 0) ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        {wordCount} / {selectedExercise.wordLimit} words
                       </span>
                     </div>
-                    
-                    <Textarea
-                      id="writing-response"
+                    <Textarea 
                       value={userResponse}
-                      onChange={(e) => setUserResponse(e.target.value)}
-                      placeholder="Write your response here..."
+                      onChange={handleResponseChange}
+                      placeholder="Write your response here in Italian..."
                       className="min-h-[200px]"
                       disabled={submitted}
                     />
@@ -358,27 +350,28 @@ const WritingModule: React.FC = () => {
                   {!submitted ? (
                     <Button 
                       onClick={handleSubmit}
-                      disabled={wordCount < selectedPrompt.minWords || isSubmitting}
+                      disabled={userResponse.trim().length < 10}
                       className="mt-4"
                     >
-                      {isSubmitting ? <><Spinner size="sm" className="mr-2" /> Submitting...</> : 'Submit Response'}
+                      Submit Response
                     </Button>
                   ) : feedback ? (
                     <div className="p-4 bg-accent rounded-md">
-                      <div dangerouslySetInnerHTML={{ __html: feedback }} />
+                      <h3 className="text-lg font-medium mb-2">Feedback</h3>
+                      <div className="whitespace-pre-line text-sm mb-4">{feedback}</div>
                       <Button 
                         onClick={() => {
-                          setActiveTab('prompts');
-                          setSelectedPrompt(null);
+                          setActiveTab('exercises');
+                          setSelectedExercise(null);
                         }}
-                        className="mt-4"
                       >
-                        Back to Prompts
+                        Back to Exercises
                       </Button>
                     </div>
                   ) : (
                     <div className="flex justify-center p-4">
-                      <Spinner size="lg" />
+                      <Spinner />
+                      <span className="ml-2">Analyzing your response...</span>
                     </div>
                   )}
                 </CardContent>

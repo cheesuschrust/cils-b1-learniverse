@@ -1,5 +1,5 @@
 
-declare module 'cypress' {
+declare namespace Cypress {
   interface PluginEvents {
     (action: string, callback: (...args: any[]) => any): void;
   }
@@ -9,7 +9,7 @@ declare module 'cypress' {
   }
 }
 
-declare namespace Cypress {
+declare module 'cypress' {
   interface PluginEvents {
     (action: string, callback: (...args: any[]) => any): void;
   }
