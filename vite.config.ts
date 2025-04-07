@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 import * as path from 'path';  
 
 export default defineConfig(({ mode }) => {
-  return {
+  const config = {
     plugins: [
       react({
         jsxRuntime: 'automatic',
@@ -79,4 +79,6 @@ export default defineConfig(({ mode }) => {
       }  
     }  
   };
+  
+  return config;
 });

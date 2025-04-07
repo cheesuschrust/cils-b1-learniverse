@@ -10,3 +10,5 @@ declare namespace Cypress {
     [key: string]: any;
   }
 }
+
+export {};

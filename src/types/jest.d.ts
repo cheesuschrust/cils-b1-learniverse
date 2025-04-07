@@ -1,6 +1,6 @@
 
-declare namespace jest {
-  interface Config {
+declare module 'jest' {
+  export interface Config {
     preset?: string;
     testEnvironment?: string;
     setupFilesAfterEnv?: string[];
@@ -14,12 +14,11 @@ declare namespace jest {
     verbose?: boolean;
     testTimeout?: number;
     modulePathIgnorePatterns?: string[];
-  }
-}
-
-declare module 'ts-jest' {
-  interface InitialOptionsTsJest {
-    tsconfig?: string;
-    isolatedModules?: boolean;
+    bail?: number;
+    clearMocks?: boolean;
+    restoreMocks?: boolean;
+    resetModules?: boolean;
+    watchPlugins?: string[];
+    maxWorkers?: string;
   }
 }
