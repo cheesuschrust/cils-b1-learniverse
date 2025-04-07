@@ -18,5 +18,23 @@ declare module 'vite' {
     preview?: {
       port?: number;
     };
+    test?: {
+      globals?: boolean;
+      environment?: string;
+      setupFiles?: string[];
+      include?: string[];
+      coverage?: {
+        reporter?: string[];
+        exclude?: string[];
+      };
+    };
+    define?: Record<string, any>;
+    optimizeDeps?: {
+      include?: string[];
+      exclude?: string[];
+    };
+    css?: Record<string, any>;
   }
+
+  export function defineConfig(config: UserConfig): UserConfig;
 }

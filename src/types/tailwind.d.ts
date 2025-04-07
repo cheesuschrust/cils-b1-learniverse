@@ -7,12 +7,32 @@ interface DarkModeConfig {
 type DarkModeStrategy = 
   | 'media' 
   | 'class' 
-  | ['class'] 
-  | ['class', string];
+  | ['class', string]
+  | 'selector';
 
 declare module 'tailwindcss' {
   export interface Config {
     darkMode?: DarkModeStrategy;
-    // Add other tailwind config properties as needed
+    content?: string[];
+    theme?: {
+      extend?: Record<string, any>;
+      [key: string]: any;
+    };
+    plugins?: any[];
+    preflight?: boolean;
+    corePlugins?: {
+      [key: string]: boolean;
+    } | string[];
   }
+  
+  const tailwindcss: {
+    (config?: Partial<Config>): any;
+    config: {
+      (config: Partial<Config>): Partial<Config>;
+    };
+    defaultConfig: Record<string, any>;
+    plugin: (handler: any) => any;
+  };
+  
+  export default tailwindcss;
 }

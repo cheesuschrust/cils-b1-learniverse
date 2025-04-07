@@ -1,529 +1,495 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import Spinner from '@/components/ui/spinner';
+import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/lib/supabase-client';
+import { Play, Pause, Volume2, Volume, VolumeX } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
-import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { PlayCircle, PauseCircle, SkipForward, RotateCcw, Volume2, CheckCircle2, XCircle, HelpCircle, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase-client';
-import { useAuth } from '@/contexts/AuthContext';
+
+interface ListeningQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correct_answer: string;
+}
 
 interface ListeningExercise {
   id: string;
   title: string;
-  audioUrl: string;
-  transcript: string;
-  questions: Array<{
-    id: string;
-    question: string;
-    options: Array<{
-      id: string;
-      text: string;
-    }>;
-    correctAnswer: string;
-  }>;
-  difficulty: string;
-  isPremium: boolean;
+  description: string;
+  audio_url: string;
+  transcript?: string;
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  timeEstimate: number; // in minutes
+  points: number;
+  questions: ListeningQuestion[];
 }
 
 const ListeningModule: React.FC = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  
   const [exercises, setExercises] = useState<ListeningExercise[]>([]);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [selectedExercise, setSelectedExercise] = useState<ListeningExercise | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('exercises');
+  const [listeningProgress, setListeningProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  
-  // Load exercises from database
+  const [volume, setVolume] = useState(0.8);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { hasReachedLimit, getLimit, incrementUsage } = useFeatureLimits();
+
   useEffect(() => {
     const fetchExercises = async () => {
-      setIsLoading(true);
-      
       try {
+        setIsLoading(true);
+        
+        // Using Supabase client to fetch listening exercises
         const { data, error } = await supabase
           .from('learning_content')
           .select('*')
           .eq('content_type', 'listening')
-          .order('created_at', { ascending: false });
+          .order('difficulty', { ascending: true });
           
         if (error) throw error;
         
-        if (data && data.length > 0) {
-          // Transform the data to match our interface
-          const transformedExercises: ListeningExercise[] = data.map(item => ({
-            id: item.id,
-            title: item.title,
-            audioUrl: item.content.audioUrl || '',
-            transcript: item.content.transcript || '',
-            questions: item.content.questions || [],
-            difficulty: item.difficulty || 'intermediate',
-            isPremium: item.premium || false
-          }));
-          
-          setExercises(transformedExercises);
-        } else {
-          // Load fallback exercise if no data available
-          const fallbackExercise: ListeningExercise = {
-            id: 'fallback',
-            title: 'At the Restaurant',
-            audioUrl: 'https://storage.googleapis.com/cils-learning/audio/restaurant_conversation.mp3',
-            transcript: 'Buongiorno, posso avere un tavolo per due persone? Certamente, seguitemi per favore. Grazie. Ecco il menu. Cosa desidera ordinare?',
-            questions: [
-              {
-                id: 'q1',
-                question: 'Where is the conversation taking place?',
-                options: [
-                  { id: 'a', text: 'At a hotel' },
-                  { id: 'b', text: 'At a restaurant' },
-                  { id: 'c', text: 'At a shop' },
-                  { id: 'd', text: 'At a train station' }
-                ],
-                correctAnswer: 'b'
-              },
-              {
-                id: 'q2',
-                question: 'How many people need a table?',
-                options: [
-                  { id: 'a', text: 'One person' },
-                  { id: 'b', text: 'Two people' },
-                  { id: 'c', text: 'Three people' },
-                  { id: 'd', text: 'Four people' }
-                ],
-                correctAnswer: 'b'
-              }
-            ],
-            difficulty: 'beginner',
-            isPremium: false
-          };
-          
-          setExercises([fallbackExercise]);
+        // Transform data to match our ListeningExercise interface
+        const transformedData: ListeningExercise[] = data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          description: item.content.description,
+          audio_url: item.content.audio_url,
+          transcript: item.content.transcript,
+          level: item.content.level || 'B1',
+          difficulty: item.difficulty || 'intermediate',
+          timeEstimate: item.content.timeEstimate || 10,
+          points: item.content.points || 10,
+          questions: item.content.questions || []
+        }));
+        
+        setExercises(transformedData);
+        
+        // Fetch user progress for the listening module
+        if (user) {
+          const { data: progressData, error: progressError } = await supabase
+            .from('user_progress')
+            .select('progress_percentage')
+            .eq('user_id', user.id)
+            .eq('content_type', 'listening')
+            .single();
+            
+          if (!progressError && progressData) {
+            setListeningProgress(progressData.progress_percentage);
+          }
         }
       } catch (error) {
         console.error('Error fetching listening exercises:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load listening exercises. Please try again later.',
-          variant: 'destructive'
+          title: "Error loading exercises",
+          description: "Failed to load listening exercises. Please try again later.",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchExercises();
-  }, [toast]);
-  
-  // Update audio playing state
-  useEffect(() => {
-    const audio = audioRef.current;
+  }, [user, toast]);
+
+  const handleSelectExercise = (exercise: ListeningExercise) => {
+    if (hasReachedLimit('listeningExercises')) {
+      toast({
+        title: "Daily limit reached",
+        description: `You've reached your daily limit of ${getLimit('listeningExercises')} listening exercises. Upgrade to premium for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
-    if (!audio) return;
-    
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setProgress(100);
-    };
-    const handleTimeUpdate = () => {
-      const currentProgress = (audio.currentTime / audio.duration) * 100;
-      setProgress(currentProgress);
-    };
-    
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    
-    return () => {
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-    };
-  }, [currentExerciseIndex]);
-  
-  // Reset state when changing exercises
-  useEffect(() => {
+    setSelectedExercise(exercise);
+    setUserAnswers({});
+    setSubmitted(false);
+    setScore(null);
+    setActiveTab('exercise');
     setShowTranscript(false);
-    setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
-    setIsSubmitted(false);
-    setProgress(0);
-    setScore({ correct: 0, total: 0 });
-    
-    // Attempt to load audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.load();
-    }
-  }, [currentExerciseIndex]);
-  
-  const currentExercise = exercises[currentExerciseIndex];
-  const currentQuestion = currentExercise?.questions[currentQuestionIndex];
-  
-  const togglePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
+    incrementUsage('listeningExercises');
   };
-  
-  const restartAudio = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    audio.currentTime = 0;
-    audio.play();
-  };
-  
-  const forward10Seconds = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
-  };
-  
-  const handleAnswerSelect = (questionId: string, answerId: string) => {
-    setSelectedAnswers(prev => ({
+
+  const handleAnswerChange = (questionId: string, answer: string) => {
+    setUserAnswers(prev => ({
       ...prev,
-      [questionId]: answerId
+      [questionId]: answer
     }));
   };
-  
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < currentExercise.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // Calculate score
-      let correctAnswers = 0;
-      currentExercise.questions.forEach(question => {
-        if (selectedAnswers[question.id] === question.correctAnswer) {
-          correctAnswers++;
-        }
-      });
-      
-      setScore({
-        correct: correctAnswers,
-        total: currentExercise.questions.length
-      });
-      
-      setIsSubmitted(true);
-      
-      // Track usage
-      incrementUsage('listeningExercises');
-      
-      // Update user stats in database
-      updateUserStats(correctAnswers, currentExercise.questions.length);
-    }
-  };
-  
-  const updateUserStats = async (correct: number, total: number) => {
-    if (!user) return;
-    
-    try {
-      // Update user stats
-      const { data: stats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-        
-      if (statsError && statsError.code !== 'PGRST116') {
-        console.error('Error fetching user stats:', statsError);
-        return;
-      }
-      
-      if (stats) {
-        // Update existing stats
-        await supabase
-          .from('user_stats')
-          .update({
-            questions_answered: stats.questions_answered + total,
-            correct_answers: stats.correct_answers + correct,
-            listening_score: stats.listening_score 
-              ? Math.round((stats.listening_score + (correct / total * 100)) / 2) 
-              : Math.round(correct / total * 100),
-            last_activity_date: new Date().toISOString().split('T')[0]
-          })
-          .eq('user_id', user.id);
+
+  const togglePlayAudio = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
       } else {
-        // Create new stats record
-        await supabase
-          .from('user_stats')
-          .insert({
-            user_id: user.id,
-            questions_answered: total,
-            correct_answers: correct,
-            listening_score: Math.round(correct / total * 100),
-            last_activity_date: new Date().toISOString().split('T')[0]
-          });
+        audioRef.current.play();
       }
-    } catch (error) {
-      console.error('Error updating user stats:', error);
     }
   };
-  
-  const nextExercise = () => {
-    if (currentExerciseIndex < exercises.length - 1) {
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-    } else {
-      // Cycle back to first exercise
-      setCurrentExerciseIndex(0);
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
     }
   };
-  
+
+  const handleSubmit = async () => {
+    if (!selectedExercise) return;
+    
+    // Check if all questions have been answered
+    const unansweredQuestions = selectedExercise.questions.filter(
+      q => !userAnswers[q.id]
+    );
+    
+    if (unansweredQuestions.length > 0) {
+      toast({
+        title: "Incomplete",
+        description: "Please answer all questions before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSubmitted(true);
+    
+    // Calculate score
+    let correctCount = 0;
+    selectedExercise.questions.forEach(question => {
+      if (userAnswers[question.id] === question.correct_answer) {
+        correctCount++;
+      }
+    });
+    
+    const calculatedScore = Math.round((correctCount / selectedExercise.questions.length) * 100);
+    setScore(calculatedScore);
+    
+    // Update user progress
+    if (user) {
+      try {
+        const { data: existingProgress, error: fetchError } = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('content_id', selectedExercise.id)
+          .single();
+          
+        const progressData = {
+          user_id: user.id,
+          content_id: selectedExercise.id,
+          content_type: 'listening',
+          score: calculatedScore,
+          completed: true,
+          answers: userAnswers,
+          progress_percentage: calculatedScore
+        };
+        
+        if (fetchError || !existingProgress) {
+          // Create new progress entry
+          await supabase
+            .from('user_progress')
+            .insert([progressData]);
+        } else {
+          // Update existing progress if the new score is better
+          if (calculatedScore > existingProgress.score) {
+            await supabase
+              .from('user_progress')
+              .update(progressData)
+              .eq('id', existingProgress.id);
+          }
+        }
+        
+        // Update overall listening progress
+        const { data: allProgress, error: allProgressError } = await supabase
+          .from('user_progress')
+          .select('score')
+          .eq('user_id', user.id)
+          .eq('content_type', 'listening');
+          
+        if (!allProgressError && allProgress && allProgress.length > 0) {
+          const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
+          setListeningProgress(averageScore);
+          
+          await supabase
+            .from('user_stats')
+            .update({ listening_score: averageScore })
+            .eq('user_id', user.id);
+        }
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      const handlePlay = () => setIsPlaying(true);
+      const handlePause = () => setIsPlaying(false);
+      const handleEnded = () => setIsPlaying(false);
+      
+      audioElement.addEventListener('play', handlePlay);
+      audioElement.addEventListener('pause', handlePause);
+      audioElement.addEventListener('ended', handleEnded);
+      
+      // Set initial volume
+      audioElement.volume = volume;
+      
+      return () => {
+        audioElement.removeEventListener('play', handlePlay);
+        audioElement.removeEventListener('pause', handlePause);
+        audioElement.removeEventListener('ended', handleEnded);
+      };
+    }
+  }, [selectedExercise, volume]);
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading listening exercises...</p>
+      <div className="flex justify-center items-center h-64">
+        <Spinner size="lg" />
       </div>
     );
   }
-  
-  if (!currentExercise) {
-    return (
-      <div className="text-center py-8">
-        <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No exercises found</h3>
-        <p className="mt-2 text-muted-foreground">
-          We couldn't find any listening exercises. Please try again later.
-        </p>
-      </div>
-    );
-  }
-  
-  if (hasReachedLimit('listeningExercises')) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Daily Limit Reached</CardTitle>
-          <CardDescription>
-            You've reached your daily limit of {getLimit('listeningExercises')} listening exercises.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <div className="bg-muted p-4 rounded-lg mb-6">
-            <p className="text-muted-foreground">
-              You've completed {getUsage('listeningExercises')}/{getLimit('listeningExercises')} exercises today.
-            </p>
-            <p className="text-muted-foreground mt-2">
-              Come back tomorrow for more exercises, or upgrade to Premium for unlimited access.
-            </p>
-          </div>
-          <Button>Upgrade to Premium</Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (isSubmitted) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Results: {currentExercise.title}</CardTitle>
-          <CardDescription>
-            You scored {score.correct} out of {score.total}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <div className="flex justify-between mb-2">
-              <span>Score</span>
-              <span>{Math.round((score.correct / score.total) * 100)}%</span>
-            </div>
-            <Progress value={(score.correct / score.total) * 100} />
-          </div>
-          
-          <div className="space-y-4">
-            {currentExercise.questions.map((question, index) => {
-              const isCorrect = selectedAnswers[question.id] === question.correctAnswer;
-              
-              return (
-                <div 
-                  key={question.id} 
-                  className={`p-4 rounded-lg border ${
-                    isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' : 
-                    'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className="mr-3 mt-1">
-                      {isCorrect ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium mb-2">Question {index + 1}: {question.question}</p>
-                      <p className="text-sm mb-1">Your answer: {
-                        question.options.find(o => o.id === selectedAnswers[question.id])?.text || 'Not answered'
-                      }</p>
-                      {!isCorrect && (
-                        <p className="text-sm text-green-600 dark:text-green-400">
-                          Correct answer: {
-                            question.options.find(o => o.id === question.correctAnswer)?.text
-                          }
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          {showTranscript ? (
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <h3 className="font-medium mb-2">Transcript</h3>
-              <p className="text-sm">{currentExercise.transcript}</p>
-            </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              className="mt-6 w-full" 
-              onClick={() => setShowTranscript(true)}
-            >
-              Show Transcript
-            </Button>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={nextExercise}>
-            Next Exercise
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
-  
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Listening Practice</h1>
-      
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>{currentExercise.title}</CardTitle>
-          <CardDescription>
-            Listen to the audio and answer the questions. {currentExercise.isPremium && '(Premium Content)'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Audio player */}
-          <div className="mb-6">
-            <audio ref={audioRef} preload="metadata" className="hidden">
-              <source src={currentExercise.audioUrl} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-            
-            <div className="mb-2">
-              <Progress value={progress} />
-            </div>
-            
-            <div className="flex justify-center space-x-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={restartAudio}
-                title="Restart"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                variant="default"
-                size="icon"
-                onClick={togglePlayPause}
-                className="h-12 w-12 rounded-full"
-                title={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? (
-                  <PauseCircle className="h-8 w-8" />
-                ) : (
-                  <PlayCircle className="h-8 w-8" />
-                )}
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={forward10Seconds}
-                title="Forward 10 seconds"
-              >
-                <SkipForward className="h-4 w-4" />
-              </Button>
-            </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Listening Practice</h1>
+          <p className="text-muted-foreground">Improve your Italian listening comprehension</p>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Overall progress:</span>
+            <span className="text-sm font-bold">{Math.round(listeningProgress)}%</span>
+          </div>
+          <Progress value={listeningProgress} className="w-40 h-2" />
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="exercises" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {exercises.length > 0 ? (
+              exercises.map((exercise) => (
+                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Level: {exercise.level}</span>
+                      <span>{exercise.timeEstimate} min</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="line-clamp-2 text-sm mb-4">{exercise.description.substring(0, 100)}...</p>
+                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-10">
+                <p className="text-muted-foreground">No listening exercises available.</p>
+              </div>
+            )}
           </div>
           
-          {/* Question */}
-          <div className="mt-8">
-            <h3 className="text-lg font-medium mb-4">
-              Question {currentQuestionIndex + 1} of {currentExercise.questions.length}: {currentQuestion.question}
-            </h3>
-            
-            <RadioGroup
-              value={selectedAnswers[currentQuestion.id] || ''}
-              onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value)}
-              className="space-y-4"
-            >
-              {currentQuestion.options.map(option => (
-                <div key={option.id} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.id} id={`option-${option.id}`} />
-                  <Label htmlFor={`option-${option.id}`} className="flex-1 cursor-pointer py-2">
-                    {option.text}
-                  </Label>
+          <div className="border-t border-border pt-4 mt-8">
+            <h2 className="text-xl font-bold mb-4">Listening Progress</h2>
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <span>Overall Listening Skill</span>
+                <div className="flex items-center gap-2">
+                  <Progress value={listeningProgress} className="w-40 h-2" />
+                  <span className="min-w-[40px] text-right">{Math.round(listeningProgress)}%</span>
                 </div>
-              ))}
-            </RadioGroup>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Complete more exercises to improve your listening skills and track your progress toward CILS B1 proficiency.
+              </p>
+            </div>
           </div>
-        </CardContent>
-        <CardFooter className="justify-between">
-          <Button
-            variant="outline"
-            onClick={() => setShowTranscript(!showTranscript)}
-            disabled={isSubmitted}
-          >
-            <Volume2 className="h-4 w-4 mr-2" />
-            {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
-          </Button>
-          
-          <Button
-            onClick={handleNextQuestion}
-            disabled={!selectedAnswers[currentQuestion.id]}
-          >
-            {currentQuestionIndex < currentExercise.questions.length - 1 ? 'Next Question' : 'Submit Answers'}
-          </Button>
-        </CardFooter>
-      </Card>
-      
-      {showTranscript && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transcript</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{currentExercise.transcript}</p>
-          </CardContent>
-        </Card>
-      )}
+        </TabsContent>
+        
+        <TabsContent value="exercise">
+          {selectedExercise && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{selectedExercise.title}</CardTitle>
+                  <div className="flex gap-2 text-sm text-muted-foreground">
+                    <span>Level: {selectedExercise.level}</span>
+                    <span>•</span>
+                    <span>{selectedExercise.timeEstimate} minutes</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 bg-muted/50 rounded-md">
+                    <p className="whitespace-pre-line">{selectedExercise.description}</p>
+                  </div>
+                  
+                  <div className="bg-primary/5 rounded-md p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <Button
+                        onClick={togglePlayAudio}
+                        variant="outline"
+                        className="flex-shrink-0"
+                      >
+                        {isPlaying ? (
+                          <>
+                            <Pause className="mr-2 h-4 w-4" />
+                            Pause Audio
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-4 w-4" />
+                            Play Audio
+                          </>
+                        )}
+                      </Button>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => handleVolumeChange(0)}
+                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        >
+                          <VolumeX className="h-4 w-4" />
+                        </button>
+                        <div className="w-20 h-1 bg-gray-300 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary"
+                            style={{ width: `${volume * 100}%` }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleVolumeChange(1)}
+                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        >
+                          <Volume2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <audio 
+                      ref={audioRef} 
+                      src={selectedExercise.audio_url}
+                      className="w-full"
+                      controls={false}
+                    />
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {selectedExercise.questions.map((question, idx) => (
+                      <div key={question.id} className="space-y-4">
+                        <h3 className="font-medium">
+                          Question {idx + 1}: {question.question}
+                        </h3>
+                        <RadioGroup
+                          value={userAnswers[question.id] || ""}
+                          onValueChange={(value) => handleAnswerChange(question.id, value)}
+                          disabled={submitted}
+                        >
+                          {question.options.map((option, optionIdx) => (
+                            <div key={optionIdx} className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value={option}
+                                id={`q${idx}-option${optionIdx}`}
+                              />
+                              <Label 
+                                htmlFor={`q${idx}-option${optionIdx}`}
+                                className={
+                                  submitted && option === question.correct_answer
+                                    ? "text-green-600 dark:text-green-400 font-medium"
+                                    : submitted && userAnswers[question.id] === option && option !== question.correct_answer
+                                    ? "text-red-600 dark:text-red-400 line-through"
+                                    : ""
+                                }
+                              >
+                                {option}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {!submitted ? (
+                    <Button onClick={handleSubmit} className="mt-4">
+                      Submit Answers
+                    </Button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-accent rounded-md">
+                        <h3 className="text-lg font-medium mb-2">Your Results</h3>
+                        <p className="mb-2">
+                          Your score: <span className="font-bold">{score}%</span>
+                        </p>
+                        {score && score >= 70 ? (
+                          <p className="text-green-600 dark:text-green-400">
+                            Great job! You've demonstrated good listening comprehension.
+                          </p>
+                        ) : (
+                          <p className="text-amber-600 dark:text-amber-400">
+                            Keep practicing! Try listening to the audio again and check where you made mistakes.
+                          </p>
+                        )}
+                      </div>
+                      
+                      {selectedExercise.transcript && (
+                        <div>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowTranscript(!showTranscript)}
+                          >
+                            {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
+                          </Button>
+                          
+                          {showTranscript && (
+                            <div className="mt-4 p-4 bg-muted/50 rounded-md">
+                              <h3 className="font-medium mb-2">Transcript:</h3>
+                              <p className="whitespace-pre-line">{selectedExercise.transcript}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <Button 
+                        onClick={() => {
+                          setActiveTab('exercises');
+                          setSelectedExercise(null);
+                        }}
+                      >
+                        Back to Exercises
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

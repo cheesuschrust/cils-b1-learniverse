@@ -1,268 +1,111 @@
-import { supabase } from "@/lib/supabase";
 
-interface ApiRequestOptions {
-  method?: string;
+// Basic API client for handling HTTP requests
+
+interface ApiOptions {
+  baseUrl?: string;
   headers?: Record<string, string>;
-  body?: any;
+  timeout?: number;
 }
 
 export class API {
+  private static baseUrl: string = "/api";
+  private static defaultHeaders: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  private static timeout: number = 30000; // 30 seconds
+  
+  static configure(options: ApiOptions) {
+    if (options.baseUrl) this.baseUrl = options.baseUrl;
+    if (options.headers) this.defaultHeaders = { ...this.defaultHeaders, ...options.headers };
+    if (options.timeout) this.timeout = options.timeout;
+  }
+  
   static async handleRequest<T>(
-    endpoint: string,
-    method: string = "GET",
-    data?: any,
-    options?: ApiRequestOptions
+    endpoint: string, 
+    method: string = "GET", 
+    data?: any, 
+    customHeaders?: Record<string, string>
   ): Promise<T> {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const headers = { ...this.defaultHeaders, ...customHeaders };
+    
+    const options: RequestInit = {
+      method,
+      headers,
+      credentials: 'include',
+    };
+    
+    if (data && method !== 'GET') {
+      options.body = JSON.stringify(data);
+    }
+    
     try {
-      // For real API requests, create proper URL
-      const url = `/api${endpoint}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       
-      // Mock response based on endpoint and method
-      // In a real app, this would make a fetch request
-      // For this implementation, we'll use Supabase directly
+      options.signal = controller.signal;
       
-      if (endpoint.startsWith("/auth")) {
-        return await this.handleAuthRequests<T>(endpoint, method, data);
-      } else if (endpoint.startsWith("/user")) {
-        return await this.handleUserRequests<T>(endpoint, method, data);
-      } else if (endpoint.startsWith("/content")) {
-        return await this.handleContentRequests<T>(endpoint, method, data);
-      } else if (endpoint.startsWith("/questions")) {
-        return await this.handleQuestionRequests<T>(endpoint, method, data);
+      const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorData.message || 'Request failed',
+          details: errorData,
+          code: errorData.code || 'API_ERROR'
+        };
       }
       
-      // Default mock response
-      return { success: true } as unknown as T;
+      // Handle empty responses
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return {} as T;
+      }
+      
+      // Check content type to determine parsing method
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      } else {
+        // Handle non-JSON responses
+        const text = await response.text();
+        try {
+          return JSON.parse(text) as T;
+        } catch (e) {
+          return text as unknown as T;
+        }
+      }
     } catch (error: any) {
-      // Log and rethrow to be handled by the calling function
-      console.error(`API Error (${method} ${endpoint}):`, error);
-      throw new Error(error.message || "API request failed");
+      if (error.name === 'AbortError') {
+        throw {
+          message: 'Request timeout',
+          code: 'TIMEOUT',
+          status: 408
+        };
+      }
+      throw error;
     }
   }
   
-  private static async handleAuthRequests<T>(
-    endpoint: string,
-    method: string,
-    data?: any
-  ): Promise<T> {
-    switch (endpoint) {
-      case "/auth/login":
-        if (method === "POST") {
-          const { email, password } = data;
-          const { data: authData, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (error) throw error;
-          
-          // Fetch additional user data from our users table
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', authData.user?.id)
-            .single();
-          
-          if (userError) throw userError;
-          
-          // Return formatted user data
-          return {
-            user: {
-              id: userData.id,
-              firstName: userData.first_name,
-              lastName: userData.last_name,
-              email: userData.email,
-              role: userData.role,
-              isVerified: userData.is_verified,
-              // Add other properties
-            }
-          } as unknown as T;
-        }
-        break;
-        
-      case "/auth/register":
-        if (method === "POST") {
-          const { email, password, firstName, lastName } = data;
-          
-          // Register with Supabase Auth
-          const { data: authData, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                first_name: firstName,
-                last_name: lastName,
-              },
-            },
-          });
-          
-          if (error) throw error;
-          
-          // Insert into our users table
-          // This would be handled by triggers in a real implementation
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .insert({
-              id: authData.user?.id,
-              email,
-              first_name: firstName,
-              last_name: lastName,
-              role: 'user',
-              subscription: 'free',
-              is_verified: false,
-              created_at: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-              last_active: new Date().toISOString(),
-              preferred_language: 'both',
-              status: 'active'
-            })
-            .select()
-            .single();
-          
-          if (userError) throw userError;
-          
-          // Return formatted user data
-          return {
-            user: {
-              id: userData.id,
-              firstName: userData.first_name,
-              lastName: userData.last_name,
-              email: userData.email,
-              role: userData.role,
-              isVerified: userData.is_verified,
-              // Add other properties
-            }
-          } as unknown as T;
-        }
-        break;
-        
-      case "/auth/forgot-password":
-        if (method === "POST") {
-          const { email } = data;
-          
-          const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
-          });
-          
-          if (error) throw error;
-          
-          return { success: true } as unknown as T;
-        }
-        break;
-        
-      // Handle other auth endpoints
-      default:
-        throw new Error(`Unhandled auth endpoint: ${endpoint}`);
-    }
-    
-    throw new Error(`Unhandled auth request: ${method} ${endpoint}`);
+  static async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+    return this.handleRequest<T>(endpoint, 'GET', undefined, headers);
   }
   
-  private static async handleUserRequests<T>(
-    endpoint: string,
-    method: string,
-    data?: any
-  ): Promise<T> {
-    switch (endpoint) {
-      case "/user/profile":
-        if (method === "GET") {
-          const { userId } = data;
-          
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select(`
-              *,
-              user_preferences(*),
-              user_metrics(*)
-            `)
-            .eq('id', userId)
-            .single();
-          
-          if (error) throw error;
-          
-          // Return formatted user data
-          return {
-            user: {
-              id: userData.id,
-              firstName: userData.first_name,
-              lastName: userData.last_name,
-              email: userData.email,
-              role: userData.role,
-              isVerified: userData.is_verified,
-              // Add other properties from user_preferences and user_metrics
-            }
-          } as unknown as T;
-        }
-        break;
-        
-      case "/user/update":
-        if (method === "PUT") {
-          const { userId, userData } = data;
-          
-          // Update user data
-          const { error } = await supabase
-            .from('users')
-            .update({
-              first_name: userData.firstName,
-              last_name: userData.lastName,
-              preferred_language: userData.preferredLanguage,
-              // Add other properties
-            })
-            .eq('id', userId);
-          
-          if (error) throw error;
-          
-          // Fetch updated user data
-          const { data: updatedUser, error: fetchError } = await supabase
-            .from('users')
-            .select(`
-              *,
-              user_preferences(*),
-              user_metrics(*)
-            `)
-            .eq('id', userId)
-            .single();
-          
-          if (fetchError) throw fetchError;
-          
-          // Return formatted user data
-          return {
-            user: {
-              id: updatedUser.id,
-              firstName: updatedUser.first_name,
-              lastName: updatedUser.last_name,
-              email: updatedUser.email,
-              role: updatedUser.role,
-              isVerified: updatedUser.is_verified,
-              // Add other properties
-            }
-          } as unknown as T;
-        }
-        break;
-        
-      // Handle other user endpoints
-      default:
-        throw new Error(`Unhandled user endpoint: ${endpoint}`);
-    }
-    
-    throw new Error(`Unhandled user request: ${method} ${endpoint}`);
+  static async post<T>(endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
+    return this.handleRequest<T>(endpoint, 'POST', data, headers);
   }
   
-  private static async handleContentRequests<T>(
-    endpoint: string,
-    method: string,
-    data?: any
-  ): Promise<T> {
-    // Handle content endpoints with Supabase
-    return { success: true } as unknown as T;
+  static async put<T>(endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
+    return this.handleRequest<T>(endpoint, 'PUT', data, headers);
   }
   
-  private static async handleQuestionRequests<T>(
-    endpoint: string,
-    method: string,
-    data?: any
-  ): Promise<T> {
-    // Handle question endpoints with Supabase
-    return { success: true } as unknown as T;
+  static async patch<T>(endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
+    return this.handleRequest<T>(endpoint, 'PATCH', data, headers);
+  }
+  
+  static async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+    return this.handleRequest<T>(endpoint, 'DELETE', undefined, headers);
   }
 }

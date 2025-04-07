@@ -1,512 +1,581 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import Spinner from '@/components/ui/spinner';
 import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { Mic, MicOff, Play, Square, ArrowRight, HelpCircle, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/lib/supabase-client';
-import { useAuth } from '@/contexts/AuthContext';
+import { Mic, MicOff, Play, Pause, RefreshCw } from 'lucide-react';
 
 interface SpeakingExercise {
   id: string;
   title: string;
   prompt: string;
-  exampleAudioUrl?: string;
-  hints: string[];
-  difficulty: string;
-  isPremium: boolean;
+  example_audio?: string;
+  model_text?: string;
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  timeEstimate: number; // in minutes
+  points: number;
+  keywords?: string[];
+  pronunciation_focus?: string[];
 }
 
 const SpeakingModule: React.FC = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  
   const [exercises, setExercises] = useState<SpeakingExercise[]>([]);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [selectedExercise, setSelectedExercise] = useState<SpeakingExercise | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [confidence, setConfidence] = useState<number | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [feedback, setFeedback] = useState('');
-  
+  const [activeTab, setActiveTab] = useState('exercises');
+  const [speakingProgress, setSpeakingProgress] = useState(0);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { hasReachedLimit, getLimit, incrementUsage } = useFeatureLimits();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
-  const timerRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Load exercises from database
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [exampleAudioUrl, setExampleAudioUrl] = useState<string | null>(null);
+  const [isExamplePlaying, setIsExamplePlaying] = useState(false);
+  const exampleAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     const fetchExercises = async () => {
-      setIsLoading(true);
-      
       try {
+        setIsLoading(true);
+        
+        // Using Supabase client to fetch speaking exercises
         const { data, error } = await supabase
           .from('learning_content')
           .select('*')
           .eq('content_type', 'speaking')
-          .order('created_at', { ascending: false });
+          .order('difficulty', { ascending: true });
           
         if (error) throw error;
         
-        if (data && data.length > 0) {
-          // Transform the data to match our interface
-          const transformedExercises: SpeakingExercise[] = data.map(item => ({
-            id: item.id,
-            title: item.title,
-            prompt: item.content.prompt || '',
-            exampleAudioUrl: item.content.exampleAudioUrl,
-            hints: item.content.hints || [],
-            difficulty: item.difficulty || 'intermediate',
-            isPremium: item.premium || false
-          }));
-          
-          setExercises(transformedExercises);
-        } else {
-          // Load fallback exercise if no data available
-          const fallbackExercise: SpeakingExercise = {
-            id: 'fallback',
-            title: 'Introducing Yourself',
-            prompt: 'Introduce yourself in Italian. Tell us your name, where you are from, what you do, and one of your hobbies.',
-            hints: [
-              'Start with "Mi chiamo..." (My name is...)',
-              'For where you are from: "Sono di..." (I am from...)',
-              'For your job: "Lavoro come..." (I work as...)',
-              'For hobbies: "Nel tempo libero mi piace..." (In my free time I like to...)'
-            ],
-            difficulty: 'beginner',
-            isPremium: false
-          };
-          
-          setExercises([fallbackExercise]);
+        // Transform data to match our SpeakingExercise interface
+        const transformedData: SpeakingExercise[] = data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          prompt: item.content.prompt,
+          example_audio: item.content.example_audio,
+          model_text: item.content.model_text,
+          level: item.content.level || 'B1',
+          difficulty: item.difficulty || 'intermediate',
+          timeEstimate: item.content.timeEstimate || 5,
+          points: item.content.points || 10,
+          keywords: item.content.keywords || [],
+          pronunciation_focus: item.content.pronunciation_focus || []
+        }));
+        
+        setExercises(transformedData);
+        
+        // Fetch user progress for the speaking module
+        if (user) {
+          const { data: progressData, error: progressError } = await supabase
+            .from('user_progress')
+            .select('progress_percentage')
+            .eq('user_id', user.id)
+            .eq('content_type', 'speaking')
+            .single();
+            
+          if (!progressError && progressData) {
+            setSpeakingProgress(progressData.progress_percentage);
+          }
         }
       } catch (error) {
         console.error('Error fetching speaking exercises:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load speaking exercises. Please try again later.',
-          variant: 'destructive'
+          title: "Error loading exercises",
+          description: "Failed to load speaking exercises. Please try again later.",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchExercises();
-  }, [toast]);
-  
-  // Reset state when changing exercises
-  useEffect(() => {
-    setIsRecording(false);
-    setIsPlaying(false);
-    setRecordedAudio(null);
-    setRecordingTime(0);
-    setConfidence(null);
-    setIsSubmitted(false);
-    setFeedback('');
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  }, [user, toast]);
+
+  const handleSelectExercise = async (exercise: SpeakingExercise) => {
+    if (hasReachedLimit('speakingExercises')) {
+      toast({
+        title: "Daily limit reached",
+        description: `You've reached your daily limit of ${getLimit('speakingExercises')} speaking exercises. Upgrade to premium for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
     }
-  }, [currentExerciseIndex]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+    
+    setSelectedExercise(exercise);
+    setAudioUrl(null);
+    setAudioBlob(null);
+    setSubmitted(false);
+    setFeedback(null);
+    setActiveTab('exercise');
+    incrementUsage('speakingExercises');
+    
+    // Load example audio if available
+    if (exercise.example_audio) {
+      try {
+        // In a real app, this would download from storage
+        // Here we'll just set it directly
+        setExampleAudioUrl(exercise.example_audio);
+      } catch (err) {
+        console.error('Error loading example audio:', err);
+        setExampleAudioUrl(null);
       }
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop();
-      }
-    };
-  }, [isRecording]);
-  
-  const currentExercise = exercises[currentExerciseIndex];
-  
+    }
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
       
-      mediaRecorderRef.current.addEventListener('dataavailable', event => {
-        audioChunksRef.current.push(event.data);
-      });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
       
-      mediaRecorderRef.current.addEventListener('stop', () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
-        setRecordedAudio(audioBlob);
-        setIsRecording(false);
-        
-        // Stop all tracks in the stream to release the microphone
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
-      });
+      };
       
-      mediaRecorderRef.current.start();
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+        setAudioBlob(audioBlob);
+        
+        // Release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
       setIsRecording(true);
-      setRecordingTime(0);
       
-      // Start timer
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
+      toast({
+        title: "Recording started",
+        description: "Speak clearly into your microphone.",
+      });
     } catch (error) {
       console.error('Error starting recording:', error);
       toast({
-        title: 'Microphone Access Denied',
-        description: 'Please allow access to your microphone to use the speaking practice feature.',
-        variant: 'destructive'
+        title: "Recording error",
+        description: "Could not access your microphone. Please check permissions.",
+        variant: "destructive",
       });
     }
   };
-  
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-    }
-  };
-  
-  const playRecording = () => {
-    if (!recordedAudio || !audioRef.current) return;
-    
-    const audioUrl = URL.createObjectURL(recordedAudio);
-    audioRef.current.src = audioUrl;
-    audioRef.current.play();
-    setIsPlaying(true);
-    
-    audioRef.current.onended = () => {
-      setIsPlaying(false);
-      URL.revokeObjectURL(audioUrl);
-    };
-  };
-  
-  const stopPlayback = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  };
-  
-  const submitRecording = async () => {
-    if (!recordedAudio) return;
-    
-    try {
-      // Simulate AI analysis with random confidence score
-      // In a real app, you would send the audio to a server for analysis
-      const randomConfidence = Math.floor(Math.random() * 41) + 60; // 60-100
-      setConfidence(randomConfidence);
+      setIsRecording(false);
       
-      // Generate feedback based on confidence
-      let feedbackText = '';
-      if (randomConfidence >= 90) {
-        feedbackText = 'Excellent pronunciation! Your Italian sounds very natural.';
-      } else if (randomConfidence >= 80) {
-        feedbackText = 'Very good pronunciation. Just a few minor accent issues.';
-      } else if (randomConfidence >= 70) {
-        feedbackText = 'Good effort! Work on the rhythm and stress patterns of Italian.';
-      } else {
-        feedbackText = 'Keep practicing! Focus on vowel sounds and intonation.';
-      }
-      
-      setFeedback(feedbackText);
-      setIsSubmitted(true);
-      
-      // Track usage
-      incrementUsage('speakingExercises');
-      
-      // Update user stats in database
-      updateUserStats(randomConfidence);
-      
-    } catch (error) {
-      console.error('Error submitting recording:', error);
       toast({
-        title: 'Submission Failed',
-        description: 'Failed to analyze your recording. Please try again.',
-        variant: 'destructive'
+        title: "Recording stopped",
+        description: "Your recording has been saved.",
       });
     }
   };
-  
-  const updateUserStats = async (confidenceScore: number) => {
-    if (!user) return;
+
+  const handlePlayRecording = () => {
+    if (audioRef.current && audioUrl) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handlePlayExampleAudio = () => {
+    if (exampleAudioRef.current && exampleAudioUrl) {
+      if (isExamplePlaying) {
+        exampleAudioRef.current.pause();
+      } else {
+        exampleAudioRef.current.play();
+      }
+      setIsExamplePlaying(!isExamplePlaying);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedExercise || !audioBlob) return;
+    
+    setSubmitted(true);
     
     try {
-      // Update user stats
-      const { data: stats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-        
-      if (statsError && statsError.code !== 'PGRST116') {
-        console.error('Error fetching user stats:', statsError);
-        return;
-      }
+      // In a real implementation, this would upload the audio to a server for analysis
+      // and use a speech recognition API to analyze pronunciation, etc.
       
-      if (stats) {
-        // Update existing stats
-        await supabase
-          .from('user_stats')
-          .update({
-            questions_answered: stats.questions_answered + 1,
-            correct_answers: stats.correct_answers + (confidenceScore >= 70 ? 1 : 0),
-            speaking_score: stats.speaking_score 
-              ? Math.round((stats.speaking_score + confidenceScore) / 2) 
-              : confidenceScore,
-            last_activity_date: new Date().toISOString().split('T')[0]
-          })
-          .eq('user_id', user.id);
-      } else {
-        // Create new stats record
-        await supabase
-          .from('user_stats')
-          .insert({
+      // Simulate AI feedback with a timeout
+      setTimeout(() => {
+        const simulatedFeedback = `
+          Your pronunciation is good overall. 
+          
+          Strengths:
+          - Clear pronunciation of most words
+          - Good intonation for questions
+          - Natural speaking pace
+          
+          Areas to improve:
+          - Pay attention to the "r" sound in Italian words
+          - Try to use more connecting phrases between ideas
+          - Some vowel sounds could be more precise
+          
+          Overall score: B1 level demonstrated
+        `;
+        
+        setFeedback(simulatedFeedback);
+      }, 2000);
+      
+      // Update user progress
+      if (user) {
+        try {
+          const { data: existingProgress, error: fetchError } = await supabase
+            .from('user_progress')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('content_id', selectedExercise.id)
+            .single();
+            
+          const progressData = {
             user_id: user.id,
-            questions_answered: 1,
-            correct_answers: confidenceScore >= 70 ? 1 : 0,
-            speaking_score: confidenceScore,
-            last_activity_date: new Date().toISOString().split('T')[0]
-          });
+            content_id: selectedExercise.id,
+            content_type: 'speaking',
+            score: 80, // Simulated score
+            completed: true,
+            answers: [],
+            progress_percentage: 80
+          };
+          
+          if (fetchError || !existingProgress) {
+            // Create new progress entry
+            await supabase
+              .from('user_progress')
+              .insert([progressData]);
+          } else {
+            // Update existing progress if the new score is better
+            if (80 > existingProgress.score) {
+              await supabase
+                .from('user_progress')
+                .update(progressData)
+                .eq('id', existingProgress.id);
+            }
+          }
+          
+          // Update overall speaking progress
+          const { data: allProgress, error: allProgressError } = await supabase
+            .from('user_progress')
+            .select('score')
+            .eq('user_id', user.id)
+            .eq('content_type', 'speaking');
+            
+          if (!allProgressError && allProgress && allProgress.length > 0) {
+            const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
+            setSpeakingProgress(averageScore);
+            
+            await supabase
+              .from('user_stats')
+              .update({ speaking_score: averageScore })
+              .eq('user_id', user.id);
+          }
+        } catch (error) {
+          console.error('Error updating progress:', error);
+        }
       }
     } catch (error) {
-      console.error('Error updating user stats:', error);
+      console.error('Error submitting speaking response:', error);
+      toast({
+        title: "Error",
+        description: "Failed to analyze your speaking. Please try again.",
+        variant: "destructive",
+      });
+      setSubmitted(false);
     }
   };
-  
-  const nextExercise = () => {
-    if (currentExerciseIndex < exercises.length - 1) {
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-    } else {
-      // Cycle back to first exercise
-      setCurrentExerciseIndex(0);
+
+  const resetRecording = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
     }
+    setAudioUrl(null);
+    setAudioBlob(null);
+    setIsPlaying(false);
   };
-  
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-  
+
+  // Clean up audio URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
+  // Handle audio playback ended events
+  useEffect(() => {
+    const handleAudioEnded = () => {
+      setIsPlaying(false);
+    };
+    
+    const handleExampleAudioEnded = () => {
+      setIsExamplePlaying(false);
+    };
+    
+    const currentAudioRef = audioRef.current;
+    const currentExampleAudioRef = exampleAudioRef.current;
+    
+    if (currentAudioRef) {
+      currentAudioRef.addEventListener('ended', handleAudioEnded);
+    }
+    
+    if (currentExampleAudioRef) {
+      currentExampleAudioRef.addEventListener('ended', handleExampleAudioEnded);
+    }
+    
+    return () => {
+      if (currentAudioRef) {
+        currentAudioRef.removeEventListener('ended', handleAudioEnded);
+      }
+      
+      if (currentExampleAudioRef) {
+        currentExampleAudioRef.removeEventListener('ended', handleExampleAudioEnded);
+      }
+    };
+  }, []);
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading speaking exercises...</p>
+      <div className="flex justify-center items-center h-64">
+        <Spinner size="lg" />
       </div>
     );
   }
-  
-  if (!currentExercise) {
-    return (
-      <div className="text-center py-8">
-        <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No exercises found</h3>
-        <p className="mt-2 text-muted-foreground">
-          We couldn't find any speaking exercises. Please try again later.
-        </p>
-      </div>
-    );
-  }
-  
-  if (hasReachedLimit('speakingExercises')) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Daily Limit Reached</CardTitle>
-          <CardDescription>
-            You've reached your daily limit of {getLimit('speakingExercises')} speaking exercises.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <div className="bg-muted p-4 rounded-lg mb-6">
-            <p className="text-muted-foreground">
-              You've completed {getUsage('speakingExercises')}/{getLimit('speakingExercises')} exercises today.
-            </p>
-            <p className="text-muted-foreground mt-2">
-              Come back tomorrow for more exercises, or upgrade to Premium for unlimited access.
-            </p>
-          </div>
-          <Button>Upgrade to Premium</Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (isSubmitted) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Feedback: {currentExercise.title}</CardTitle>
-          <CardDescription>
-            Your speaking confidence score
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <div className="flex justify-between mb-2">
-              <span>Confidence</span>
-              <span>{confidence}%</span>
-            </div>
-            <Progress value={confidence || 0} className="h-2 mb-4" />
-            
-            <div className="p-4 rounded-lg border bg-muted">
-              <p className="mb-2 font-medium">AI Feedback:</p>
-              <p>{feedback}</p>
-            </div>
-            
-            <div className="mt-6">
-              <p className="text-sm font-medium mb-2">Your Recording:</p>
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={isPlaying ? stopPlayback : playRecording}
-                  disabled={!recordedAudio}
-                >
-                  {isPlaying ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-                <div className="flex-1 h-2 bg-gray-200 rounded-full">
-                  <div 
-                    className="h-2 bg-primary rounded-full"
-                    style={{ width: isPlaying ? '100%' : '0%', transition: 'width 0.3s ease' }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => setIsSubmitted(false)}>
-            Try Again
-          </Button>
-          <Button onClick={nextExercise}>
-            Next Exercise
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
-  
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Speaking Practice</h1>
-      
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>{currentExercise.title}</CardTitle>
-          <CardDescription>
-            Practice your Italian pronunciation. {currentExercise.isPremium && '(Premium Content)'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-3">Your Task:</h3>
-            <p className="text-lg mb-6">{currentExercise.prompt}</p>
-            
-            {currentExercise.hints.length > 0 && (
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Helpful Phrases:</h4>
-                <ul className="space-y-1 list-disc pl-4">
-                  {currentExercise.hints.map((hint, index) => (
-                    <li key={index}>{hint}</li>
-                  ))}
-                </ul>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Speaking Practice</h1>
+          <p className="text-muted-foreground">Improve your Italian speaking skills</p>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Overall progress:</span>
+            <span className="text-sm font-bold">{Math.round(speakingProgress)}%</span>
+          </div>
+          <Progress value={speakingProgress} className="w-40 h-2" />
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="exercises" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {exercises.length > 0 ? (
+              exercises.map((exercise) => (
+                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Level: {exercise.level}</span>
+                      <span>{exercise.timeEstimate} min</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="line-clamp-2 text-sm mb-4">{exercise.prompt.substring(0, 100)}...</p>
+                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-10">
+                <p className="text-muted-foreground">No speaking exercises available.</p>
               </div>
             )}
           </div>
           
-          <div className="flex flex-col items-center justify-center py-6">
-            <audio ref={audioRef} className="hidden" />
-            
-            {!recordedAudio ? (
-              <>
-                <Button
-                  variant={isRecording ? 'destructive' : 'default'}
-                  size="lg"
-                  className={`h-16 w-16 rounded-full ${isRecording ? 'animate-pulse' : ''}`}
-                  onClick={isRecording ? stopRecording : startRecording}
-                >
-                  {isRecording ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-                </Button>
-                <p className="mt-4 text-center">
-                  {isRecording ? (
-                    <span className="text-lg font-bold">{formatTime(recordingTime)}</span>
-                  ) : (
-                    'Click to start recording'
-                  )}
-                </p>
-              </>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="flex items-center space-x-4 mb-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={isPlaying ? stopPlayback : playRecording}
-                  >
-                    {isPlaying ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  <span>Listen to your recording</span>
+          <div className="border-t border-border pt-4 mt-8">
+            <h2 className="text-xl font-bold mb-4">Speaking Progress</h2>
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <span>Overall Speaking Skill</span>
+                <div className="flex items-center gap-2">
+                  <Progress value={speakingProgress} className="w-40 h-2" />
+                  <span className="min-w-[40px] text-right">{Math.round(speakingProgress)}%</span>
                 </div>
-                
-                <Button
-                  variant="default"
-                  onClick={submitRecording}
-                  className="mt-2"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Submit for Feedback
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={() => setRecordedAudio(null)}
-                  className="mt-4"
-                  size="sm"
-                >
-                  Record Again
-                </Button>
               </div>
-            )}
+              <p className="text-sm text-muted-foreground mt-2">
+                Complete more exercises to improve your speaking skills and track your progress toward CILS B1 proficiency.
+              </p>
+            </div>
           </div>
-        </CardContent>
-        {!recordedAudio && (
-          <CardFooter className="justify-end">
-            <Button variant="outline" onClick={nextExercise} className="ml-auto">
-              Skip Exercise
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
-      
-      <div className="bg-muted p-4 rounded-lg">
-        <div className="flex items-start">
-          <Sparkles className="h-5 w-5 text-yellow-500 mr-3 mt-1" />
-          <div>
-            <h3 className="font-medium mb-1">Speaking Practice Tips</h3>
-            <p className="text-sm text-muted-foreground">
-              Speak clearly and at a natural pace. Don't worry about making mistakes - focus on communicating your ideas. 
-              Practice makes perfect, so try to speak Italian regularly, even if just to yourself.
-            </p>
-          </div>
-        </div>
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="exercise">
+          {selectedExercise && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{selectedExercise.title}</CardTitle>
+                  <div className="flex gap-2 text-sm text-muted-foreground">
+                    <span>Level: {selectedExercise.level}</span>
+                    <span>•</span>
+                    <span>{selectedExercise.timeEstimate} minutes</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 bg-muted/50 rounded-md">
+                    <p className="whitespace-pre-line">{selectedExercise.prompt}</p>
+                  </div>
+                  
+                  {selectedExercise.model_text && (
+                    <div className="space-y-2">
+                      <h3 className="text-md font-medium">Model Text:</h3>
+                      <p className="text-sm p-3 bg-accent/30 rounded-md italic">
+                        {selectedExercise.model_text}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {exampleAudioUrl && (
+                    <div className="space-y-2">
+                      <h3 className="text-md font-medium">Example Audio:</h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handlePlayExampleAudio}
+                        >
+                          {isExamplePlaying ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                          {isExamplePlaying ? 'Pause' : 'Play Example'}
+                        </Button>
+                        <audio ref={exampleAudioRef} src={exampleAudioUrl} className="hidden" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedExercise.pronunciation_focus && selectedExercise.pronunciation_focus.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-md font-medium">Focus on these sounds:</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedExercise.pronunciation_focus.map((sound, index) => (
+                          <span key={index} className="px-2 py-1 bg-primary/10 rounded-md text-sm">
+                            {sound}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-md font-medium">Your Response:</h3>
+                    
+                    {!audioUrl ? (
+                      <div className="flex justify-center gap-4">
+                        <Button
+                          onClick={isRecording ? stopRecording : startRecording}
+                          variant={isRecording ? "destructive" : "default"}
+                          disabled={submitted}
+                        >
+                          {isRecording ? (
+                            <>
+                              <MicOff className="mr-2 h-4 w-4" />
+                              Stop Recording
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="mr-2 h-4 w-4" />
+                              Start Recording
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex justify-center gap-4">
+                          <Button
+                            onClick={handlePlayRecording}
+                            variant="outline"
+                            disabled={submitted}
+                          >
+                            {isPlaying ? (
+                              <>
+                                <Pause className="mr-2 h-4 w-4" />
+                                Pause
+                              </>
+                            ) : (
+                              <>
+                                <Play className="mr-2 h-4 w-4" />
+                                Play Recording
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={resetRecording}
+                            variant="outline"
+                            disabled={submitted}
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Record Again
+                          </Button>
+                          <audio ref={audioRef} src={audioUrl} className="hidden" />
+                        </div>
+                        
+                        {!submitted && (
+                          <Button onClick={handleSubmit}>
+                            Submit Recording
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {submitted && !feedback && (
+                    <div className="flex justify-center p-4">
+                      <Spinner />
+                      <span className="ml-2">Analyzing your pronunciation...</span>
+                    </div>
+                  )}
+                  
+                  {feedback && (
+                    <div className="p-4 bg-accent rounded-md">
+                      <h3 className="text-lg font-medium mb-2">Feedback</h3>
+                      <div className="whitespace-pre-line text-sm mb-4">{feedback}</div>
+                      <Button 
+                        onClick={() => {
+                          setActiveTab('exercises');
+                          setSelectedExercise(null);
+                        }}
+                      >
+                        Back to Exercises
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
