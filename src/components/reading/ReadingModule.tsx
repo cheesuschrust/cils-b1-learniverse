@@ -1,430 +1,350 @@
 
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { BookOpen, CheckCircle2, XCircle, HelpCircle, Loader2, ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import Spinner from '@/components/ui/spinner';
+import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/lib/supabase-client';
 
 interface ReadingExercise {
   id: string;
   title: string;
-  text: string;
-  questions: Array<{
+  content: string;
+  questions: {
     id: string;
-    question: string;
-    options: Array<{
-      id: string;
-      text: string;
-    }>;
-    correctAnswer: string;
-  }>;
-  difficulty: string;
-  isPremium: boolean;
+    text: string;
+    options: string[];
+    correctAnswer: number;
+  }[];
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  timeEstimate: number; // in minutes
+  points: number;
 }
 
 const ReadingModule: React.FC = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  
   const [exercises, setExercises] = useState<ReadingExercise[]>([]);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<ReadingExercise | null>(null);
+  const [userAnswers, setUserAnswers] = useState<number[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  
-  // Load exercises from database
+  const [activeTab, setActiveTab] = useState('exercises');
+  const [readingProgress, setReadingProgress] = useState(0);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
+
   useEffect(() => {
     const fetchExercises = async () => {
-      setIsLoading(true);
-      
       try {
+        setIsLoading(true);
+        
+        // Using Supabase client to fetch reading exercises
         const { data, error } = await supabase
           .from('learning_content')
           .select('*')
           .eq('content_type', 'reading')
-          .order('created_at', { ascending: false });
+          .order('difficulty', { ascending: true });
           
         if (error) throw error;
         
-        if (data && data.length > 0) {
-          // Transform the data to match our interface
-          const transformedExercises: ReadingExercise[] = data.map(item => ({
-            id: item.id,
-            title: item.title,
-            text: item.content.text || '',
-            questions: item.content.questions || [],
-            difficulty: item.difficulty || 'intermediate',
-            isPremium: item.premium || false
-          }));
-          
-          setExercises(transformedExercises);
-        } else {
-          // Load fallback exercise if no data available
-          const fallbackExercise: ReadingExercise = {
-            id: 'fallback',
-            title: 'La Vita in Italia',
-            text: `L'Italia è conosciuta in tutto il mondo per la sua ricca cultura, la sua storia millenaria e la sua eccellente cucina. Ogni anno, milioni di turisti visitano le città italiane come Roma, Firenze, Venezia e Milano per ammirare l'arte, l'architettura e assaporare la cucina locale.
-
-La vita quotidiana in Italia è caratterizzata da un ritmo rilassato. Gli italiani danno grande importanza alla famiglia e alle relazioni sociali. Il pranzo e la cena sono momenti importanti della giornata, durante i quali le famiglie si riuniscono per mangiare insieme e parlare.
-
-Nelle città italiane, è comune vedere persone che passeggiano nelle piazze o si siedono ai caffè all'aperto, specialmente durante la sera. Questa abitudine si chiama "passeggiata" ed è un modo per socializzare e godersi la bellezza delle città italiane.
-
-L'Italia è anche famosa per il suo patrimonio culturale. Il paese ospita 55 siti del patrimonio mondiale dell'UNESCO, più di qualsiasi altro paese al mondo. Dai monumenti antichi di Roma ai canali di Venezia, l'Italia offre un'incredibile varietà di attrazioni culturali.`,
-            questions: [
-              {
-                id: 'q1',
-                question: 'Perché i turisti visitano l'Italia?',
-                options: [
-                  { id: 'a', text: 'Solo per la cucina' },
-                  { id: 'b', text: 'Per l'arte, l'architettura e la cucina' },
-                  { id: 'c', text: 'Solo per l'architettura' },
-                  { id: 'd', text: 'Per il clima caldo' }
-                ],
-                correctAnswer: 'b'
-              },
-              {
-                id: 'q2',
-                question: 'Cosa è importante nella vita quotidiana degli italiani?',
-                options: [
-                  { id: 'a', text: 'Solo il lavoro' },
-                  { id: 'b', text: 'Lo sport' },
-                  { id: 'c', text: 'La famiglia e le relazioni sociali' },
-                  { id: 'd', text: 'La tecnologia' }
-                ],
-                correctAnswer: 'c'
-              },
-              {
-                id: 'q3',
-                question: 'Cos'è la "passeggiata"?',
-                options: [
-                  { id: 'a', text: 'Un tipo di cibo italiano' },
-                  { id: 'b', text: 'Una danza tradizionale' },
-                  { id: 'c', text: 'Una festa annuale' },
-                  { id: 'd', text: 'L'abitudine di passeggiare nelle piazze o sedersi ai caffè' }
-                ],
-                correctAnswer: 'd'
-              },
-              {
-                id: 'q4',
-                question: 'Quanti siti del patrimonio mondiale dell'UNESCO ha l'Italia?',
-                options: [
-                  { id: 'a', text: '30' },
-                  { id: 'b', text: '40' },
-                  { id: 'c', text: '55' },
-                  { id: 'd', text: '70' }
-                ],
-                correctAnswer: 'c'
-              }
-            ],
-            difficulty: 'beginner',
-            isPremium: false
-          };
-          
-          setExercises([fallbackExercise]);
+        // Simulate transformation if your data structure is different
+        const transformedData: ReadingExercise[] = data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content.text,
+          questions: item.content.questions,
+          level: item.content.level || 'B1',
+          difficulty: item.difficulty || 'intermediate',
+          timeEstimate: item.content.timeEstimate || 15,
+          points: item.content.points || 10
+        }));
+        
+        setExercises(transformedData);
+        
+        // Fetch user progress for the reading module
+        if (user) {
+          const { data: progressData, error: progressError } = await supabase
+            .from('user_progress')
+            .select('progress_percentage')
+            .eq('user_id', user.id)
+            .eq('content_type', 'reading')
+            .single();
+            
+          if (!progressError && progressData) {
+            setReadingProgress(progressData.progress_percentage);
+          }
         }
       } catch (error) {
         console.error('Error fetching reading exercises:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load reading exercises. Please try again later.',
-          variant: 'destructive'
+          title: "Error loading exercises",
+          description: "Failed to load reading exercises. Please try again later.",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchExercises();
-  }, [toast]);
-  
-  // Reset state when changing exercises
-  useEffect(() => {
-    setSelectedAnswers({});
-    setIsSubmitted(false);
-    setScore({ correct: 0, total: 0 });
-  }, [currentExerciseIndex]);
-  
-  const currentExercise = exercises[currentExerciseIndex];
-  
-  const handleAnswerSelect = (questionId: string, answerId: string) => {
-    setSelectedAnswers(prev => ({
-      ...prev,
-      [questionId]: answerId
-    }));
-  };
-  
-  const handleSubmit = () => {
-    // Calculate score
-    let correctAnswers = 0;
-    currentExercise.questions.forEach(question => {
-      if (selectedAnswers[question.id] === question.correctAnswer) {
-        correctAnswers++;
-      }
-    });
+  }, [user, toast]);
+
+  const handleSelectExercise = (exercise: ReadingExercise) => {
+    if (hasReachedLimit('readingExercises')) {
+      toast({
+        title: "Daily limit reached",
+        description: `You've reached your daily limit of ${getLimit('readingExercises')} reading exercises. Upgrade to premium for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
-    setScore({
-      correct: correctAnswers,
-      total: currentExercise.questions.length
-    });
-    
-    setIsSubmitted(true);
-    
-    // Track usage
+    setSelectedExercise(exercise);
+    setUserAnswers(new Array(exercise.questions.length).fill(-1));
+    setSubmitted(false);
+    setScore(0);
+    setActiveTab('exercise');
     incrementUsage('readingExercises');
-    
-    // Update user stats in database
-    updateUserStats(correctAnswers, currentExercise.questions.length);
   };
-  
-  const updateUserStats = async (correct: number, total: number) => {
-    if (!user) return;
+
+  const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
+    if (submitted) return;
     
-    try {
-      // Update user stats
-      const { data: stats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+    const newAnswers = [...userAnswers];
+    newAnswers[questionIndex] = optionIndex;
+    setUserAnswers(newAnswers);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedExercise) return;
+    
+    // Calculate score
+    let correctCount = 0;
+    userAnswers.forEach((answer, index) => {
+      if (selectedExercise.questions[index] && answer === selectedExercise.questions[index].correctAnswer) {
+        correctCount++;
+      }
+    });
+    
+    const calculatedScore = Math.round((correctCount / selectedExercise.questions.length) * 100);
+    setScore(calculatedScore);
+    setSubmitted(true);
+    
+    // Update user progress
+    if (user) {
+      try {
+        const { data: existingProgress, error: fetchError } = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('content_id', selectedExercise.id)
+          .single();
+          
+        const progressData = {
+          user_id: user.id,
+          content_id: selectedExercise.id,
+          content_type: 'reading',
+          score: calculatedScore,
+          completed: true,
+          answers: userAnswers,
+          progress_percentage: calculatedScore
+        };
         
-      if (statsError && statsError.code !== 'PGRST116') {
-        console.error('Error fetching user stats:', statsError);
-        return;
+        if (fetchError || !existingProgress) {
+          // Create new progress entry
+          await supabase
+            .from('user_progress')
+            .insert([progressData]);
+        } else {
+          // Update existing progress if the new score is better
+          if (calculatedScore > existingProgress.score) {
+            await supabase
+              .from('user_progress')
+              .update(progressData)
+              .eq('id', existingProgress.id);
+          }
+        }
+        
+        // Update overall reading progress
+        const { data: allProgress, error: allProgressError } = await supabase
+          .from('user_progress')
+          .select('score')
+          .eq('user_id', user.id)
+          .eq('content_type', 'reading');
+          
+        if (!allProgressError && allProgress && allProgress.length > 0) {
+          const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
+          setReadingProgress(averageScore);
+          
+          await supabase
+            .from('user_stats')
+            .update({ reading_score: averageScore })
+            .eq('user_id', user.id);
+        }
+      } catch (error) {
+        console.error('Error updating progress:', error);
       }
-      
-      if (stats) {
-        // Update existing stats
-        await supabase
-          .from('user_stats')
-          .update({
-            questions_answered: stats.questions_answered + total,
-            correct_answers: stats.correct_answers + correct,
-            reading_score: stats.reading_score 
-              ? Math.round((stats.reading_score + (correct / total * 100)) / 2) 
-              : Math.round(correct / total * 100),
-            last_activity_date: new Date().toISOString().split('T')[0]
-          })
-          .eq('user_id', user.id);
-      } else {
-        // Create new stats record
-        await supabase
-          .from('user_stats')
-          .insert({
-            user_id: user.id,
-            questions_answered: total,
-            correct_answers: correct,
-            reading_score: Math.round(correct / total * 100),
-            last_activity_date: new Date().toISOString().split('T')[0]
-          });
-      }
-    } catch (error) {
-      console.error('Error updating user stats:', error);
     }
   };
-  
-  const nextExercise = () => {
-    if (currentExerciseIndex < exercises.length - 1) {
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-    } else {
-      // Cycle back to first exercise
-      setCurrentExerciseIndex(0);
-    }
-  };
-  
-  const allAnswered = currentExercise?.questions.every(q => selectedAnswers[q.id]);
-  
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading reading exercises...</p>
+      <div className="flex justify-center items-center h-64">
+        <Spinner size="lg" />
       </div>
     );
   }
-  
-  if (!currentExercise) {
-    return (
-      <div className="text-center py-8">
-        <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No exercises found</h3>
-        <p className="mt-2 text-muted-foreground">
-          We couldn't find any reading exercises. Please try again later.
-        </p>
-      </div>
-    );
-  }
-  
-  if (hasReachedLimit('readingExercises')) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Daily Limit Reached</CardTitle>
-          <CardDescription>
-            You've reached your daily limit of {getLimit('readingExercises')} reading exercises.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <div className="bg-muted p-4 rounded-lg mb-6">
-            <p className="text-muted-foreground">
-              You've completed {getUsage('readingExercises')}/{getLimit('readingExercises')} exercises today.
-            </p>
-            <p className="text-muted-foreground mt-2">
-              Come back tomorrow for more exercises, or upgrade to Premium for unlimited access.
-            </p>
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Reading Practice</h1>
+          <p className="text-muted-foreground">Improve your Italian reading comprehension skills</p>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Overall progress:</span>
+            <span className="text-sm font-bold">{Math.round(readingProgress)}%</span>
           </div>
-          <Button>Upgrade to Premium</Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (isSubmitted) {
-    return (
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>Results: {currentExercise.title}</CardTitle>
-          <CardDescription>
-            You scored {score.correct} out of {score.total}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <div className="flex justify-between mb-2">
-              <span>Score</span>
-              <span>{Math.round((score.correct / score.total) * 100)}%</span>
-            </div>
-            <Progress value={(score.correct / score.total) * 100} />
+          <Progress value={readingProgress} className="w-40 h-2" />
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="exercises" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {exercises.length > 0 ? (
+              exercises.map((exercise) => (
+                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Level: {exercise.level}</span>
+                      <span>{exercise.timeEstimate} min</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="line-clamp-2 text-sm mb-4">{exercise.content.substring(0, 100)}...</p>
+                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-10">
+                <p className="text-muted-foreground">No reading exercises available.</p>
+              </div>
+            )}
           </div>
           
-          <div className="space-y-4">
-            {currentExercise.questions.map((question, index) => {
-              const isCorrect = selectedAnswers[question.id] === question.correctAnswer;
-              
-              return (
-                <div 
-                  key={question.id} 
-                  className={`p-4 rounded-lg border ${
-                    isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' : 
-                    'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className="mr-3 mt-1">
-                      {isCorrect ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium mb-2">Question {index + 1}: {question.question}</p>
-                      <p className="text-sm mb-1">Your answer: {
-                        question.options.find(o => o.id === selectedAnswers[question.id])?.text || 'Not answered'
-                      }</p>
-                      {!isCorrect && (
-                        <p className="text-sm text-green-600 dark:text-green-400">
-                          Correct answer: {
-                            question.options.find(o => o.id === question.correctAnswer)?.text
-                          }
-                        </p>
-                      )}
-                    </div>
-                  </div>
+          <div className="border-t border-border pt-4 mt-8">
+            <h2 className="text-xl font-bold mb-4">Reading Progress</h2>
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <span>Overall Reading Skill</span>
+                <div className="flex items-center gap-2">
+                  <Progress value={readingProgress} className="w-40 h-2" />
+                  <span className="min-w-[40px] text-right">{Math.round(readingProgress)}%</span>
                 </div>
-              );
-            })}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Complete more exercises to improve your reading skills and track your progress toward CILS B1 proficiency.
+              </p>
+            </div>
           </div>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={nextExercise}>
-            Next Exercise
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
-  
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Reading Practice</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BookOpen className="h-5 w-5 mr-2 text-blue-500" />
-                {currentExercise.title}
-              </CardTitle>
-              <CardDescription>
-                Read the text and answer the questions. {currentExercise.isPremium && '(Premium Content)'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="prose dark:prose-invert max-w-none">
-                {currentExercise.text.split('\n\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        </TabsContent>
         
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Questions</CardTitle>
-              <CardDescription>
-                Answer all {currentExercise.questions.length} questions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {currentExercise.questions.map((question, index) => (
-                  <div key={question.id}>
-                    <h3 className="text-base font-medium mb-3">
-                      {index + 1}. {question.question}
-                    </h3>
-                    
-                    <RadioGroup
-                      value={selectedAnswers[question.id] || ''}
-                      onValueChange={(value) => handleAnswerSelect(question.id, value)}
-                      className="space-y-2"
-                    >
-                      {question.options.map(option => (
-                        <div key={option.id} className="flex items-center space-x-2">
-                          <RadioGroupItem value={option.id} id={`q${index}-option-${option.id}`} />
-                          <Label htmlFor={`q${index}-option-${option.id}`} className="flex-1 cursor-pointer py-1">
-                            {option.text}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+        <TabsContent value="exercise">
+          {selectedExercise && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{selectedExercise.title}</CardTitle>
+                  <div className="flex gap-2 text-sm text-muted-foreground">
+                    <span>Level: {selectedExercise.level}</span>
+                    <span>•</span>
+                    <span>{selectedExercise.timeEstimate} minutes</span>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                onClick={handleSubmit}
-                disabled={!allAnswered}
-                className="w-full"
-              >
-                {allAnswered ? 'Submit Answers' : `Answer all questions (${currentExercise.questions.filter(q => selectedAnswers[q.id]).length}/${currentExercise.questions.length})`}
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 bg-muted/50 rounded-md">
+                    <p className="whitespace-pre-line">{selectedExercise.content}</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-medium">Answer the following questions:</h3>
+                    
+                    {selectedExercise.questions.map((question, qIndex) => (
+                      <div key={question.id} className="space-y-3">
+                        <h4 className="font-medium">{qIndex + 1}. {question.text}</h4>
+                        <div className="space-y-2">
+                          {question.options.map((option, oIndex) => (
+                            <div 
+                              key={oIndex}
+                              className={`p-3 border rounded-md cursor-pointer ${
+                                userAnswers[qIndex] === oIndex 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-border hover:border-primary/50'
+                              } ${
+                                submitted && oIndex === question.correctAnswer
+                                  ? 'bg-green-100 dark:bg-green-900/30 border-green-500'
+                                  : submitted && userAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
+                                    ? 'bg-red-100 dark:bg-red-900/30 border-red-500'
+                                    : ''
+                              }`}
+                              onClick={() => handleAnswerSelect(qIndex, oIndex)}
+                            >
+                              {option}
+                              {submitted && oIndex === question.correctAnswer && (
+                                <span className="ml-2 text-green-600 dark:text-green-400">✓</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {!submitted ? (
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={userAnswers.some(a => a === -1)}
+                      className="mt-4"
+                    >
+                      Submit Answers
+                    </Button>
+                  ) : (
+                    <div className="p-4 bg-accent rounded-md">
+                      <h3 className="text-lg font-medium mb-2">Results</h3>
+                      <p className="text-xl font-bold mb-2">Your score: {score}%</p>
+                      <Progress value={score} className="mb-4 h-2" />
+                      <Button 
+                        onClick={() => {
+                          setActiveTab('exercises');
+                          setSelectedExercise(null);
+                        }}
+                      >
+                        Back to Exercises
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
