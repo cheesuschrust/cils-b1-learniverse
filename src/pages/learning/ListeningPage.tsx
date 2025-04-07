@@ -4,7 +4,7 @@ import ListeningModule from '@/components/listening/ListeningModule';
 
 const ListeningPage: React.FC = () => {
   return (
-    <div>
+    <div className="container mx-auto py-8">
       <ListeningModule />
     </div>
   );

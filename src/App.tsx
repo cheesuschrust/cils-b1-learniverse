@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
+import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
@@ -26,6 +27,9 @@ function App() {
         <FlashcardsProvider>
           <Toaster />
           <Routes>
+            {/* Home page */}
+            <Route path="/" element={<HomePage />} />
+            
             {/* Auth routes */}
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
@@ -50,7 +54,7 @@ function App() {
             </Route>
             
             {/* Redirect to login for any unknown routes */}
-            <Route path="*" element={<LoginPage />} />
+            <Route path="*" element={<HomePage />} />
           </Routes>
         </FlashcardsProvider>
       </AuthProvider>

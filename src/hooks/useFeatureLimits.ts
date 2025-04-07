@@ -5,146 +5,185 @@ import { supabase } from '@/lib/supabase-client';
 
 interface FeatureLimits {
   flashcards: number;
-  readingExercises: number;
-  writingExercises: number;
   listeningExercises: number;
   speakingExercises: number;
-  grammarExercises: number;
-  vocabularyExercises: number;
-  aiCorrectionRequests: number;
+  writingExercises: number;
+  readingExercises: number;
+  multipleChoice: number;
 }
 
-interface DailyUsage {
-  [key: string]: number;
+interface FeatureUsage {
+  flashcards: number;
+  listeningExercises: number;
+  speakingExercises: number;
+  writingExercises: number;
+  readingExercises: number;
+  multipleChoice: number;
 }
 
-export const useFeatureLimits = () => {
-  const { user, isAuthenticated } = useAuth();
+export function useFeatureLimits() {
+  const { user } = useAuth();
   const [limits, setLimits] = useState<FeatureLimits>({
-    flashcards: 10,
-    readingExercises: 3,
-    writingExercises: 2,
+    flashcards: 20,
     listeningExercises: 3,
-    speakingExercises: 2,
-    grammarExercises: 5,
-    vocabularyExercises: 5,
-    aiCorrectionRequests: 3,
+    speakingExercises: 3,
+    writingExercises: 3,
+    readingExercises: 5,
+    multipleChoice: 10,
   });
-  const [usage, setUsage] = useState<DailyUsage>({});
-  const [isPremium, setIsPremium] = useState(false);
+  
+  const [usage, setUsage] = useState<FeatureUsage>({
+    flashcards: 0,
+    listeningExercises: 0,
+    speakingExercises: 0,
+    writingExercises: 0,
+    readingExercises: 0,
+    multipleChoice: 0,
+  });
 
-  // Fetch user's premium status and daily usage
+  const [isPremium, setIsPremium] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const fetchLimitsAndUsage = async () => {
-      if (!isAuthenticated || !user) return;
+    const fetchUserData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         // Check if user is premium
-        const { data: profileData, error: profileError } = await supabase
+        const { data: userProfile, error: profileError } = await supabase
           .from('user_profiles')
           .select('is_premium')
           .eq('id', user.id)
           .single();
 
-        if (!profileError && profileData) {
-          setIsPremium(profileData.is_premium);
+        if (profileError) {
+          console.error('Error fetching premium status:', profileError);
+        } else {
+          setIsPremium(userProfile?.is_premium || false);
         }
 
-        // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0];
-
-        // Fetch today's usage
+        // Get today's usage
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        
         const { data: usageData, error: usageError } = await supabase
           .from('usage_tracking')
-          .select('feature_type, count')
+          .select('feature, count')
           .eq('user_id', user.id)
           .eq('date', today);
 
-        if (!usageError && usageData) {
-          const usageMap: DailyUsage = {};
+        if (usageError) {
+          console.error('Error fetching usage data:', usageError);
+        } else if (usageData) {
+          const newUsage = { ...usage };
+          
           usageData.forEach((item) => {
-            usageMap[item.feature_type] = item.count;
+            if (item.feature in newUsage) {
+              newUsage[item.feature as keyof FeatureUsage] = item.count;
+            }
           });
-          setUsage(usageMap);
+          
+          setUsage(newUsage);
         }
       } catch (error) {
-        console.error('Error fetching feature limits:', error);
+        console.error('Error in useFeatureLimits:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchLimitsAndUsage();
-  }, [user, isAuthenticated]);
+    fetchUserData();
+  }, [user]);
 
-  const getLimit = (feature: keyof FeatureLimits) => {
-    if (isPremium) {
-      return Infinity; // Premium users have unlimited access
-    }
-    return limits[feature];
-  };
-
-  const getUsage = (feature: string) => {
-    return usage[feature] || 0;
-  };
-
-  const hasReachedLimit = (feature: keyof FeatureLimits) => {
-    if (isPremium) return false; // Premium users have no limits
-    return getUsage(feature) >= getLimit(feature);
-  };
-
-  const incrementUsage = async (feature: string) => {
-    if (!isAuthenticated || !user) return;
+  const incrementUsage = async (feature: keyof FeatureUsage) => {
+    if (!user) return false;
     
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const currentUsage = getUsage(feature);
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
-      // First check if there's an existing record
-      const { data: existingData, error: fetchError } = await supabase
+      // First, check if there's an existing record
+      const { data: existingData, error: existingError } = await supabase
         .from('usage_tracking')
-        .select('id')
+        .select('id, count')
         .eq('user_id', user.id)
+        .eq('feature', feature)
         .eq('date', today)
-        .eq('feature_type', feature)
-        .maybeSingle();
+        .single();
       
-      if (fetchError) {
-        console.error('Error checking usage:', fetchError);
-        return;
+      if (existingError && existingError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned, which is fine
+        console.error('Error checking usage tracking:', existingError);
+        return false;
       }
       
       if (existingData) {
         // Update existing record
-        await supabase
+        const { error: updateError } = await supabase
           .from('usage_tracking')
-          .update({ count: currentUsage + 1 })
+          .update({ count: existingData.count + 1 })
           .eq('id', existingData.id);
+        
+        if (updateError) {
+          console.error('Error updating usage:', updateError);
+          return false;
+        }
+        
+        // Update local state
+        setUsage(prev => ({
+          ...prev,
+          [feature]: prev[feature] + 1
+        }));
       } else {
         // Create new record
-        await supabase
+        const { error: insertError } = await supabase
           .from('usage_tracking')
           .insert({
             user_id: user.id,
-            date: today,
-            feature_type: feature,
-            count: 1
+            feature,
+            count: 1,
+            date: today
           });
+        
+        if (insertError) {
+          console.error('Error inserting usage:', insertError);
+          return false;
+        }
+        
+        // Update local state
+        setUsage(prev => ({
+          ...prev,
+          [feature]: 1
+        }));
       }
       
-      // Update local state
-      setUsage({
-        ...usage,
-        [feature]: currentUsage + 1
-      });
+      return true;
     } catch (error) {
       console.error('Error incrementing usage:', error);
+      return false;
     }
   };
 
+  const hasReachedLimit = (feature: keyof FeatureUsage): boolean => {
+    if (isPremium) return false; // Premium users have no limits
+    return usage[feature] >= limits[feature];
+  };
+
+  const getLimit = (feature: keyof FeatureLimits): number => {
+    return isPremium ? Infinity : limits[feature];
+  };
+
+  const getUsage = (feature: keyof FeatureUsage): number => {
+    return usage[feature];
+  };
+
   return {
+    hasReachedLimit,
     getLimit,
     getUsage,
-    hasReachedLimit,
     incrementUsage,
-    isPremium
+    isPremium,
+    isLoading,
   };
-};
+}
