@@ -1,614 +1,423 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import useOfflineCapability from '@/hooks/useOfflineCapability';
-import { Loader2, RefreshCw, Save, Check, AlertTriangle, Info, Send } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Edit, CheckCircle2, HelpCircle, Loader2, ArrowRight, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Mock writing prompts
-const mockPrompts = [
-  {
-    id: '1',
-    title: 'Introduce Yourself',
-    description: 'Write a short paragraph introducing yourself in Italian',
-    level: 'beginner',
-    prompt: 'Write a paragraph of 50-100 words introducing yourself. Include your name, age, where you are from, what you do, and some of your interests.',
-    wordCount: { min: 50, max: 100 },
-    example: `Mi chiamo Marco e ho 32 anni. Sono americano, di New York, ma ora vivo a Milano. Sono insegnante d'inglese. Mi piace molto l'Italia: il cibo, la cultura e la gente. Nel mio tempo libero, mi piace leggere libri, guardare film italiani e viaggiare. Sto imparando l'italiano da due anni e voglio parlare bene per comunicare con i miei amici italiani. Ho anche un gatto che si chiama Leo.`
-  },
-  {
-    id: '2',
-    title: 'My Daily Routine',
-    description: 'Describe your typical day in Italian',
-    level: 'beginner',
-    prompt: 'Write a paragraph of 70-120 words describing your daily routine. Include what time you wake up, what you do during the day, and what time you go to bed.',
-    wordCount: { min: 70, max: 120 },
-    example: `Mi sveglio alle 7 di mattina. Faccio colazione con un caffè e un cornetto. Poi mi preparo per andare al lavoro. Lavoro dalle 9 alle 17. Durante la pausa pranzo, mangio un panino o un'insalata con i miei colleghi. Dopo il lavoro, vado in palestra tre volte a settimana. Torno a casa alle 19 e preparo la cena. Di solito guardo un po' di televisione o leggo un libro. A volte, esco con i miei amici per una pizza o un aperitivo. Vado a letto alle 23 circa.`
-  },
-  {
-    id: '3',
-    title: 'My Last Vacation',
-    description: 'Write about a recent vacation or trip',
-    level: 'intermediate',
-    prompt: 'Write a paragraph of 100-150 words about your last vacation or a memorable trip. Include where you went, who you were with, what you did, and what you enjoyed most.',
-    wordCount: { min: 100, max: 150 },
-    example: `L'estate scorsa sono andato in Sicilia con la mia famiglia. Abbiamo soggiornato in un bellissimo hotel vicino al mare a Taormina. La vista dall'hotel era incredibile: potevamo vedere l'Etna e il Mar Mediterraneo dalla nostra camera. Durante la vacanza, abbiamo visitato molti luoghi interessanti come Siracusa, Noto e Palermo. Abbiamo anche fatto un'escursione sull'Etna, che è stata un'esperienza indimenticabile. La cosa che mi è piaciuta di più è stata la cucina siciliana. Abbiamo mangiato piatti deliziosi come arancini, pasta alla Norma e cannoli. I siciliani sono molto ospitali e la loro cultura è affascinante. È stata una vacanza perfetta e spero di tornare presto.`
-  },
-  {
-    id: '4',
-    title: 'Italian Citizenship Application Letter',
-    description: 'Practice writing a formal letter for citizenship',
-    level: 'advanced',
-    prompt: 'Write a formal letter (150-200 words) to the Italian consulate explaining why you are applying for Italian citizenship. Include your connection to Italy, your qualifications, and why you want to become an Italian citizen.',
-    wordCount: { min: 150, max: 200 },
-    example: `Egregio Console,
-
-Mi chiamo John Smith e scrivo questa lettera per presentare la mia domanda di cittadinanza italiana. Sono di origine italiana attraverso il mio bisnonno, Luigi Rossi, nato a Milano nel 1910 ed emigrato negli Stati Uniti nel 1930.
-
-Ho raccolto tutti i documenti necessari che dimostrano la mia discendenza italiana, tra cui i certificati di nascita, matrimonio e morte dei miei antenati. Inoltre, ho completato il livello B1 di italiano presso l'Istituto Italiano di Cultura di New York.
-
-Desidero diventare cittadino italiano per diversi motivi. In primo luogo, sento un forte legame con la cultura e le tradizioni italiane che sono sempre state parte della mia vita familiare. In secondo luogo, vorrei onorare la memoria dei miei antenati e mantenere viva la connessione con le mie radici. Infine, ho intenzione di trasferirmi in Italia nei prossimi anni e contribuire alla società italiana con le mie competenze professionali nel campo dell'ingegneria.
-
-Resto a disposizione per qualsiasi ulteriore informazione o documento necessario per completare la mia domanda.
-
-Distinti saluti,
-John Smith`
-  }
-];
-
-// Mock feedback function (this would be replaced with a real AI analysis in production)
-const analyzeMockText = (text: string, prompt: any) => {
-  // Simulate API processing time
-  return new Promise<any>((resolve) => {
-    setTimeout(() => {
-      const wordCount = text.split(/\s+/).filter(Boolean).length;
-      
-      // Generate mock feedback
-      const errors = [];
-      const suggestions = [];
-      
-      // Word count feedback
-      if (wordCount < prompt.wordCount.min) {
-        suggestions.push({
-          type: 'length',
-          message: `Your text is too short. You wrote ${wordCount} words, but the minimum is ${prompt.wordCount.min}.`
-        });
-      } else if (wordCount > prompt.wordCount.max) {
-        suggestions.push({
-          type: 'length',
-          message: `Your text is too long. You wrote ${wordCount} words, but the maximum is ${prompt.wordCount.max}.`
-        });
-      }
-      
-      // Grammar error simulation (random)
-      if (text.length > 20 && Math.random() > 0.3) {
-        const randomErrors = [
-          { type: 'grammar', position: [15, 20], message: 'Check verb conjugation here' },
-          { type: 'spelling', position: [40, 45], message: 'This word may be misspelled' },
-          { type: 'gender', position: [60, 70], message: 'Check gender agreement' }
-        ];
-        
-        // Add 1-3 random errors if text is long enough
-        const errorCount = Math.ceil(Math.random() * 3);
-        for (let i = 0; i < errorCount && i < randomErrors.length; i++) {
-          if (text.length > randomErrors[i].position[1]) {
-            errors.push(randomErrors[i]);
-          }
-        }
-      }
-      
-      // Calculate overall score (70-100 for meaningful text)
-      let score = 85;
-      
-      // Adjust score based on word count
-      if (wordCount < prompt.wordCount.min) {
-        score = Math.max(70, score - (prompt.wordCount.min - wordCount) / 2);
-      } else if (wordCount > prompt.wordCount.max) {
-        score = Math.max(70, score - (wordCount - prompt.wordCount.max) / 4);
-      }
-      
-      // Adjust score based on error count
-      score = Math.max(70, score - (errors.length * 5));
-      
-      resolve({
-        wordCount,
-        errors,
-        suggestions,
-        score: Math.round(score),
-        strengths: [
-          'Good use of vocabulary',
-          'Clear structure',
-          'Appropriate tone for the task'
-        ],
-        improvements: [
-          'Consider using more complex tenses',
-          'Expand your vocabulary',
-          'Add more connecting words for smoother transitions'
-        ]
-      });
-    }, 1500);
-  });
-};
+interface WritingExercise {
+  id: string;
+  title: string;
+  prompt: string;
+  minWords: number;
+  maxWords: number;
+  exampleAnswer?: string;
+  hints: string[];
+  difficulty: string;
+  isPremium: boolean;
+}
 
 const WritingModule: React.FC = () => {
-  const [prompts, setPrompts] = useState<any[]>(mockPrompts);
-  const [activeTab, setActiveTab] = useState('prompts');
-  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
-  const [userText, setUserText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [feedback, setFeedback] = useState<any | null>(null);
-  const [savedWritings, setSavedWritings] = useState<any[]>([]);
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { isOnline, isOfflineReady, enableOfflineAccess } = useOfflineCapability('/writing');
+  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
   
-  const isLimitReached = hasReachedLimit('writingExercises');
-  const maxExercises = getLimit('writingExercises');
-  const currentUsage = getUsage('writingExercises');
-
+  const [exercises, setExercises] = useState<WritingExercise[]>([]);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [answer, setAnswer] = useState('');
+  const [wordCount, setWordCount] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [feedback, setFeedback] = useState('');
+  const [score, setScore] = useState<number | null>(null);
+  const [showExample, setShowExample] = useState(false);
+  
+  // Load exercises from database
   useEffect(() => {
-    // In a real app, fetch prompts and saved writings from the database
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    const fetchExercises = async () => {
+      setIsLoading(true);
       
-      // Load saved writings from localStorage for the demo
-      const savedItems = localStorage.getItem('savedWritings');
-      if (savedItems) {
-        setSavedWritings(JSON.parse(savedItems));
+      try {
+        const { data, error } = await supabase
+          .from('learning_content')
+          .select('*')
+          .eq('content_type', 'writing')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          // Transform the data to match our interface
+          const transformedExercises: WritingExercise[] = data.map(item => ({
+            id: item.id,
+            title: item.title,
+            prompt: item.content.prompt || '',
+            minWords: item.content.minWords || 30,
+            maxWords: item.content.maxWords || 150,
+            exampleAnswer: item.content.exampleAnswer,
+            hints: item.content.hints || [],
+            difficulty: item.difficulty || 'intermediate',
+            isPremium: item.premium || false
+          }));
+          
+          setExercises(transformedExercises);
+        } else {
+          // Load fallback exercise if no data available
+          const fallbackExercise: WritingExercise = {
+            id: 'fallback',
+            title: 'Describing Your Daily Routine',
+            prompt: 'Write a short text in Italian describing your typical daily routine. Include when you wake up, what you eat, your work or study activities, and how you spend your evenings.',
+            minWords: 40,
+            maxWords: 100,
+            exampleAnswer: 'Mi sveglio alle sette ogni mattina. Faccio colazione con caffè e biscotti. Alle otto inizio a lavorare. Lavoro fino alle cinque. Dopo il lavoro, faccio una passeggiata nel parco. Ceno alle otto di sera. Dopo cena, guardo un po' di televisione o leggo un libro. Vado a dormire alle undici.',
+            hints: [
+              'Use present tense for routine activities',
+              'Include time expressions like "alle sette" (at seven)',
+              'Use reflexive verbs like "svegliarsi" (to wake up)',
+              'Include meal times: "colazione" (breakfast), "pranzo" (lunch), "cena" (dinner)'
+            ],
+            difficulty: 'beginner',
+            isPremium: false
+          };
+          
+          setExercises([fallbackExercise]);
+        }
+      } catch (error) {
+        console.error('Error fetching writing exercises:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load writing exercises. Please try again later.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }, 1000);
-  }, []);
-
-  const handleSelectPrompt = async (promptId: string) => {
-    if (isLimitReached && !user?.isPremium) {
-      toast({
-        title: "Daily Limit Reached",
-        description: `You've reached your daily limit of ${maxExercises} writing exercises. Upgrade to Premium for unlimited access.`,
-        variant: "destructive"
-      });
+    };
+    
+    fetchExercises();
+  }, [toast]);
+  
+  // Reset state when changing exercises
+  useEffect(() => {
+    setAnswer('');
+    setWordCount(0);
+    setIsSubmitted(false);
+    setFeedback('');
+    setScore(null);
+    setShowExample(false);
+  }, [currentExerciseIndex]);
+  
+  // Update word count when answer changes
+  useEffect(() => {
+    if (answer.trim() === '') {
+      setWordCount(0);
       return;
     }
     
-    setSelectedPromptId(promptId);
-    setUserText('');
-    setFeedback(null);
-    setActiveTab('writing');
+    const words = answer.trim().split(/\s+/);
+    setWordCount(words.length);
+  }, [answer]);
+  
+  const currentExercise = exercises[currentExerciseIndex];
+  
+  const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAnswer(e.target.value);
+  };
+  
+  const submitAnswer = async () => {
+    if (answer.trim() === '') return;
     
     try {
-      await incrementUsage('writingExercises');
-    } catch (err) {
-      console.error("Failed to increment usage:", err);
-    }
-  };
-
-  const handleBackToPrompts = () => {
-    if (userText.trim() && !feedback) {
-      if (confirm("You have unsaved work. Are you sure you want to leave?")) {
-        setSelectedPromptId(null);
-        setUserText('');
-        setFeedback(null);
-        setActiveTab('prompts');
-      }
-    } else {
-      setSelectedPromptId(null);
-      setUserText('');
-      setFeedback(null);
-      setActiveTab('prompts');
-    }
-  };
-
-  const handleAnalyzeText = async () => {
-    if (!selectedPromptId || !userText.trim()) return;
-    
-    setIsAnalyzing(true);
-    const selectedPrompt = prompts.find(p => p.id === selectedPromptId);
-    
-    try {
-      // In a real app, this would call an AI service via API
-      const result = await analyzeMockText(userText, selectedPrompt);
-      setFeedback(result);
+      // Simulate AI analysis with random score
+      // In a real app, you would send the text to a server for analysis
+      const randomScore = Math.floor(Math.random() * 41) + 60; // 60-100
+      setScore(randomScore);
       
-      toast({
-        title: "Analysis Complete",
-        description: `Your writing has been analyzed. Overall score: ${result.score}/100.`
-      });
+      // Generate feedback based on score
+      let feedbackText = '';
+      if (randomScore >= 90) {
+        feedbackText = 'Excellent work! Your writing demonstrates a strong command of Italian grammar and vocabulary. Keep up the good work!';
+      } else if (randomScore >= 80) {
+        feedbackText = 'Very good writing. You have a good grasp of Italian, with just a few minor errors. Keep practicing!';
+      } else if (randomScore >= 70) {
+        feedbackText = 'Good effort! Your meaning is clear, though there are some grammatical errors. Focus on verb conjugations and gender agreement.';
+      } else {
+        feedbackText = 'You\'re making progress! Try to use more varied vocabulary and pay attention to sentence structure. Keep practicing regular verbs.';
+      }
+      
+      setFeedback(feedbackText);
+      setIsSubmitted(true);
+      
+      // Track usage
+      incrementUsage('writingExercises');
+      
+      // Update user stats in database
+      updateUserStats(randomScore);
+      
     } catch (error) {
-      console.error('Error analyzing text:', error);
+      console.error('Error submitting answer:', error);
       toast({
-        title: "Analysis Failed",
-        description: "We couldn't analyze your text. Please try again.",
-        variant: "destructive"
+        title: 'Submission Failed',
+        description: 'Failed to analyze your writing. Please try again.',
+        variant: 'destructive'
       });
-    } finally {
-      setIsAnalyzing(false);
     }
   };
-
-  const handleSaveWriting = () => {
-    if (!selectedPromptId || !userText.trim()) return;
+  
+  const updateUserStats = async (scoreValue: number) => {
+    if (!user) return;
     
-    const selectedPrompt = prompts.find(p => p.id === selectedPromptId);
-    const newSavedWriting = {
-      id: Date.now().toString(),
-      promptId: selectedPromptId,
-      promptTitle: selectedPrompt?.title,
-      text: userText,
-      date: new Date().toISOString(),
-      feedback: feedback || null
-    };
-    
-    const updatedSavedWritings = [...savedWritings, newSavedWriting];
-    setSavedWritings(updatedSavedWritings);
-    
-    // Save to localStorage for demo purposes
-    localStorage.setItem('savedWritings', JSON.stringify(updatedSavedWritings));
-    
-    toast({
-      title: "Writing Saved",
-      description: "Your writing has been saved successfully."
-    });
-  };
-
-  const renderSelectedPrompt = () => {
-    if (!selectedPromptId) return null;
-    
-    const selectedPrompt = prompts.find(p => p.id === selectedPromptId);
-    if (!selectedPrompt) return null;
-    
-    return (
-      <>
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>{selectedPrompt.title}</CardTitle>
-                <CardDescription>{selectedPrompt.description}</CardDescription>
-              </div>
-              <Badge variant={selectedPrompt.level === 'beginner' ? 'outline' : (selectedPrompt.level === 'intermediate' ? 'secondary' : 'destructive')}>
-                {selectedPrompt.level.charAt(0).toUpperCase() + selectedPrompt.level.slice(1)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-medium mb-1">Instructions</h3>
-                <p className="text-muted-foreground">{selectedPrompt.prompt}</p>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Word count: {selectedPrompt.wordCount.min}-{selectedPrompt.wordCount.max}</span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Aim to write between {selectedPrompt.wordCount.min} and {selectedPrompt.wordCount.max} words</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    try {
+      // Update user stats
+      const { data: stats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
         
-        <div className="space-y-4">
-          <div className="flex justify-between items-end">
-            <Label htmlFor="user-text">Your Response</Label>
-            <span className="text-sm text-muted-foreground">
-              {userText.split(/\s+/).filter(Boolean).length} words
-            </span>
-          </div>
-          
-          <Textarea 
-            id="user-text"
-            value={userText}
-            onChange={(e) => setUserText(e.target.value)}
-            placeholder="Write your response here in Italian..."
-            className="min-h-[200px]"
-          />
-          
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setUserText('')}>
-              Clear
-            </Button>
-            <div className="space-x-2">
-              <Button 
-                variant="outline"
-                onClick={handleSaveWriting}
-                disabled={!userText.trim() || isAnalyzing}
-              >
-                <Save className="mr-2 h-4 w-4" /> Save
-              </Button>
-              <Button 
-                onClick={handleAnalyzeText}
-                disabled={!userText.trim() || isAnalyzing}
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Analyze
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        {feedback && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>Writing Feedback</CardTitle>
-              <CardDescription>
-                Analysis of your writing based on grammar, vocabulary, and structure
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium">Overall Score</h3>
-                  <span className="font-bold text-lg">{feedback.score}/100</span>
-                </div>
-                <Progress value={feedback.score} className="h-2" />
-              </div>
-              
-              {feedback.errors.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-medium flex items-center">
-                    <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                    Errors Found
-                  </h3>
-                  <ul className="space-y-1 text-sm">
-                    {feedback.errors.map((error: any, index: number) => (
-                      <li key={index} className="flex items-start">
-                        <span className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded text-amber-800 dark:text-amber-300 mr-2">
-                          {error.type}
-                        </span>
-                        {error.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h3 className="font-medium flex items-center">
-                    <Check className="h-4 w-4 mr-2 text-green-500" />
-                    Strengths
-                  </h3>
-                  <ul className="space-y-1 text-sm list-disc pl-5">
-                    {feedback.strengths.map((strength: string, index: number) => (
-                      <li key={index}>{strength}</li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="font-medium flex items-center">
-                    <Info className="h-4 w-4 mr-2 text-blue-500" />
-                    Areas for Improvement
-                  </h3>
-                  <ul className="space-y-1 text-sm list-disc pl-5">
-                    {feedback.improvements.map((improvement: string, index: number) => (
-                      <li key={index}>{improvement}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              
-              {feedback.suggestions.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-medium">Suggestions</h3>
-                  <ul className="space-y-1 text-sm">
-                    {feedback.suggestions.map((suggestion: any, index: number) => (
-                      <li key={index} className="text-muted-foreground">
-                        • {suggestion.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t pt-6">
-              <Button variant="outline" onClick={() => setFeedback(null)} className="w-full">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Revise and Resubmit
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
-      </>
-    );
+      if (statsError && statsError.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', statsError);
+        return;
+      }
+      
+      if (stats) {
+        // Update existing stats
+        await supabase
+          .from('user_stats')
+          .update({
+            questions_answered: stats.questions_answered + 1,
+            correct_answers: stats.correct_answers + (scoreValue >= 70 ? 1 : 0),
+            writing_score: stats.writing_score 
+              ? Math.round((stats.writing_score + scoreValue) / 2) 
+              : scoreValue,
+            last_activity_date: new Date().toISOString().split('T')[0]
+          })
+          .eq('user_id', user.id);
+      } else {
+        // Create new stats record
+        await supabase
+          .from('user_stats')
+          .insert({
+            user_id: user.id,
+            questions_answered: 1,
+            correct_answers: scoreValue >= 70 ? 1 : 0,
+            writing_score: scoreValue,
+            last_activity_date: new Date().toISOString().split('T')[0]
+          });
+      }
+    } catch (error) {
+      console.error('Error updating user stats:', error);
+    }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Italian Writing Practice</CardTitle>
-          <CardDescription>
-            Please log in to access writing exercises
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>You need to be logged in to use the writing exercises.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
+  const nextExercise = () => {
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+    } else {
+      // Cycle back to first exercise
+      setCurrentExerciseIndex(0);
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading exercises...</p>
+        <p className="mt-4 text-lg text-muted-foreground">Loading writing exercises...</p>
       </div>
     );
   }
-
-  const renderWritingTab = () => {
-    if (selectedPromptId) {
-      return renderSelectedPrompt();
-    }
-    
+  
+  if (!currentExercise) {
     return (
-      <div className="text-center p-6">
-        <p className="text-muted-foreground mb-4">
-          Please select a writing prompt to begin
+      <div className="text-center py-8">
+        <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">No exercises found</h3>
+        <p className="mt-2 text-muted-foreground">
+          We couldn't find any writing exercises. Please try again later.
         </p>
-        <Button onClick={() => setActiveTab('prompts')}>
-          Browse Prompts
-        </Button>
       </div>
     );
-  };
-
-  return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Italian Writing Practice</h1>
-          <p className="text-muted-foreground">
-            Improve your writing skills with guided exercises
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedPromptId ? (
-            <Button variant="outline" onClick={handleBackToPrompts}>
-              ← Back to Prompts
-            </Button>
-          ) : (
-            <>
-              <Badge variant="outline" className="px-3 py-1">
-                {currentUsage} / {maxExercises} Exercises
-              </Badge>
-              {!isOnline && !isOfflineReady && (
-                <Button onClick={enableOfflineAccess} disabled={!isOnline} variant="outline" size="sm">
-                  Enable Offline
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-      
-      {!selectedPromptId && isLimitReached && !user?.isPremium && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Daily Limit Reached</AlertTitle>
-          <AlertDescription>
-            You've reached your daily limit of {maxExercises} writing exercises. 
-            <Button variant="link" className="p-0 h-auto font-normal">
-              Upgrade to Premium
-            </Button> for unlimited access.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {selectedPromptId ? (
-        renderWritingTab()
-      ) : (
-        <Tabs defaultValue="prompts" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="prompts">Writing Prompts</TabsTrigger>
-            <TabsTrigger value="saved">Saved Writings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="prompts" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {prompts.map((prompt) => (
-                <Card key={prompt.id} className="h-full flex flex-col">
-                  <CardHeader>
-                    <div className="flex justify-between">
-                      <CardTitle>{prompt.title}</CardTitle>
-                      <Badge variant={prompt.level === 'beginner' ? 'outline' : (prompt.level === 'intermediate' ? 'secondary' : 'destructive')}>
-                        {prompt.level.charAt(0).toUpperCase() + prompt.level.slice(1)}
-                      </Badge>
-                    </div>
-                    <CardDescription>{prompt.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {prompt.prompt}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="mt-auto">
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleSelectPrompt(prompt.id)}
-                      disabled={isLimitReached && !user?.isPremium}
-                    >
-                      Start Writing
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+  }
+  
+  if (hasReachedLimit('writingExercises')) {
+    return (
+      <Card className="mx-auto max-w-2xl">
+        <CardHeader>
+          <CardTitle>Daily Limit Reached</CardTitle>
+          <CardDescription>
+            You've reached your daily limit of {getLimit('writingExercises')} writing exercises.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <div className="bg-muted p-4 rounded-lg mb-6">
+            <p className="text-muted-foreground">
+              You've completed {getUsage('writingExercises')}/{getLimit('writingExercises')} exercises today.
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Come back tomorrow for more exercises, or upgrade to Premium for unlimited access.
+            </p>
+          </div>
+          <Button>Upgrade to Premium</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (isSubmitted) {
+    return (
+      <Card className="mx-auto max-w-2xl">
+        <CardHeader>
+          <CardTitle>Feedback: {currentExercise.title}</CardTitle>
+          <CardDescription>
+            Your writing score
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6">
+            <div className="flex justify-between mb-2">
+              <span>Score</span>
+              <span>{score}%</span>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="saved">
-            {savedWritings.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-muted-foreground">
-                    You haven't saved any writings yet.
-                  </p>
-                  <Button onClick={() => setActiveTab('prompts')} className="mt-4">
-                    Browse Writing Prompts
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {savedWritings.map((writing) => (
-                  <Card key={writing.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between">
-                        <CardTitle>{writing.promptTitle}</CardTitle>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(writing.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-2">
-                      <p className="line-clamp-3">{writing.text}</p>
-                    </CardContent>
-                    <CardFooter className="pt-2">
-                      <div className="w-full flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">
-                          {writing.text.split(/\s+/).filter(Boolean).length} words
-                        </span>
-                        {writing.feedback && (
-                          <Badge>Score: {writing.feedback.score}/100</Badge>
-                        )}
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
+            <Progress value={score || 0} className="h-2 mb-4" />
+            
+            <div className="p-4 rounded-lg border bg-muted mb-6">
+              <p className="mb-2 font-medium">AI Feedback:</p>
+              <p>{feedback}</p>
+            </div>
+            
+            <div className="p-4 rounded-lg border">
+              <p className="mb-2 font-medium">Your Answer:</p>
+              <p className="whitespace-pre-wrap">{answer}</p>
+            </div>
+            
+            {currentExercise.exampleAnswer && (
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExample(!showExample)}
+                  className="w-full"
+                >
+                  {showExample ? 'Hide Example Answer' : 'Show Example Answer'}
+                </Button>
+                
+                {showExample && (
+                  <div className="p-4 rounded-lg border mt-3 bg-green-50 dark:bg-green-950">
+                    <p className="mb-2 font-medium">Example Answer:</p>
+                    <p className="whitespace-pre-wrap">{currentExercise.exampleAnswer}</p>
+                  </div>
+                )}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      )}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={nextExercise}>
+            Next Exercise
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Writing Practice</h1>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Edit className="h-5 w-5 mr-2 text-green-500" />
+            {currentExercise.title}
+          </CardTitle>
+          <CardDescription>
+            Write in Italian to practice your skills. {currentExercise.isPremium && '(Premium Content)'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-3">Your Task:</h3>
+            <p className="text-lg mb-4">{currentExercise.prompt}</p>
+            <p className="text-sm text-muted-foreground">
+              Write between {currentExercise.minWords} and {currentExercise.maxWords} words.
+            </p>
+          </div>
+          
+          {currentExercise.hints.length > 0 && (
+            <div className="bg-muted p-4 rounded-lg mb-6">
+              <h4 className="font-medium mb-2">Helpful Tips:</h4>
+              <ul className="space-y-1 list-disc pl-4">
+                {currentExercise.hints.map((hint, index) => (
+                  <li key={index}>{hint}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          <div>
+            <Textarea
+              placeholder="Write your answer in Italian..."
+              value={answer}
+              onChange={handleAnswerChange}
+              rows={8}
+              className="resize-none"
+            />
+            
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm">
+                Word count: {wordCount}
+              </span>
+              <span className={`text-sm ${
+                wordCount < currentExercise.minWords
+                  ? 'text-red-500'
+                  : wordCount > currentExercise.maxWords
+                  ? 'text-yellow-500'
+                  : 'text-green-500'
+              }`}>
+                {wordCount < currentExercise.minWords
+                  ? `Need ${currentExercise.minWords - wordCount} more words`
+                  : wordCount > currentExercise.maxWords
+                  ? `${wordCount - currentExercise.maxWords} words over limit`
+                  : 'Within word limit'}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="justify-between">
+          <Button
+            variant="outline"
+            onClick={nextExercise}
+          >
+            Skip Exercise
+          </Button>
+          
+          <Button
+            onClick={submitAnswer}
+            disabled={wordCount < currentExercise.minWords || answer.trim() === ''}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Submit for Feedback
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      <div className="bg-muted p-4 rounded-lg">
+        <div className="flex items-start">
+          <Sparkles className="h-5 w-5 text-yellow-500 mr-3 mt-1" />
+          <div>
+            <h3 className="font-medium mb-1">Writing Practice Tips</h3>
+            <p className="text-sm text-muted-foreground">
+              Try to use vocabulary and grammar you've already learned. Start with simple sentences and gradually make them more complex. 
+              Don't rely too much on translation tools - try to compose directly in Italian.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,204 +1,87 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import useOnlineStatus from './useOnlineStatus';
-import { supabase } from '@/lib/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
+import { FeatureLimits } from '@/types';
 
-export type FeatureLimitConfig = {
-  free: number;
-  premium: number;
+const FEATURE_LIMITS: FeatureLimits = {
+  flashcards: { free: 100, premium: 1000 },
+  dailyQuestions: { free: 5, premium: 20 },
+  listeningExercises: { free: 3, premium: 15 },
+  writingExercises: { free: 2, premium: 10 },
+  speakingExercises: { free: 2, premium: 10 }
 };
 
-export type FeatureLimits = {
-  flashcards: FeatureLimitConfig;
-  writingExercises: FeatureLimitConfig;
-  aiSuggestions: FeatureLimitConfig;
-  downloads: FeatureLimitConfig;
-  listeningExercises: FeatureLimitConfig;
-  readingExercises: FeatureLimitConfig;
-  speakingExercises: FeatureLimitConfig;
-};
+export function useFeatureLimits() {
+  const { user } = useAuth();
+  const [usageData, setUsageData] = useState<Record<string, number>>({});
 
-const DEFAULT_LIMITS: FeatureLimits = {
-  flashcards: { free: 50, premium: 1000 },
-  writingExercises: { free: 5, premium: 100 },
-  aiSuggestions: { free: 10, premium: 500 },
-  downloads: { free: 3, premium: 100 },
-  listeningExercises: { free: 5, premium: 100 },
-  readingExercises: { free: 5, premium: 100 },
-  speakingExercises: { free: 5, premium: 100 },
-};
+  // Local storage key for usage tracking
+  const storageKey = `usage_${user?.id || 'anonymous'}`;
 
-export type UsageMetrics = {
-  [key: string]: number;
-};
-
-/**
- * Hook for managing feature limitations based on subscription tier
- */
-export const useFeatureLimits = () => {
-  const { isPremium, isAuthenticated, user } = useAuth();
-  const isOnline = useOnlineStatus();
-  const [usageMetrics, setUsageMetrics] = useState<UsageMetrics>({});
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load usage metrics from local storage or API
   useEffect(() => {
-    const loadUsageMetrics = async () => {
+    // Load usage data from local storage
+    const storedUsage = localStorage.getItem(storageKey);
+    if (storedUsage) {
       try {
-        // If offline, get from localStorage only
-        if (!isOnline) {
-          const storedMetrics = localStorage.getItem('usageMetrics');
-          if (storedMetrics) {
-            setUsageMetrics(JSON.parse(storedMetrics));
-          }
-          setIsLoading(false);
-          return;
-        }
-
-        // If online and authenticated, get from API and update local storage
-        if (isAuthenticated && user) {
-          try {
-            // In a real implementation, we would fetch from API
-            // const response = await api.getUserMetrics();
-            // For now, attempt to fetch from Supabase
-            const today = new Date().toISOString().split('T')[0];
-            
-            const { data, error } = await supabase
-              .from('usage_tracking')
-              .select('question_type, count')
-              .eq('user_id', user.id)
-              .eq('date', today);
-            
-            if (error) throw error;
-            
-            const metricsFromDb = data?.reduce((acc: UsageMetrics, current) => {
-              acc[current.question_type] = current.count;
-              return acc;
-            }, {}) || {};
-            
-            setUsageMetrics(metricsFromDb);
-            localStorage.setItem('usageMetrics', JSON.stringify(metricsFromDb));
-          } catch (error) {
-            console.error('Error fetching usage metrics from API:', error);
-            
-            // Fallback to localStorage if API fails
-            const storedMetrics = localStorage.getItem('usageMetrics');
-            if (storedMetrics) {
-              setUsageMetrics(JSON.parse(storedMetrics));
-            }
-          }
-        } else {
-          // Not authenticated, use whatever is in localStorage
-          const storedMetrics = localStorage.getItem('usageMetrics');
-          if (storedMetrics) {
-            setUsageMetrics(JSON.parse(storedMetrics));
-          }
-        }
+        setUsageData(JSON.parse(storedUsage));
       } catch (error) {
-        console.error('Error loading usage metrics:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Failed to parse usage data:', error);
+        // Reset usage data if it's corrupted
+        localStorage.setItem(storageKey, JSON.stringify({}));
+        setUsageData({});
       }
-    };
-
-    loadUsageMetrics();
-  }, [isAuthenticated, isOnline, user]);
+    }
+  }, [storageKey]);
 
   /**
-   * Check if a feature has reached its limit
+   * Check if user has reached the limit for a specific feature
    */
-  const hasReachedLimit = (feature: keyof FeatureLimits): boolean => {
-    // Premium users have no limits
-    if (isPremium) return false;
+  const hasReachedLimit = (featureKey: keyof FeatureLimits): boolean => {
+    if (!user) return false; // No limits for unauthenticated users (they'll be redirected)
     
-    const limit = getLimit(feature);
-    const currentUsage = usageMetrics[feature] || 0;
+    const isPremium = user.isPremiumUser || false;
+    const currentUsage = usageData[featureKey] || 0;
+    const limit = isPremium ? FEATURE_LIMITS[featureKey].premium : FEATURE_LIMITS[featureKey].free;
+    
     return currentUsage >= limit;
   };
 
   /**
-   * Get the limit for a specific feature based on subscription
+   * Get the usage limit for a specific feature
    */
-  const getLimit = (feature: keyof FeatureLimits): number => {
-    const tier = isPremium ? 'premium' : 'free';
-    return DEFAULT_LIMITS[feature][tier];
+  const getLimit = (featureKey: keyof FeatureLimits): number => {
+    if (!user) return 0;
+    return user.isPremiumUser 
+      ? FEATURE_LIMITS[featureKey].premium 
+      : FEATURE_LIMITS[featureKey].free;
   };
 
   /**
-   * Get current usage for a feature
+   * Get current usage for a specific feature
    */
-  const getUsage = (feature: keyof FeatureLimits): number => {
-    return usageMetrics[feature] || 0;
+  const getUsage = (featureKey: string): number => {
+    return usageData[featureKey] || 0;
   };
 
   /**
-   * Increment usage for a feature
+   * Increment usage counter for a specific feature
    */
-  const incrementUsage = async (feature: keyof FeatureLimits): Promise<boolean> => {
-    try {
-      // Premium users don't increment usage
-      if (isPremium) return true;
-      
-      const currentUsage = usageMetrics[feature] || 0;
-      const newUsage = currentUsage + 1;
-      
-      // Update local state
-      setUsageMetrics(prev => ({
-        ...prev,
-        [feature]: newUsage
-      }));
-      
-      // Save to localStorage
-      localStorage.setItem('usageMetrics', JSON.stringify({
-        ...usageMetrics,
-        [feature]: newUsage
-      }));
-      
-      // If online and authenticated, update the server
-      if (isAuthenticated && isOnline && user) {
-        try {
-          // Get today's date in YYYY-MM-DD format
-          const today = new Date().toISOString().split('T')[0];
-          
-          // Use upsert to either insert or update
-          await supabase.from('usage_tracking').upsert(
-            {
-              user_id: user.id,
-              question_type: feature,
-              date: today,
-              count: newUsage
-            },
-            { onConflict: 'user_id,question_type,date' }
-          );
-        } catch (error) {
-          console.error(`Error updating server usage for ${feature}:`, error);
-          // Continue even if server update fails
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(`Error incrementing usage for ${feature}:`, error);
-      return false;
-    }
-  };
-
-  /**
-   * Reset usage for testing purposes
-   */
-  const resetUsage = (feature: keyof FeatureLimits) => {
-    setUsageMetrics(prev => ({
-      ...prev,
-      [feature]: 0
-    }));
-    
-    const updatedMetrics = {
-      ...usageMetrics,
-      [feature]: 0
+  const incrementUsage = (featureKey: string): void => {
+    const newUsage = { 
+      ...usageData, 
+      [featureKey]: (usageData[featureKey] || 0) + 1 
     };
     
-    localStorage.setItem('usageMetrics', JSON.stringify(updatedMetrics));
+    setUsageData(newUsage);
+    localStorage.setItem(storageKey, JSON.stringify(newUsage));
+  };
+
+  /**
+   * Reset usage counters (e.g., at the start of a new day)
+   */
+  const resetUsage = (): void => {
+    setUsageData({});
+    localStorage.setItem(storageKey, JSON.stringify({}));
   };
 
   return {
@@ -207,9 +90,8 @@ export const useFeatureLimits = () => {
     getUsage,
     incrementUsage,
     resetUsage,
-    isLoading,
-    DEFAULT_LIMITS
+    FEATURE_LIMITS
   };
-};
+}
 
 export default useFeatureLimits;

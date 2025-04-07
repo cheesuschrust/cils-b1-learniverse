@@ -1,7 +1,5 @@
 
 import { defineConfig } from 'cypress';
-import { addMatchImageSnapshotPlugin } from 'cypress-image-snapshot/plugin';
-import codeCoverageTask from '@cypress/code-coverage/task';
 
 export default defineConfig({
   e2e: {
@@ -11,18 +9,16 @@ export default defineConfig({
     viewportHeight: 720,
     video: false,
     screenshotOnRunFailure: true,
-    setupNodeEvents(on, config) {
-      // Implement node event listeners here
-      addMatchImageSnapshotPlugin(on, config);
-      codeCoverageTask(on, config);
+    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
+      // We'll add image snapshot and code coverage plugins when they're installed
       
       // Additional custom tasks can be added here
       on('task', {
-        log(message) {
+        log(message: string) {
           console.log(message);
           return null;
         },
-        table(message) {
+        table(message: unknown) {
           console.table(message);
           return null;
         }
@@ -38,8 +34,8 @@ export default defineConfig({
       bundler: 'vite',
     },
     specPattern: 'src/**/*.cy.{js,jsx,ts,tsx}',
-    setupNodeEvents(on, config) {
-      addMatchImageSnapshotPlugin(on, config);
+    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
+      // We'll add image snapshot plugin when it's installed
       return config;
     },
   },

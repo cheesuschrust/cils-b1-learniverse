@@ -1,36 +1,40 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, User, Key, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 
 // Validation schema
 const signupSchema = z.object({
-  firstName: z.string().min(2, { message: 'First name must be at least 2 characters' }),
-  lastName: z.string().min(2, { message: 'Last name must be at least 2 characters' }),
+  firstName: z.string().min(1, { message: 'First name is required' }),
+  lastName: z.string().min(1, { message: 'Last name is required' }),
   email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
-  confirmPassword: z.string().min(8, { message: 'Password must be at least 8 characters' })
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  password: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' }),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
   path: ['confirmPassword']
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
-const SignupPage = () => {
-  const { register, loginWithGoogle } = useAuth();
+const SignupPage: React.FC = () => {
+  const { register: registerUser } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignupFormValues>({
@@ -47,25 +51,31 @@ const SignupPage = () => {
   const onSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const result = await register(
+      const { success, error } = await registerUser(
         values.firstName,
         values.lastName,
         values.email,
         values.password
       );
-      
-      if (!result.success) {
+
+      if (success) {
+        toast({
+          title: 'Account created',
+          description: 'Your account has been created successfully.',
+        });
+        navigate('/dashboard');
+      } else {
         toast({
           title: 'Registration failed',
-          description: result.error || 'An unexpected error occurred',
-          variant: 'destructive'
+          description: error || 'An error occurred during registration.',
+          variant: 'destructive',
         });
       }
     } catch (error: any) {
       toast({
         title: 'Registration failed',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive'
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -76,7 +86,12 @@ const SignupPage = () => {
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+          <div className="flex items-center mb-2">
+            <Link to="/login" className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+            </Link>
+            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+          </div>
           <CardDescription>
             Enter your information to create an account
           </CardDescription>
@@ -90,7 +105,10 @@ const SignupPage = () => {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First name</FormLabel>
+                      <FormLabel className="flex items-center">
+                        <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                        First Name
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="John" {...field} disabled={isLoading} />
                       </FormControl>
@@ -98,12 +116,16 @@ const SignupPage = () => {
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={form.control}
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last name</FormLabel>
+                      <FormLabel className="flex items-center">
+                        <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                        Last Name
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Doe" {...field} disabled={isLoading} />
                       </FormControl>
@@ -118,9 +140,12 @@ const SignupPage = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="flex items-center">
+                      <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Email
+                    </FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john.doe@example.com" {...field} disabled={isLoading} />
+                      <Input placeholder="john.doe@example.com" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -132,29 +157,17 @@ const SignupPage = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="flex items-center">
+                      <Key className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Password
+                    </FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full px-3"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </Button>
-                      </div>
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,9 +179,17 @@ const SignupPage = () => {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
+                    <FormLabel className="flex items-center">
+                      <Key className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Confirm Password
+                    </FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,29 +203,11 @@ const SignupPage = () => {
                     Creating account...
                   </>
                 ) : (
-                  "Sign up"
+                  "Create account"
                 )}
               </Button>
             </form>
           </Form>
-          
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <Separator />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or</span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4">
-            <Button variant="outline" className="w-full" onClick={() => loginWithGoogle()} disabled={isLoading}>
-              <svg className="w-4 h-4 mr-2" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
-              </svg>
-              Continue with Google
-            </Button>
-          </div>
         </CardContent>
         <CardFooter>
           <p className="text-sm text-center w-full">

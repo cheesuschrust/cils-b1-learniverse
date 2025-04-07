@@ -10,266 +10,294 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      users: {
+      flashcard_sets: {
         Row: {
+          category: string | null
+          created_at: string
+          description: string | null
           id: string
-          email: string
+          is_favorite: boolean
+          is_public: boolean
+          language: string
+          name: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          language?: string
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          language?: string
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_sets_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      flashcards: {
+        Row: {
+          back: string
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          difficulty: number | null
+          english: string
+          front: string
+          id: string
+          italian: string
+          set_id: string | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          back: string
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: number | null
+          english: string
+          front: string
+          id?: string
+          italian: string
+          set_id?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          back?: string
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          difficulty?: number | null
+          english?: string
+          front?: string
+          id?: string
+          italian?: string
+          set_id?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_category_id_fkey"
+            columns: ["category_id"]
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_set_id_fkey"
+            columns: ["set_id"]
+            referencedRelation: "flashcard_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_flashcard_progress: {
+        Row: {
+          created_at: string | null
+          ease_factor: number | null
+          flashcard_id: string | null
+          id: string
+          interval_days: number | null
+          next_review: string | null
+          review_count: number | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ease_factor?: number | null
+          flashcard_id?: string | null
+          id?: string
+          interval_days?: number | null
+          next_review?: string | null
+          review_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ease_factor?: number | null
+          flashcard_id?: string | null
+          id?: string
+          interval_days?: number | null
+          next_review?: string | null
+          review_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_flashcard_progress_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flashcard_progress_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
           first_name: string | null
+          id: string
+          is_premium: boolean
+          last_login_at: string | null
           last_name: string | null
-          role: string
-          is_verified: boolean
-          created_at: string
-          last_login: string | null
-          last_active: string | null
-          subscription: string
-          preferred_language: string
-          status: string
-        }
-        Insert: {
-          id: string
-          email: string
-          first_name?: string | null
-          last_name?: string | null
-          role?: string
-          is_verified?: boolean
-          created_at?: string
-          last_login?: string | null
-          last_active?: string | null
-          subscription?: string
-          preferred_language?: string
-          status?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          first_name?: string | null
-          last_name?: string | null
-          role?: string
-          is_verified?: boolean
-          created_at?: string
-          last_login?: string | null
-          last_active?: string | null
-          subscription?: string
-          preferred_language?: string
-          status?: string
-        }
-      }
-      user_preferences: {
-        Row: {
-          id: string
-          user_id: string
-          theme: string
-          email_notifications: boolean
-          language: string
-          difficulty: string
-          font_size: number | null
-          notifications_enabled: boolean
-          animations_enabled: boolean
-          voice_speed: number | null
-          auto_play_audio: boolean
-          show_progress_metrics: boolean
-          ai_enabled: boolean
-          ai_model_size: string | null
-          ai_processing_on_device: boolean
-          confidence_score_visible: boolean
-          created_at: string
+          premium_until: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          theme?: string
-          email_notifications?: boolean
-          language?: string
-          difficulty?: string
-          font_size?: number | null
-          notifications_enabled?: boolean
-          animations_enabled?: boolean
-          voice_speed?: number | null
-          auto_play_audio?: boolean
-          show_progress_metrics?: boolean
-          ai_enabled?: boolean
-          ai_model_size?: string | null
-          ai_processing_on_device?: boolean
-          confidence_score_visible?: boolean
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id: string
+          is_premium?: boolean
+          last_login_at?: string | null
+          last_name?: string | null
+          premium_until?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          theme?: string
-          email_notifications?: boolean
-          language?: string
-          difficulty?: string
-          font_size?: number | null
-          notifications_enabled?: boolean
-          animations_enabled?: boolean
-          voice_speed?: number | null
-          auto_play_audio?: boolean
-          show_progress_metrics?: boolean
-          ai_enabled?: boolean
-          ai_model_size?: string | null
-          ai_processing_on_device?: boolean
-          confidence_score_visible?: boolean
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          is_premium?: boolean
+          last_login_at?: string | null
+          last_name?: string | null
+          premium_until?: string | null
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_id_fkey"
+            columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
-      user_metrics: {
+      user_stats: {
         Row: {
-          id: string
-          user_id: string
-          total_questions: number
           correct_answers: number
-          streak: number
-          created_at: string
+          id: string
+          last_activity_date: string | null
+          listening_score: number | null
+          questions_answered: number
+          reading_score: number | null
+          speaking_score: number | null
+          streak_days: number
           updated_at: string
+          user_id: string
+          writing_score: number | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          total_questions?: number
           correct_answers?: number
-          streak?: number
-          created_at?: string
+          id?: string
+          last_activity_date?: string | null
+          listening_score?: number | null
+          questions_answered?: number
+          reading_score?: number | null
+          speaking_score?: number | null
+          streak_days?: number
           updated_at?: string
+          user_id: string
+          writing_score?: number | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          total_questions?: number
           correct_answers?: number
-          streak?: number
-          created_at?: string
+          id?: string
+          last_activity_date?: string | null
+          listening_score?: number | null
+          questions_answered?: number
+          reading_score?: number | null
+          speaking_score?: number | null
+          streak_days?: number
           updated_at?: string
-        }
-      }
-      usage_tracking: {
-        Row: {
-          id: string
-          user_id: string
-          question_type: string
-          date: string
-          count: number
-          last_updated: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          question_type: string
-          date: string
-          count: number
-          last_updated: string
-        }
-        Update: {
-          id?: string
           user_id?: string
-          question_type?: string
-          date?: string
-          count?: number
-          last_updated?: string
+          writing_score?: number | null
         }
-      }
-      content: {
-        Row: {
-          id: string
-          title: string
-          description: string
-          content_type: string
-          difficulty: string
-          language: string
-          tags: string[] | null
-          created_at: string
-          updated_at: string
-          created_by: string
-          is_published: boolean
-          raw_content: string | null
-          file_url: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string
-          content_type: string
-          difficulty?: string
-          language?: string
-          tags?: string[] | null
-          created_at?: string
-          updated_at?: string
-          created_by: string
-          is_published?: boolean
-          raw_content?: string | null
-          file_url?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string
-          content_type?: string
-          difficulty?: string
-          language?: string
-          tags?: string[] | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string
-          is_published?: boolean
-          raw_content?: string | null
-          file_url?: string | null
-        }
-      }
-      questions: {
-        Row: {
-          id: string
-          content_id: string | null
-          question: string
-          question_type: string
-          options: Json | null
-          correct_answer: string
-          explanation: string | null
-          difficulty: string
-          tags: string[] | null
-          created_at: string
-          updated_at: string
-          created_by: string
-          language: string
-        }
-        Insert: {
-          id?: string
-          content_id?: string | null
-          question: string
-          question_type: string
-          options?: Json | null
-          correct_answer: string
-          explanation?: string | null
-          difficulty?: string
-          tags?: string[] | null
-          created_at?: string
-          updated_at?: string
-          created_by: string
-          language?: string
-        }
-        Update: {
-          id?: string
-          content_id?: string | null
-          question?: string
-          question_type?: string
-          options?: Json | null
-          correct_answer?: string
-          explanation?: string | null
-          difficulty?: string
-          tags?: string[] | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string
-          language?: string
-        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stats_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
-    Functions: {
+    Views: {
       [_ in never]: never
     }
+    Functions: {
+      is_premium_user: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+    }
     Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }

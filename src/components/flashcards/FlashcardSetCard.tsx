@@ -3,78 +3,88 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Star, Clock } from 'lucide-react';
+import { BookOpen, Star, Users, Clock, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { FlashcardSet } from '@/types';
+import { formatDate } from '@/lib/utils';
 
-interface FlashcardSetProps {
-  set: {
-    id: string;
-    name: string;
-    description: string;
-    cards?: any[];
-    dueCount?: number;
-    totalCards?: number;
-    isFavorite?: boolean;
-    lastStudied?: string;
-    category?: string;
-  };
+interface FlashcardSetCardProps {
+  set: FlashcardSet;
   onStudy: (setId: string) => void;
   isPublic?: boolean;
   showDueCount?: boolean;
 }
 
-const FlashcardSetCard: React.FC<FlashcardSetProps> = ({ 
-  set, 
+const FlashcardSetCard: React.FC<FlashcardSetCardProps> = ({
+  set,
   onStudy,
   isPublic = false,
   showDueCount = false
 }) => {
-  const cardCount = set.totalCards || set.cards?.length || 0;
-  
   return (
-    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
-      <CardHeader>
+    <Card className={cn(
+      "overflow-hidden transition-all duration-200 hover:shadow-md",
+      set.isFavorite && "border-yellow-300"
+    )}>
+      <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <CardTitle className="flex-1">{set.name}</CardTitle>
-          {set.isFavorite && <Star className="h-5 w-5 text-yellow-500 fill-yellow-400" />}
+          <CardTitle className="text-lg font-bold line-clamp-1">{set.name}</CardTitle>
+          {set.isFavorite && (
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+          )}
         </div>
-        <CardDescription>{set.description}</CardDescription>
-        
-        {set.category && (
-          <Badge variant="outline" className="mt-2">
-            {set.category}
-          </Badge>
-        )}
+        <CardDescription className="line-clamp-2">
+          {set.description || `Italian flashcards for ${set.category || 'learning'}`}
+        </CardDescription>
       </CardHeader>
       
-      <CardContent>
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+      <CardContent className="pb-2">
+        <div className="flex flex-wrap gap-1 mb-3">
+          <Badge variant="outline" className="text-xs">
+            {set.category || 'General'}
+          </Badge>
+          {set.tags?.map((tag, index) => (
+            <Badge key={index} variant="secondary" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
           <div className="flex items-center">
-            <BookOpen className="h-4 w-4 mr-1" /> 
-            <span>{cardCount} cards</span>
+            <BookOpen className="h-3 w-3 mr-1" />
+            <span>Italian</span>
           </div>
           
-          {showDueCount && set.dueCount && set.dueCount > 0 && (
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1 text-amber-500" />
-              <span className="text-amber-500 font-medium">{set.dueCount} due</span>
+          {showDueCount && set.dueCount && (
+            <div className="flex items-center text-orange-600">
+              <Clock className="h-3 w-3 mr-1" />
+              <span>{set.dueCount} due</span>
             </div>
           )}
           
-          {set.lastStudied && (
-            <div className="text-xs">
-              Last studied: {new Date(set.lastStudied).toLocaleDateString()}
+          {isPublic && (
+            <div className="flex items-center">
+              <Users className="h-3 w-3 mr-1" />
+              <span>Public</span>
             </div>
           )}
+          
+          <div className="flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            <span>{formatDate(set.createdAt)}</span>
+          </div>
         </div>
       </CardContent>
       
-      <CardFooter className="mt-auto">
+      <CardFooter className="pt-2">
         <Button 
-          variant="default" 
-          className="w-full" 
-          onClick={() => onStudy(set.id)}
+          onClick={() => onStudy(set.id)} 
+          className="w-full"
+          variant={set.isFavorite ? "default" : "secondary"}
         >
-          {isPublic ? "View Set" : "Study Now"}
+          Study Now
+          <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </CardFooter>
     </Card>

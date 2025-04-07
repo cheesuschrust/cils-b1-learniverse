@@ -1,438 +1,529 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import useOfflineCapability from '@/hooks/useOfflineCapability';
-import { Loader2, Play, Pause, VolumeUp, VolumeX, SkipForward, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { textToSpeech, stopSpeaking, pauseSpeaking, resumeSpeaking } from '@/utils/textToSpeech';
+import { PlayCircle, PauseCircle, SkipForward, RotateCcw, Volume2, CheckCircle2, XCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Mock exercises until we connect to the database
-const mockExercises = [
-  {
-    id: '1',
-    title: 'Basic Conversations',
-    description: 'Practice understanding common Italian conversations',
-    level: 'beginner',
-    audio: {
-      transcriptItalian: 'Ciao! Come stai? Mi chiamo Marco. Sono di Roma. E tu, come ti chiami e di dove sei?',
-      transcriptEnglish: 'Hello! How are you? My name is Marco. I\'m from Rome. And you, what\'s your name and where are you from?',
-    },
-    questions: [
-      {
-        id: 'q1',
-        question: 'What is the man\'s name?',
-        options: ['Marco', 'Mario', 'Matteo', 'Michele'],
-        correctAnswer: 'Marco'
-      },
-      {
-        id: 'q2',
-        question: 'Where is he from?',
-        options: ['Milan', 'Naples', 'Rome', 'Florence'],
-        correctAnswer: 'Rome'
-      },
-      {
-        id: 'q3',
-        question: 'What is he asking about?',
-        options: ['Your job', 'Your name and origin', 'Your family', 'Your age'],
-        correctAnswer: 'Your name and origin'
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Ordering at a Restaurant',
-    description: 'Learn how to understand restaurant conversations',
-    level: 'intermediate',
-    audio: {
-      transcriptItalian: 'Buonasera, vorrei prenotare un tavolo per due persone per domani sera alle otto, è possibile? E vorrei sapere se avete piatti vegetariani nel menu.',
-      transcriptEnglish: 'Good evening, I would like to reserve a table for two people for tomorrow evening at eight, is that possible? And I would like to know if you have vegetarian dishes on the menu.',
-    },
-    questions: [
-      {
-        id: 'q1',
-        question: 'What is the person trying to do?',
-        options: ['Order takeout', 'Reserve a table', 'Pay the bill', 'Complain about food'],
-        correctAnswer: 'Reserve a table'
-      },
-      {
-        id: 'q2',
-        question: 'How many people is the reservation for?',
-        options: ['One', 'Two', 'Three', 'Four'],
-        correctAnswer: 'Two'
-      },
-      {
-        id: 'q3',
-        question: 'What time is the reservation for?',
-        options: ['7:00', '7:30', '8:00', '8:30'],
-        correctAnswer: '8:00'
-      },
-      {
-        id: 'q4',
-        question: 'What special request does the person make?',
-        options: ['A quiet table', 'A table near the window', 'Information about vegetarian options', 'A birthday cake'],
-        correctAnswer: 'Information about vegetarian options'
-      }
-    ]
-  }
-];
+interface ListeningExercise {
+  id: string;
+  title: string;
+  audioUrl: string;
+  transcript: string;
+  questions: Array<{
+    id: string;
+    question: string;
+    options: Array<{
+      id: string;
+      text: string;
+    }>;
+    correctAnswer: string;
+  }>;
+  difficulty: string;
+  isPremium: boolean;
+}
 
 const ListeningModule: React.FC = () => {
-  const [exercises, setExercises] = useState<any[]>(mockExercises);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { isOnline, isOfflineReady, enableOfflineAccess } = useOfflineCapability('/listening');
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const isLimitReached = hasReachedLimit('listeningExercises');
-  const maxExercises = getLimit('listeningExercises');
-  const currentUsage = getUsage('listeningExercises');
-
+  const [exercises, setExercises] = useState<ListeningExercise[]>([]);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+  
+  // Load exercises from database
   useEffect(() => {
-    // In a real app, fetch exercises from the database
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // We'd normally fetch from API here
-    }, 1000);
-  }, []);
-
-  const handleStartExercise = async (index: number) => {
-    if (isLimitReached && !user?.isPremium) {
-      toast({
-        title: "Daily Limit Reached",
-        description: `You've reached your daily limit of ${maxExercises} listening exercises. Upgrade to Premium for unlimited access.`,
-        variant: "destructive"
-      });
-      return;
-    }
+    const fetchExercises = async () => {
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('learning_content')
+          .select('*')
+          .eq('content_type', 'listening')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          // Transform the data to match our interface
+          const transformedExercises: ListeningExercise[] = data.map(item => ({
+            id: item.id,
+            title: item.title,
+            audioUrl: item.content.audioUrl || '',
+            transcript: item.content.transcript || '',
+            questions: item.content.questions || [],
+            difficulty: item.difficulty || 'intermediate',
+            isPremium: item.premium || false
+          }));
+          
+          setExercises(transformedExercises);
+        } else {
+          // Load fallback exercise if no data available
+          const fallbackExercise: ListeningExercise = {
+            id: 'fallback',
+            title: 'At the Restaurant',
+            audioUrl: 'https://storage.googleapis.com/cils-learning/audio/restaurant_conversation.mp3',
+            transcript: 'Buongiorno, posso avere un tavolo per due persone? Certamente, seguitemi per favore. Grazie. Ecco il menu. Cosa desidera ordinare?',
+            questions: [
+              {
+                id: 'q1',
+                question: 'Where is the conversation taking place?',
+                options: [
+                  { id: 'a', text: 'At a hotel' },
+                  { id: 'b', text: 'At a restaurant' },
+                  { id: 'c', text: 'At a shop' },
+                  { id: 'd', text: 'At a train station' }
+                ],
+                correctAnswer: 'b'
+              },
+              {
+                id: 'q2',
+                question: 'How many people need a table?',
+                options: [
+                  { id: 'a', text: 'One person' },
+                  { id: 'b', text: 'Two people' },
+                  { id: 'c', text: 'Three people' },
+                  { id: 'd', text: 'Four people' }
+                ],
+                correctAnswer: 'b'
+              }
+            ],
+            difficulty: 'beginner',
+            isPremium: false
+          };
+          
+          setExercises([fallbackExercise]);
+        }
+      } catch (error) {
+        console.error('Error fetching listening exercises:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load listening exercises. Please try again later.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    setCurrentExerciseIndex(index);
+    fetchExercises();
+  }, [toast]);
+  
+  // Update audio playing state
+  useEffect(() => {
+    const audio = audioRef.current;
+    
+    if (!audio) return;
+    
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(100);
+    };
+    const handleTimeUpdate = () => {
+      const currentProgress = (audio.currentTime / audio.duration) * 100;
+      setProgress(currentProgress);
+    };
+    
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [currentExerciseIndex]);
+  
+  // Reset state when changing exercises
+  useEffect(() => {
+    setShowTranscript(false);
     setSelectedAnswers({});
-    setShowResults(false);
-    
-    // Reset score
+    setCurrentQuestionIndex(0);
+    setIsSubmitted(false);
+    setProgress(0);
     setScore({ correct: 0, total: 0 });
     
-    try {
-      await incrementUsage('listeningExercises');
-    } catch (err) {
-      console.error("Failed to increment usage:", err);
+    // Attempt to load audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.load();
     }
-  };
-
-  const handlePlayAudio = async () => {
-    if (!currentExerciseIndex && currentExerciseIndex !== 0) return;
-    
-    const exercise = exercises[currentExerciseIndex];
+  }, [currentExerciseIndex]);
+  
+  const currentExercise = exercises[currentExerciseIndex];
+  const currentQuestion = currentExercise?.questions[currentQuestionIndex];
+  
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
     
     if (isPlaying) {
-      stopSpeaking();
-      setIsPlaying(false);
-      return;
+      audio.pause();
+    } else {
+      audio.play();
     }
+  };
+  
+  const restartAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
     
-    setIsPlaying(true);
+    audio.currentTime = 0;
+    audio.play();
+  };
+  
+  const forward10Seconds = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+  };
+  
+  const handleAnswerSelect = (questionId: string, answerId: string) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionId]: answerId
+    }));
+  };
+  
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < currentExercise.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Calculate score
+      let correctAnswers = 0;
+      currentExercise.questions.forEach(question => {
+        if (selectedAnswers[question.id] === question.correctAnswer) {
+          correctAnswers++;
+        }
+      });
+      
+      setScore({
+        correct: correctAnswers,
+        total: currentExercise.questions.length
+      });
+      
+      setIsSubmitted(true);
+      
+      // Track usage
+      incrementUsage('listeningExercises');
+      
+      // Update user stats in database
+      updateUserStats(correctAnswers, currentExercise.questions.length);
+    }
+  };
+  
+  const updateUserStats = async (correct: number, total: number) => {
+    if (!user) return;
     
     try {
-      await textToSpeech(exercise.audio.transcriptItalian, {
-        language: 'it',
-        rate: playbackSpeed
-      });
-      setIsPlaying(false);
+      // Update user stats
+      const { data: stats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (statsError && statsError.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', statsError);
+        return;
+      }
+      
+      if (stats) {
+        // Update existing stats
+        await supabase
+          .from('user_stats')
+          .update({
+            questions_answered: stats.questions_answered + total,
+            correct_answers: stats.correct_answers + correct,
+            listening_score: stats.listening_score 
+              ? Math.round((stats.listening_score + (correct / total * 100)) / 2) 
+              : Math.round(correct / total * 100),
+            last_activity_date: new Date().toISOString().split('T')[0]
+          })
+          .eq('user_id', user.id);
+      } else {
+        // Create new stats record
+        await supabase
+          .from('user_stats')
+          .insert({
+            user_id: user.id,
+            questions_answered: total,
+            correct_answers: correct,
+            listening_score: Math.round(correct / total * 100),
+            last_activity_date: new Date().toISOString().split('T')[0]
+          });
+      }
     } catch (error) {
-      console.error('Error playing audio:', error);
-      setIsPlaying(false);
-      toast({
-        title: "Audio Error",
-        description: "Failed to play the audio. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Error updating user stats:', error);
     }
   };
-
-  const handleAnswerSelect = (questionId: string, answer: string) => {
-    setSelectedAnswers({
-      ...selectedAnswers,
-      [questionId]: answer
-    });
+  
+  const nextExercise = () => {
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+    } else {
+      // Cycle back to first exercise
+      setCurrentExerciseIndex(0);
+    }
   };
-
-  const handleSubmit = () => {
-    if (!currentExerciseIndex && currentExerciseIndex !== 0) return;
-    
-    const exercise = exercises[currentExerciseIndex];
-    const questions = exercise.questions;
-    
-    // Calculate score
-    let correctCount = 0;
-    questions.forEach(question => {
-      if (selectedAnswers[question.id] === question.correctAnswer) {
-        correctCount++;
-      }
-    });
-    
-    setScore({
-      correct: correctCount,
-      total: questions.length
-    });
-    
-    setShowResults(true);
-  };
-
-  const handleReset = () => {
-    setSelectedAnswers({});
-    setShowResults(false);
-  };
-
-  const handleBackToExercises = () => {
-    setCurrentExerciseIndex(null);
-    stopSpeaking();
-    setIsPlaying(false);
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Italian Listening Exercises</CardTitle>
-          <CardDescription>
-            Please log in to access listening exercises
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>You need to be logged in to use the listening exercises.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading exercises...</p>
+        <p className="mt-4 text-lg text-muted-foreground">Loading listening exercises...</p>
       </div>
     );
   }
-
-  if (currentExerciseIndex !== null) {
-    const exercise = exercises[currentExerciseIndex];
-    
+  
+  if (!currentExercise) {
     return (
-      <div className="container py-8">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={handleBackToExercises}>
-            ← Back to Exercises
-          </Button>
-          <Badge variant={exercise.level === 'beginner' ? 'outline' : (exercise.level === 'intermediate' ? 'secondary' : 'destructive')}>
-            {exercise.level.charAt(0).toUpperCase() + exercise.level.slice(1)}
-          </Badge>
-        </div>
-        
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>{exercise.title}</CardTitle>
-            <CardDescription>{exercise.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-muted p-4 rounded-md">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Listen to the conversation</h3>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handlePlayAudio}
-                    className="flex gap-2 items-center"
-                  >
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    {isPlaying ? 'Pause' : 'Play'}
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <VolumeUp className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Slider
-                    defaultValue={[1]}
-                    max={2}
-                    min={0.5}
-                    step={0.1}
-                    value={[playbackSpeed]}
-                    onValueChange={(value) => setPlaybackSpeed(value[0])}
-                  />
-                </div>
-                <span className="text-sm w-12 text-muted-foreground">
-                  {playbackSpeed}x
-                </span>
-              </div>
-              
-              {showResults && (
-                <div className="mt-4 p-3 bg-background rounded-md">
-                  <p className="font-medium mb-1">Transcript:</p>
-                  <p className="italic text-muted-foreground">{exercise.audio.transcriptItalian}</p>
-                  <p className="text-sm mt-2">{exercise.audio.transcriptEnglish}</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-6">
-              {exercise.questions.map((question, index) => (
-                <div key={question.id} className="space-y-3">
-                  <h3 className="font-medium">{index + 1}. {question.question}</h3>
-                  <RadioGroup 
-                    value={selectedAnswers[question.id] || ''}
-                    onValueChange={(value) => handleAnswerSelect(question.id, value)}
-                    className="space-y-2"
-                  >
-                    {question.options.map((option) => {
-                      const isCorrect = option === question.correctAnswer;
-                      const isSelected = selectedAnswers[question.id] === option;
-                      const showCorrect = showResults && isCorrect;
-                      const showIncorrect = showResults && isSelected && !isCorrect;
-                      
-                      return (
-                        <div 
-                          key={option} 
-                          className={`
-                            flex items-center rounded-md border p-3
-                            ${showCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : ''}
-                            ${showIncorrect ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''}
-                          `}
-                        >
-                          <RadioGroupItem 
-                            value={option} 
-                            id={`${question.id}-${option}`}
-                            disabled={showResults}
-                          />
-                          <Label 
-                            htmlFor={`${question.id}-${option}`}
-                            className="w-full ml-2 flex justify-between"
-                          >
-                            {option}
-                            {showCorrect && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                            {showIncorrect && <AlertCircle className="h-4 w-4 text-red-500" />}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </RadioGroup>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {showResults ? (
-              <>
-                <p className="font-medium">
-                  Score: {score.correct}/{score.total} ({Math.round((score.correct / score.total) * 100)}%)
-                </p>
-                <div className="space-x-2">
-                  <Button variant="outline" onClick={handleReset}>
-                    <RotateCcw className="h-4 w-4 mr-2" /> Try Again
-                  </Button>
-                  <Button onClick={handleBackToExercises}>
-                    Back to Exercises
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={handleReset}>
-                  Reset
-                </Button>
-                <Button onClick={handleSubmit} disabled={Object.keys(selectedAnswers).length < exercise.questions.length}>
-                  Submit Answers
-                </Button>
-              </>
-            )}
-          </CardFooter>
-        </Card>
+      <div className="text-center py-8">
+        <HelpCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">No exercises found</h3>
+        <p className="mt-2 text-muted-foreground">
+          We couldn't find any listening exercises. Please try again later.
+        </p>
       </div>
     );
   }
-
-  return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Italian Listening Exercises</h1>
-          <p className="text-muted-foreground">
-            Improve your comprehension by listening to native speakers
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="px-3 py-1">
-            {currentUsage} / {maxExercises} Exercises
-          </Badge>
-          {!isOnline && !isOfflineReady && (
-            <Button onClick={enableOfflineAccess} disabled={!isOnline} variant="outline" size="sm">
-              Enable Offline
+  
+  if (hasReachedLimit('listeningExercises')) {
+    return (
+      <Card className="mx-auto max-w-2xl">
+        <CardHeader>
+          <CardTitle>Daily Limit Reached</CardTitle>
+          <CardDescription>
+            You've reached your daily limit of {getLimit('listeningExercises')} listening exercises.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <div className="bg-muted p-4 rounded-lg mb-6">
+            <p className="text-muted-foreground">
+              You've completed {getUsage('listeningExercises')}/{getLimit('listeningExercises')} exercises today.
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Come back tomorrow for more exercises, or upgrade to Premium for unlimited access.
+            </p>
+          </div>
+          <Button>Upgrade to Premium</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (isSubmitted) {
+    return (
+      <Card className="mx-auto max-w-2xl">
+        <CardHeader>
+          <CardTitle>Results: {currentExercise.title}</CardTitle>
+          <CardDescription>
+            You scored {score.correct} out of {score.total}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6">
+            <div className="flex justify-between mb-2">
+              <span>Score</span>
+              <span>{Math.round((score.correct / score.total) * 100)}%</span>
+            </div>
+            <Progress value={(score.correct / score.total) * 100} />
+          </div>
+          
+          <div className="space-y-4">
+            {currentExercise.questions.map((question, index) => {
+              const isCorrect = selectedAnswers[question.id] === question.correctAnswer;
+              
+              return (
+                <div 
+                  key={question.id} 
+                  className={`p-4 rounded-lg border ${
+                    isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' : 
+                    'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                  }`}
+                >
+                  <div className="flex items-start">
+                    <div className="mr-3 mt-1">
+                      {isCorrect ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium mb-2">Question {index + 1}: {question.question}</p>
+                      <p className="text-sm mb-1">Your answer: {
+                        question.options.find(o => o.id === selectedAnswers[question.id])?.text || 'Not answered'
+                      }</p>
+                      {!isCorrect && (
+                        <p className="text-sm text-green-600 dark:text-green-400">
+                          Correct answer: {
+                            question.options.find(o => o.id === question.correctAnswer)?.text
+                          }
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {showTranscript ? (
+            <div className="mt-6 p-4 bg-muted rounded-lg">
+              <h3 className="font-medium mb-2">Transcript</h3>
+              <p className="text-sm">{currentExercise.transcript}</p>
+            </div>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="mt-6 w-full" 
+              onClick={() => setShowTranscript(true)}
+            >
+              Show Transcript
             </Button>
           )}
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={nextExercise}>
+            Next Exercise
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Listening Practice</h1>
       
-      {isLimitReached && !user?.isPremium && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Daily Limit Reached</AlertTitle>
-          <AlertDescription>
-            You've reached your daily limit of {maxExercises} listening exercises. 
-            <Button variant="link" className="p-0 h-auto font-normal">
-              Upgrade to Premium
-            </Button> for unlimited access.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {exercises.map((exercise, index) => (
-          <Card key={exercise.id} className="h-full flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between">
-                <CardTitle>{exercise.title}</CardTitle>
-                <Badge variant={exercise.level === 'beginner' ? 'outline' : (exercise.level === 'intermediate' ? 'secondary' : 'destructive')}>
-                  {exercise.level.charAt(0).toUpperCase() + exercise.level.slice(1)}
-                </Badge>
-              </div>
-              <CardDescription>{exercise.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {exercise.questions.length} comprehension questions
-              </p>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button 
-                className="w-full" 
-                onClick={() => handleStartExercise(index)}
-                disabled={isLimitReached && !user?.isPremium}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>{currentExercise.title}</CardTitle>
+          <CardDescription>
+            Listen to the audio and answer the questions. {currentExercise.isPremium && '(Premium Content)'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Audio player */}
+          <div className="mb-6">
+            <audio ref={audioRef} preload="metadata" className="hidden">
+              <source src={currentExercise.audioUrl} type="audio/mpeg" />
+              Your browser does not support the audio element.
+            </audio>
+            
+            <div className="mb-2">
+              <Progress value={progress} />
+            </div>
+            
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={restartAudio}
+                title="Restart"
               >
-                Start Exercise
+                <RotateCcw className="h-4 w-4" />
               </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+              
+              <Button
+                variant="default"
+                size="icon"
+                onClick={togglePlayPause}
+                className="h-12 w-12 rounded-full"
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? (
+                  <PauseCircle className="h-8 w-8" />
+                ) : (
+                  <PlayCircle className="h-8 w-8" />
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={forward10Seconds}
+                title="Forward 10 seconds"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Question */}
+          <div className="mt-8">
+            <h3 className="text-lg font-medium mb-4">
+              Question {currentQuestionIndex + 1} of {currentExercise.questions.length}: {currentQuestion.question}
+            </h3>
+            
+            <RadioGroup
+              value={selectedAnswers[currentQuestion.id] || ''}
+              onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value)}
+              className="space-y-4"
+            >
+              {currentQuestion.options.map(option => (
+                <div key={option.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option.id} id={`option-${option.id}`} />
+                  <Label htmlFor={`option-${option.id}`} className="flex-1 cursor-pointer py-2">
+                    {option.text}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        </CardContent>
+        <CardFooter className="justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setShowTranscript(!showTranscript)}
+            disabled={isSubmitted}
+          >
+            <Volume2 className="h-4 w-4 mr-2" />
+            {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
+          </Button>
+          
+          <Button
+            onClick={handleNextQuestion}
+            disabled={!selectedAnswers[currentQuestion.id]}
+          >
+            {currentQuestionIndex < currentExercise.questions.length - 1 ? 'Next Question' : 'Submit Answers'}
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {showTranscript && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Transcript</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{currentExercise.transcript}</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

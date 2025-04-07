@@ -1,92 +1,91 @@
 
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
-import { ModeToggle } from '@/components/ui/mode-toggle';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Menu } from 'lucide-react';
 
 const DashboardLayout: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const location = useLocation();
+
+  // Handle responsive layout
+  useEffect(() => {
+    const checkWindowSize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      } else if (!mobile && !isSidebarOpen) {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    checkWindowSize();
+    window.addEventListener('resize', checkWindowSize);
+    return () => window.removeEventListener('resize', checkWindowSize);
+  }, [isSidebarOpen]);
+
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="h-screen flex overflow-hidden bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <Sidebar className="hidden md:flex w-64 flex-shrink-0" />
-      
+      <div
+        className={`${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } fixed inset-y-0 left-0 transform lg:relative lg:translate-x-0 z-30 transition duration-200 ease-in-out`}
+      >
+        <Sidebar className="w-64 h-full" />
+      </div>
+
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top navigation */}
-        <header className="border-b bg-background z-10">
-          <div className="h-16 px-4 flex items-center justify-between">
-            {/* Mobile menu button */}
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+        {/* Mobile header */}
+        <header className="bg-white dark:bg-gray-800 shadow-sm lg:hidden">
+          <div className="py-4 px-4 flex items-center justify-between">
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+              <Menu className="h-6 w-6" />
             </Button>
-            
-            {/* Logo for mobile */}
-            <div className="md:hidden font-bold text-lg">CILS B1 Learniverse</div>
-            
-            {/* Right side items */}
-            <div className="flex items-center space-x-4">
-              <ModeToggle />
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.firstName} {user?.lastName}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/app/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/app/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <h1 className="text-lg font-medium">CILS B1 Cittadinanza</h1>
           </div>
         </header>
-        
-        {/* Main content area */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          <Outlet />
+
+        {/* Content area */}
+        <main className="flex-1 overflow-y-auto focus:outline-none">
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
+            <Outlet />
+          </div>
         </main>
       </div>
-      
-      <Toaster />
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
     </div>
   );
 };
