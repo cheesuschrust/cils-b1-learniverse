@@ -1,189 +1,192 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase-client';
+import { useToast } from '@/hooks/use-toast';
 
-interface FeatureLimits {
-  flashcards: number;
-  listeningExercises: number;
-  speakingExercises: number;
-  writingExercises: number;
-  readingExercises: number;
-  multipleChoice: number;
+export interface FeatureLimits {
+  flashcards: {
+    maxCards: number;
+    maxSets: number;
+    maxCardsPerDay: number;
+    currentUsage: number;
+  };
+  exercises: {
+    maxDailyLessons: number;
+    currentUsage: number;
+  };
+  premium: {
+    isPremium: boolean;
+    expiresAt: Date | null;
+  };
 }
 
-interface FeatureUsage {
-  flashcards: number;
-  listeningExercises: number;
-  speakingExercises: number;
-  writingExercises: number;
-  readingExercises: number;
-  multipleChoice: number;
-}
+// Default limits for free and premium users
+const DEFAULT_FREE_LIMITS: FeatureLimits = {
+  flashcards: {
+    maxCards: 100,
+    maxSets: 5,
+    maxCardsPerDay: 50,
+    currentUsage: 0
+  },
+  exercises: {
+    maxDailyLessons: 3,
+    currentUsage: 0
+  },
+  premium: {
+    isPremium: false,
+    expiresAt: null
+  }
+};
 
-export function useFeatureLimits() {
-  const { user } = useAuth();
-  const [limits, setLimits] = useState<FeatureLimits>({
-    flashcards: 20,
-    listeningExercises: 3,
-    speakingExercises: 3,
-    writingExercises: 3,
-    readingExercises: 5,
-    multipleChoice: 10,
-  });
-  
-  const [usage, setUsage] = useState<FeatureUsage>({
-    flashcards: 0,
-    listeningExercises: 0,
-    speakingExercises: 0,
-    writingExercises: 0,
-    readingExercises: 0,
-    multipleChoice: 0,
-  });
+const DEFAULT_PREMIUM_LIMITS: FeatureLimits = {
+  flashcards: {
+    maxCards: Infinity,
+    maxSets: Infinity,
+    maxCardsPerDay: Infinity,
+    currentUsage: 0
+  },
+  exercises: {
+    maxDailyLessons: Infinity,
+    currentUsage: 0
+  },
+  premium: {
+    isPremium: true,
+    expiresAt: null
+  }
+};
 
-  const [isPremium, setIsPremium] = useState(false);
+export const useFeatureLimits = () => {
+  const { user, isAuthenticated } = useAuth();
+  const [limits, setLimits] = useState<FeatureLimits>(DEFAULT_FREE_LIMITS);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) {
+    const fetchUserLimits = async () => {
+      if (!isAuthenticated || !user) {
+        setLimits(DEFAULT_FREE_LIMITS);
         setIsLoading(false);
         return;
       }
 
       try {
-        // Check if user is premium
-        const { data: userProfile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('is_premium')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching premium status:', profileError);
-        } else {
-          setIsPremium(userProfile?.is_premium || false);
-        }
-
-        // Get today's usage
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        const { data: usageData, error: usageError } = await supabase
-          .from('usage_tracking')
-          .select('feature, count')
-          .eq('user_id', user.id)
-          .eq('date', today);
-
-        if (usageError) {
-          console.error('Error fetching usage data:', usageError);
-        } else if (usageData) {
-          const newUsage = { ...usage };
+        // In a real app, this would fetch from Supabase
+        // For now, we'll simulate a fetch with a delay
+        setTimeout(() => {
+          // Example: check if user has premium based on user object
+          const isPremium = user.role === 'premium' || false;
           
-          usageData.forEach((item) => {
-            if (item.feature in newUsage) {
-              newUsage[item.feature as keyof FeatureUsage] = item.count;
-            }
-          });
+          if (isPremium) {
+            setLimits({
+              ...DEFAULT_PREMIUM_LIMITS,
+              premium: {
+                isPremium: true,
+                // Set expiration date to 30 days from now for demo purposes
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              }
+            });
+          } else {
+            // For free users, we would normally fetch their current usage
+            // Here we'll just use default limits with random usage
+            setLimits({
+              ...DEFAULT_FREE_LIMITS,
+              flashcards: {
+                ...DEFAULT_FREE_LIMITS.flashcards,
+                currentUsage: Math.floor(Math.random() * 30) // Random number for demo
+              },
+              exercises: {
+                ...DEFAULT_FREE_LIMITS.exercises,
+                currentUsage: Math.floor(Math.random() * 2) // Random number for demo
+              }
+            });
+          }
           
-          setUsage(newUsage);
-        }
+          setIsLoading(false);
+        }, 500);
       } catch (error) {
-        console.error('Error in useFeatureLimits:', error);
-      } finally {
+        console.error("Error fetching feature limits:", error);
+        setLimits(DEFAULT_FREE_LIMITS);
         setIsLoading(false);
       }
     };
 
-    fetchUserData();
-  }, [user]);
+    fetchUserLimits();
+  }, [isAuthenticated, user]);
 
-  const incrementUsage = async (feature: keyof FeatureUsage) => {
-    if (!user) return false;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      // First, check if there's an existing record
-      const { data: existingData, error: existingError } = await supabase
-        .from('usage_tracking')
-        .select('id, count')
-        .eq('user_id', user.id)
-        .eq('feature', feature)
-        .eq('date', today)
-        .single();
-      
-      if (existingError && existingError.code !== 'PGRST116') {
-        // PGRST116 means no rows returned, which is fine
-        console.error('Error checking usage tracking:', existingError);
-        return false;
-      }
-      
-      if (existingData) {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('usage_tracking')
-          .update({ count: existingData.count + 1 })
-          .eq('id', existingData.id);
-        
-        if (updateError) {
-          console.error('Error updating usage:', updateError);
-          return false;
-        }
-        
-        // Update local state
-        setUsage(prev => ({
-          ...prev,
-          [feature]: prev[feature] + 1
-        }));
-      } else {
-        // Create new record
-        const { error: insertError } = await supabase
-          .from('usage_tracking')
-          .insert({
-            user_id: user.id,
-            feature,
-            count: 1,
-            date: today
-          });
-        
-        if (insertError) {
-          console.error('Error inserting usage:', insertError);
-          return false;
-        }
-        
-        // Update local state
-        setUsage(prev => ({
-          ...prev,
-          [feature]: 1
-        }));
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error incrementing usage:', error);
+  const incrementUsage = (feature: 'flashcards' | 'exercises', amount: number = 1) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to use this feature.",
+        variant: "destructive"
+      });
       return false;
     }
+
+    setLimits(prev => {
+      const currentUsage = prev[feature].currentUsage;
+      const maxUsage = feature === 'flashcards' ? prev.flashcards.maxCardsPerDay : prev.exercises.maxDailyLessons;
+      
+      // Check if adding amount would exceed limits
+      if (currentUsage + amount > maxUsage && !prev.premium.isPremium) {
+        toast({
+          title: "Usage Limit Reached",
+          description: `You've reached your daily ${feature} limit. Upgrade to Premium for unlimited usage.`,
+          variant: "destructive"
+        });
+        return prev;
+      }
+      
+      // If user is within limits or is premium, increment usage
+      return {
+        ...prev,
+        [feature]: {
+          ...prev[feature],
+          currentUsage: prev.premium.isPremium ? currentUsage : currentUsage + amount
+        }
+      };
+    });
+    
+    return true;
   };
 
-  const hasReachedLimit = (feature: keyof FeatureUsage): boolean => {
-    if (isPremium) return false; // Premium users have no limits
-    return usage[feature] >= limits[feature];
+  const checkCanUseFeature = (feature: 'flashcards' | 'exercises', amount: number = 1): boolean => {
+    if (!isAuthenticated) {
+      return false;
+    }
+    
+    if (limits.premium.isPremium) {
+      return true;
+    }
+    
+    const currentUsage = limits[feature].currentUsage;
+    const maxUsage = feature === 'flashcards' ? limits.flashcards.maxCardsPerDay : limits.exercises.maxDailyLessons;
+    
+    return currentUsage + amount <= maxUsage;
   };
 
-  const getLimit = (feature: keyof FeatureLimits): number => {
-    return isPremium ? Infinity : limits[feature];
-  };
-
-  const getUsage = (feature: keyof FeatureUsage): number => {
-    return usage[feature];
+  const resetDailyUsage = () => {
+    setLimits(prev => ({
+      ...prev,
+      flashcards: {
+        ...prev.flashcards,
+        currentUsage: 0
+      },
+      exercises: {
+        ...prev.exercises,
+        currentUsage: 0
+      }
+    }));
   };
 
   return {
-    hasReachedLimit,
-    getLimit,
-    getUsage,
-    incrementUsage,
-    isPremium,
+    limits,
     isLoading,
+    incrementUsage,
+    checkCanUseFeature,
+    resetDailyUsage,
+    isPremium: limits.premium.isPremium
   };
-}
+};
+
+export default useFeatureLimits;

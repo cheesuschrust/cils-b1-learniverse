@@ -1,385 +1,337 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useRef, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import Spinner from '@/components/ui/spinner';
-import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/lib/supabase-client';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { CheckCircle, Timer, Send, RefreshCw, Lightbulb } from 'lucide-react';
 
-interface WritingExercise {
+interface WritingPrompt {
   id: string;
   title: string;
+  description: string;
   prompt: string;
-  examples?: string[];
-  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
-  timeEstimate: number; // in minutes
-  points: number;
-  wordLimit?: number;
-  criteria?: string[];
+  wordLimit: number;
+  suggestedTime: number; // in minutes
+  exampleResponse?: string;
+  category: string;
+  tips?: string[];
 }
 
+// Sample data - in a real app, this would come from Supabase
+const samplePrompt: WritingPrompt = {
+  id: "1",
+  title: "La Mia Città Preferita",
+  description: "Write about your favorite city in Italy or in your home country.",
+  prompt: "Descrivi la tua città preferita. Perché ti piace? Cosa puoi fare lì? Quali sono i luoghi più interessanti da visitare?",
+  difficulty: "intermediate",
+  wordLimit: 150,
+  suggestedTime: 15,
+  category: "Travel",
+  tips: [
+    "Use different adjectives to describe the city",
+    "Write about specific locations in the city",
+    "Include some information about the history or culture",
+    "Explain what makes this city special to you"
+  ],
+  exampleResponse: "La mia città preferita è Firenze. Mi piace molto perché è una città piena di storia e arte. A Firenze, puoi visitare molti musei famosi come gli Uffizi e la Galleria dell'Accademia, dove si trova il David di Michelangelo. Il centro storico è bellissimo, con la sua cattedrale Santa Maria del Fiore e il famoso Ponte Vecchio. Mi piace camminare lungo l'Arno, specialmente al tramonto quando la luce è magica. La cucina toscana è anche deliziosa – la bistecca alla fiorentina è il mio piatto preferito! Firenze è speciale per me perché ho studiato italiano lì per tre mesi e ho incontrato amici da tutto il mondo."
+};
+
 const WritingModule: React.FC = () => {
-  const [exercises, setExercises] = useState<WritingExercise[]>([]);
-  const [selectedExercise, setSelectedExercise] = useState<WritingExercise | null>(null);
-  const [userResponse, setUserResponse] = useState<string>('');
-  const [submitted, setSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('exercises');
-  const [writingProgress, setWritingProgress] = useState(0);
-  const [wordCount, setWordCount] = useState(0);
+  const [prompt, setPrompt] = useState<WritingPrompt>(samplePrompt);
+  const [response, setResponse] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(prompt.suggestedTime * 60); // convert to seconds
+  const [timerActive, setTimerActive] = useState(false);
+  const [showExample, setShowExample] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { hasReachedLimit, getLimit, incrementUsage } = useFeatureLimits();
-
+  
   useEffect(() => {
-    const fetchExercises = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Using Supabase client to fetch writing exercises
-        const { data, error } = await supabase
-          .from('learning_content')
-          .select('*')
-          .eq('content_type', 'writing')
-          .order('difficulty', { ascending: true });
-          
-        if (error) throw error;
-        
-        // Transform data to match our WritingExercise interface
-        const transformedData: WritingExercise[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          prompt: item.content.prompt,
-          examples: item.content.examples || [],
-          level: item.content.level || 'B1',
-          difficulty: item.difficulty || 'intermediate',
-          timeEstimate: item.content.timeEstimate || 20,
-          points: item.content.points || 10,
-          wordLimit: item.content.wordLimit || 150,
-          criteria: item.content.criteria || []
-        }));
-        
-        setExercises(transformedData);
-        
-        // Fetch user progress for the writing module
-        if (user) {
-          const { data: progressData, error: progressError } = await supabase
-            .from('user_progress')
-            .select('progress_percentage')
-            .eq('user_id', user.id)
-            .eq('content_type', 'writing')
-            .single();
-            
-          if (!progressError && progressData) {
-            setWritingProgress(progressData.progress_percentage);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching writing exercises:', error);
-        toast({
-          title: "Error loading exercises",
-          description: "Failed to load writing exercises. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchExercises();
-  }, [user, toast]);
-
-  const handleSelectExercise = (exercise: WritingExercise) => {
-    if (hasReachedLimit('writingExercises')) {
+    // Update word count whenever response changes
+    setWordCount(response.trim() ? response.trim().split(/\s+/).length : 0);
+  }, [response]);
+  
+  useEffect(() => {
+    // Timer logic
+    let interval: NodeJS.Timeout;
+    
+    if (timerActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
       toast({
-        title: "Daily limit reached",
-        description: `You've reached your daily limit of ${getLimit('writingExercises')} writing exercises. Upgrade to premium for unlimited access.`,
-        variant: "destructive",
+        title: "Time's Up!",
+        description: "The suggested time has ended, but you can still complete your response.",
+      });
+    }
+    
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft, toast]);
+  
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+  
+  const startTimer = () => {
+    setTimerActive(true);
+    // Focus on textarea when timer starts
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+  
+  const stopTimer = () => {
+    setTimerActive(false);
+  };
+  
+  const resetTimer = () => {
+    setTimeLeft(prompt.suggestedTime * 60);
+    setTimerActive(false);
+  };
+  
+  const handleResponseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isSubmitted) return;
+    setResponse(e.target.value);
+  };
+  
+  const handleSubmit = () => {
+    if (response.trim().length === 0) {
+      toast({
+        title: "Empty Response",
+        description: "Please write something before submitting.",
+        variant: "destructive"
       });
       return;
     }
     
-    setSelectedExercise(exercise);
-    setUserResponse('');
-    setSubmitted(false);
+    setIsSubmitted(true);
+    stopTimer();
+    
+    // Generate mock feedback (in a real app, this would call an API)
+    generateFeedback();
+    
+    toast({
+      title: "Response Submitted",
+      description: "Your writing has been submitted for feedback.",
+    });
+  };
+  
+  const generateFeedback = () => {
+    // In a real app, this would come from an API
+    // For now, we'll generate some mock feedback
+    setTimeout(() => {
+      const mockFeedback = `
+Your writing shows a good understanding of Italian vocabulary related to describing places. You've used some appropriate adjectives and connected your ideas well.
+
+Grammar:
+- Pay attention to gender agreement with adjectives
+- Make sure to use the correct prepositions with locations
+
+Vocabulary:
+- You've used appropriate vocabulary for this topic
+- Try to incorporate more varied descriptive terms
+
+Structure:
+- Good opening and explanation of why you like the place
+- Consider adding more about personal experiences
+
+Keep practicing and expanding your vocabulary!`;
+      
+      setFeedback(mockFeedback);
+    }, 1500);
+  };
+  
+  const handleStartNew = () => {
+    setResponse("");
+    setIsSubmitted(false);
     setFeedback(null);
-    setActiveTab('exercise');
-    incrementUsage('writingExercises');
-  };
-
-  const handleResponseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setUserResponse(text);
+    resetTimer();
+    setShowExample(false);
     
-    // Count words
-    const words = text.trim().split(/\s+/);
-    setWordCount(text.trim().length > 0 ? words.length : 0);
+    // In a real app, this would fetch a new prompt
+    toast({
+      title: "Coming Soon",
+      description: "More writing prompts will be available soon!",
+    });
   };
-
-  const handleSubmit = async () => {
-    if (!selectedExercise) return;
-    
-    setSubmitted(true);
-    
-    try {
-      // In a real implementation, this would send the response to an AI service
-      // for evaluation and feedback
-      
-      // Simulate AI feedback with a timeout
-      setTimeout(() => {
-        const simulatedFeedback = `
-          Your response shows good understanding of the topic. 
-          
-          Strengths:
-          - Clear structure
-          - Good vocabulary usage
-          - Relevant points
-          
-          Areas to improve:
-          - Watch out for agreement errors
-          - Consider using more connectors
-          - Add more specific examples
-          
-          Overall score: B1 level achieved
-        `;
-        
-        setFeedback(simulatedFeedback);
-      }, 1500);
-      
-      // Update user progress
-      if (user) {
-        try {
-          const { data: existingProgress, error: fetchError } = await supabase
-            .from('user_progress')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('content_id', selectedExercise.id)
-            .single();
-            
-          const progressData = {
-            user_id: user.id,
-            content_id: selectedExercise.id,
-            content_type: 'writing',
-            score: 75, // Simulated score, in a real implementation would come from AI evaluation
-            completed: true,
-            answers: [userResponse],
-            progress_percentage: 75
-          };
-          
-          if (fetchError || !existingProgress) {
-            // Create new progress entry
-            await supabase
-              .from('user_progress')
-              .insert([progressData]);
-          } else {
-            // Update existing progress if the new score is better
-            if (75 > existingProgress.score) {
-              await supabase
-                .from('user_progress')
-                .update(progressData)
-                .eq('id', existingProgress.id);
-            }
-          }
-          
-          // Update overall writing progress
-          const { data: allProgress, error: allProgressError } = await supabase
-            .from('user_progress')
-            .select('score')
-            .eq('user_id', user.id)
-            .eq('content_type', 'writing');
-            
-          if (!allProgressError && allProgress && allProgress.length > 0) {
-            const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
-            setWritingProgress(averageScore);
-            
-            await supabase
-              .from('user_stats')
-              .update({ writing_score: averageScore })
-              .eq('user_id', user.id);
-          }
-        } catch (error) {
-          console.error('Error updating progress:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error submitting writing response:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit your writing response. Please try again.",
-        variant: "destructive",
-      });
-    }
+  
+  const toggleShowExample = () => {
+    setShowExample(!showExample);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
+  
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Writing Practice</h1>
-          <p className="text-muted-foreground">Improve your Italian writing skills</p>
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Overall progress:</span>
-            <span className="text-sm font-bold">{Math.round(writingProgress)}%</span>
+    <div className="container mx-auto py-8 space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{prompt.title}</CardTitle>
+              <CardDescription>
+                {prompt.category} - {prompt.difficulty.charAt(0).toUpperCase() + prompt.difficulty.slice(1)} Level
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="capitalize">
+              {prompt.difficulty}
+            </Badge>
           </div>
-          <Progress value={writingProgress} className="w-40 h-2" />
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="exercises">Exercises</TabsTrigger>
-          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="exercises" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exercises.length > 0 ? (
-              exercises.map((exercise) => (
-                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Level: {exercise.level}</span>
-                      <span>{exercise.timeEstimate} min</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="line-clamp-2 text-sm mb-4">{exercise.prompt.substring(0, 100)}...</p>
-                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-10">
-                <p className="text-muted-foreground">No writing exercises available.</p>
-              </div>
-            )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="bg-muted p-4 rounded-md">
+            <h3 className="font-medium mb-2">Writing Prompt:</h3>
+            <p>{prompt.description}</p>
+            <p className="mt-2 font-medium">{prompt.prompt}</p>
           </div>
           
-          <div className="border-t border-border pt-4 mt-8">
-            <h2 className="text-xl font-bold mb-4">Writing Progress</h2>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span>Overall Writing Skill</span>
-                <div className="flex items-center gap-2">
-                  <Progress value={writingProgress} className="w-40 h-2" />
-                  <span className="min-w-[40px] text-right">{Math.round(writingProgress)}%</span>
-                </div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <span className="text-sm font-medium mr-2">Word Limit:</span>
+                <Badge variant={wordCount > prompt.wordLimit ? "destructive" : "outline"}>
+                  {wordCount} / {prompt.wordLimit}
+                </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Complete more exercises to improve your writing skills and track your progress toward CILS B1 proficiency.
-              </p>
+              
+              <div className="flex items-center">
+                <span className="text-sm font-medium mr-2">Time:</span>
+                <Badge 
+                  variant={timerActive ? "default" : "outline"}
+                  className="flex items-center"
+                >
+                  <Timer className="h-3 w-3 mr-1" />
+                  {formatTime(timeLeft)}
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              {!timerActive ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={startTimer}
+                  disabled={isSubmitted}
+                >
+                  Start Timer
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={stopTimer}
+                  disabled={isSubmitted}
+                >
+                  Pause Timer
+                </Button>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={resetTimer}
+                disabled={isSubmitted}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
             </div>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="exercise">
-          {selectedExercise && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{selectedExercise.title}</CardTitle>
-                  <div className="flex gap-2 text-sm text-muted-foreground">
-                    <span>Level: {selectedExercise.level}</span>
-                    <span>•</span>
-                    <span>{selectedExercise.timeEstimate} minutes</span>
-                    <span>•</span>
-                    <span>Word limit: {selectedExercise.wordLimit}</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="p-4 bg-muted/50 rounded-md">
-                    <p className="whitespace-pre-line">{selectedExercise.prompt}</p>
-                  </div>
-                  
-                  {selectedExercise.examples && selectedExercise.examples.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-md font-medium">Examples:</h3>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {selectedExercise.examples.map((example, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">{example}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {selectedExercise.criteria && selectedExercise.criteria.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-md font-medium">Evaluation Criteria:</h3>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {selectedExercise.criteria.map((criterion, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">{criterion}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-md font-medium">Your Response:</h3>
-                      <span className={`text-sm ${wordCount > (selectedExercise.wordLimit || 0) ? 'text-red-500' : 'text-muted-foreground'}`}>
-                        {wordCount} / {selectedExercise.wordLimit} words
-                      </span>
-                    </div>
-                    <Textarea 
-                      value={userResponse}
-                      onChange={handleResponseChange}
-                      placeholder="Write your response here in Italian..."
-                      className="min-h-[200px]"
-                      disabled={submitted}
-                    />
-                  </div>
-                  
-                  {!submitted ? (
-                    <Button 
-                      onClick={handleSubmit}
-                      disabled={userResponse.trim().length < 10}
-                      className="mt-4"
-                    >
-                      Submit Response
-                    </Button>
-                  ) : feedback ? (
-                    <div className="p-4 bg-accent rounded-md">
-                      <h3 className="text-lg font-medium mb-2">Feedback</h3>
-                      <div className="whitespace-pre-line text-sm mb-4">{feedback}</div>
-                      <Button 
-                        onClick={() => {
-                          setActiveTab('exercises');
-                          setSelectedExercise(null);
-                        }}
-                      >
-                        Back to Exercises
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-center p-4">
-                      <Spinner />
-                      <span className="ml-2">Analyzing your response...</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          
+          {prompt.tips && (
+            <div className="bg-muted/50 p-4 rounded-md border border-dashed">
+              <h3 className="font-medium flex items-center mb-2">
+                <Lightbulb className="h-4 w-4 mr-2 text-amber-500" />
+                Writing Tips:
+              </h3>
+              <ul className="text-sm space-y-1 list-disc pl-5">
+                {prompt.tips.map((tip, index) => (
+                  <li key={index}>{tip}</li>
+                ))}
+              </ul>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+          
+          <div className="space-y-2">
+            <Textarea
+              ref={textareaRef}
+              placeholder="Write your response in Italian..."
+              className="min-h-[200px] resize-y"
+              value={response}
+              onChange={handleResponseChange}
+              disabled={isSubmitted}
+            />
+            
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Write in Italian</span>
+              <span className={wordCount > prompt.wordLimit ? "text-red-500" : ""}>
+                {wordCount} / {prompt.wordLimit} words
+              </span>
+            </div>
+          </div>
+          
+          {prompt.exampleResponse && (
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleShowExample}
+                className="text-sm"
+              >
+                {showExample ? "Hide Example Response" : "Show Example Response"}
+              </Button>
+              
+              {showExample && (
+                <div className="mt-2 bg-muted/30 p-4 rounded-md border border-dashed">
+                  <h3 className="font-medium mb-2">Example Response:</h3>
+                  <p className="text-sm italic">{prompt.exampleResponse}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {feedback && (
+            <div className="bg-primary/10 p-4 rounded-md border border-primary/20">
+              <h3 className="font-medium flex items-center mb-2">
+                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                Feedback on Your Writing:
+              </h3>
+              <div className="text-sm whitespace-pre-line">
+                {feedback}
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="border-t pt-4 flex justify-between">
+          {!isSubmitted ? (
+            <Button
+              variant="default"
+              onClick={handleSubmit}
+              disabled={response.trim().length === 0}
+              className="ml-auto"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Submit
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              onClick={handleStartNew}
+              className="ml-auto"
+            >
+              Start New Writing Exercise
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 };

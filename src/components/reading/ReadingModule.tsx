@@ -1,350 +1,353 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import Spinner from '@/components/ui/spinner';
-import { useFeatureLimits } from '@/hooks/useFeatureLimits';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/lib/supabase-client';
+import { useToast } from '@/hooks/use-toast';
+import { BookOpen, CornerDownRight, Check, X } from 'lucide-react';
+
+interface Question {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+}
 
 interface ReadingExercise {
   id: string;
   title: string;
   content: string;
-  questions: {
-    id: string;
-    text: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
-  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
-  timeEstimate: number; // in minutes
-  points: number;
+  category: string;
+  questions: Question[];
+  vocabulary?: {
+    word: string;
+    definition: string;
+    example?: string;
+  }[];
 }
 
-const ReadingModule: React.FC = () => {
-  const [exercises, setExercises] = useState<ReadingExercise[]>([]);
-  const [selectedExercise, setSelectedExercise] = useState<ReadingExercise | null>(null);
-  const [userAnswers, setUserAnswers] = useState<number[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('exercises');
-  const [readingProgress, setReadingProgress] = useState(0);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
+// Sample data - in a real app, this would come from Supabase
+const sampleExercise: ReadingExercise = {
+  id: "1",
+  title: "La Vita in Italia",
+  content: `L'Italia è un paese con una ricca storia e cultura. Situata nel cuore del Mediterraneo, l'Italia ha influenzato profondamente la civiltà occidentale. La sua capitale, Roma, è stata il centro dell'Impero Romano, uno dei più grandi imperi del mondo antico.
 
-  useEffect(() => {
-    const fetchExercises = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Using Supabase client to fetch reading exercises
-        const { data, error } = await supabase
-          .from('learning_content')
-          .select('*')
-          .eq('content_type', 'reading')
-          .order('difficulty', { ascending: true });
-          
-        if (error) throw error;
-        
-        // Simulate transformation if your data structure is different
-        const transformedData: ReadingExercise[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          content: item.content.text,
-          questions: item.content.questions,
-          level: item.content.level || 'B1',
-          difficulty: item.difficulty || 'intermediate',
-          timeEstimate: item.content.timeEstimate || 15,
-          points: item.content.points || 10
-        }));
-        
-        setExercises(transformedData);
-        
-        // Fetch user progress for the reading module
-        if (user) {
-          const { data: progressData, error: progressError } = await supabase
-            .from('user_progress')
-            .select('progress_percentage')
-            .eq('user_id', user.id)
-            .eq('content_type', 'reading')
-            .single();
-            
-          if (!progressError && progressData) {
-            setReadingProgress(progressData.progress_percentage);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching reading exercises:', error);
-        toast({
-          title: "Error loading exercises",
-          description: "Failed to load reading exercises. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+Gli italiani sono noti per il loro amore per il buon cibo, l'arte, la famiglia e la socialità. La cucina italiana è famosa in tutto il mondo, con piatti come la pasta, la pizza e il gelato che sono diventati popolari a livello internazionale.
 
-    fetchExercises();
-  }, [user, toast]);
+L'Italia è anche conosciuta per i suoi numerosi siti storici e artistici. Il Colosseo a Roma, la Torre di Pisa e il Duomo di Milano sono solo alcuni dei monumenti più famosi. Inoltre, l'Italia è la patria di artisti leggendari come Leonardo da Vinci, Michelangelo e Raffaello.
 
-  const handleSelectExercise = (exercise: ReadingExercise) => {
-    if (hasReachedLimit('readingExercises')) {
-      toast({
-        title: "Daily limit reached",
-        description: `You've reached your daily limit of ${getLimit('readingExercises')} reading exercises. Upgrade to premium for unlimited access.`,
-        variant: "destructive",
-      });
-      return;
+Oggi, l'Italia è una repubblica democratica e membro dell'Unione Europea. Nonostante le sfide economiche, il paese mantiene un alto standard di vita e continua ad essere una meta turistica molto popolare.`,
+  difficulty: "intermediate",
+  category: "Culture",
+  questions: [
+    {
+      id: "q1",
+      text: "Qual è la capitale dell'Italia?",
+      options: ["Milano", "Firenze", "Roma", "Venezia"],
+      correctAnswer: "Roma"
+    },
+    {
+      id: "q2",
+      text: "Per cosa sono conosciuti gli italiani secondo il testo?",
+      options: [
+        "Solo per la loro cucina",
+        "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità",
+        "Per la loro influenza politica nel Mediterraneo",
+        "Per i loro monumenti"
+      ],
+      correctAnswer: "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità"
+    },
+    {
+      id: "q3",
+      text: "Quale dei seguenti NON è menzionato come un famoso artista italiano?",
+      options: ["Leonardo da Vinci", "Michelangelo", "Raffaello", "Donatello"],
+      correctAnswer: "Donatello"
+    },
+    {
+      id: "q4",
+      text: "Cosa è l'Italia oggi secondo il testo?",
+      options: [
+        "Una monarchia costituzionale",
+        "Un impero",
+        "Una repubblica democratica e membro dell'UE",
+        "Un paese sottosviluppato"
+      ],
+      correctAnswer: "Una repubblica democratica e membro dell'UE"
     }
-    
-    setSelectedExercise(exercise);
-    setUserAnswers(new Array(exercise.questions.length).fill(-1));
-    setSubmitted(false);
-    setScore(0);
-    setActiveTab('exercise');
-    incrementUsage('readingExercises');
+  ],
+  vocabulary: [
+    {
+      word: "ricca",
+      definition: "wealthy, rich",
+      example: "Una famiglia ricca = A wealthy family"
+    },
+    {
+      word: "situata",
+      definition: "located, situated",
+      example: "La casa è situata vicino al mare = The house is located near the sea"
+    },
+    {
+      word: "influenzato",
+      definition: "influenced",
+      example: "Il suo stile è influenzato dall'arte classica = His style is influenced by classical art"
+    },
+    {
+      word: "sfide",
+      definition: "challenges",
+      example: "Affronta molte sfide nel suo lavoro = He faces many challenges in his job"
+    }
+  ]
+};
+
+const ReadingModule: React.FC = () => {
+  const [currentExercise, setCurrentExercise] = useState<ReadingExercise>(sampleExercise);
+  const [showQuestions, setShowQuestions] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [highlightedWord, setHighlightedWord] = useState<string | null>(null);
+  
+  const { toast } = useToast();
+
+  const handleStartQuiz = () => {
+    setShowQuestions(true);
   };
 
-  const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
-    if (submitted) return;
+  const handleAnswerSelect = (questionId: string, answer: string) => {
+    if (isSubmitted) return;
     
-    const newAnswers = [...userAnswers];
-    newAnswers[questionIndex] = optionIndex;
-    setUserAnswers(newAnswers);
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
   };
 
-  const handleSubmit = async () => {
-    if (!selectedExercise) return;
+  const handleSubmit = () => {
+    if (isSubmitted) return;
     
-    // Calculate score
     let correctCount = 0;
-    userAnswers.forEach((answer, index) => {
-      if (selectedExercise.questions[index] && answer === selectedExercise.questions[index].correctAnswer) {
+    currentExercise.questions.forEach(question => {
+      if (selectedAnswers[question.id] === question.correctAnswer) {
         correctCount++;
       }
     });
     
-    const calculatedScore = Math.round((correctCount / selectedExercise.questions.length) * 100);
-    setScore(calculatedScore);
-    setSubmitted(true);
+    const newScore = Math.round((correctCount / currentExercise.questions.length) * 100);
+    setScore(newScore);
+    setIsSubmitted(true);
     
-    // Update user progress
-    if (user) {
-      try {
-        const { data: existingProgress, error: fetchError } = await supabase
-          .from('user_progress')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('content_id', selectedExercise.id)
-          .single();
-          
-        const progressData = {
-          user_id: user.id,
-          content_id: selectedExercise.id,
-          content_type: 'reading',
-          score: calculatedScore,
-          completed: true,
-          answers: userAnswers,
-          progress_percentage: calculatedScore
-        };
-        
-        if (fetchError || !existingProgress) {
-          // Create new progress entry
-          await supabase
-            .from('user_progress')
-            .insert([progressData]);
-        } else {
-          // Update existing progress if the new score is better
-          if (calculatedScore > existingProgress.score) {
-            await supabase
-              .from('user_progress')
-              .update(progressData)
-              .eq('id', existingProgress.id);
-          }
-        }
-        
-        // Update overall reading progress
-        const { data: allProgress, error: allProgressError } = await supabase
-          .from('user_progress')
-          .select('score')
-          .eq('user_id', user.id)
-          .eq('content_type', 'reading');
-          
-        if (!allProgressError && allProgress && allProgress.length > 0) {
-          const averageScore = allProgress.reduce((sum, item) => sum + item.score, 0) / allProgress.length;
-          setReadingProgress(averageScore);
-          
-          await supabase
-            .from('user_stats')
-            .update({ reading_score: averageScore })
-            .eq('user_id', user.id);
-        }
-      } catch (error) {
-        console.error('Error updating progress:', error);
-      }
+    toast({
+      title: "Reading Comprehension Completed!",
+      description: `Your score: ${newScore}%`,
+      variant: newScore >= 70 ? "default" : "destructive"
+    });
+  };
+
+  const handleWordClick = (word: string) => {
+    // Strip punctuation from the clicked word
+    const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
+    
+    // Find the vocabulary item for this word if it exists
+    const vocabularyItem = currentExercise.vocabulary?.find(
+      item => item.word.toLowerCase() === cleanWord
+    );
+    
+    if (vocabularyItem) {
+      setHighlightedWord(vocabularyItem.word);
+    } else {
+      setHighlightedWord(null);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  const handleNext = () => {
+    // In a real app, this would load the next exercise
+    toast({
+      title: "Coming Soon",
+      description: "More reading exercises will be available soon!",
+    });
+  };
 
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Reading Practice</h1>
-          <p className="text-muted-foreground">Improve your Italian reading comprehension skills</p>
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Overall progress:</span>
-            <span className="text-sm font-bold">{Math.round(readingProgress)}%</span>
-          </div>
-          <Progress value={readingProgress} className="w-40 h-2" />
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="exercises">Exercises</TabsTrigger>
-          <TabsTrigger value="exercise" disabled={!selectedExercise}>Current Exercise</TabsTrigger>
-        </TabsList>
+  // Process the text to make words clickable
+  const processText = () => {
+    const paragraphs = currentExercise.content.split('\n\n');
+    
+    return paragraphs.map((paragraph, pIndex) => {
+      const words = paragraph.split(' ');
+      
+      const processedWords = words.map((word, wIndex) => {
+        // Check if this word (without punctuation) is in our vocabulary list
+        const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
+        const isVocabWord = currentExercise.vocabulary?.some(
+          item => item.word.toLowerCase() === cleanWord
+        );
         
-        <TabsContent value="exercises" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exercises.length > 0 ? (
-              exercises.map((exercise) => (
-                <Card key={exercise.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{exercise.title}</CardTitle>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Level: {exercise.level}</span>
-                      <span>{exercise.timeEstimate} min</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="line-clamp-2 text-sm mb-4">{exercise.content.substring(0, 100)}...</p>
-                    <Button onClick={() => handleSelectExercise(exercise)}>Start Exercise</Button>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-10">
-                <p className="text-muted-foreground">No reading exercises available.</p>
-              </div>
+        return (
+          <span 
+            key={`${pIndex}-${wIndex}`}
+            className={`${isVocabWord ? 'cursor-pointer hover:text-primary underline decoration-dotted underline-offset-4' : ''}`}
+            onClick={() => isVocabWord && handleWordClick(cleanWord)}
+          >
+            {word}{' '}
+          </span>
+        );
+      });
+      
+      return (
+        <p key={pIndex} className="mb-4">
+          {processedWords}
+        </p>
+      );
+    });
+  };
+
+  const VocabularyDefinition = () => {
+    if (!highlightedWord) return null;
+    
+    const vocab = currentExercise.vocabulary?.find(
+      item => item.word.toLowerCase() === highlightedWord.toLowerCase()
+    );
+    
+    if (!vocab) return null;
+    
+    return (
+      <div className="bg-primary/10 p-4 rounded-md border border-primary/20 mt-4">
+        <div className="flex items-start space-x-2">
+          <CornerDownRight className="h-5 w-5 text-primary mt-1" />
+          <div>
+            <h4 className="font-medium text-primary">{vocab.word}</h4>
+            <p className="text-sm">{vocab.definition}</p>
+            {vocab.example && (
+              <p className="text-xs text-muted-foreground mt-1 italic">{vocab.example}</p>
             )}
           </div>
-          
-          <div className="border-t border-border pt-4 mt-8">
-            <h2 className="text-xl font-bold mb-4">Reading Progress</h2>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span>Overall Reading Skill</span>
-                <div className="flex items-center gap-2">
-                  <Progress value={readingProgress} className="w-40 h-2" />
-                  <span className="min-w-[40px] text-right">{Math.round(readingProgress)}%</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="container mx-auto py-8 space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{currentExercise.title}</CardTitle>
+              <CardDescription>
+                {currentExercise.category} - {currentExercise.difficulty.charAt(0).toUpperCase() + currentExercise.difficulty.slice(1)} Level
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="capitalize">
+              {currentExercise.difficulty}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!showQuestions ? (
+            <div className="space-y-4">
+              <div className="bg-muted p-6 rounded-md">
+                <div className="prose prose-sm max-w-none">
+                  {processText()}
+                </div>
+                
+                {VocabularyDefinition()}
+                
+                <div className="flex justify-center mt-6">
+                  <Button onClick={handleStartQuiz} className="mt-4">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Start Comprehension Questions
+                  </Button>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Complete more exercises to improve your reading skills and track your progress toward CILS B1 proficiency.
-              </p>
+              
+              {currentExercise.vocabulary && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-medium mb-2">Vocabulary Help</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Click on the underlined words in the text to see their definitions.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="exercise">
-          {selectedExercise && (
+          ) : (
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{selectedExercise.title}</CardTitle>
-                  <div className="flex gap-2 text-sm text-muted-foreground">
-                    <span>Level: {selectedExercise.level}</span>
-                    <span>•</span>
-                    <span>{selectedExercise.timeEstimate} minutes</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="p-4 bg-muted/50 rounded-md">
-                    <p className="whitespace-pre-line">{selectedExercise.content}</p>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-medium">Answer the following questions:</h3>
-                    
-                    {selectedExercise.questions.map((question, qIndex) => (
-                      <div key={question.id} className="space-y-3">
-                        <h4 className="font-medium">{qIndex + 1}. {question.text}</h4>
-                        <div className="space-y-2">
-                          {question.options.map((option, oIndex) => (
-                            <div 
-                              key={oIndex}
-                              className={`p-3 border rounded-md cursor-pointer ${
-                                userAnswers[qIndex] === oIndex 
-                                  ? 'border-primary bg-primary/10' 
-                                  : 'border-border hover:border-primary/50'
-                              } ${
-                                submitted && oIndex === question.correctAnswer
-                                  ? 'bg-green-100 dark:bg-green-900/30 border-green-500'
-                                  : submitted && userAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer
-                                    ? 'bg-red-100 dark:bg-red-900/30 border-red-500'
-                                    : ''
-                              }`}
-                              onClick={() => handleAnswerSelect(qIndex, oIndex)}
-                            >
-                              {option}
-                              {submitted && oIndex === question.correctAnswer && (
-                                <span className="ml-2 text-green-600 dark:text-green-400">✓</span>
-                              )}
-                            </div>
-                          ))}
+              <h3 className="text-lg font-medium">Comprehension Questions</h3>
+              
+              {currentExercise.questions.map((question, index) => (
+                <div key={question.id} className="space-y-3">
+                  <h4 className="font-medium">
+                    {index + 1}. {question.text}
+                  </h4>
+                  <div className="space-y-2">
+                    {question.options.map((option) => (
+                      <div 
+                        key={option}
+                        className={`p-3 rounded-md border cursor-pointer transition-colors ${
+                          selectedAnswers[question.id] === option 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'hover:bg-muted'
+                        } ${
+                          isSubmitted && option === question.correctAnswer
+                            ? 'bg-green-100 border-green-500'
+                            : isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer
+                              ? 'bg-red-100 border-red-500'
+                              : ''
+                        }`}
+                        onClick={() => handleAnswerSelect(question.id, option)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option}</span>
+                          {isSubmitted && option === question.correctAnswer && (
+                            <Check className="h-5 w-5 text-green-600" />
+                          )}
+                          {isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer && (
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
-                  
-                  {!submitted ? (
-                    <Button 
-                      onClick={handleSubmit}
-                      disabled={userAnswers.some(a => a === -1)}
-                      className="mt-4"
-                    >
-                      Submit Answers
-                    </Button>
-                  ) : (
-                    <div className="p-4 bg-accent rounded-md">
-                      <h3 className="text-lg font-medium mb-2">Results</h3>
-                      <p className="text-xl font-bold mb-2">Your score: {score}%</p>
-                      <Progress value={score} className="mb-4 h-2" />
-                      <Button 
-                        onClick={() => {
-                          setActiveTab('exercises');
-                          setSelectedExercise(null);
-                        }}
-                      >
-                        Back to Exercises
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </div>
+              ))}
+              
+              <div className="flex justify-between pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQuestions(false)}
+                >
+                  Back to Reading
+                </Button>
+                
+                {!isSubmitted ? (
+                  <Button 
+                    variant="default" 
+                    onClick={handleSubmit}
+                    disabled={Object.keys(selectedAnswers).length !== currentExercise.questions.length}
+                  >
+                    Submit Answers
+                  </Button>
+                ) : (
+                  <Button variant="default" onClick={handleNext}>
+                    Next Exercise
+                  </Button>
+                )}
+              </div>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+        {isSubmitted && (
+          <CardFooter className="border-t pt-4">
+            <div className="w-full space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Your Score:</span>
+                <span className={`font-bold ${score >= 70 ? 'text-green-600' : 'text-red-600'}`}>{score}%</span>
+              </div>
+              <Progress value={score} className="h-2" />
+            </div>
+          </CardFooter>
+        )}
+      </Card>
     </div>
   );
 };
