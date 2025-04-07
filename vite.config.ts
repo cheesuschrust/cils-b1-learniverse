@@ -3,10 +3,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';  
 import * as path from 'path';  
 
-export default defineConfig(({ mode }) => ({  
-  plugins: [  
-    react(),  
-    // Removed the componentTagger() as it was causing issues with Vite 6
+export default defineConfig({
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+    }),
   ],
   
   // Server Configuration  
