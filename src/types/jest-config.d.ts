@@ -1,5 +1,5 @@
 
-declare module 'jest' {
+declare module "jest" {
   export interface Config {
     preset?: string;
     testEnvironment?: string;
@@ -20,5 +20,17 @@ declare module 'jest' {
     resetModules?: boolean;
     watchPlugins?: string[];
     maxWorkers?: string;
+  }
+}
+
+declare module "ts-jest" {
+  export function pathsToModuleNameMapper(
+    paths: Record<string, string[]>,
+    options: { prefix: string }
+  ): Record<string, string>;
+  
+  export interface InitialOptionsTsJest {
+    tsconfig?: string;
+    isolatedModules?: boolean;
   }
 }

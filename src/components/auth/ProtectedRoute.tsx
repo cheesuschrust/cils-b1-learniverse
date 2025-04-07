@@ -1,34 +1,27 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import { Spinner } from '@/components/ui/spinner';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAdmin?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requireAdmin = false
-}) => {
-  const { isLoading, isAuthenticated, userRole } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Spinner size="lg" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (requireAdmin && userRole !== 'admin') {
-    return <Navigate to="/" replace />;
+    // Redirect to login page with a return URL
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

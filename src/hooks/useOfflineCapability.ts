@@ -1,58 +1,75 @@
 
 import { useState, useEffect } from 'react';
-import { useOnlineStatus } from './useOnlineStatus';
-import { registerOfflineAccessibleRoute, isRouteOfflineAccessible } from '@/serviceWorkerRegistration';
 
-/**
- * Hook to manage offline capabilities for learning modules
- */
-export function useOfflineCapability(modulePath: string) {
-  const isOnline = useOnlineStatus();
+export function useOfflineCapability(featurePath: string) {
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [isOfflineReady, setIsOfflineReady] = useState<boolean>(false);
-  const [isCaching, setIsCaching] = useState<boolean>(false);
+  
+  // Local storage key for tracking offline-enabled features
+  const storageKey = 'offline_enabled_features';
 
-  // Check if this route is available offline
+  // Check if feature is already enabled for offline use
   useEffect(() => {
-    const checkOfflineAvailability = () => {
-      const isAvailable = isRouteOfflineAccessible(modulePath);
-      setIsOfflineReady(isAvailable);
+    const enabledFeatures = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    setIsOfflineReady(enabledFeatures.includes(featurePath));
+    
+    // Set up online/offline event listeners
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
+  }, [featurePath, storageKey]);
+  
+  /**
+   * Enable offline access for a specific feature
+   */
+  const enableOfflineAccess = () => {
+    if (!isOnline) return false; // Can't enable offline mode while offline
     
-    checkOfflineAvailability();
-    
-    // If online, register this route as accessible offline
-    if (isOnline) {
-      registerOfflineAccessibleRoute(modulePath);
-      setIsOfflineReady(true);
-    }
-  }, [isOnline, modulePath]);
-
-  // Function to enable offline access for this module
-  const enableOfflineAccess = async () => {
-    if (isOnline) {
-      setIsCaching(true);
+    try {
+      const enabledFeatures = JSON.parse(localStorage.getItem(storageKey) || '[]');
       
-      try {
-        // Register the route for offline access
-        registerOfflineAccessibleRoute(modulePath);
-        
-        // Small delay to simulate caching process
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        setIsOfflineReady(true);
-      } catch (error) {
-        console.error('Error enabling offline access:', error);
-      } finally {
-        setIsCaching(false);
+      if (!enabledFeatures.includes(featurePath)) {
+        enabledFeatures.push(featurePath);
+        localStorage.setItem(storageKey, JSON.stringify(enabledFeatures));
       }
+      
+      setIsOfflineReady(true);
+      return true;
+    } catch (error) {
+      console.error('Failed to enable offline access:', error);
+      return false;
     }
   };
-
+  
+  /**
+   * Disable offline access for a specific feature
+   */
+  const disableOfflineAccess = () => {
+    try {
+      const enabledFeatures = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const updatedFeatures = enabledFeatures.filter((path: string) => path !== featurePath);
+      
+      localStorage.setItem(storageKey, JSON.stringify(updatedFeatures));
+      setIsOfflineReady(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to disable offline access:', error);
+      return false;
+    }
+  };
+  
   return {
     isOnline,
     isOfflineReady,
-    isCaching,
-    enableOfflineAccess
+    enableOfflineAccess,
+    disableOfflineAccess
   };
 }
 

@@ -1,201 +1,278 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
 import { useFlashcards } from '@/contexts/FlashcardsContext';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Plus, Loader2, X, Tag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+// Validation schema
+const formSchema = z.object({
+  name: z.string().min(1, "Set name is required").max(100, "Name is too long"),
+  description: z.string().max(500, "Description is too long").optional(),
+  category: z.string().optional(),
+  isPublic: z.boolean().default(false),
+  isFavorite: z.boolean().default(false),
+  language: z.string().default("italian"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface FlashcardSetCreatorProps {
   onCancel: () => void;
   onCreated: (setId: string) => void;
 }
 
-const FlashcardSetCreator: React.FC<FlashcardSetCreatorProps> = ({ 
-  onCancel, 
-  onCreated 
+const FlashcardSetCreator: React.FC<FlashcardSetCreatorProps> = ({
+  onCancel,
+  onCreated
 }) => {
-  const { createFlashcardSet } = useFlashcards();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
-  const [category, setCategory] = useState('');
-  const [initialCards, setInitialCards] = useState([
-    { id: '1', front: '', back: '' },
-    { id: '2', front: '', back: '' }
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createFlashcardSet, isLoading } = useFlashcards();
+  const { toast } = useToast();
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
-  const handleAddCard = () => {
-    setInitialCards([
-      ...initialCards,
-      { id: `${Date.now()}`, front: '', back: '' }
-    ]);
-  };
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      category: '',
+      isPublic: false,
+      isFavorite: false,
+      language: 'italian',
+    },
+  });
 
-  const handleRemoveCard = (id: string) => {
-    if (initialCards.length <= 2) return;
-    setInitialCards(initialCards.filter(card => card.id !== id));
-  };
-
-  const handleCardChange = (id: string, field: 'front' | 'back', value: string) => {
-    setInitialCards(initialCards.map(card => 
-      card.id === id ? { ...card, [field]: value } : card
-    ));
-  };
-
-  const handleSubmit = async () => {
-    if (!name || initialCards.some(card => !card.front || !card.back)) {
-      return;
-    }
-    
-    setIsSubmitting(true);
+  const onSubmit = async (values: FormValues) => {
     try {
-      const validCards = initialCards.filter(card => card.front && card.back);
-      const result = await createFlashcardSet({
-        name,
-        description,
-        isPublic,
-        category: category || undefined,
-        initialCards: validCards.map(card => ({
-          front: card.front,
-          back: card.back,
-          italian: card.front,
-          english: card.back
-        }))
+      const setId = await createFlashcardSet({
+        ...values,
+        tags,
       });
       
-      onCreated(result.id);
+      if (setId) {
+        toast({
+          title: "Success",
+          description: "Flashcard set created successfully",
+        });
+        onCreated(setId);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create flashcard set",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error('Error creating flashcard set:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error creating flashcard set:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 10) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
     }
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex mb-6">
-        <Button variant="ghost" onClick={onCancel} className="mr-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Create New Flashcard Set</h1>
-          <p className="text-muted-foreground">Add your flashcards below</p>
-        </div>
-      </div>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Create New Flashcard Set</CardTitle>
+        <CardDescription>
+          Create a new set of flashcards to help you learn Italian vocabulary and phrases
+        </CardDescription>
+      </CardHeader>
       
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Set Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Set Name</Label>
-            <Input 
-              id="name" 
-              value={name} 
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Italian Verb Conjugations" 
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Set Name</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="e.g., Common Phrases, Food Vocabulary" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Choose a descriptive name for your flashcard set
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
-              value={description} 
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Describe what this set is about" 
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Describe what this set covers..." 
+                      {...field} 
+                      rows={3}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="category">Category (optional)</Label>
-            <Input 
-              id="category" 
-              value={category} 
-              onChange={e => setCategory(e.target.value)}
-              placeholder="e.g. Verbs, Nouns, CILS B1" 
+            
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="e.g., Vocabulary, Grammar, Conversation" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="public" 
-              checked={isPublic} 
-              onCheckedChange={setIsPublic} 
-            />
-            <Label htmlFor="public">
-              Make this set public for other users to see
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <h2 className="text-xl font-semibold mb-4">Flashcards</h2>
-      
-      <div className="space-y-4 mb-6">
-        {initialCards.map((card, index) => (
-          <Card key={card.id}>
-            <CardHeader className="py-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">Card {index + 1}</CardTitle>
+            
+            <div>
+              <FormLabel>Tags (Optional)</FormLabel>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="px-2 py-1">
+                    {tag}
+                    <X 
+                      className="ml-1 h-3 w-3 cursor-pointer" 
+                      onClick={() => removeTag(tag)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Add a tag..."
+                  className="flex-1"
+                />
                 <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => handleRemoveCard(card.id)}
-                  disabled={initialCards.length <= 2}
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addTag}
+                  disabled={!tagInput.trim() || tags.length >= 10}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Tag className="h-4 w-4 mr-1" />
+                  Add
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor={`front-${card.id}`}>Front (Italian)</Label>
-                <Input 
-                  id={`front-${card.id}`} 
-                  value={card.front} 
-                  onChange={e => handleCardChange(card.id, 'front', e.target.value)}
-                  placeholder="e.g. parlare" 
-                />
-              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Press Enter to add a tag. Maximum 10 tags.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
+              <FormField
+                control={form.control}
+                name="isPublic"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel>Public Set</FormLabel>
+                      <FormDescription>
+                        Make this set available to all users
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               
-              <div className="space-y-2">
-                <Label htmlFor={`back-${card.id}`}>Back (English)</Label>
-                <Input 
-                  id={`back-${card.id}`} 
-                  value={card.back} 
-                  onChange={e => handleCardChange(card.id, 'back', e.target.value)}
-                  placeholder="e.g. to speak" 
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        
-        <Button variant="outline" onClick={handleAddCard} className="w-full">
-          <Plus className="mr-2 h-4 w-4" /> Add Card
-        </Button>
-      </div>
+              <FormField
+                control={form.control}
+                name="isFavorite"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel>Favorite</FormLabel>
+                      <FormDescription>
+                        Add to your favorites for quick access
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </form>
+        </Form>
+      </CardContent>
       
-      <div className="flex justify-end space-x-4">
+      <CardFooter className="flex justify-between">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
         <Button 
-          onClick={handleSubmit} 
-          disabled={!name || initialCards.some(card => !card.front || !card.back) || isSubmitting}
+          onClick={form.handleSubmit(onSubmit)} 
+          disabled={isLoading}
         >
-          {isSubmitting ? 'Creating...' : 'Create Flashcard Set'}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Set
+            </>
+          )}
         </Button>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 };
 

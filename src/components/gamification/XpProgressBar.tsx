@@ -1,51 +1,31 @@
 
 import React from 'react';
-import { useGamification } from '@/hooks/useGamification';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { useGamificationContext } from '@/contexts/GamificationContext';
+import { calculateLevelProgress } from '@/lib/learning-utils';
 
 interface XpProgressBarProps {
   className?: string;
-  showText?: boolean;
-  compact?: boolean;
+  showDetails?: boolean;
 }
 
-const XpProgressBar: React.FC<XpProgressBarProps> = ({
+const XpProgressBar: React.FC<XpProgressBarProps> = ({ 
   className,
-  showText = true,
-  compact = false
+  showDetails = true
 }) => {
-  const { gamification, levelDetails } = useGamification();
+  const { getCurrentXP } = useGamificationContext();
+  const currentXP = getCurrentXP();
   
-  if (!gamification || !levelDetails) {
-    return null;
-  }
-
-  // Calculate current XP progress within the level
-  const currentXp = gamification.xp;
-  const { minXp, maxXp } = levelDetails;
-  const levelXp = currentXp - minXp;
-  const levelXpRequired = maxXp - minXp;
-  const percentage = Math.min(Math.round((levelXp / levelXpRequired) * 100), 100);
+  const { level, currentLevelXP, nextLevelXP, progress } = calculateLevelProgress(currentXP);
   
   return (
-    <div className={cn("space-y-1", className)}>
-      {showText && !compact && (
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>XP: {currentXp}</span>
-          <span>{levelXp}/{levelXpRequired} to level {gamification.level + 1}</span>
-        </div>
-      )}
+    <div className="space-y-1">
+      <Progress value={progress} className="h-2" />
       
-      <Progress 
-        value={percentage} 
-        className={cn("h-2", compact ? "h-1" : "")}
-      />
-      
-      {showText && compact && (
+      {showDetails && (
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{percentage}%</span>
-          <span>{levelXp}/{levelXpRequired}</span>
+          <div>{currentLevelXP} XP</div>
+          <div>{nextLevelXP - currentLevelXP} XP to level {level + 1}</div>
         </div>
       )}
     </div>

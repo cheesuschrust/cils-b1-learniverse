@@ -1,585 +1,353 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useFeatureLimits } from '@/hooks/useFeatureLimits';
-import { useAuth } from '@/contexts/EnhancedAuthContext';
-import useOfflineCapability from '@/hooks/useOfflineCapability';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Clock, Check, X, VolumeUp, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { speak } from '@/utils/textToSpeech';
+import { useToast } from '@/hooks/use-toast';
+import { BookOpen, CornerDownRight, Check, X } from 'lucide-react';
 
-// Mock reading passages
-const mockPassages = [
-  {
-    id: '1',
-    title: 'La Vita in Italia',
-    description: 'Learn about everyday life in Italy',
-    level: 'beginner',
-    content: `L'Italia è un paese bellissimo con una cultura ricca e una lunga storia. 
-    Gli italiani amano mangiare bene, passare tempo con la famiglia e godere della vita all'aperto. 
-    La colazione è un pasto leggero, spesso solo un caffè e un cornetto. 
-    Il pranzo è tradizionalmente il pasto principale della giornata, mentre la cena è più leggera e si mangia tardi.
-    Molti italiani fanno la "pausa caffè" al bar durante la giornata per socializzare.`,
-    translation: `Italy is a beautiful country with a rich culture and a long history. 
-    Italians love to eat well, spend time with family, and enjoy outdoor living. 
-    Breakfast is a light meal, often just a coffee and a croissant. 
-    Lunch is traditionally the main meal of the day, while dinner is lighter and eaten late.
-    Many Italians take a "coffee break" at the bar during the day to socialize.`,
-    readingTime: 40,
-    words: 86,
-    vocabulary: {
-      'bellissimo': 'beautiful',
-      'ricca': 'rich',
-      'lunga': 'long',
-      'amano': 'love to',
-      'mangiare': 'to eat',
-      'famiglia': 'family',
-      'godere': 'to enjoy',
-      'aperto': 'open, outdoor',
-      'leggero': 'light',
-      'cornetto': 'croissant',
-      'pranzo': 'lunch',
-      'principale': 'main',
-      'giornata': 'day',
-      'cena': 'dinner',
-      'tardi': 'late',
-      'pausa': 'break',
-      'socializzare': 'to socialize'
+interface Question {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+}
+
+interface ReadingExercise {
+  id: string;
+  title: string;
+  content: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
+  questions: Question[];
+  vocabulary?: {
+    word: string;
+    definition: string;
+    example?: string;
+  }[];
+}
+
+// Sample data - in a real app, this would come from Supabase
+const sampleExercise: ReadingExercise = {
+  id: "1",
+  title: "La Vita in Italia",
+  content: `L'Italia è un paese con una ricca storia e cultura. Situata nel cuore del Mediterraneo, l'Italia ha influenzato profondamente la civiltà occidentale. La sua capitale, Roma, è stata il centro dell'Impero Romano, uno dei più grandi imperi del mondo antico.
+
+Gli italiani sono noti per il loro amore per il buon cibo, l'arte, la famiglia e la socialità. La cucina italiana è famosa in tutto il mondo, con piatti come la pasta, la pizza e il gelato che sono diventati popolari a livello internazionale.
+
+L'Italia è anche conosciuta per i suoi numerosi siti storici e artistici. Il Colosseo a Roma, la Torre di Pisa e il Duomo di Milano sono solo alcuni dei monumenti più famosi. Inoltre, l'Italia è la patria di artisti leggendari come Leonardo da Vinci, Michelangelo e Raffaello.
+
+Oggi, l'Italia è una repubblica democratica e membro dell'Unione Europea. Nonostante le sfide economiche, il paese mantiene un alto standard di vita e continua ad essere una meta turistica molto popolare.`,
+  difficulty: "intermediate",
+  category: "Culture",
+  questions: [
+    {
+      id: "q1",
+      text: "Qual è la capitale dell'Italia?",
+      options: ["Milano", "Firenze", "Roma", "Venezia"],
+      correctAnswer: "Roma"
     },
-    questions: [
-      {
-        id: 'q1',
-        question: 'What is the main meal of the day in Italy?',
-        options: ['Breakfast', 'Lunch', 'Coffee break', 'Dinner'],
-        correctAnswer: 'Lunch'
-      },
-      {
-        id: 'q2',
-        question: 'What do Italians typically have for breakfast?',
-        options: ['A big meal', 'Coffee and a croissant', 'Pasta', 'Pizza'],
-        correctAnswer: 'Coffee and a croissant'
-      },
-      {
-        id: 'q3',
-        question: 'Why do many Italians take a coffee break?',
-        options: ['To work more', 'To sleep', 'To socialize', 'To exercise'],
-        correctAnswer: 'To socialize'
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Il Sistema Scolastico Italiano',
-    description: 'Discover how the Italian educational system works',
-    level: 'intermediate',
-    content: `Il sistema scolastico italiano è diviso in diversi livelli. L'istruzione è obbligatoria dai 6 ai 16 anni.
-    La scuola primaria (elementare) dura cinque anni, seguita dalla scuola secondaria di primo grado (media) che dura tre anni.
-    Dopo la scuola media, gli studenti frequentano la scuola secondaria di secondo grado, che può essere un liceo, un istituto tecnico o un istituto professionale.
-    Il liceo prepara gli studenti per l'università, mentre gli istituti tecnici e professionali offrono una formazione più pratica.
-    Dopo il diploma, gli studenti possono iscriversi all'università. Il sistema universitario italiano si basa sul sistema di Bologna:
-    laurea triennale (3 anni), laurea magistrale (2 anni) e dottorato di ricerca.`,
-    translation: `The Italian school system is divided into different levels. Education is compulsory from ages 6 to 16.
-    Primary school lasts five years, followed by middle school which lasts three years.
-    After middle school, students attend high school, which can be a liceo, a technical institute, or a vocational institute.
-    The liceo prepares students for university, while technical and vocational institutes offer more practical training.
-    After obtaining a diploma, students can enroll in university. The Italian university system is based on the Bologna system:
-    bachelor's degree (3 years), master's degree (2 years), and doctorate.`,
-    readingTime: 60,
-    words: 131,
-    vocabulary: {
-      'sistema scolastico': 'school system',
-      'diviso': 'divided',
-      'livelli': 'levels',
-      'istruzione': 'education',
-      'obbligatoria': 'compulsory',
-      'scuola primaria': 'primary school',
-      'elementare': 'elementary',
-      'dura': 'lasts',
-      'seguita': 'followed by',
-      'secondaria': 'secondary',
-      'primo grado': 'first level',
-      'media': 'middle school',
-      'studenti': 'students',
-      'frequentano': 'attend',
-      'secondo grado': 'second level',
-      'liceo': 'high school (academic)',
-      'istituto tecnico': 'technical institute',
-      'istituto professionale': 'vocational institute',
-      'prepara': 'prepares',
-      'università': 'university',
-      'formazione': 'training',
-      'pratica': 'practical',
-      'diploma': 'diploma',
-      'iscriversi': 'to enroll',
-      'laurea': 'degree',
-      'triennale': 'three-year',
-      'magistrale': 'master\'s',
-      'dottorato di ricerca': 'doctorate'
+    {
+      id: "q2",
+      text: "Per cosa sono conosciuti gli italiani secondo il testo?",
+      options: [
+        "Solo per la loro cucina",
+        "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità",
+        "Per la loro influenza politica nel Mediterraneo",
+        "Per i loro monumenti"
+      ],
+      correctAnswer: "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità"
     },
-    questions: [
-      {
-        id: 'q1',
-        question: 'Until what age is education compulsory in Italy?',
-        options: ['14', '16', '18', '21'],
-        correctAnswer: '16'
-      },
-      {
-        id: 'q2',
-        question: 'Which type of high school prepares students for university?',
-        options: ['Istituto professionale', 'Istituto tecnico', 'Liceo', 'Scuola media'],
-        correctAnswer: 'Liceo'
-      },
-      {
-        id: 'q3',
-        question: 'How many years does primary school (scuola elementare) last?',
-        options: ['3', '5', '8', '13'],
-        correctAnswer: '5'
-      },
-      {
-        id: 'q4',
-        question: 'What is the first university degree called in Italy?',
-        options: ['Laurea triennale', 'Laurea magistrale', 'Dottorato', 'Diploma'],
-        correctAnswer: 'Laurea triennale'
-      }
-    ]
-  }
-];
+    {
+      id: "q3",
+      text: "Quale dei seguenti NON è menzionato come un famoso artista italiano?",
+      options: ["Leonardo da Vinci", "Michelangelo", "Raffaello", "Donatello"],
+      correctAnswer: "Donatello"
+    },
+    {
+      id: "q4",
+      text: "Cosa è l'Italia oggi secondo il testo?",
+      options: [
+        "Una monarchia costituzionale",
+        "Un impero",
+        "Una repubblica democratica e membro dell'UE",
+        "Un paese sottosviluppato"
+      ],
+      correctAnswer: "Una repubblica democratica e membro dell'UE"
+    }
+  ],
+  vocabulary: [
+    {
+      word: "ricca",
+      definition: "wealthy, rich",
+      example: "Una famiglia ricca = A wealthy family"
+    },
+    {
+      word: "situata",
+      definition: "located, situated",
+      example: "La casa è situata vicino al mare = The house is located near the sea"
+    },
+    {
+      word: "influenzato",
+      definition: "influenced",
+      example: "Il suo stile è influenzato dall'arte classica = His style is influenced by classical art"
+    },
+    {
+      word: "sfide",
+      definition: "challenges",
+      example: "Affronta molte sfide nel suo lavoro = He faces many challenges in his job"
+    }
+  ]
+};
 
 const ReadingModule: React.FC = () => {
-  const [passages, setPassages] = useState<any[]>(mockPassages);
-  const [currentPassageIndex, setCurrentPassageIndex] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState<ReadingExercise>(sampleExercise);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [readingStartTime, setReadingStartTime] = useState<Date | null>(null);
-  const [readingEndTime, setReadingEndTime] = useState<Date | null>(null);
-  const [showTranslation, setShowTranslation] = useState(false);
-  const [selectedWord, setSelectedWord] = useState<string | null>(null);
-  const { hasReachedLimit, getLimit, getUsage, incrementUsage } = useFeatureLimits();
-  const { isAuthenticated, user } = useAuth();
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [highlightedWord, setHighlightedWord] = useState<string | null>(null);
+  
   const { toast } = useToast();
-  const { isOnline, isOfflineReady, enableOfflineAccess } = useOfflineCapability('/reading');
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  const isLimitReached = hasReachedLimit('readingExercises');
-  const maxExercises = getLimit('readingExercises');
-  const currentUsage = getUsage('readingExercises');
 
-  useEffect(() => {
-    // In a real app, fetch passages from the database
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // We'd normally fetch from API here
-    }, 1000);
-  }, []);
-  
-  useEffect(() => {
-    // Track reading time when a passage is selected
-    if (currentPassageIndex !== null && !readingStartTime) {
-      setReadingStartTime(new Date());
-    }
-  }, [currentPassageIndex, readingStartTime]);
-
-  const handleStartPassage = async (index: number) => {
-    if (isLimitReached && !user?.isPremium) {
-      toast({
-        title: "Daily Limit Reached",
-        description: `You've reached your daily limit of ${maxExercises} reading exercises. Upgrade to Premium for unlimited access.`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setCurrentPassageIndex(index);
-    setSelectedAnswers({});
-    setShowResults(false);
-    setReadingStartTime(new Date());
-    setReadingEndTime(null);
-    setShowTranslation(false);
-    
-    // Reset score
-    setScore({ correct: 0, total: 0 });
-    
-    try {
-      await incrementUsage('readingExercises');
-    } catch (err) {
-      console.error("Failed to increment usage:", err);
-    }
-  };
-
-  const handleWordClick = (word: string) => {
-    setSelectedWord(word.toLowerCase().replace(/[.,;!?]$/, ''));
+  const handleStartQuiz = () => {
+    setShowQuestions(true);
   };
 
   const handleAnswerSelect = (questionId: string, answer: string) => {
-    setSelectedAnswers({
-      ...selectedAnswers,
+    if (isSubmitted) return;
+    
+    setSelectedAnswers(prev => ({
+      ...prev,
       [questionId]: answer
-    });
+    }));
   };
 
   const handleSubmit = () => {
-    if (currentPassageIndex === null) return;
+    if (isSubmitted) return;
     
-    const passage = passages[currentPassageIndex];
-    const questions = passage.questions;
-    
-    // Calculate score
     let correctCount = 0;
-    questions.forEach(question => {
+    currentExercise.questions.forEach(question => {
       if (selectedAnswers[question.id] === question.correctAnswer) {
         correctCount++;
       }
     });
     
-    setScore({
-      correct: correctCount,
-      total: questions.length
+    const newScore = Math.round((correctCount / currentExercise.questions.length) * 100);
+    setScore(newScore);
+    setIsSubmitted(true);
+    
+    toast({
+      title: "Reading Comprehension Completed!",
+      description: `Your score: ${newScore}%`,
+      variant: newScore >= 70 ? "default" : "destructive"
     });
+  };
+
+  const handleWordClick = (word: string) => {
+    // Strip punctuation from the clicked word
+    const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
     
-    setReadingEndTime(new Date());
-    setShowResults(true);
-    setShowTranslation(true);
-  };
-
-  const handleReset = () => {
-    setSelectedAnswers({});
-    setShowResults(false);
-    setReadingStartTime(new Date());
-    setReadingEndTime(null);
-    setShowTranslation(false);
-  };
-
-  const handleBackToPassages = () => {
-    setCurrentPassageIndex(null);
-    setReadingStartTime(null);
-    setReadingEndTime(null);
-  };
-
-  const speakText = (text: string, language: 'en' | 'it' = 'it') => {
-    speak(text, language);
-  };
-
-  const calculateReadingSpeed = () => {
-    if (!readingStartTime || !readingEndTime || currentPassageIndex === null) return null;
+    // Find the vocabulary item for this word if it exists
+    const vocabularyItem = currentExercise.vocabulary?.find(
+      item => item.word.toLowerCase() === cleanWord
+    );
     
-    const passage = passages[currentPassageIndex];
-    const readingTimeInSeconds = (readingEndTime.getTime() - readingStartTime.getTime()) / 1000;
-    const wordsPerMinute = Math.round((passage.words / readingTimeInSeconds) * 60);
-    
-    return wordsPerMinute;
+    if (vocabularyItem) {
+      setHighlightedWord(vocabularyItem.word);
+    } else {
+      setHighlightedWord(null);
+    }
   };
 
-  const renderPassageContent = (content: string, vocabulary: Record<string, string>) => {
-    const words = content.split(/(\s+)/);
+  const handleNext = () => {
+    // In a real app, this would load the next exercise
+    toast({
+      title: "Coming Soon",
+      description: "More reading exercises will be available soon!",
+    });
+  };
+
+  // Process the text to make words clickable
+  const processText = () => {
+    const paragraphs = currentExercise.content.split('\n\n');
     
-    return words.map((word, index) => {
-      // Skip spaces
-      if (/^\s+$/.test(word)) return word;
+    return paragraphs.map((paragraph, pIndex) => {
+      const words = paragraph.split(' ');
       
-      // Clean word for lookup (remove punctuation)
-      const cleanWord = word.toLowerCase().replace(/[.,;!?]$/g, '');
-      
-      // Check if the word is in the vocabulary
-      const isInVocabulary = Object.keys(vocabulary).some(key => 
-        key.toLowerCase() === cleanWord || key.toLowerCase().includes(cleanWord)
-      );
-      
-      if (isInVocabulary) {
-        return (
-          <Popover key={index}>
-            <PopoverTrigger asChild>
-              <span 
-                className="text-blue-600 dark:text-blue-400 cursor-pointer hover:underline" 
-                onClick={() => handleWordClick(cleanWord)}
-              >
-                {word}
-              </span>
-            </PopoverTrigger>
-            <PopoverContent className="w-60">
-              <div className="space-y-2">
-                <h4 className="font-medium">Translation</h4>
-                <p>{findTranslation(cleanWord, vocabulary)}</p>
-                <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => speakText(word)}>
-                    <VolumeUp className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+      const processedWords = words.map((word, wIndex) => {
+        // Check if this word (without punctuation) is in our vocabulary list
+        const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
+        const isVocabWord = currentExercise.vocabulary?.some(
+          item => item.word.toLowerCase() === cleanWord
         );
-      }
+        
+        return (
+          <span 
+            key={`${pIndex}-${wIndex}`}
+            className={`${isVocabWord ? 'cursor-pointer hover:text-primary underline decoration-dotted underline-offset-4' : ''}`}
+            onClick={() => isVocabWord && handleWordClick(cleanWord)}
+          >
+            {word}{' '}
+          </span>
+        );
+      });
       
-      return <span key={index}>{word}</span>;
+      return (
+        <p key={pIndex} className="mb-4">
+          {processedWords}
+        </p>
+      );
     });
   };
 
-  const findTranslation = (word: string, vocabulary: Record<string, string>) => {
-    // First try direct match
-    if (vocabulary[word]) return vocabulary[word];
+  const VocabularyDefinition = () => {
+    if (!highlightedWord) return null;
     
-    // Then try to find as part of a phrase
-    const matchingKey = Object.keys(vocabulary).find(key => 
-      key.toLowerCase().includes(word.toLowerCase())
+    const vocab = currentExercise.vocabulary?.find(
+      item => item.word.toLowerCase() === highlightedWord.toLowerCase()
     );
     
-    return matchingKey ? `${matchingKey}: ${vocabulary[matchingKey]}` : '(No translation available)';
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Italian Reading Exercises</CardTitle>
-          <CardDescription>
-            Please log in to access reading exercises
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>You need to be logged in to use the reading exercises.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[300px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-muted-foreground">Loading passages...</p>
-      </div>
-    );
-  }
-
-  if (currentPassageIndex !== null) {
-    const passage = passages[currentPassageIndex];
+    if (!vocab) return null;
     
     return (
-      <div className="container py-8">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={handleBackToPassages}>
-            ← Back to Passages
-          </Button>
-          <div className="flex items-center gap-2">
-            <Badge variant={passage.level === 'beginner' ? 'outline' : (passage.level === 'intermediate' ? 'secondary' : 'destructive')}>
-              {passage.level.charAt(0).toUpperCase() + passage.level.slice(1)}
-            </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {passage.readingTime}s
-            </Badge>
-            <Badge variant="outline" className="flex items-center gap-1">
-              <BookOpen className="h-3 w-3" />
-              {passage.words} words
-            </Badge>
+      <div className="bg-primary/10 p-4 rounded-md border border-primary/20 mt-4">
+        <div className="flex items-start space-x-2">
+          <CornerDownRight className="h-5 w-5 text-primary mt-1" />
+          <div>
+            <h4 className="font-medium text-primary">{vocab.word}</h4>
+            <p className="text-sm">{vocab.definition}</p>
+            {vocab.example && (
+              <p className="text-xs text-muted-foreground mt-1 italic">{vocab.example}</p>
+            )}
           </div>
         </div>
-        
-        <Card className="mb-8">
-          <CardHeader className="pb-3">
-            <CardTitle>{passage.title}</CardTitle>
-            <CardDescription>{passage.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-muted p-4 rounded-md">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium">Italian Text</h3>
-                <Button variant="ghost" size="sm" onClick={() => speakText(passage.content)}>
-                  <VolumeUp className="h-4 w-4 mr-2" /> Listen
-                </Button>
-              </div>
-              
-              <div 
-                ref={contentRef} 
-                className="prose dark:prose-invert max-w-none"
-              >
-                <p className="whitespace-pre-line">
-                  {renderPassageContent(passage.content, passage.vocabulary)}
-                </p>
-              </div>
-            </div>
-            
-            {(showTranslation || showResults) && (
-              <div className="bg-muted/50 p-4 rounded-md">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-medium">English Translation</h3>
-                  <Button variant="ghost" size="sm" onClick={() => speakText(passage.translation, 'en')}>
-                    <VolumeUp className="h-4 w-4 mr-2" /> Listen
-                  </Button>
-                </div>
-                <p className="whitespace-pre-line text-muted-foreground">
-                  {passage.translation}
-                </p>
-              </div>
-            )}
-            
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium">Comprehension Questions</h3>
-              {passage.questions.map((question, index) => (
-                <div key={question.id} className="space-y-3">
-                  <h3 className="font-medium">{index + 1}. {question.question}</h3>
-                  <RadioGroup 
-                    value={selectedAnswers[question.id] || ''}
-                    onValueChange={(value) => handleAnswerSelect(question.id, value)}
-                    className="space-y-2"
-                  >
-                    {question.options.map((option) => {
-                      const isCorrect = option === question.correctAnswer;
-                      const isSelected = selectedAnswers[question.id] === option;
-                      const showCorrect = showResults && isCorrect;
-                      const showIncorrect = showResults && isSelected && !isCorrect;
-                      
-                      return (
-                        <div 
-                          key={option} 
-                          className={`
-                            flex items-center rounded-md border p-3
-                            ${showCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : ''}
-                            ${showIncorrect ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''}
-                          `}
-                        >
-                          <RadioGroupItem 
-                            value={option} 
-                            id={`${question.id}-${option}`}
-                            disabled={showResults}
-                          />
-                          <Label 
-                            htmlFor={`${question.id}-${option}`}
-                            className="w-full ml-2 flex justify-between"
-                          >
-                            {option}
-                            {showCorrect && <Check className="h-4 w-4 text-green-500" />}
-                            {showIncorrect && <X className="h-4 w-4 text-red-500" />}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </RadioGroup>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {showResults ? (
-              <>
-                <div className="text-sm">
-                  <p className="font-medium">
-                    Score: {score.correct}/{score.total} ({Math.round((score.correct / score.total) * 100)}%)
-                  </p>
-                  <p className="text-muted-foreground">
-                    Reading speed: {calculateReadingSpeed()} words per minute
-                  </p>
-                </div>
-                <div className="space-x-2">
-                  <Button variant="outline" onClick={handleReset}>
-                    <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-                  </Button>
-                  <Button onClick={handleBackToPassages}>
-                    Back to Passages
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowTranslation(!showTranslation)}
-                >
-                  {showTranslation ? 'Hide Translation' : 'Show Translation'}
-                </Button>
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={Object.keys(selectedAnswers).length < passage.questions.length}
-                >
-                  Submit Answers
-                </Button>
-              </>
-            )}
-          </CardFooter>
-        </Card>
       </div>
     );
-  }
+  };
 
   return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Italian Reading Exercises</h1>
-          <p className="text-muted-foreground">
-            Improve your reading comprehension and vocabulary
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="px-3 py-1">
-            {currentUsage} / {maxExercises} Exercises
-          </Badge>
-          {!isOnline && !isOfflineReady && (
-            <Button onClick={enableOfflineAccess} disabled={!isOnline} variant="outline" size="sm">
-              Enable Offline
-            </Button>
+    <div className="container mx-auto py-8 space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{currentExercise.title}</CardTitle>
+              <CardDescription>
+                {currentExercise.category} - {currentExercise.difficulty.charAt(0).toUpperCase() + currentExercise.difficulty.slice(1)} Level
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="capitalize">
+              {currentExercise.difficulty}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!showQuestions ? (
+            <div className="space-y-4">
+              <div className="bg-muted p-6 rounded-md">
+                <div className="prose prose-sm max-w-none">
+                  {processText()}
+                </div>
+                
+                {VocabularyDefinition()}
+                
+                <div className="flex justify-center mt-6">
+                  <Button onClick={handleStartQuiz} className="mt-4">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Start Comprehension Questions
+                  </Button>
+                </div>
+              </div>
+              
+              {currentExercise.vocabulary && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-medium mb-2">Vocabulary Help</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Click on the underlined words in the text to see their definitions.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium">Comprehension Questions</h3>
+              
+              {currentExercise.questions.map((question, index) => (
+                <div key={question.id} className="space-y-3">
+                  <h4 className="font-medium">
+                    {index + 1}. {question.text}
+                  </h4>
+                  <div className="space-y-2">
+                    {question.options.map((option) => (
+                      <div 
+                        key={option}
+                        className={`p-3 rounded-md border cursor-pointer transition-colors ${
+                          selectedAnswers[question.id] === option 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'hover:bg-muted'
+                        } ${
+                          isSubmitted && option === question.correctAnswer
+                            ? 'bg-green-100 border-green-500'
+                            : isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer
+                              ? 'bg-red-100 border-red-500'
+                              : ''
+                        }`}
+                        onClick={() => handleAnswerSelect(question.id, option)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option}</span>
+                          {isSubmitted && option === question.correctAnswer && (
+                            <Check className="h-5 w-5 text-green-600" />
+                          )}
+                          {isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer && (
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="flex justify-between pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQuestions(false)}
+                >
+                  Back to Reading
+                </Button>
+                
+                {!isSubmitted ? (
+                  <Button 
+                    variant="default" 
+                    onClick={handleSubmit}
+                    disabled={Object.keys(selectedAnswers).length !== currentExercise.questions.length}
+                  >
+                    Submit Answers
+                  </Button>
+                ) : (
+                  <Button variant="default" onClick={handleNext}>
+                    Next Exercise
+                  </Button>
+                )}
+              </div>
+            </div>
           )}
-        </div>
-      </div>
-      
-      {isLimitReached && !user?.isPremium && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Daily Limit Reached</AlertTitle>
-          <AlertDescription>
-            You've reached your daily limit of {maxExercises} reading exercises. 
-            <Button variant="link" className="p-0 h-auto font-normal">
-              Upgrade to Premium
-            </Button> for unlimited access.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {passages.map((passage, index) => (
-          <Card key={passage.id} className="h-full flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between">
-                <CardTitle>{passage.title}</CardTitle>
-                <Badge variant={passage.level === 'beginner' ? 'outline' : (passage.level === 'intermediate' ? 'secondary' : 'destructive')}>
-                  {passage.level.charAt(0).toUpperCase() + passage.level.slice(1)}
-                </Badge>
+        </CardContent>
+        {isSubmitted && (
+          <CardFooter className="border-t pt-4">
+            <div className="w-full space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Your Score:</span>
+                <span className={`font-bold ${score >= 70 ? 'text-green-600' : 'text-red-600'}`}>{score}%</span>
               </div>
-              <CardDescription>{passage.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <div className="flex items-center">
-                  <BookOpen className="h-4 w-4 mr-1" /> 
-                  <span>{passage.words} words</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>~{passage.readingTime}s</span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button 
-                className="w-full" 
-                onClick={() => handleStartPassage(index)}
-                disabled={isLimitReached && !user?.isPremium}
-              >
-                Start Reading
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+              <Progress value={score} className="h-2" />
+            </div>
+          </CardFooter>
+        )}
+      </Card>
     </div>
   );
 };
