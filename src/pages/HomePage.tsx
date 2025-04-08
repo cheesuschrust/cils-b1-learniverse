@@ -1,279 +1,190 @@
 
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import AIAssistant from '@/components/ai/AIAssistant';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { BookOpen, MessageSquare, Lightbulb, Sparkles, Book, Mic, Brain, ArrowRight } from 'lucide-react';
+import BilingualTitle from '@/components/language/BilingualTitle';
+import BilingualText from '@/components/language/BilingualText';
+import { useBilingualTitle } from '@/hooks/useBilingualTitle';
+import { SpeakableWord } from '@/components/ui/speakable-word';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Check, Headphones, MessageSquare, BookOpen } from 'lucide-react';
 
 const HomePage: React.FC = () => {
-  const { isAIEnabled } = useAIUtils();
-
-  return (
-    <>
-      <Helmet>
-        <title>Learn Italian - AI-Powered Language Learning</title>
-      </Helmet>
-
-      <div className="container py-8">
-        {/* Hero Section */}
-        <section className="mb-16">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="md:w-1/2 space-y-6">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                Master Italian with AI-Powered Learning
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                Learn Italian faster and more effectively with personalized lessons and AI-powered feedback.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button asChild size="lg" className="gap-2">
-                  <Link to="/dashboard">
-                    Get Started <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link to="/subscription">Explore Plans</Link>
-                </Button>
-              </div>
-            </div>
-            <div className="md:w-1/2">
-              <img 
-                src="/images/italian-learning-hero.jpg" 
-                alt="Italian Learning" 
-                className="rounded-lg shadow-lg object-cover w-full"
-                onError={(e) => {
-                  // Fallback if image doesn't exist
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1528114039593-4366cc08227d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80';
-                }}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Featured AI Assistant */}
-        <section className="mb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold">Your Personal Italian Tutor</h2>
-            <p className="text-muted-foreground mt-2">
-              Ask questions, practice conversations, and get instant feedback from our AI tutor
-            </p>
-          </div>
-          <AIAssistant />
-        </section>
-
-        {/* Learning Paths */}
-        <section className="mb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold">Personalized Learning Paths</h2>
-            <p className="text-muted-foreground mt-2">
-              Choose your learning path based on your goals and level
-            </p>
-          </div>
-
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="general">General Italian</TabsTrigger>
-              <TabsTrigger value="business">Business Italian</TabsTrigger>
-              <TabsTrigger value="travel">Travel & Tourism</TabsTrigger>
-              <TabsTrigger value="citizenship">Italian Citizenship</TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="mt-6">
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <LearningFeatureCard 
-                  icon={<BookOpen className="h-6 w-6 text-primary" />}
-                  title="Grammar & Vocabulary"
-                  description="Build a strong foundation with essential grammar rules and vocabulary."
-                  link="/practice/grammar"
-                />
-                <LearningFeatureCard 
-                  icon={<MessageSquare className="h-6 w-6 text-primary" />}
-                  title="Conversation Practice"
-                  description="Practice real conversations with our AI language partner."
-                  link="/practice/speaking"
-                  hasAI
-                />
-                <LearningFeatureCard 
-                  icon={<Brain className="h-6 w-6 text-primary" />}
-                  title="Comprehension"
-                  description="Develop your listening and reading comprehension skills."
-                  link="/practice/listening"
-                />
-                <LearningFeatureCard 
-                  icon={<Sparkles className="h-6 w-6 text-primary" />}
-                  title="Cultural Insights"
-                  description="Learn about Italian culture, customs, and traditions."
-                  link="/practice/culture"
-                  hasAI
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="business" className="mt-6">
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <LearningFeatureCard 
-                  icon={<Book className="h-6 w-6 text-primary" />}
-                  title="Business Vocabulary"
-                  description="Learn specialized vocabulary for professional environments."
-                  link="/practice/business"
-                />
-                <LearningFeatureCard 
-                  icon={<Mic className="h-6 w-6 text-primary" />}
-                  title="Meeting Simulations"
-                  description="Practice business meetings and negotiations in Italian."
-                  link="/practice/business-speaking"
-                  hasAI
-                />
-                <LearningFeatureCard 
-                  icon={<MessageSquare className="h-6 w-6 text-primary" />}
-                  title="Email Writing"
-                  description="Learn to write professional emails and correspondence."
-                  link="/practice/business-writing"
-                />
-                <LearningFeatureCard 
-                  icon={<Lightbulb className="h-6 w-6 text-primary" />}
-                  title="Case Studies"
-                  description="Analyze real business scenarios in Italian contexts."
-                  link="/practice/business-cases"
-                  hasAI
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="travel" className="mt-6">
-              <div className="h-[250px] flex items-center justify-center">
-                <p className="text-muted-foreground">Travel & Tourism content is coming soon!</p>
-              </div>
-            </TabsContent>
-            <TabsContent value="citizenship" className="mt-6">
-              <div className="h-[250px] flex items-center justify-center">
-                <p className="text-muted-foreground">Italian Citizenship exam preparation content is coming soon!</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </section>
-
-        {/* AI-Powered Features */}
-        <section>
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold">AI-Powered Learning Features</h2>
-            <p className="text-muted-foreground mt-2">
-              Our advanced AI technologies enhance your language learning experience
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <AIFeatureCard 
-              title="Personalized Feedback"
-              description="Get instant feedback on your pronunciation, grammar, and vocabulary usage."
-              isAvailable={isAIEnabled}
-            />
-            <AIFeatureCard 
-              title="Adaptive Learning"
-              description="Our AI adapts to your learning pace and focuses on areas where you need more practice."
-              isAvailable={isAIEnabled}
-            />
-            <AIFeatureCard 
-              title="Voice Recognition"
-              description="Practice speaking Italian and get real-time pronunciation feedback."
-              isAvailable={isAIEnabled}
-            />
-            <AIFeatureCard 
-              title="Natural Conversations"
-              description="Have realistic conversations with our AI language partner to improve fluency."
-              isAvailable={isAIEnabled}
-            />
-            <AIFeatureCard 
-              title="Translation Assistance"
-              description="Translate phrases and understand the nuances of Italian language."
-              isAvailable={isAIEnabled}
-            />
-            <AIFeatureCard 
-              title="Cultural Context"
-              description="Learn Italian in cultural context with AI-powered explanations."
-              isAvailable={isAIEnabled}
-            />
-          </div>
-        </section>
-      </div>
-    </>
+  const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  // Set the page title
+  useBilingualTitle(
+    'Italian Learning for CILS Citizenship Test', 
+    'Apprendimento Italiano per l\'Esame di Cittadinanza CILS'
   );
-};
-
-interface LearningFeatureCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  link: string;
-  hasAI?: boolean;
-}
-
-const LearningFeatureCard: React.FC<LearningFeatureCardProps> = ({ 
-  icon, 
-  title, 
-  description, 
-  link,
-  hasAI = false
-}) => {
+  
+  const features = [
+    {
+      icon: <BookOpen className="h-8 w-8 text-primary" />,
+      titleEnglish: "Reading Practice",
+      titleItalian: "Pratica di Lettura",
+      descriptionEnglish: "Practice reading comprehension with authentic texts",
+      descriptionItalian: "Esercita la comprensione della lettura con testi autentici"
+    },
+    {
+      icon: <Headphones className="h-8 w-8 text-primary" />,
+      titleEnglish: "Listening Practice",
+      titleItalian: "Pratica di Ascolto",
+      descriptionEnglish: "Improve your listening skills with native speakers",
+      descriptionItalian: "Migliora le tue capacità di ascolto con madrelingua"
+    },
+    {
+      icon: <MessageSquare className="h-8 w-8 text-primary" />,
+      titleEnglish: "Speaking Practice",
+      titleItalian: "Pratica di Conversazione",
+      descriptionEnglish: "Practice speaking with AI-powered conversation partners",
+      descriptionItalian: "Esercitati a parlare con partner di conversazione basati su AI"
+    }
+  ];
+  
+  const benefits = [
+    {
+      english: "Tailored specifically for the CILS citizenship test requirements",
+      italian: "Creato specificamente per i requisiti del test di cittadinanza CILS"
+    },
+    {
+      english: "Learn at your own pace with personalized learning paths",
+      italian: "Impara al tuo ritmo con percorsi di apprendimento personalizzati"
+    },
+    {
+      english: "Track your progress and identify areas for improvement",
+      italian: "Monitora i tuoi progressi e identifica aree di miglioramento"
+    },
+    {
+      english: "Practice with real exam-style questions and scenarios",
+      italian: "Esercitati con domande e scenari in stile esame reale"
+    }
+  ];
+  
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          {icon}
-          {hasAI && (
-            <div className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-              AI Powered
-            </div>
-          )}
+    <div className="px-4 py-12 md:py-24">
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto text-center">
+        <div className="flex justify-center mb-8">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 bg-italian-green w-1/3 h-full"></div>
+            <div className="absolute inset-0 left-1/3 bg-italian-white w-1/3 h-full"></div>
+            <div className="absolute inset-0 left-2/3 bg-italian-red w-1/3 h-full"></div>
+          </div>
         </div>
-        <CardTitle className="text-xl">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <CardDescription>{description}</CardDescription>
-      </CardContent>
-      <CardFooter>
-        <Button asChild variant="ghost" className="gap-1 w-full">
-          <Link to={link}>
-            Explore <ArrowRight className="h-4 w-4" />
-          </Link>
+        
+        <BilingualTitle
+          english="Master Italian for Your Citizenship Journey"
+          italian="Padroneggia l'Italiano per il Tuo Percorso di Cittadinanza"
+          as="h1"
+          className="text-4xl md:text-6xl mb-4"
+          showSpeak
+        />
+        
+        <div className="max-w-3xl mx-auto mb-8">
+          <BilingualText
+            english="Prepare effectively for the CILS B1 Citizenship Test with our specialized platform. Build your Italian language skills through interactive exercises tailored to the exam requirements."
+            italian="Preparati efficacemente per l'Esame di Cittadinanza CILS B1 con la nostra piattaforma specializzata. Costruisci le tue competenze linguistiche italiane attraverso esercizi interattivi adattati ai requisiti dell'esame."
+            className="text-xl text-muted-foreground"
+          />
+        </div>
+        
+        <div className="flex flex-wrap justify-center gap-4 mb-16">
+          <Button size="lg" onClick={() => navigate('/signup')}>
+            {language === 'english' ? 'Get Started' : 
+             language === 'italian' ? 'Inizia Ora' : 
+             'Get Started / Inizia Ora'}
+          </Button>
+          <Button size="lg" variant="outline" onClick={() => navigate('/about')}>
+            {language === 'english' ? 'Learn More' : 
+             language === 'italian' ? 'Scopri di Più' : 
+             'Learn More / Scopri di Più'}
+          </Button>
+        </div>
+      </section>
+      
+      {/* Features Section */}
+      <section className="max-w-7xl mx-auto py-16">
+        <BilingualTitle
+          english="Complete Learning Experience"
+          italian="Esperienza di Apprendimento Completa"
+          as="h2"
+          className="text-3xl md:text-4xl text-center mb-12"
+        />
+        
+        <div className="grid md:grid-cols-3 gap-8">
+          {features.map((feature, index) => (
+            <Card key={index} className="text-center">
+              <CardContent className="pt-6">
+                <div className="flex justify-center mb-4">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  {language === 'english' ? feature.titleEnglish : 
+                   language === 'italian' ? feature.titleItalian : 
+                   `${feature.titleEnglish} / ${feature.titleItalian}`}
+                </h3>
+                <p className="text-muted-foreground">
+                  {language === 'english' ? feature.descriptionEnglish : 
+                   language === 'italian' ? feature.descriptionItalian : 
+                   feature.descriptionEnglish}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+      
+      {/* Benefits Section */}
+      <section className="max-w-7xl mx-auto py-16 bg-muted/30 rounded-lg p-8">
+        <BilingualTitle
+          english="Why Choose Our Platform"
+          italian="Perché Scegliere la Nostra Piattaforma"
+          as="h2"
+          className="text-3xl md:text-4xl text-center mb-12"
+        />
+        
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {benefits.map((benefit, index) => (
+            <div key={index} className="flex items-start gap-3">
+              <div className="mt-1 bg-primary rounded-full p-1 text-primary-foreground">
+                <Check className="h-4 w-4" />
+              </div>
+              <div>
+                <BilingualText
+                  english={benefit.english}
+                  italian={benefit.italian}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+      
+      {/* CTA Section */}
+      <section className="max-w-4xl mx-auto py-16 text-center">
+        <BilingualTitle
+          english="Ready to Start Your Journey?"
+          italian="Pronto a Iniziare il Tuo Percorso?"
+          as="h2"
+          className="text-3xl md:text-4xl mb-6"
+        />
+        
+        <BilingualText
+          english="Join thousands of successful students who have achieved their citizenship goals with our platform."
+          italian="Unisciti a migliaia di studenti di successo che hanno raggiunto i loro obiettivi di cittadinanza con la nostra piattaforma."
+          className="text-xl text-muted-foreground mb-8"
+        />
+        
+        <Button size="lg" onClick={() => navigate('/signup')}>
+          {language === 'english' ? 'Start Free Trial' : 
+           language === 'italian' ? 'Inizia Prova Gratuita' : 
+           'Start Free Trial / Inizia Prova Gratuita'}
         </Button>
-      </CardFooter>
-    </Card>
-  );
-};
-
-interface AIFeatureCardProps {
-  title: string;
-  description: string;
-  isAvailable: boolean;
-}
-
-const AIFeatureCard: React.FC<AIFeatureCardProps> = ({ 
-  title, 
-  description, 
-  isAvailable
-}) => {
-  return (
-    <Card className={isAvailable ? 'border-primary/30' : 'opacity-75'}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-xl">{title}</CardTitle>
-          {isAvailable ? (
-            <div className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-md text-xs font-medium">
-              Available
-            </div>
-          ) : (
-            <div className="px-2 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 rounded-md text-xs font-medium">
-              Coming Soon
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <CardDescription>{description}</CardDescription>
-      </CardContent>
-    </Card>
+      </section>
+    </div>
   );
 };
 
