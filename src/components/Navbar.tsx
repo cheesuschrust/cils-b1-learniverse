@@ -1,94 +1,42 @@
 
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
-export const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
-
-  const navLinks = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Speaking', href: '/speaking' },
-    { title: 'Italian Citizenship Test', href: '/italian-citizenship-test' }
-  ];
-
+const Navbar = () => {
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/" className="text-xl font-bold text-foreground">
-            ItalianMaster
-          </Link>
-        </div>
-
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === link.href
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {link.title}
+    <nav className="bg-white dark:bg-gray-800 shadow-sm">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <span className="text-xl font-bold text-primary">CILS B1 Prep</span>
             </Link>
-          ))}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-4">
-          <Button variant="outline" asChild>
-            <Link to="/login">Login</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/signup">Sign Up</Link>
-          </Button>
-        </div>
-
-        {/* Mobile menu button */}
-        <button
-          className="md:hidden"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      {/* Mobile navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t py-4">
-          <div className="container space-y-4">
-            <nav className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    location.pathname === link.href
-                      ? 'text-primary'
-                      : 'text-muted-foreground'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.title}
-                </Link>
-              ))}
-            </nav>
-            <div className="flex flex-col gap-2 pt-4 border-t">
-              <Button variant="outline" asChild>
-                <Link to="/login">Login</Link>
-              </Button>
-              <Button asChild>
-                <Link to="/signup">Sign Up</Link>
-              </Button>
+            <div className="ml-10 flex items-center space-x-4">
+              <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary">
+                Dashboard
+              </Link>
+              <Link to="/gamification" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary">
+                Gamification
+              </Link>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="ml-3 relative">
+              <div>
+                <button className="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300">
+                  <img
+                    className="h-8 w-8 rounded-full"
+                    src="https://via.placeholder.com/150"
+                    alt="User"
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </header>
+      </div>
+    </nav>
   );
 };
+
+export default Navbar;
