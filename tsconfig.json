@@ -1,71 +1,38 @@
-{
-  "compilerOptions": {
-    // Target and Language
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    
-    // Module Resolution
+{  
+  "compilerOptions": {  
+    "target": "ES2022",  
+    "module": "ESNext",  
     "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
     
-    // Strict Typing
-    "strict": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    
-    // Additional Checks - Some relaxed for compatibility
-    "noImplicitAny": false,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    
-    // Unused and Unreachable Code - Relaxed for development
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    
-    // React and JSX
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    
-    // Compilation and Bundling
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "noEmit": false,  // Changed from true to false
-    
-    // Path Aliases
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@types/*": ["./src/types/*"],
-      "@context/*": ["./src/contexts/*"],
-      "@routes/*": ["./src/routes/*"]
-    }
-  },
-  
-  // Include and Exclude
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.d.ts",
-    "cypress/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ],
-  
-  // Project References
-  "references": [
-    { "path": "./tsconfig.node.json" }
-  ]
+    "composite": true,  
+    "incremental": true,  
+
+    "esModuleInterop": true,  
+    "allowSyntheticDefaultImports": true,  
+    "resolveJsonModule": true,  
+    "allowImportingTsExtensions": true,  
+    "moduleDetection": "force",  
+
+    "strict": true,  
+    "skipLibCheck": true,  
+    "noUnusedLocals": true,  
+    "noUnusedParameters": false,  
+    "noImplicitReturns": true,  
+    "noFallthroughCasesInSwitch": true,  
+    "forceConsistentCasingInFileNames": true,  
+
+    "isolatedModules": true,  
+    "noEmit": false,  
+
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]  
+  },  
+  "include": [  
+    "vite.config.ts",   
+    "cypress.config.ts",  
+    "*.config.ts"
+  ],  
+  "exclude": [  
+    "node_modules",  
+    "dist"  
+  ]  
 }
