@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import RootLayout from '@/layouts/RootLayout';
@@ -25,6 +26,10 @@ const SignupPage = lazy(() => import('@/pages/auth/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const TermsPage = lazy(() => import('@/pages/TermsPage'));
+const EULAPage = lazy(() => import('@/pages/EULAPage'));
+const GDPRPage = lazy(() => import('@/pages/GDPRPage'));
+const CookiesPage = lazy(() => import('@/pages/CookiesPage'));
 
 // Practice pages
 const FlashcardsPage = lazy(() => import('@/pages/learning/FlashcardsPage'));
@@ -73,6 +78,10 @@ const AppRoutes = () => {
             
             {/* Legal pages */}
             <Route path="privacy" element={<PrivacyPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="eula" element={<EULAPage />} />
+            <Route path="gdpr" element={<GDPRPage />} />
+            <Route path="cookies" element={<CookiesPage />} />
             
             {/* Learning pages */}
             <Route path="flashcards" element={<FlashcardsPage />} />

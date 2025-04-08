@@ -5,10 +5,15 @@ import MainNavigation from '@/components/navigation/MainNavigation';
 import Footer from '@/components/layout/Footer';
 import AIStatusIndicator from '@/components/ai/AIStatusIndicator';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
-import { Flag, Sun, Moon } from 'lucide-react';
+import { Flag } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
+import AccessibilityFeatures from '@/components/accessibility/AccessibilityFeatures';
+import useBilingualTitle from '@/hooks/useBilingualTitle';
 
 const RootLayout: React.FC = () => {
+  // Set a default title for the root layout
+  useBilingualTitle('Welcome', 'Benvenuto');
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -20,6 +25,8 @@ const RootLayout: React.FC = () => {
               <Flag className="h-4 w-4 mr-2 text-italian-green" />
               <LanguageToggle />
             </div>
+            
+            <AccessibilityFeatures />
             <ModeToggle />
             <AIStatusIndicator />
           </div>

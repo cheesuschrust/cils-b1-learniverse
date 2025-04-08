@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
 import { ThemeProvider } from '@/components/theme-provider';
+import CookieConsentBanner from '@/components/common/CookieConsentBanner';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <BrowserRouter>
               <AppRoutes />
               <Toaster />
+              <CookieConsentBanner />
             </BrowserRouter>
           </AuthProvider>
         </UserPreferencesProvider>
