@@ -27,6 +27,13 @@ export const navigationLabels: RouteLabel[] = [
   { path: '/practice/writing', english: 'Writing Practice', italian: 'Pratica di Scrittura' },
   { path: '/practice/speaking', english: 'Speaking Practice', italian: 'Pratica di Conversazione' },
   
+  // Legal pages
+  { path: '/privacy', english: 'Privacy Policy', italian: 'Informativa sulla Privacy' },
+  { path: '/terms', english: 'Terms of Service', italian: 'Termini di Servizio' },
+  { path: '/eula', english: 'End User License Agreement', italian: 'Accordo di Licenza per l\'Utente Finale' },
+  { path: '/gdpr', english: 'GDPR Compliance', italian: 'Conformità GDPR' },
+  { path: '/cookies', english: 'Cookie Policy', italian: 'Politica dei Cookie' },
+  
   // Admin routes
   { path: '/admin', english: 'Admin Dashboard', italian: 'Dashboard Admin', admin: true },
   { path: '/admin/users', english: 'User Management', italian: 'Gestione Utenti', admin: true },

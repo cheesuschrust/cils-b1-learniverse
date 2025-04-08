@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getDefaultVoicePreferences, VoicePreference } from '@/utils/textToSpeech';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ContentType } from '@/utils/textAnalysis';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export type Theme = 'dark' | 'light' | 'system';
 
@@ -12,6 +12,8 @@ export interface AIPreference {
   modelSize: 'small' | 'medium' | 'large';
   dataCollection: boolean;
   assistanceLevel: number;
+  provider: 'openai' | 'anthropic' | 'google' | 'local';
+  voiceProvider: 'elevenlabs' | 'google' | 'browser';
 }
 
 interface UserPreferencesContextType {
@@ -33,18 +35,25 @@ interface UserPreferencesContextType {
   setNotifications: (enabled: boolean) => void;
   dailyGoal: number;
   setDailyGoal: (minutes: number) => void;
-  // Add missing properties
   preferredLanguage: 'english' | 'italian' | 'both';
   setPreferredLanguage: (lang: 'english' | 'italian' | 'both') => void;
   aiPreference: AIPreference;
   setAIPreference: (preference: AIPreference) => void;
+  highContrastMode: boolean;
+  setHighContrastMode: (enabled: boolean) => void;
+  animationsEnabled: boolean;
+  setAnimationsEnabled: (enabled: boolean) => void;
+  showProgressMetrics: boolean;
+  setShowProgressMetrics: (show: boolean) => void;
 }
 
 const defaultAIPreference: AIPreference = {
   processOnDevice: false,
   modelSize: 'medium',
   dataCollection: true,
-  assistanceLevel: 5
+  assistanceLevel: 5,
+  provider: 'openai',
+  voiceProvider: 'browser'
 };
 
 const defaultPreferences: UserPreferencesContextType = {
@@ -71,11 +80,16 @@ const defaultPreferences: UserPreferencesContextType = {
   setNotifications: () => {},
   dailyGoal: 15,
   setDailyGoal: () => {},
-  // Add default values for new properties
   preferredLanguage: 'both',
   setPreferredLanguage: () => {},
   aiPreference: defaultAIPreference,
-  setAIPreference: () => {}
+  setAIPreference: () => {},
+  highContrastMode: false,
+  setHighContrastMode: () => {},
+  animationsEnabled: true,
+  setAnimationsEnabled: () => {},
+  showProgressMetrics: true,
+  setShowProgressMetrics: () => {}
 };
 
 const UserPreferencesContext = createContext<UserPreferencesContextType>(defaultPreferences);
@@ -83,6 +97,7 @@ const UserPreferencesContext = createContext<UserPreferencesContextType>(default
 export const useUserPreferences = () => useContext(UserPreferencesContext);
 
 export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { language: displayLanguage } = useLanguage();
   const [theme, setThemeValue] = useLocalStorage<Theme>('theme', 'system');
   const [fontSize, setFontSizeValue] = useLocalStorage<'small' | 'medium' | 'large'>('fontSize', 'medium');
   const [autoPlayAudio, setAutoPlayAudioValue] = useLocalStorage<boolean>('autoPlayAudio', true);
@@ -92,11 +107,12 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
   const [difficulty, setDifficultyValue] = useLocalStorage<'beginner' | 'intermediate' | 'advanced'>('difficulty', 'intermediate');
   const [notifications, setNotificationsValue] = useLocalStorage<boolean>('notifications', true);
   const [dailyGoal, setDailyGoalValue] = useLocalStorage<number>('dailyGoal', 15);
-  // Add new state variables
   const [preferredLanguage, setPreferredLanguageValue] = useLocalStorage<'english' | 'italian' | 'both'>('preferredLanguage', 'both');
   const [aiPreference, setAIPreferenceValue] = useLocalStorage<AIPreference>('aiPreference', defaultAIPreference);
+  const [highContrastMode, setHighContrastModeValue] = useLocalStorage<boolean>('highContrastMode', false);
+  const [animationsEnabled, setAnimationsEnabledValue] = useLocalStorage<boolean>('animationsEnabled', true);
+  const [showProgressMetrics, setShowProgressMetricsValue] = useLocalStorage<boolean>('showProgressMetrics', true);
 
-  // Initialize voice preferences with system defaults if not already set
   useEffect(() => {
     const initVoicePreferences = async () => {
       if (!voicePreference.englishVoiceURI && !voicePreference.italianVoiceURI) {
@@ -108,7 +124,6 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     initVoicePreferences();
   }, [voicePreference, setVoicePreferenceValue]);
 
-  // Set theme on body element
   useEffect(() => {
     const root = window.document.documentElement;
     
@@ -122,7 +137,24 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [theme]);
 
-  // Set font size on body element
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (highContrastMode) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+  }, [highContrastMode]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (!animationsEnabled) {
+      root.classList.add('reduce-motion');
+    } else {
+      root.classList.remove('reduce-motion');
+    }
+  }, [animationsEnabled]);
+
   useEffect(() => {
     const body = window.document.body;
     
@@ -143,6 +175,12 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [fontSize]);
 
+  useEffect(() => {
+    if (displayLanguage !== preferredLanguage) {
+      setPreferredLanguageValue(displayLanguage);
+    }
+  }, [displayLanguage]);
+
   const setTheme = (value: Theme) => setThemeValue(value);
   const setFontSize = (value: 'small' | 'medium' | 'large') => setFontSizeValue(value);
   const setAutoPlayAudio = (value: boolean) => setAutoPlayAudioValue(value);
@@ -152,9 +190,11 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
   const setDifficulty = (value: 'beginner' | 'intermediate' | 'advanced') => setDifficultyValue(value);
   const setNotifications = (value: boolean) => setNotificationsValue(value);
   const setDailyGoal = (value: number) => setDailyGoalValue(value);
-  // Add setter functions for new properties
   const setPreferredLanguage = (value: 'english' | 'italian' | 'both') => setPreferredLanguageValue(value);
   const setAIPreference = (value: AIPreference) => setAIPreferenceValue(value);
+  const setHighContrastMode = (value: boolean) => setHighContrastModeValue(value);
+  const setAnimationsEnabled = (value: boolean) => setAnimationsEnabledValue(value);
+  const setShowProgressMetrics = (value: boolean) => setShowProgressMetricsValue(value);
 
   return (
     <UserPreferencesContext.Provider
@@ -177,15 +217,19 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         setNotifications,
         dailyGoal,
         setDailyGoal,
-        // Add new properties
         preferredLanguage,
         setPreferredLanguage,
         aiPreference,
-        setAIPreference
+        setAIPreference,
+        highContrastMode,
+        setHighContrastMode,
+        animationsEnabled,
+        setAnimationsEnabled,
+        showProgressMetrics,
+        setShowProgressMetrics
       }}
     >
       {children}
     </UserPreferencesContext.Provider>
   );
 };
-

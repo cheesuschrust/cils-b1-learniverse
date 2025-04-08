@@ -5,7 +5,8 @@ import MainNavigation from '@/components/navigation/MainNavigation';
 import Footer from '@/components/layout/Footer';
 import AIStatusIndicator from '@/components/ai/AIStatusIndicator';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
-import { Flag } from 'lucide-react';
+import { Flag, Sun, Moon } from 'lucide-react';
+import { ModeToggle } from '@/components/ui/mode-toggle';
 
 const RootLayout: React.FC = () => {
   return (
@@ -19,6 +20,7 @@ const RootLayout: React.FC = () => {
               <Flag className="h-4 w-4 mr-2 text-italian-green" />
               <LanguageToggle />
             </div>
+            <ModeToggle />
             <AIStatusIndicator />
           </div>
         </div>

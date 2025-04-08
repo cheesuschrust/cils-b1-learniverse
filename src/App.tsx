@@ -2,33 +2,27 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
-import { AIProvider } from '@/contexts/AIContext';
-import { LanguageProvider } from '@/contexts/LanguageContext';
-import { HelmetProvider } from 'react-helmet-async';
 import AppRoutes from '@/routes';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import { ThemeProvider } from '@/components/theme-provider';
 
-const App: React.FC = () => {
+function App() {
   return (
-    <HelmetProvider>
-      <BrowserRouter>
-        <ThemeProvider>
+    <ThemeProvider defaultTheme="system">
+      <LanguageProvider>
+        <UserPreferencesProvider>
           <AuthProvider>
-            <AIProvider>
-              <AIUtilsProvider>
-                <LanguageProvider>
-                  <AppRoutes />
-                  <Toaster />
-                </LanguageProvider>
-              </AIUtilsProvider>
-            </AIProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster />
+            </BrowserRouter>
           </AuthProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </HelmetProvider>
+        </UserPreferencesProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
-};
+}
 
 export default App;

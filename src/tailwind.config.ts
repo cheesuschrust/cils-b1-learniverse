@@ -57,6 +57,11 @@ export default {
         "italian-green": "#008C45", // Green from the Italian flag
         "italian-white": "#F4F5F0", // White from the Italian flag
         "italian-red": "#CD212A",   // Red from the Italian flag
+        
+        // High contrast mode colors
+        "high-contrast-bg": "#000000",
+        "high-contrast-text": "#FFFFFF",
+        "high-contrast-accent": "#FFFF00",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,6 +70,7 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        dyslexic: ["OpenDyslexic", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
@@ -82,5 +88,26 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.reduce-motion *': {
+          'animation-duration': '0.001ms !important',
+          'transition-duration': '0.001ms !important',
+        },
+        '.high-contrast': {
+          '--background': '#000000',
+          '--foreground': '#FFFFFF',
+          '--border': '#FFFFFF',
+          '--link': '#FFFF00',
+          '--focus': '#FFFF00',
+        },
+        '.dyslexic-font': {
+          'font-family': 'OpenDyslexic, sans-serif',
+        },
+      }
+      addUtilities(newUtilities)
+    },
+  ],
+} satisfies Config;

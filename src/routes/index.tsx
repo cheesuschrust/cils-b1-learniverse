@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import RootLayout from '@/layouts/RootLayout';
@@ -25,6 +24,7 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('@/pages/auth/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 
 // Practice pages
 const FlashcardsPage = lazy(() => import('@/pages/learning/FlashcardsPage'));
@@ -70,6 +70,9 @@ const AppRoutes = () => {
                 <SettingsPage />
               </ProtectedRoute>
             } />
+            
+            {/* Legal pages */}
+            <Route path="privacy" element={<PrivacyPage />} />
             
             {/* Learning pages */}
             <Route path="flashcards" element={<FlashcardsPage />} />
