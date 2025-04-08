@@ -1,138 +1,109 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
   id: string;
   email: string;
-  displayName?: string;
-  photoURL?: string;
-  isAdmin?: boolean;
+  name?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName?: string) => Promise<void>;
-  logout: () => Promise<void>;
   loading: boolean;
-  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  isAuthenticated: false,
-  isAdmin: false,
+  loading: true,
   login: async () => {},
   signup: async () => {},
   logout: async () => {},
-  loading: false,
-  error: null,
+  forgotPassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Check if there's a user session on init
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    // Check if user is stored in localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Failed to parse stored user:', err);
-        localStorage.removeItem('user');
-      }
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Mock login for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
-        email,
-        displayName: email.split('@')[0],
-        isAdmin: email.includes('admin'),
-      };
-      
-      setUser(mockUser);
+      // For demonstration - replace with actual authentication logic
+      const mockUser = { id: '1', email };
       localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Login failed. Please check your credentials and try again.');
-      console.error('Login error:', err);
+      setUser(mockUser);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, displayName?: string) => {
+  const signup = async (email: string, password: string, name: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Mock signup for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
-        email,
-        displayName: displayName || email.split('@')[0],
-        isAdmin: false,
-      };
-      
-      setUser(mockUser);
+      // For demonstration - replace with actual authentication logic
+      const mockUser = { id: '2', email, name };
       localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Signup failed. Please try again later.');
-      console.error('Signup error:', err);
+      setUser(mockUser);
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      // Clear user from state and localStorage
-      setUser(null);
       localStorage.removeItem('user');
-    } catch (err) {
-      setError('Logout failed. Please try again.');
-      console.error('Logout error:', err);
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = !!(user?.isAdmin);
+  const forgotPassword = async (email: string) => {
+    setLoading(true);
+    try {
+      // For demonstration - replace with actual password reset logic
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isAdmin,
-      login,
-      signup,
-      logout,
-      loading,
-      error,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    login,
+    signup,
+    logout,
+    forgotPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export default AuthContext;

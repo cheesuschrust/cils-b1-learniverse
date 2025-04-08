@@ -1,66 +1,62 @@
 
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
-const AuthLayout: React.FC = () => {
+const AuthLayout = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
+  // If user is already logged in, show a message
+  if (user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card shadow-sm p-8 space-y-6">
+          <h1 className="text-2xl font-semibold text-center">You're Already Logged In</h1>
+          <p className="text-center text-muted-foreground">
+            You are currently logged in as {user.email}.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <Button asChild variant="default">
+              <Link to="/">Go to Home</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/dashboard">Go to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* Header */}
-      <header className="bg-background border-b py-4 px-6">
-        <div className="container mx-auto flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <span className="font-bold text-xl">CILS B1 Cittadinanza</span>
-          </a>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="/about" className="text-muted-foreground hover:text-foreground">About</a>
-            <a href="/contact" className="text-muted-foreground hover:text-foreground">Contact</a>
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link to="/" className="text-2xl font-bold">Italian Learning</Link>
+          <nav>
+            {isLoginPage ? (
+              <Link to="/signup">
+                <Button variant="outline">Sign Up</Button>
+              </Link>
+            ) : (
+              <Link to="/login">
+                <Button variant="outline">Log In</Button>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
       
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
-          <Card className="w-full shadow-lg">
-            <Outlet />
-          </Card>
-          
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>
-              By using this service, you agree to our{" "}
-              <a href="/terms" className="underline hover:text-foreground">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="/privacy" className="underline hover:text-foreground">
-                Privacy Policy
-              </a>
-              .
-            </p>
-          </div>
-        </div>
+      <main className="flex-1 flex items-center justify-center p-4">
+        <Outlet />
       </main>
       
-      {/* Footer */}
-      <footer className="border-t py-6 bg-background">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} CILS B1 Cittadinanza. All rights reserved.
-            </p>
-            <div className="flex items-center space-x-4">
-              <a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
-                Privacy
-              </a>
-              <a href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
-                Terms
-              </a>
-              <a href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
-                Contact
-              </a>
-            </div>
-          </div>
+      <footer className="py-6 border-t">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} Italian Learning App. All rights reserved.</p>
         </div>
       </footer>
     </div>
