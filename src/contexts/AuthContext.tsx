@@ -1,215 +1,138 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Types
 interface User {
   id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  isVerified?: boolean;
-  role?: 'user' | 'admin';
+  displayName?: string;
+  photoURL?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<void>;
-  register: (firstName: string, lastName: string, email: string, password: string) => Promise<{success: boolean; error?: string}>;
-  logout: () => void;
-  resetPassword: (email: string) => Promise<boolean>;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, displayName?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loading: boolean;
+  error: string | null;
 }
 
-// Create the context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  isAdmin: false,
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
+  loading: false,
+  error: null,
+});
 
-// Provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const useAuth = () => useContext(AuthContext);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Check if user is logged in on initial load
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Check if there's a user session on init
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      setIsLoading(true);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
       try {
-        // Simulate checking if user is logged in
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-      } finally {
-        setIsLoading(false);
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error('Failed to parse stored user:', err);
+        localStorage.removeItem('user');
       }
-    };
-
-    checkAuthStatus();
+    }
+    setLoading(false);
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+  const login = async (email: string, password: string) => {
     try {
-      // This is a mock implementation - in a real app, you would call your API
-      if (email === 'demo@example.com' && password === 'password123') {
-        const userData: User = {
-          id: '1',
-          email: email,
-          firstName: 'Demo',
-          lastName: 'User',
-          isVerified: true,
-          role: 'user'
-        };
-        
-        // Save to local storage
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        
-        toast({
-          title: "Login successful",
-          description: "Welcome to CILS B1 Cittadinanza!",
-        });
-        
-        navigate('/dashboard');
-        return true;
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Google login
-  const loginWithGoogle = async (): Promise<void> => {
-    // This is a mock implementation
-    setIsLoading(true);
-    try {
-      // Simulate Google login
-      toast({
-        title: "Google login",
-        description: "This would redirect to Google in a real implementation",
-      });
-    } catch (error) {
-      console.error('Google login error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Register function
-  const register = async (
-    firstName: string, 
-    lastName: string, 
-    email: string, 
-    password: string
-  ): Promise<{success: boolean; error?: string}> => {
-    setIsLoading(true);
-    try {
-      // This is a mock implementation
-      if (email === 'taken@example.com') {
-        return { success: false, error: 'Email already in use' };
-      }
+      setLoading(true);
+      setError(null);
       
-      const userData: User = {
-        id: Date.now().toString(),
+      // Mock login for now - would be replaced with Supabase authentication
+      const mockUser: User = {
+        id: '1',
         email,
-        firstName,
-        lastName,
-        isVerified: false,
-        role: 'user'
+        displayName: email.split('@')[0],
+        isAdmin: email.includes('admin'),
       };
       
-      // In a real app, you would call your API here
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
-      toast({
-        title: "Registration successful",
-        description: "Welcome to CILS B1 Cittadinanza!",
-      });
-      
-      navigate('/dashboard');
-      return { success: true };
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message || 'Registration failed' };
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (err) {
+      setError('Login failed. Please check your credentials and try again.');
+      console.error('Login error:', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Logout function
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate('/login');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-  };
-
-  // Reset password
-  const resetPassword = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
+  const signup = async (email: string, password: string, displayName?: string) => {
     try {
-      // This is a mock implementation
-      toast({
-        title: "Password reset email sent",
-        description: `If an account exists for ${email}, we've sent instructions to reset your password`,
-      });
-      return true;
-    } catch (error) {
-      console.error('Reset password error:', error);
-      return false;
+      setLoading(true);
+      setError(null);
+      
+      // Mock signup for now - would be replaced with Supabase authentication
+      const mockUser: User = {
+        id: '1',
+        email,
+        displayName: displayName || email.split('@')[0],
+        isAdmin: false,
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (err) {
+      setError('Signup failed. Please try again later.');
+      console.error('Signup error:', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Context value
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    loginWithGoogle,
-    register,
-    logout,
-    resetPassword,
+  const logout = async () => {
+    try {
+      setLoading(true);
+      // Clear user from state and localStorage
+      setUser(null);
+      localStorage.removeItem('user');
+    } catch (err) {
+      setError('Logout failed. Please try again.');
+      console.error('Logout error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const isAuthenticated = !!user;
+  const isAdmin = !!(user?.isAdmin);
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isAdmin,
+      login,
+      signup,
+      logout,
+      loading,
+      error,
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-// Hook to use the context
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
 
 export default AuthContext;
