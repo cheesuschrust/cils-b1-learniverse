@@ -1,44 +1,36 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Trophy, Award, Star, Flame, CheckCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { calculateLevelProgress } from '@/lib/learning-utils';
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  category: string;
-  points: number;
-  requiredValue?: number;
-  progress?: number;
-  unlockedAt?: Date;
-}
+import { calculateUserLevel, calculateXpReward, isStreakMaintained } from '@/lib/learning-utils';
+import { Achievement, UserGamification } from '@/types/gamification';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GamificationContextType {
-  addXP: (amount: number, source: string) => Promise<void>;
-  updateStreak: (hasActivity: boolean) => Promise<void>;
-  showAchievementUnlock: (achievement: Achievement) => void;
-  showLevelUp: (newLevel: number, oldLevel: number) => void;
-  getUserLevel: () => number;
-  getCurrentXP: () => number;
-  unlockAchievement: (achievementId: string) => Promise<void>;
   achievements: Achievement[];
-  isLoadingAchievements: boolean;
+  addXP: (amount: number, source: string) => void;
+  updateStreak: (hasActivity: boolean) => void;
+  unlockAchievement: (achievementId: string) => void;
+  getCurrentXP: () => number;
+  getUserLevel: () => number;
+  checkForAchievements: () => Promise<Achievement[]>;
+  resetDailyXP: () => void;
+  weeklyChallenge: any | null;
 }
 
-const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
+const GamificationContext = createContext<GamificationContextType>({
+  achievements: [],
+  addXP: () => {},
+  updateStreak: () => {},
+  unlockAchievement: () => {},
+  getCurrentXP: () => 0,
+  getUserLevel: () => 1,
+  checkForAchievements: async () => [],
+  resetDailyXP: () => {},
+  weeklyChallenge: null
+});
+
+export const useGamificationContext = () => useContext(GamificationContext);
 
 interface GamificationProviderProps {
   children: ReactNode;
@@ -47,382 +39,317 @@ interface GamificationProviderProps {
 export const GamificationProvider: React.FC<GamificationProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentXP, setCurrentXP] = useState<number>(0);
-  const [userLevel, setUserLevel] = useState<number>(1);
+  const [userGamification, setUserGamification] = useState<UserGamification>({
+    userId: '',
+    xp: 0,
+    level: 1,
+    achievements: [],
+    streak: 0,
+    lastActivity: new Date()
+  });
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [isLoadingAchievements, setIsLoadingAchievements] = useState<boolean>(true);
-  const [showAchievementDialog, setShowAchievementDialog] = useState<boolean>(false);
-  const [showLevelUpDialog, setShowLevelUpDialog] = useState<boolean>(false);
-  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
-  const [levelUpDetails, setLevelUpDetails] = useState<{newLevel: number, oldLevel: number}>({newLevel: 0, oldLevel: 0});
-  
+  const [weeklyChallenge, setWeeklyChallenge] = useState<any>(null);
+
+  // Initialize user gamification data
   useEffect(() => {
-    const loadUserXPAndLevel = async () => {
-      if (!user) return;
-      
-      try {
-        const { data: xpData, error: xpError } = await supabase
-          .rpc('get_user_xp', { user_id: user.id });
-          
-        if (xpError) throw xpError;
-        
-        const xp = xpData || 0;
-        setCurrentXP(xp);
-        
-        const { level } = calculateLevelProgress(xp);
-        setUserLevel(level);
-        
-      } catch (error) {
-        console.error('Error loading user XP and level:', error);
-      }
-    };
-    
-    loadUserXPAndLevel();
+    if (user) {
+      fetchUserGamificationData();
+      fetchAchievements();
+      fetchWeeklyChallenge();
+    }
   }, [user]);
-  
+
+  // Check for date change to reset daily XP
   useEffect(() => {
-    const loadAchievements = async () => {
-      if (!user) return;
-      
-      setIsLoadingAchievements(true);
-      
-      try {
-        const { data: userAchievements, error: achievementsError } = await supabase
-          .from('user_achievements')
-          .select('*')
-          .eq('user_id', user.id);
-          
-        if (achievementsError) throw achievementsError;
-        
-        const availableAchievements: Achievement[] = [
-          {
-            id: 'first_lesson',
-            title: 'First Steps',
-            description: 'Complete your first lesson',
-            icon: 'award',
-            category: 'learning',
-            points: 10
-          },
-          {
-            id: 'perfect_score',
-            title: 'Perfect Score',
-            description: 'Get 100% on a quiz or exercise',
-            icon: 'star',
-            category: 'mastery',
-            points: 20
-          },
-          {
-            id: 'weekly_streak',
-            title: 'Weekly Warrior',
-            description: 'Complete daily questions for 7 consecutive days',
-            icon: 'flame',
-            category: 'streak',
-            points: 50,
-            requiredValue: 7
-          },
-          {
-            id: 'monthly_streak',
-            title: 'Monthly Dedication',
-            description: 'Complete daily questions for 30 consecutive days',
-            icon: 'calendar',
-            category: 'streak',
-            points: 200,
-            requiredValue: 30
-          },
-          {
-            id: 'vocabulary_master',
-            title: 'Vocabulary Master',
-            description: 'Learn 100 vocabulary words',
-            icon: 'book',
-            category: 'learning',
-            points: 100,
-            requiredValue: 100
-          },
-          {
-            id: 'grammar_guru',
-            title: 'Grammar Guru',
-            description: 'Complete 20 grammar exercises',
-            icon: 'check-circle',
-            category: 'mastery',
-            points: 75,
-            requiredValue: 20
-          },
-          {
-            id: 'social_butterfly',
-            title: 'Social Butterfly',
-            description: 'Participate in a community challenge',
-            icon: 'users',
-            category: 'social',
-            points: 30
-          },
-          {
-            id: 'citizenship_expert',
-            title: 'Citizenship Expert',
-            description: 'Complete all citizenship modules',
-            icon: 'award',
-            category: 'mastery',
-            points: 150
-          }
-        ];
-        
-        const mappedAchievements = availableAchievements.map(achievement => {
-          const userAchievement = userAchievements?.find(
-            ua => ua.achievement_name === achievement.title || ua.achievement_type === achievement.id
-          );
-          
-          if (userAchievement) {
-            return {
-              ...achievement,
-              unlockedAt: new Date(userAchievement.achieved_at)
-            };
-          }
-          
-          return achievement;
-        });
-        
-        setAchievements(mappedAchievements);
-      } catch (error) {
-        console.error('Error loading achievements:', error);
-      } finally {
-        setIsLoadingAchievements(false);
-      }
-    };
+    const now = new Date();
+    const lastActivity = userGamification.lastActivity ? new Date(userGamification.lastActivity) : null;
     
-    loadAchievements();
-  }, [user]);
-  
-  const addXP = async (amount: number, source: string) => {
-    if (!user || amount <= 0) return;
+    if (lastActivity && now.getDate() !== lastActivity.getDate()) {
+      resetDailyXP();
+    }
+  }, [userGamification.lastActivity]);
+
+  // Fetch user gamification data
+  const fetchUserGamificationData = async () => {
+    if (!user) return;
     
     try {
-      const oldLevel = userLevel;
+      // In a real app, this would fetch from your database
+      // Simulating with mock data for now
+      const mockGamification: UserGamification = {
+        userId: user.id,
+        xp: 450,
+        level: calculateUserLevel(450),
+        achievements: [],
+        streak: 7,
+        lastActivity: new Date(),
+        weeklyXp: 120,
+        totalCorrectAnswers: 78,
+        totalCompletedReviews: 45
+      };
       
-      await supabase.rpc('add_user_xp', { 
-        user_id: user.id, 
-        xp_amount: amount, 
-        activity_type: source 
-      });
-      
-      const newXP = currentXP + amount;
-      setCurrentXP(newXP);
-      
-      const { level: newLevel } = calculateLevelProgress(newXP);
-      setUserLevel(newLevel);
-      
-      if (newLevel > oldLevel) {
-        showLevelUp(newLevel, oldLevel);
-      }
-      
-      toast({
-        title: `+${amount} XP`,
-        description: `You earned XP from ${source}`,
-        variant: 'default',
-      });
-      
+      setUserGamification(mockGamification);
     } catch (error) {
-      console.error('Error adding XP:', error);
+      console.error('Error fetching gamification data:', error);
     }
   };
-  
-  const updateStreak = async (hasActivity: boolean) => {
+
+  // Fetch achievements
+  const fetchAchievements = async () => {
+    if (!user) return;
+    
+    try {
+      // In a real app, this would fetch from your database
+      const mockAchievements: Achievement[] = [
+        {
+          id: '1',
+          name: 'first_day',
+          title: 'First Day',
+          description: 'Complete your first day of learning',
+          icon: 'star',
+          type: 'milestone',
+          category: 'learning',
+          points: 10,
+          threshold: 1,
+          progress: 1,
+          unlocked: true
+        },
+        {
+          id: '2',
+          name: 'vocab_master',
+          title: 'Vocabulary Master',
+          description: 'Learn 100 vocabulary words',
+          icon: 'book',
+          type: 'progress',
+          category: 'learning',
+          points: 50,
+          threshold: 100,
+          progress: 45,
+          unlocked: false
+        },
+        {
+          id: '3',
+          name: 'streak_week',
+          title: 'Week Streak',
+          description: 'Maintain a 7-day learning streak',
+          icon: 'flame',
+          type: 'streak',
+          category: 'streak',
+          points: 25,
+          threshold: 7,
+          progress: 7,
+          unlocked: true
+        }
+      ];
+      
+      setAchievements(mockAchievements);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+    }
+  };
+
+  // Fetch weekly challenge
+  const fetchWeeklyChallenge = async () => {
+    if (!user) return;
+    
+    try {
+      // In a real app, this would fetch from your database
+      const mockChallenge = {
+        id: 'wc-1',
+        title: 'Vocabulary Champion',
+        description: 'Complete 20 flashcard reviews this week',
+        category: 'learning',
+        type: 'flashcards',
+        reward: 50,
+        target: 20,
+        progress: 12,
+        startDate: new Date(new Date().setDate(new Date().getDate() - 2)),
+        endDate: new Date(new Date().setDate(new Date().getDate() + 5)),
+        isCompleted: false,
+        icon: 'star'
+      };
+      
+      setWeeklyChallenge(mockChallenge);
+    } catch (error) {
+      console.error('Error fetching weekly challenge:', error);
+    }
+  };
+
+  // Add XP to user
+  const addXP = (amount: number, source: string) => {
+    if (!user) return;
+    
+    const newTotalXP = userGamification.xp + amount;
+    const newWeeklyXP = (userGamification.weeklyXp || 0) + amount;
+    const oldLevel = userGamification.level;
+    const newLevel = calculateUserLevel(newTotalXP);
+    
+    setUserGamification(prev => ({
+      ...prev,
+      xp: newTotalXP,
+      weeklyXp: newWeeklyXP,
+      level: newLevel,
+      lastActivity: new Date()
+    }));
+    
+    // Toast notification for XP gain
+    toast({
+      title: `+${amount} XP`,
+      description: `You gained XP from ${source}!`,
+    });
+    
+    // Check if user leveled up
+    if (newLevel > oldLevel) {
+      toast({
+        title: 'Level Up!',
+        description: `Congratulations! You are now level ${newLevel}!`,
+        variant: 'default',
+      });
+    }
+    
+    // In a real app, you would update the database
+    // updateUserXpInDatabase(user.id, newTotalXP, newLevel);
+  };
+
+  // Update user streak
+  const updateStreak = (hasActivity: boolean) => {
     if (!user || !hasActivity) return;
     
-    try {
-      toast({
-        title: 'Streak Maintained',
-        description: 'You\'ve maintained your daily streak!',
-        variant: 'default',
-      });
-    } catch (error) {
-      console.error('Error updating streak:', error);
+    const lastActivityDate = userGamification.lastActivityDate ? new Date(userGamification.lastActivityDate) : null;
+    const now = new Date();
+    
+    // Check if this is a new day
+    const isNewDay = !lastActivityDate || 
+      now.getDate() !== lastActivityDate.getDate() || 
+      now.getMonth() !== lastActivityDate.getMonth() || 
+      now.getFullYear() !== lastActivityDate.getFullYear();
+    
+    if (isNewDay) {
+      const streakMaintained = isStreakMaintained(lastActivityDate, now);
+      const newStreak = streakMaintained ? userGamification.streak + 1 : 1;
+      const newLongestStreak = Math.max(userGamification.longestStreak || 0, newStreak);
+      
+      setUserGamification(prev => ({
+        ...prev,
+        streak: newStreak,
+        longestStreak: newLongestStreak,
+        lastActivity: now,
+        lastActivityDate: now
+      }));
+      
+      // Celebrate streak milestones
+      if (newStreak % 7 === 0) {
+        toast({
+          title: 'Streak Milestone!',
+          description: `You've maintained a ${newStreak}-day streak. Keep it up!`,
+          variant: 'default',
+        });
+      }
+      
+      // In a real app, you would update the database
+      // updateUserStreakInDatabase(user.id, newStreak, now);
     }
   };
-  
-  const unlockAchievement = async (achievementId: string) => {
+
+  // Unlock an achievement
+  const unlockAchievement = (achievementId: string) => {
     if (!user) return;
     
     const achievement = achievements.find(a => a.id === achievementId);
-    if (!achievement || achievement.unlockedAt) return;
+    if (!achievement || achievement.unlocked) return;
     
-    try {
-      const { error } = await supabase
-        .from('user_achievements')
-        .insert({
-          user_id: user.id,
-          achievement_name: achievement.title,
-          achievement_type: achievement.id,
-          description: achievement.description
-        });
-        
-      if (error) throw error;
-      
-      setAchievements(achievements.map(a => 
-        a.id === achievementId 
-          ? { ...a, unlockedAt: new Date() } 
-          : a
-      ));
-      
-      showAchievementUnlock(achievement);
-      
-      addXP(achievement.points, 'Achievement Unlocked');
-      
-    } catch (error) {
-      console.error('Error unlocking achievement:', error);
-    }
-  };
-  
-  const showAchievementUnlock = (achievement: Achievement) => {
-    setCurrentAchievement(achievement);
-    setShowAchievementDialog(true);
+    // Update achievement
+    const updatedAchievements = achievements.map(a => 
+      a.id === achievementId ? { ...a, unlocked: true, unlockedAt: new Date() } : a
+    );
     
-    setTimeout(() => {
-      setShowAchievementDialog(false);
-    }, 5000);
-  };
-  
-  const showLevelUp = (newLevel: number, oldLevel: number) => {
-    setLevelUpDetails({ newLevel, oldLevel });
-    setShowLevelUpDialog(true);
+    setAchievements(updatedAchievements);
     
-    setTimeout(() => {
-      setShowLevelUpDialog(false);
-    }, 5000);
+    // Add XP reward
+    addXP(achievement.points, `Achievement: ${achievement.title}`);
+    
+    // Toast notification for achievement
+    toast({
+      title: 'Achievement Unlocked!',
+      description: achievement.title,
+      variant: 'default',
+    });
+    
+    // In a real app, you would update the database
+    // updateUserAchievementInDatabase(user.id, achievementId);
   };
-  
-  const getUserLevel = () => userLevel;
-  
-  const getCurrentXP = () => currentXP;
-  
-  const renderAchievementIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'trophy': return <Trophy className="h-6 w-6 text-amber-500" />;
-      case 'award': return <Award className="h-6 w-6 text-amber-500" />;
-      case 'star': return <Star className="h-6 w-6 text-amber-500" />;
-      case 'flame': return <Flame className="h-6 w-6 text-amber-500" />;
-      case 'check-circle': return <CheckCircle className="h-6 w-6 text-amber-500" />;
-      default: return <Award className="h-6 w-6 text-amber-500" />;
-    }
+
+  // Check for new achievements based on user stats
+  const checkForAchievements = async (): Promise<Achievement[]> => {
+    if (!user) return [];
+    
+    const unlockedAchievements: Achievement[] = [];
+    
+    // Check each achievement
+    achievements.forEach(achievement => {
+      if (achievement.unlocked) return;
+      
+      let shouldUnlock = false;
+      
+      switch (achievement.name) {
+        case 'streak_week':
+          shouldUnlock = userGamification.streak >= 7;
+          break;
+        case 'streak_month':
+          shouldUnlock = userGamification.streak >= 30;
+          break;
+        case 'vocab_master':
+          shouldUnlock = (userGamification.totalCorrectAnswers || 0) >= 100;
+          break;
+        case 'flashcard_expert':
+          shouldUnlock = (userGamification.totalCompletedReviews || 0) >= 500;
+          break;
+        // Add more achievement checks as needed
+      }
+      
+      if (shouldUnlock) {
+        unlockAchievement(achievement.id);
+        unlockedAchievements.push(achievement);
+      }
+    });
+    
+    return unlockedAchievements;
   };
+
+  // Reset daily XP tracking
+  const resetDailyXP = () => {
+    if (!user) return;
+    
+    setUserGamification(prev => ({
+      ...prev,
+      dailyXp: 0
+    }));
+    
+    // In a real app, you would update the database
+    // resetUserDailyXpInDatabase(user.id);
+  };
+
+  // Get current XP
+  const getCurrentXP = () => userGamification.xp;
   
+  // Get user level
+  const getUserLevel = () => userGamification.level;
+
   return (
-    <GamificationContext.Provider
+    <GamificationContext.Provider 
       value={{
+        achievements,
         addXP,
         updateStreak,
-        showAchievementUnlock,
-        showLevelUp,
-        getUserLevel,
-        getCurrentXP,
         unlockAchievement,
-        achievements,
-        isLoadingAchievements,
+        getCurrentXP,
+        getUserLevel,
+        checkForAchievements,
+        resetDailyXP,
+        weeklyChallenge
       }}
     >
       {children}
-      
-      <Dialog open={showAchievementDialog} onOpenChange={setShowAchievementDialog}>
-        <DialogContent className="sm:max-w-md">
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <DialogHeader>
-              <DialogTitle className="text-center">Achievement Unlocked!</DialogTitle>
-              <DialogDescription className="text-center">
-                You've earned a new achievement
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="flex flex-col items-center py-6">
-              <div className="h-20 w-20 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                <motion.div 
-                  initial={{ rotate: 0 }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1 }}
-                >
-                  {currentAchievement && renderAchievementIcon(currentAchievement.icon)}
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-bold mb-1">{currentAchievement?.title}</h3>
-              <p className="text-muted-foreground text-center mb-3">
-                {currentAchievement?.description}
-              </p>
-              <div className="text-amber-500 font-bold text-lg">
-                +{currentAchievement?.points} XP
-              </div>
-            </div>
-            
-            <div className="flex justify-center">
-              <Button onClick={() => setShowAchievementDialog(false)}>
-                Continue
-              </Button>
-            </div>
-          </motion.div>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showLevelUpDialog} onOpenChange={setShowLevelUpDialog}>
-        <DialogContent className="sm:max-w-md">
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <DialogHeader>
-              <DialogTitle className="text-center">Level Up!</DialogTitle>
-              <DialogDescription className="text-center">
-                You've reached a new level
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="flex flex-col items-center py-6">
-              <div className="relative mb-6">
-                <motion.div 
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <div className="text-5xl font-bold text-primary">
-                    {levelUpDetails.newLevel}
-                  </div>
-                </motion.div>
-                <motion.div 
-                  initial={{ y: 0 }}
-                  animate={{ y: -50, opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-3xl font-bold text-muted"
-                >
-                  {levelUpDetails.oldLevel}
-                </motion.div>
-              </div>
-              
-              <h3 className="text-xl font-bold mb-4">Congratulations!</h3>
-              <p className="text-muted-foreground text-center mb-3">
-                You've leveled up to level {levelUpDetails.newLevel}!
-              </p>
-              <p className="text-muted-foreground text-center mb-5">
-                Keep learning to unlock more achievements and reach higher levels.
-              </p>
-            </div>
-            
-            <div className="flex justify-center">
-              <Button onClick={() => setShowLevelUpDialog(false)}>
-                Continue
-              </Button>
-            </div>
-          </motion.div>
-        </DialogContent>
-      </Dialog>
     </GamificationContext.Provider>
   );
-};
-
-export const useGamificationContext = (): GamificationContextType => {
-  const context = useContext(GamificationContext);
-  if (context === undefined) {
-    throw new Error('useGamificationContext must be used within a GamificationProvider');
-  }
-  return context;
 };
