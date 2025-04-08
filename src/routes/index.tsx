@@ -7,6 +7,7 @@ import AuthLayout from '@/layouts/AuthLayout';
 import AdminLayout from '@/layouts/AdminLayout';
 import { Spinner } from '@/components/ui/spinner';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -47,79 +48,81 @@ const SubscriptionManagementPage = lazy(() => import('@/pages/subscription/Subsc
 const AppRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {/* Root routes with main layout */}
-        <Route element={<RootLayout />}>
-          <Route index element={<HomePage />} />
-          
-          {/* User related pages */}
-          <Route path="profile" element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          } />
-          <Route path="progress" element={
-            <ProtectedRoute>
-              <ProgressPage />
-            </ProtectedRoute>
-          } />
-          <Route path="settings" element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          } />
-          
-          {/* Learning pages */}
-          <Route path="flashcards" element={<FlashcardsPage />} />
-          <Route path="practice">
-            <Route path="listening" element={<ListeningPage />} />
-            <Route path="reading" element={<ReadingPage />} />
-            <Route path="writing" element={<WritingPage />} />
-            <Route path="speaking" element={<SpeakingPage />} />
+      <AIUtilsProvider>
+        <Routes>
+          {/* Root routes with main layout */}
+          <Route element={<RootLayout />}>
+            <Route index element={<HomePage />} />
+            
+            {/* User related pages */}
+            <Route path="profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="progress" element={
+              <ProtectedRoute>
+                <ProgressPage />
+              </ProtectedRoute>
+            } />
+            <Route path="settings" element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Learning pages */}
+            <Route path="flashcards" element={<FlashcardsPage />} />
+            <Route path="practice">
+              <Route path="listening" element={<ListeningPage />} />
+              <Route path="reading" element={<ReadingPage />} />
+              <Route path="writing" element={<WritingPage />} />
+              <Route path="speaking" element={<SpeakingPage />} />
+            </Route>
+            
+            {/* Subscription pages */}
+            <Route path="subscription" element={<SubscriptionPage />} />
+            <Route path="subscription/manage" element={
+              <ProtectedRoute>
+                <SubscriptionManagementPage />
+              </ProtectedRoute>
+            } />
           </Route>
           
-          {/* Subscription pages */}
-          <Route path="subscription" element={<SubscriptionPage />} />
-          <Route path="subscription/manage" element={
+          {/* Auth routes */}
+          <Route element={<AuthLayout />}>
+            <Route path="login" element={<LoginPage />} />
+            <Route path="signup" element={<SignupPage />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          </Route>
+          
+          {/* Dashboard layout */}
+          <Route path="dashboard" element={
             <ProtectedRoute>
-              <SubscriptionManagementPage />
+              <DashboardLayout />
             </ProtectedRoute>
-          } />
-        </Route>
-        
-        {/* Auth routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="login" element={<LoginPage />} />
-          <Route path="signup" element={<SignupPage />} />
-          <Route path="forgot-password" element={<ForgotPasswordPage />} />
-        </Route>
-        
-        {/* Dashboard layout */}
-        <Route path="dashboard" element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<HomePage />} />
-        </Route>
-        
-        {/* Admin routes - Protected with requireAdmin flag */}
-        <Route path="admin" element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="content" element={<ContentManager />} />
-          <Route path="ai-management" element={<AIManagement />} />
-          <Route path="subscriptions" element={<SubscriptionManager />} />
-          <Route path="system-health" element={<SystemHealth />} />
-        </Route>
-        
-        {/* 404 - Not Found */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          }>
+            <Route index element={<HomePage />} />
+          </Route>
+          
+          {/* Admin routes - Protected with requireAdmin flag */}
+          <Route path="admin" element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="content" element={<ContentManager />} />
+            <Route path="ai-management" element={<AIManagement />} />
+            <Route path="subscriptions" element={<SubscriptionManager />} />
+            <Route path="system-health" element={<SystemHealth />} />
+          </Route>
+          
+          {/* 404 - Not Found */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AIUtilsProvider>
     </Suspense>
   );
 };
