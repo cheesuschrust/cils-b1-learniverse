@@ -2,38 +2,47 @@
 import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  redirectTo?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requireAdmin = false 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requireAdmin = false,
+  redirectTo = '/login'
 }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   
-  // While authentication is being checked, show a loading state
-  if (loading) {
+  // While authentication state is loading, show a loading spinner
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-screen">
+        <Spinner size="lg" className="text-primary" />
       </div>
     );
   }
   
-  // If not authenticated, redirect to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  // If user is not authenticated, redirect to login
+  if (!user) {
+    return <Navigate to={redirectTo} replace />;
   }
   
-  // If admin access is required but user is not an admin
-  if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" />;
+  // For admin pages, check if user has admin role
+  // In a real implementation, this would check the user's roles in the database
+  if (requireAdmin) {
+    // Placeholder check - in a real app, this would query backend for admin status
+    const isAdmin = user.user_metadata?.role === 'admin';
+    
+    if (!isAdmin) {
+      return <Navigate to="/" replace />;
+    }
   }
   
-  // If authenticated (and admin if required), render the children
+  // User is authenticated and has required permissions
   return <>{children}</>;
 };
 

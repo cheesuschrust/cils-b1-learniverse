@@ -1,109 +1,243 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
-
-interface AuthContextType {
+interface UserContextState {
   user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<boolean>;
+  updateUserProfile: (data: any) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType>({
+const AuthContext = createContext<UserContextState>({
   user: null,
-  loading: true,
-  login: async () => {},
-  signup: async () => {},
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => false,
+  signup: async () => false,
   logout: async () => {},
-  forgotPassword: async () => {},
+  forgotPassword: async () => false,
+  updateUserProfile: async () => false,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demonstration - replace with actual authentication logic
-      const mockUser = { id: '1', email };
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        toast({
+          title: 'Login Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Login Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
-    setLoading(true);
+  const signup = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demonstration - replace with actual authentication logic
-      const mockUser = { id: '2', email, name };
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw error;
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      
+      if (error) {
+        toast({
+          title: 'Signup Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      if (data.user?.identities?.length === 0) {
+        toast({
+          title: 'User already exists',
+          description: 'This email is already registered. Please log in instead.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Account created!',
+        description: 'Please check your email to confirm your account.',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Signup Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const logout = async () => {
-    setLoading(true);
+  const logout = async (): Promise<void> => {
     try {
-      localStorage.removeItem('user');
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast({
+          title: 'Logout Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      toast({
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Logout Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const forgotPassword = async (email: string) => {
-    setLoading(true);
+  const forgotPassword = async (email: string): Promise<boolean> => {
     try {
-      // For demonstration - replace with actual password reset logic
-      console.log(`Password reset email sent to ${email}`);
-    } catch (error) {
-      console.error('Password reset error:', error);
-      throw error;
+      setIsLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        toast({
+          title: 'Reset Password Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Reset Password Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    signup,
-    logout,
-    forgotPassword,
+  const updateUserProfile = async (userData: any): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        data: userData
+      });
+      
+      if (error) {
+        toast({
+          title: 'Profile Update Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Profile Update Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        signup,
+        logout,
+        forgotPassword,
+        updateUserProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

@@ -1,116 +1,76 @@
 
-import React, { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Edit, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Edit, Trash2, Plus } from 'lucide-react';
 
-// This is a placeholder component - in a real implementation it would fetch data from the database
 export const TrainingDataTable: React.FC = () => {
-  const [data] = useState([
-    { 
-      id: '1', 
-      inputText: 'Come ti chiami?',
-      expectedOutput: "What's your name?",
-      contentType: 'grammar',
-      difficulty: 'beginner',
-      language: 'italian',
-      verified: true,
-      createdAt: new Date(2023, 5, 15)
-    },
-    { 
-      id: '2', 
-      inputText: 'La capitale dell\'Italia è Roma.',
-      expectedOutput: 'The capital of Italy is Rome.',
-      contentType: 'culture',
-      difficulty: 'beginner',
-      language: 'italian',
-      verified: true,
-      createdAt: new Date(2023, 6, 20)
-    },
-    { 
-      id: '3', 
-      inputText: 'Il Presidente della Repubblica viene eletto dal Parlamento in seduta comune dei suoi membri.',
-      expectedOutput: 'The President of the Republic is elected by Parliament in a joint session of its members.',
-      contentType: 'citizenship',
-      difficulty: 'advanced',
-      language: 'italian',
-      verified: false,
-      createdAt: new Date(2023, 7, 5)
-    },
-    { 
-      id: '4', 
-      inputText: 'Vorrei prenotare un tavolo per quattro persone, per favore.',
-      expectedOutput: 'I would like to book a table for four people, please.',
-      contentType: 'vocabulary',
-      difficulty: 'intermediate',
-      language: 'italian',
-      verified: true,
-      createdAt: new Date(2023, 8, 10)
-    },
-    { 
-      id: '5', 
-      inputText: 'Il condizionale si usa per esprimere un\'azione ipotetica o un desiderio.',
-      expectedOutput: 'The conditional is used to express a hypothetical action or a desire.',
-      contentType: 'grammar',
-      difficulty: 'intermediate',
-      language: 'italian',
-      verified: false,
-      createdAt: new Date(2023, 9, 15)
-    }
-  ]);
-
+  // Mock data
+  const trainingData = [
+    { id: 1, text: 'Come stai oggi?', type: 'question', language: 'italian', created: '2023-10-05', difficulty: 'beginner' },
+    { id: 2, text: 'Mi piacerebbe visitare Roma', type: 'statement', language: 'italian', created: '2023-10-06', difficulty: 'beginner' },
+    { id: 3, text: 'Qual è il significato di questa espressione?', type: 'question', language: 'italian', created: '2023-10-07', difficulty: 'intermediate' },
+    { id: 4, text: 'La politica economica italiana nel dopoguerra', type: 'text', language: 'italian', created: '2023-10-08', difficulty: 'advanced' },
+    { id: 5, text: 'Potrei avere il menu, per favore?', type: 'question', language: 'italian', created: '2023-10-09', difficulty: 'beginner' },
+  ];
+  
   return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Input Text</TableHead>
-            <TableHead>Expected Output</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Difficulty</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="max-w-[200px] truncate">{item.inputText}</TableCell>
-              <TableCell className="max-w-[200px] truncate">{item.expectedOutput}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="capitalize">
-                  {item.contentType}
-                </Badge>
-              </TableCell>
-              <TableCell className="capitalize">{item.difficulty}</TableCell>
-              <TableCell>
-                {item.verified ? (
-                  <div className="flex items-center">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-xs">Verified</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <XCircle className="h-4 w-4 text-amber-500 mr-1" />
-                    <span className="text-xs">Pending</span>
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="text-lg font-medium">Training Data Entries</h3>
+          <p className="text-sm text-muted-foreground">Manage the data used to train AI models</p>
+        </div>
+        <Button size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Data
+        </Button>
+      </div>
+      
+      <div className="border rounded-md">
+        <Table>
+          <TableCaption>A list of training data for AI models.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">ID</TableHead>
+              <TableHead>Text</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Difficulty</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {trainingData.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.id}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{item.text}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{item.type}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={
+                    item.difficulty === 'beginner' ? 'default' : 
+                    item.difficulty === 'intermediate' ? 'secondary' : 'outline'
+                  }>
+                    {item.difficulty}
+                  </Badge>
+                </TableCell>
+                <TableCell>{item.created}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon">
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

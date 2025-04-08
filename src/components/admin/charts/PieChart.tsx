@@ -1,33 +1,40 @@
 
 import React from 'react';
-import { PieChart as RechartsPieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 interface PieChartProps {
-  data: { name: string; value: number; color?: string }[];
-  nameKey?: string;
-  valueKey?: string;
+  data: any[];
+  nameKey: string;
+  dataKey: string;
   height?: number;
-  showLegend?: boolean;
-  colors?: string[];
   innerRadius?: number;
   outerRadius?: number;
+  colors?: string[];
   showLabel?: boolean;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
 const PieChart: React.FC<PieChartProps> = ({
   data,
-  nameKey = 'name',
-  valueKey = 'value',
+  nameKey,
+  dataKey,
   height = 300,
-  showLegend = true,
-  colors = COLORS,
   innerRadius = 0,
   outerRadius = 80,
-  showLabel = false,
+  colors = COLORS,
+  showLabel = true
 }) => {
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const renderCustomizedLabel = ({ 
+    cx, cy, midAngle, innerRadius, outerRadius, percent, name 
+  }: any) => {
     if (!showLabel) return null;
     
     const RADIAN = Math.PI / 180;
@@ -36,11 +43,11 @@ const PieChart: React.FC<PieChartProps> = ({
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor="middle" 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
       >
         {`${(percent * 100).toFixed(0)}%`}
@@ -55,23 +62,20 @@ const PieChart: React.FC<PieChartProps> = ({
           data={data}
           cx="50%"
           cy="50%"
-          labelLine={showLabel}
-          label={showLabel ? renderCustomizedLabel : undefined}
+          labelLine={false}
+          label={renderCustomizedLabel}
           outerRadius={outerRadius}
           innerRadius={innerRadius}
           fill="#8884d8"
-          dataKey={valueKey}
+          dataKey={dataKey}
           nameKey={nameKey}
         >
           {data.map((entry, index) => (
-            <Cell 
-              key={`cell-${index}`} 
-              fill={entry.color || colors[index % colors.length]} 
-            />
+            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
           ))}
         </Pie>
-        {showLegend && <Legend />}
         <Tooltip />
+        <Legend />
       </RechartsPieChart>
     </ResponsiveContainer>
   );

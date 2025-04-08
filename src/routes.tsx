@@ -39,6 +39,7 @@ const SupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
 const SystemHealth = lazy(() => import('./pages/admin/SystemHealth'));
 const ContentUploader = lazy(() => import('./pages/admin/ContentUploader'));
 const ContentAnalysis = lazy(() => import('./pages/admin/ContentAnalysis'));
+const ProjectStatus = lazy(() => import('./pages/admin/ProjectStatus'));
 
 // Helper function to wrap components with Suspense
 const withSuspense = (Component: React.LazyExoticComponent<any>) => (
@@ -74,6 +75,7 @@ const routes: RouteObject[] = [
       { path: 'content', element: withSuspense(ContentManager) },
       { path: 'content-upload', element: withSuspense(ContentUploader) },
       { path: 'content-analysis', element: withSuspense(ContentAnalysis) },
+      { path: 'project-status', element: withSuspense(ProjectStatus) },
       { path: 'ai-management', element: withSuspense(AIManagement) },
       { path: 'subscriptions', element: withSuspense(SubscriptionManager) },
       { path: 'analytics', element: withSuspense(AdminAnalytics) },

@@ -3,20 +3,18 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Users, FileText, BarChart, Settings, Database,
-  Package, LifeBuoy, AlertCircle, Home, Bot, CreditCard,
-  Upload, FileUp, Search
-} from 'lucide-react';
+import { Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminNavigation from '@/components/navigation/AdminNavigation';
+import AdminHeader from '@/components/layout/AdminHeader';
 
 const AdminLayout: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -51,9 +49,13 @@ const AdminLayout: React.FC = () => {
     checkAdminStatus();
   }, [user, navigate]);
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="min-h-screen bg-background p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex">
             <div className="w-64 mr-8">
@@ -82,28 +84,32 @@ const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white dark:bg-gray-800 shadow-md p-4 flex flex-col">
-        <div className="mb-8">
-          <h1 className="text-xl font-bold text-primary">Admin Dashboard</h1>
-        </div>
-        
-        <AdminNavigation />
-        
-        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
-          <Link to="/">
-            <Button variant="outline" className="w-full justify-start">
-              <Home className="mr-2 h-5 w-5" />
-              Return to App
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <AdminHeader toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
       
-      {/* Main content */}
-      <div className="flex-1 p-8 overflow-auto">
-        <Outlet />
+      <div className="flex flex-1 pt-16">
+        {/* Sidebar */}
+        <div className={`fixed md:relative w-64 h-[calc(100vh-4rem)] shadow-md transition-all duration-300 ease-in-out z-20 top-16 ${
+          isSidebarOpen ? 'left-0' : '-left-64 md:left-0'
+        }`}>
+          <div className="h-full bg-background border-r overflow-y-auto p-4">
+            <AdminNavigation />
+            
+            <div className="mt-auto pt-4 border-t border-border">
+              <Link to="/">
+                <Button variant="outline" className="w-full justify-start">
+                  <Home className="mr-2 h-5 w-5" />
+                  Return to App
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        {/* Main content */}
+        <div className="flex-1 p-4 md:p-8 overflow-auto ml-0 md:ml-64">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

@@ -2,60 +2,40 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-/**
- * Merges Tailwind CSS classes with clsx
- */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Format a date to a readable string
- */
-export function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+export function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
-/**
- * Truncate a string to a maximum length
- */
-export function truncateString(str: string, num: number) {
-  if (str.length <= num) {
-    return str;
-  }
-  return str.slice(0, num) + "...";
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}...`;
 }
 
-/**
- * Convert a file to a base64 string
- */
-export function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
+export function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Generate a random ID
- */
-export function generateId() {
-  return Math.random().toString(36).substring(2, 9);
-}
+export const getInitials = (name: string): string => {
+  if (!name) return '';
+  
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
 
-/**
- * Get the initials from a name
- */
-export function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase();
-}
+export const pluralize = (count: number, singular: string, plural?: string): string => {
+  return count === 1 ? singular : plural || `${singular}s`;
+};
+
+export const generateRandomId = (): string => {
+  return Math.random().toString(36).substring(2, 15);
+};

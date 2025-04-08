@@ -1,22 +1,32 @@
 
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
-import AppRoutes from './routes';
 import { Toaster } from '@/components/ui/toaster';
+import AppRoutes from '@/routes';
 import { AuthProvider } from '@/contexts/AuthContext';
-import '@/styles/global.css';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { ThemeProvider } from '@/components/theme-provider';
+import CookieConsentBanner from '@/components/common/CookieConsentBanner';
 
 function App() {
   return (
-    <HelmetProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-          <Toaster />
-        </AuthProvider>
-      </BrowserRouter>
-    </HelmetProvider>
+    <ThemeProvider defaultTheme="system">
+      <LanguageProvider>
+        <UserPreferencesProvider>
+          <AuthProvider>
+            <NotificationsProvider>
+              <BrowserRouter>
+                <AppRoutes />
+                <Toaster />
+                <CookieConsentBanner />
+              </BrowserRouter>
+            </NotificationsProvider>
+          </AuthProvider>
+        </UserPreferencesProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

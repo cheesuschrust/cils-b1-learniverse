@@ -1,28 +1,42 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import Header from '@/components/layout/Header';
+import MainNavigation from '@/components/navigation/MainNavigation';
 import Footer from '@/components/layout/Footer';
-import { Loader2 } from 'lucide-react';
+import AIStatusIndicator from '@/components/ai/AIStatusIndicator';
+import { LanguageToggle } from '@/components/language/LanguageToggle';
+import { Flag } from 'lucide-react';
+import { ModeToggle } from '@/components/ui/mode-toggle';
+import AccessibilityFeatures from '@/components/accessibility/AccessibilityFeatures';
+import useBilingualTitle from '@/hooks/useBilingualTitle';
 
 const RootLayout: React.FC = () => {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Set a default title for the root layout
+  useBilingualTitle('Welcome', 'Benvenuto');
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <MainNavigation />
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center border-r pr-3">
+              <Flag className="h-4 w-4 mr-2 text-italian-green" />
+              <LanguageToggle />
+            </div>
+            
+            <AccessibilityFeatures />
+            <ModeToggle />
+            <AIStatusIndicator />
+          </div>
+        </div>
+      </header>
+      
       <main className="flex-1">
         <Outlet />
       </main>
+      
       <Footer />
     </div>
   );
