@@ -44,7 +44,6 @@ export default defineConfig(({ mode }) => {
         'class-variance-authority',  
         'clsx',  
         'lucide-react',
-        // Removed 'shadcn-ui' as it's not actually a package
       ],  
       force: true  
     },  

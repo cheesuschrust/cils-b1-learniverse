@@ -49,54 +49,6 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
-// Mock SpeechSynthesis API
-const mockSpeechSynthesis = {
-  speak: jest.fn(),
-  cancel: jest.fn(),
-  pause: jest.fn(),
-  resume: jest.fn(),
-  getVoices: jest.fn().mockReturnValue([
-    {
-      voiceURI: 'native',
-      name: 'English Voice',
-      lang: 'en-US',
-      localService: true,
-      default: true,
-    },
-    {
-      voiceURI: 'native-italian',
-      name: 'Italian Voice',
-      lang: 'it-IT',
-      localService: true,
-      default: false,
-    }
-  ]),
-  onvoiceschanged: null,
-  pending: false,
-  speaking: false,
-  paused: false,
-};
-
-global.SpeechSynthesisUtterance = jest.fn().mockImplementation(() => ({
-  text: '',
-  voice: null,
-  rate: 1,
-  pitch: 1,
-  volume: 1,
-  lang: '',
-  onstart: null,
-  onend: null,
-  onerror: null,
-  onpause: null,
-  onresume: null,
-  onmark: null,
-  onboundary: null,
-}));
-
-Object.defineProperty(window, 'speechSynthesis', {
-  value: mockSpeechSynthesis,
-});
-
 // Add ResizeObserver mock
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
@@ -134,29 +86,6 @@ expect.extend({
       message: () => `expected ${received} ${pass ? 'not ' : ''}to have class ${className}`,
     };
   },
-  toHaveAttribute(received, attr, value) {
-    const hasAttr = received && received.hasAttribute && received.hasAttribute(attr);
-    const pass = value !== undefined ? hasAttr && received.getAttribute(attr) === value : hasAttr;
-    return {
-      pass,
-      message: () => `expected ${received} ${pass ? 'not ' : ''}to have attribute ${attr}${value !== undefined ? ` with value ${value}` : ''}`,
-    };
-  },
-  toBeDisabled(received) {
-    const pass = received && received.disabled === true;
-    return {
-      pass,
-      message: () => `expected ${received} ${pass ? 'not ' : ''}to be disabled`,
-    };
-  },
-  toHaveTextContent(received, text) {
-    const pass = received && received.textContent && received.textContent.includes(text);
-    return {
-      pass,
-      message: () => `expected ${received} ${pass ? 'not ' : ''}to have text content ${text}`,
-    };
-  },
 });
 
-// Enable more verbose logging for test environment
 console.debug('Jest test environment setup completed');
