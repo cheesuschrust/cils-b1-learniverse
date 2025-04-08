@@ -39,5 +39,10 @@ declare module 'vite' {
         reporter?: string[];
       };
     };
+    // Override the reference to tsconfig.node.json
+    compilerOptions?: {
+      composite?: boolean;
+      noEmit?: boolean;
+    };
   }
 }
