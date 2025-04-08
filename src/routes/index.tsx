@@ -42,6 +42,8 @@ const SpeakingPage = lazy(() => import('@/pages/learning/SpeakingPracticePage'))
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'));
 const ContentManager = lazy(() => import('@/pages/admin/ContentManager'));
+const ContentUploader = lazy(() => import('@/pages/admin/ContentUploader'));
+const FileUploader = lazy(() => import('@/pages/admin/FileUploader'));
 const AIManagement = lazy(() => import('@/pages/admin/AIManagement'));
 const SubscriptionManager = lazy(() => import('@/pages/admin/SubscriptionManager'));
 const SystemHealth = lazy(() => import('@/pages/admin/SystemHealth'));
@@ -126,6 +128,8 @@ const AppRoutes = () => {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="content" element={<ContentManager />} />
+            <Route path="content-upload" element={<ContentUploader />} />
+            <Route path="file-uploader" element={<FileUploader />} />
             <Route path="ai-management" element={<AIManagement />} />
             <Route path="subscriptions" element={<SubscriptionManager />} />
             <Route path="system-health" element={<SystemHealth />} />

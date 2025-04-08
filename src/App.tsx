@@ -6,6 +6,7 @@ import AppRoutes from '@/routes';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UserPreferencesProvider } from '@/contexts/UserPreferencesContext';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import CookieConsentBanner from '@/components/common/CookieConsentBanner';
 
@@ -15,11 +16,13 @@ function App() {
       <LanguageProvider>
         <UserPreferencesProvider>
           <AuthProvider>
-            <BrowserRouter>
-              <AppRoutes />
-              <Toaster />
-              <CookieConsentBanner />
-            </BrowserRouter>
+            <NotificationsProvider>
+              <BrowserRouter>
+                <AppRoutes />
+                <Toaster />
+                <CookieConsentBanner />
+              </BrowserRouter>
+            </NotificationsProvider>
           </AuthProvider>
         </UserPreferencesProvider>
       </LanguageProvider>

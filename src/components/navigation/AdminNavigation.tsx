@@ -10,7 +10,8 @@ import {
   Bot,
   CreditCard,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  UploadCloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ const AdminNavigation: React.FC = () => {
     { name: 'Dashboard', path: '/admin', icon: <BarChart3 className="h-5 w-5" /> },
     { name: 'User Management', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { name: 'Content Management', path: '/admin/content', icon: <FileText className="h-5 w-5" /> },
+    { name: 'File Uploader', path: '/admin/file-uploader', icon: <UploadCloud className="h-5 w-5" /> },
     { name: 'AI Management', path: '/admin/ai-management', icon: <Bot className="h-5 w-5" /> },
     { name: 'Subscriptions', path: '/admin/subscriptions', icon: <CreditCard className="h-5 w-5" /> },
     { name: 'System Health', path: '/admin/system-health', icon: <ShieldAlert className="h-5 w-5" /> },

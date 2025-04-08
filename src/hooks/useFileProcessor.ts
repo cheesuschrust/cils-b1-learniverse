@@ -1,140 +1,76 @@
 
-import { useState, useCallback, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { 
-  detectContentType, 
-  detectLanguage, 
-  parseContent, 
-  detectFileFormat,
-  ContentType 
-} from '@/utils/textAnalysis';
-
-export interface ProcessedFile {
-  content: string;
-  type: ContentType;
-  language: 'english' | 'italian' | 'spanish' | 'french' | 'german' | 'unknown';
-  filename: string;
-  parsedContent?: any;
-  fileSize: number;
-  lastModified: number;
-}
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export const useFileProcessor = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [processedFile, setProcessedFile] = useState<ProcessedFile | null>(null);
   const [content, setContent] = useState<string>('');
-  const [contentType, setContentType] = useState<ContentType>('writing');
-  const [language, setLanguage] = useState<'english' | 'italian' | 'spanish' | 'french' | 'german' | 'unknown'>('unknown');
+  const [contentType, setContentType] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Reset when file changes
-  useEffect(() => {
-    if (!file) {
-      setErrorMessage(null);
-    }
-  }, [file]);
-
-  const processFile = useCallback(async (file: File): Promise<ProcessedFile> => {
+  const handleFileUpload = useCallback(async (selectedFile: File): Promise<boolean> => {
     setIsProcessing(true);
     setErrorMessage(null);
 
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = () => {
-        try {
-          const content = reader.result as string;
-          
-          // Auto-detect content type and language
-          const detectedType = detectContentType(content);
-          const detectedLanguage = detectLanguage(content);
-          
-          // Parse the content based on detected type
-          const parsedContent = parseContent(content, detectedType);
-          
-          const result: ProcessedFile = {
-            content,
-            type: detectedType,
-            language: detectedLanguage,
-            filename: file.name,
-            parsedContent,
-            fileSize: file.size,
-            lastModified: file.lastModified
-          };
-          
-          resolve(result);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to process file';
-          reject(new Error(message));
-        } finally {
-          setIsProcessing(false);
-        }
-      };
-      
-      reader.onerror = () => {
-        setIsProcessing(false);
-        reject(new Error('Failed to read file'));
-      };
-      
-      // Expanded support for different file types
-      const supportedTextTypes = [
-        'text/plain', 'text/csv', 'application/json', 
-        'text/tab-separated-values', 'application/csv', 
-        'application/x-csv', 'text/comma-separated-values', 
-        'text/x-comma-separated-values', 'text/x-csv'
+    try {
+      // Validate file type
+      const allowedTypes = [
+        'text/plain', 
+        'text/csv', 
+        'application/pdf',
+        'application/json',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'image/jpeg',
+        'image/png'
       ];
       
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      const supportedExtensions = ['txt', 'csv', 'json', 'tsv'];
-      
-      if (
-        supportedTextTypes.includes(file.type) || 
-        (fileExtension && supportedExtensions.includes(fileExtension))
-      ) {
-        reader.readAsText(file);
-      } else {
-        setIsProcessing(false);
-        reject(new Error('Unsupported file type. Please upload a text, CSV, JSON, or TSV file.'));
+      if (!allowedTypes.includes(selectedFile.type)) {
+        setErrorMessage('File type not supported. Please upload a text, PDF, Word, CSV, JSON, or image file.');
+        return false;
       }
-    });
-  }, []);
 
-  const handleFileUpload = useCallback(async (uploadedFile: File) => {
-    setFile(uploadedFile);
-    
-    try {
-      const result = await processFile(uploadedFile);
-      setContent(result.content);
-      setContentType(result.type);
-      setLanguage(result.language);
-      setProcessedFile(result);
-      
+      // Limit file size to 5MB
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (selectedFile.size > maxSize) {
+        setErrorMessage('File is too large. Maximum size is 5MB.');
+        return false;
+      }
+
+      setFile(selectedFile);
+      setContentType(selectedFile.type);
+
+      // Read the file content if it's a text file
+      if (selectedFile.type.includes('text') || selectedFile.type.includes('json')) {
+        const fileContent = await selectedFile.text();
+        setContent(fileContent.slice(0, 2000) + (fileContent.length > 2000 ? '...' : ''));
+      } else if (selectedFile.type.includes('pdf') || selectedFile.type.includes('word')) {
+        setContent('PDF/Word document preview not available. File will be processed for content extraction.');
+      } else if (selectedFile.type.includes('image')) {
+        setContent('Image file uploaded. Image analysis will be performed.');
+      }
+
       toast({
-        title: 'File Processed',
-        description: `File "${uploadedFile.name}" uploaded and processed successfully as ${result.type} content.`,
+        title: "File Accepted",
+        description: `Ready to process ${selectedFile.name}`,
       });
-      
-      return result;
+
+      return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      setErrorMessage(message);
-      
-      toast({
-        title: 'Error Processing File',
-        description: message,
-        variant: 'destructive',
-      });
-      
-      return null;
+      console.error('Error processing file:', error);
+      setErrorMessage('Error processing file. Please try again.');
+      return false;
+    } finally {
+      setIsProcessing(false);
     }
-  }, [processFile, toast]);
+  }, [toast]);
 
   const clearFile = useCallback(() => {
     setFile(null);
     setContent('');
-    setProcessedFile(null);
+    setContentType('');
     setErrorMessage(null);
   }, []);
 
@@ -142,15 +78,9 @@ export const useFileProcessor = () => {
     file,
     content,
     contentType,
-    language,
     isProcessing,
     errorMessage,
-    processedFile,
-    processFile,
     handleFileUpload,
-    setContentType,
     clearFile
   };
 };
-
-export default useFileProcessor;
