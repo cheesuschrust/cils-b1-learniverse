@@ -76,4 +76,5 @@ const FAQItems: React.FC<FAQItemsProps> = ({ items }) => {
   );
 };
 
+export { FAQItem };
 export default FAQItems;
