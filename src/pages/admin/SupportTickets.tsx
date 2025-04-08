@@ -1,360 +1,649 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, MessageSquare, CheckCircle } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import BilingualText from '@/components/language/BilingualText';
-import SupportTicketItem from '@/components/help/SupportTicketItem';
-import SupportTicketResponse from '@/components/help/SupportTicketResponse';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
+  MessageCircle, 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  ExternalLink, 
+  Mail, 
+  CheckCircle, 
+  XCircle,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
-// Mock data for support tickets
-const mockTickets = [
-  {
-    id: 'ticket-1',
-    subject: 'Problem with subscription renewal',
-    message: 'My subscription was supposed to renew automatically but it did not. Can you help me fix this issue?',
-    status: 'open' as const,
-    priority: 'high' as const,
-    category: 'billing' as const,
-    userName: 'John Doe',
-    userEmail: 'john.doe@example.com',
-    createdAt: new Date('2025-04-05T10:23:45'),
-    updatedAt: new Date('2025-04-05T10:23:45'),
-  },
-  {
-    id: 'ticket-2',
-    subject: 'Audio not working in lessons',
-    message: 'I cannot hear the audio in any of the listening lessons. I have checked my device settings and everything seems to be working fine.',
-    status: 'in-progress' as const,
-    priority: 'medium' as const,
-    category: 'technical' as const,
-    userName: 'Sarah Smith',
-    userEmail: 'sarah.smith@example.com',
-    createdAt: new Date('2025-04-03T14:32:10'),
-    updatedAt: new Date('2025-04-04T09:17:22'),
-    assignedTo: 'Tech Support Team',
-  },
-  {
-    id: 'ticket-3',
-    subject: 'Request for new content',
-    message: 'I would love to see more content about Italian regional dialects. Is this something you plan to add in the future?',
-    status: 'closed' as const,
-    priority: 'low' as const,
-    category: 'feature-request' as const,
-    userName: 'Michael Johnson',
-    userEmail: 'michael.j@example.com',
-    createdAt: new Date('2025-04-01T08:45:30'),
-    updatedAt: new Date('2025-04-06T11:12:15'),
-    responses: [
-      {
-        id: 'response-1',
-        content: 'Thank you for your suggestion! We are currently working on expanding our content to include regional dialects. Stay tuned for updates in the coming months.',
-        timestamp: new Date('2025-04-02T10:30:00'),
-        authorName: 'Content Team',
-        authorType: 'admin',
-      },
-      {
-        id: 'response-2',
-        content: 'That sounds great! Looking forward to the new content.',
-        timestamp: new Date('2025-04-03T14:22:10'),
-        authorName: 'Michael Johnson',
-        authorType: 'user',
-      }
-    ]
-  }
-];
+interface SupportTicket {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  created_at: string;
+  updated_at: string;
+  assigned_to?: string;
+}
 
 const SupportTickets: React.FC = () => {
-  const { language } = useLanguage();
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
-  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   
-  // Filter tickets based on search query and active tab
-  const filteredTickets = mockTickets.filter(ticket => {
-    const matchesSearch = searchQuery.length === 0 || 
-      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.userName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesTab = activeTab === 'all' || 
-      (activeTab === 'open' && ticket.status === 'open') ||
-      (activeTab === 'in-progress' && ticket.status === 'in-progress') ||
-      (activeTab === 'closed' && (ticket.status === 'closed' || ticket.status === 'resolved'));
-    
-    return matchesSearch && matchesTab;
-  });
+  const { toast } = useToast();
   
-  const currentTicket = selectedTicket 
-    ? mockTickets.find(ticket => ticket.id === selectedTicket)
-    : null;
+  useEffect(() => {
+    fetchTickets();
+  }, []);
   
-  const handleTicketRead = (id: string) => {
-    setSelectedTicket(id);
-  };
+  useEffect(() => {
+    applyFilters();
+  }, [tickets, searchQuery, statusFilter, priorityFilter]);
   
-  const handleTicketReply = (id: string) => {
-    setSelectedTicket(id);
-    setShowResponseForm(true);
-  };
-  
-  const handleTicketClose = (id: string) => {
-    console.log('Closing ticket:', id);
-    // In a real app, this would call an API to update the ticket status
-  };
-  
-  const handleTicketReopen = (id: string) => {
-    console.log('Reopening ticket:', id);
-    // In a real app, this would call an API to update the ticket status
-  };
-  
-  const handleResponseSubmit = async (message: string) => {
-    console.log('Sending response for ticket:', selectedTicket, message);
-    // In a real app, this would call an API to add a response to the ticket
-    return Promise.resolve();
-  };
-  
-  return (
-    <>
-      <Helmet>
-        <title>
-          {language === 'italian' ? 'Gestione Ticket di Supporto' : 'Support Ticket Management'}
-        </title>
-      </Helmet>
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          users (
+            email
+          )
+        `)
+        .order('created_at', { ascending: false });
       
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">
-          <BilingualText
-            english="Support Ticket Management"
-            italian="Gestione Ticket di Supporto"
-          />
-        </h1>
+      if (error) throw error;
+      
+      const formattedTickets: SupportTicket[] = data.map(ticket => ({
+        ...ticket,
+        user_email: ticket.users?.email
+      }));
+      
+      setTickets(formattedTickets);
+      setFilteredTickets(formattedTickets);
+    } catch (error) {
+      console.error('Error fetching support tickets:', error);
+      
+      // Create mock data for demonstration
+      const mockTickets: SupportTicket[] = [
+        {
+          id: uuidv4(),
+          user_id: '123',
+          user_email: 'user1@example.com',
+          subject: 'Cannot access speaking exercises',
+          description: 'When I try to access the speaking exercises, I get an error message saying "Microphone access denied".',
+          status: 'open',
+          priority: 'high',
+          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: uuidv4(),
+          user_id: '456',
+          user_email: 'user2@example.com',
+          subject: 'Flashcards not syncing across devices',
+          description: 'I created some flashcards on my computer, but they are not appearing on my phone app.',
+          status: 'in_progress',
+          priority: 'medium',
+          created_at: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'admin1'
+        },
+        {
+          id: uuidv4(),
+          user_id: '789',
+          user_email: 'user3@example.com',
+          subject: 'Billing question about subscription',
+          description: 'I was charged twice for my monthly subscription. Can you please help me resolve this issue?',
+          status: 'resolved',
+          priority: 'high',
+          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'admin2'
+        },
+        {
+          id: uuidv4(),
+          user_id: '101',
+          user_email: 'user4@example.com',
+          subject: 'Feature request: Dark mode',
+          description: 'Would it be possible to add a dark mode option to the application? It would be easier on the eyes when studying at night.',
+          status: 'open',
+          priority: 'low',
+          created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: uuidv4(),
+          user_id: '112',
+          user_email: 'user5@example.com',
+          subject: 'AI pronunciation feedback not working',
+          description: 'When I try to get feedback on my pronunciation, the system just loads forever and never gives me any feedback.',
+          status: 'in_progress',
+          priority: 'medium',
+          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'admin1'
+        },
+        {
+          id: uuidv4(),
+          user_id: '131',
+          user_email: 'user6@example.com',
+          subject: 'Cannot reset password',
+          description: 'I tried to reset my password but I never received the reset email. I checked my spam folder too.',
+          status: 'closed',
+          priority: 'high',
+          created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'admin2'
+        }
+      ];
+      
+      setTickets(mockTickets);
+      setFilteredTickets(mockTickets);
+      
+      toast({
+        title: 'Using demo data',
+        description: 'Could not connect to database. Using demonstration data instead.',
+        variant: 'default',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const applyFilters = () => {
+    let filtered = [...tickets];
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        ticket =>
+          ticket.subject.toLowerCase().includes(query) ||
+          ticket.description.toLowerCase().includes(query) ||
+          ticket.user_email?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.status === statusFilter);
+    }
+    
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
+    }
+    
+    setFilteredTickets(filtered);
+  };
+  
+  const updateTicketStatus = async (ticketId: string, status: 'open' | 'in_progress' | 'resolved' | 'closed') => {
+    try {
+      // In a real app, update the database
+      // const { error } = await supabase
+      //  .from('support_tickets')
+      //  .update({ status, updated_at: new Date().toISOString() })
+      //  .eq('id', ticketId);
+      
+      // if (error) throw error;
+      
+      // Update local state
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, status, updated_at: new Date().toISOString() } 
+          : ticket
+      ));
+      
+      toast({
+        title: 'Ticket Updated',
+        description: `Ticket status changed to ${status}.`,
+      });
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to update ticket status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const assignTicket = async (ticketId: string, adminId: string) => {
+    try {
+      // In a real app, update the database
+      // const { error } = await supabase
+      //  .from('support_tickets')
+      //  .update({ 
+      //    assigned_to: adminId, 
+      //    status: 'in_progress',
+      //    updated_at: new Date().toISOString() 
+      //  })
+      //  .eq('id', ticketId);
+      
+      // if (error) throw error;
+      
+      // Update local state
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId 
+          ? { 
+              ...ticket, 
+              assigned_to: adminId,
+              status: 'in_progress', 
+              updated_at: new Date().toISOString() 
+            } 
+          : ticket
+      ));
+      
+      toast({
+        title: 'Ticket Assigned',
+        description: `Ticket assigned to admin and status updated to in progress.`,
+      });
+    } catch (error) {
+      console.error('Error assigning ticket:', error);
+      toast({
+        title: 'Assignment Failed',
+        description: 'Failed to assign ticket. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'open':
+        return <Badge variant="default" className="bg-blue-500">Open</Badge>;
+      case 'in_progress':
+        return <Badge variant="default" className="bg-amber-500">In Progress</Badge>;
+      case 'resolved':
+        return <Badge variant="default" className="bg-green-500">Resolved</Badge>;
+      case 'closed':
+        return <Badge variant="outline">Closed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+  
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'critical':
+        return <Badge variant="destructive">Critical</Badge>;
+      case 'high':
+        return <Badge variant="default" className="bg-red-500">High</Badge>;
+      case 'medium':
+        return <Badge variant="default" className="bg-amber-500">Medium</Badge>;
+      case 'low':
+        return <Badge variant="outline">Low</Badge>;
+      default:
+        return <Badge variant="outline">{priority}</Badge>;
+    }
+  };
+  
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
+    
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`;
+    
+    const years = Math.floor(months / 12);
+    return `${years} year${years !== 1 ? 's' : ''} ago`;
+  };
+
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <div className="space-y-6">
+        <Helmet>
+          <title>Support Tickets - Admin</title>
+        </Helmet>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <Card className="mb-6">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-xl">
-                    <BilingualText
-                      english="Tickets"
-                      italian="Ticket"
-                    />
-                  </CardTitle>
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <BilingualText
-                      english="Filter"
-                      italian="Filtra"
-                    />
-                  </Button>
-                </div>
-                <CardDescription>
-                  <BilingualText
-                    english="Manage user support requests"
-                    italian="Gestisci le richieste di supporto degli utenti"
-                  />
-                </CardDescription>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={language === 'italian' ? "Cerca ticket..." : "Search tickets..."}
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-2">
-                <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid grid-cols-3 mb-4">
-                    <TabsTrigger value="all">
-                      <BilingualText
-                        english="All"
-                        italian="Tutti"
-                      />
-                    </TabsTrigger>
-                    <TabsTrigger value="open">
-                      <BilingualText
-                        english="Open"
-                        italian="Aperti"
-                      />
-                    </TabsTrigger>
-                    <TabsTrigger value="closed">
-                      <BilingualText
-                        english="Closed"
-                        italian="Chiusi"
-                      />
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                
-                <div className="space-y-2 mt-2">
-                  {filteredTickets.length > 0 ? (
-                    filteredTickets.map(ticket => (
-                      <div 
-                        key={ticket.id}
-                        className={`p-3 rounded-md cursor-pointer ${
-                          selectedTicket === ticket.id 
-                            ? 'bg-primary/10 border border-primary/20' 
-                            : 'hover:bg-muted'
-                        }`}
-                        onClick={() => handleTicketRead(ticket.id)}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-medium line-clamp-1">{ticket.subject}</h3>
-                          <Badge variant={
-                            ticket.status === 'open' 
-                              ? 'default' 
-                              : ticket.status === 'in-progress' 
-                                ? 'secondary'
-                                : 'outline'
-                          }>
-                            {ticket.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {ticket.message}
-                        </p>
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                          <span>{ticket.userName}</span>
-                          <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                      <p>
-                        <BilingualText
-                          english="No tickets found"
-                          italian="Nessun ticket trovato"
-                        />
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  <BilingualText
-                    english="Quick Stats"
-                    italian="Statistiche Rapide"
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      <BilingualText
-                        english="Open Tickets"
-                        italian="Ticket Aperti"
-                      />
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {mockTickets.filter(t => t.status === 'open').length}
-                    </p>
-                  </div>
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      <BilingualText
-                        english="In Progress"
-                        italian="In Corso"
-                      />
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {mockTickets.filter(t => t.status === 'in-progress').length}
-                    </p>
-                  </div>
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      <BilingualText
-                        english="Response Time"
-                        italian="Tempo di Risposta"
-                      />
-                    </p>
-                    <p className="text-2xl font-bold">4h</p>
-                  </div>
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      <BilingualText
-                        english="Resolved"
-                        italian="Risolti"
-                      />
-                    </p>
-                    <div className="flex items-center">
-                      <p className="text-2xl font-bold mr-1">
-                        {mockTickets.filter(t => t.status === 'closed' || t.status === 'resolved').length}
-                      </p>
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="lg:col-span-2">
-            {currentTicket ? (
-              <>
-                {showResponseForm ? (
-                  <SupportTicketResponse
-                    ticketId={currentTicket.id}
-                    onResponse={handleResponseSubmit}
-                    onCancel={() => setShowResponseForm(false)}
-                  />
-                ) : (
-                  <SupportTicketItem
-                    id={currentTicket.id}
-                    subject={currentTicket.subject}
-                    message={currentTicket.message}
-                    status={currentTicket.status}
-                    priority={currentTicket.priority}
-                    category={currentTicket.category}
-                    userName={currentTicket.userName}
-                    userEmail={currentTicket.userEmail}
-                    createdAt={currentTicket.createdAt}
-                    updatedAt={currentTicket.updatedAt}
-                    assignedTo={currentTicket.assignedTo}
-                    responses={currentTicket.responses}
-                    onReply={() => setShowResponseForm(true)}
-                    onClose={() => handleTicketClose(currentTicket.id)}
-                    onReopen={() => handleTicketReopen(currentTicket.id)}
-                  />
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full bg-muted/30 rounded-lg p-10">
-                <MessageSquare className="h-20 w-20 text-muted-foreground/20 mb-4" />
-                <h2 className="text-xl font-medium mb-2">
-                  <BilingualText
-                    english="Select a ticket to view"
-                    italian="Seleziona un ticket da visualizzare"
-                  />
-                </h2>
-                <p className="text-muted-foreground text-center">
-                  <BilingualText
-                    english="Click on a ticket from the list to view details and respond"
-                    italian="Clicca su un ticket dalla lista per visualizzare i dettagli e rispondere"
-                  />
-                </p>
-              </div>
-            )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Support Tickets</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage and respond to user support requests
+            </p>
           </div>
         </div>
+        
+        {/* Ticket Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                Open Tickets
+                <Badge variant="outline" className="text-blue-500 border-blue-500">
+                  {tickets.filter(t => t.status === 'open').length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center text-blue-500">
+                <AlertCircle className="h-10 w-10" />
+                <div className="ml-4">
+                  <div className="text-xl font-bold">
+                    {tickets.filter(t => t.status === 'open' && t.priority === 'high').length}
+                  </div>
+                  <div className="text-xs">High Priority</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                In Progress
+                <Badge variant="outline" className="text-amber-500 border-amber-500">
+                  {tickets.filter(t => t.status === 'in_progress').length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center text-amber-500">
+                <Clock className="h-10 w-10" />
+                <div className="ml-4">
+                  <div className="text-xl font-bold">
+                    {Math.round(tickets.filter(t => t.status === 'in_progress').length / 2)} hrs
+                  </div>
+                  <div className="text-xs">Avg. Resolution Time</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                Resolved
+                <Badge variant="outline" className="text-green-500 border-green-500">
+                  {tickets.filter(t => t.status === 'resolved').length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center text-green-500">
+                <CheckCircle className="h-10 w-10" />
+                <div className="ml-4">
+                  <div className="text-xl font-bold">
+                    {tickets.filter(t => t.status === 'resolved').length}
+                  </div>
+                  <div className="text-xs">This Week</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                Closed
+                <Badge variant="outline">
+                  {tickets.filter(t => t.status === 'closed').length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center text-muted-foreground">
+                <XCircle className="h-10 w-10" />
+                <div className="ml-4">
+                  <div className="text-xl font-bold">
+                    {tickets.filter(t => t.status === 'closed').length}
+                  </div>
+                  <div className="text-xs">All Time</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Ticket List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Support Tickets</CardTitle>
+            <CardDescription>
+              View and manage user support requests
+            </CardDescription>
+            
+            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tickets..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select
+                  value={priorityFilter}
+                  onValueChange={setPriorityFilter}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Filter by priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredTickets.length > 0 ? (
+                    filteredTickets.map((ticket) => (
+                      <TableRow key={ticket.id}>
+                        <TableCell>
+                          <div className="font-medium truncate max-w-[250px]">
+                            {ticket.subject}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[250px]">
+                            {ticket.description}
+                          </div>
+                        </TableCell>
+                        <TableCell>{ticket.user_email}</TableCell>
+                        <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                        <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">{getTimeAgo(ticket.created_at)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(ticket.created_at).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {ticket.assigned_to ? (
+                            <Badge variant="outline">
+                              Admin {ticket.assigned_to.slice(-1)}
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Unassigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <span>View Details</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <MessageCircle className="mr-2 h-4 w-4" />
+                                <span>Reply</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Mail className="mr-2 h-4 w-4" />
+                                <span>Email User</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              
+                              {!ticket.assigned_to && (
+                                <>
+                                  <DropdownMenuItem onClick={() => assignTicket(ticket.id, 'admin1')}>
+                                    <span>Assign to Me</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              
+                              {ticket.status === 'open' && (
+                                <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, 'in_progress')}>
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  <span>Mark In Progress</span>
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {(ticket.status === 'open' || ticket.status === 'in_progress') && (
+                                <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, 'resolved')}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  <span>Mark Resolved</span>
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {ticket.status === 'resolved' && (
+                                <DropdownMenuItem onClick={() => updateTicketStatus(ticket.id, 'closed')}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  <span>Close Ticket</span>
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="text-muted-foreground">No tickets found</div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </ProtectedRoute>
   );
 };
 

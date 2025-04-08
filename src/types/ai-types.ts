@@ -1,60 +1,50 @@
 
-export interface ContentType {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface AIProcessingOptions {
-  language?: string;
-  contentType?: string;
-  difficulty?: string;
-  confidence?: number;
-  maxLength?: number;
-  includeMetadata?: boolean;
-}
-
-export interface ItalianQuestionGenerationParams {
-  contentTypes: string[];
-  difficulty: string;
-  count?: number;
-  topic?: string;
-  includeImages?: boolean;
-  isCitizenshipFocused?: boolean;
-}
-
-export interface AIGeneratedQuestion {
+export type AIGeneratedQuestion = {
   id: string;
   text: string;
-  options?: string[];
+  options: string[];
   correctAnswer: string;
-  explanation?: string;
+  explanation: string;
   type: string;
   difficulty: string;
-  isCitizenshipRelevant?: boolean;
-  question: string;
+  isCitizenshipRelevant: boolean;
   questionType: string;
-}
+};
 
-export interface AIGenerationResult {
-  questions: AIGeneratedQuestion[];
-  error?: string;
-}
+export type QuestionGenerationParams = {
+  topics: string[];
+  contentTypes: string[];
+  difficulty: string;
+  count: number;
+  isCitizenshipFocused?: boolean;
+};
 
-export interface TextToSpeechOptions {
-  text: string;
+export type ItalianQuestionGenerationParams = {
+  contentTypes: string[];
+  difficulty: string;
+  count: number;
+  topics?: string[];
+  isCitizenshipFocused?: boolean;
+};
+
+export type AIProcessingOptions = {
+  format?: string;
+  translateTo?: string;
+  simplifyText?: boolean;
+  level?: string;
+};
+
+export type VoiceOptions = {
   voice?: string;
-  speed?: number;
+  rate?: number;
   pitch?: number;
-}
+  lang?: string;
+};
 
-export interface TTSOptions {
-  voice?: string;
-  speed?: number;
-  pitch?: number;
-}
+export type VoicePreference = {
+  language: string;
+  englishVoiceURI?: string;
+  italianVoiceURI?: string;
+  voiceRate?: number;
+  voicePitch?: number;
+};

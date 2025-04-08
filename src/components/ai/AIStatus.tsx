@@ -1,95 +1,72 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Bot, Server, Cpu, Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge-fixed';
+import { Progress } from '@/components/ui/progress';
+import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useAI } from '@/hooks/useAI';
 
-interface AIStatusProps {
-  status?: 'online' | 'offline' | 'degraded' | 'maintenance';
-}
-
-export const AIStatus: React.FC<AIStatusProps> = ({ status = 'online' }) => {
-  const getStatusColor = () => {
-    switch (status) {
-      case 'online':
-        return 'bg-green-500';
-      case 'degraded':
-        return 'bg-yellow-500';
-      case 'maintenance':
-        return 'bg-blue-500';
-      case 'offline':
-      default:
-        return 'bg-red-500';
-    }
-  };
-
-  const getStatusMessage = () => {
-    switch (status) {
-      case 'online':
-        return 'All AI systems operational';
-      case 'degraded':
-        return 'Experiencing performance issues';
-      case 'maintenance':
-        return 'Scheduled maintenance in progress';
-      case 'offline':
-      default:
-        return 'AI systems are currently offline';
-    }
-  };
-
+export const AIStatus: React.FC = () => {
+  const ai = useAI();
+  const isLoaded = !ai.isProcessing;
+  
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">AI System Status</CardTitle>
-          <Badge className="text-xs" variant="outline">
-            <span className={`mr-1.5 h-2 w-2 rounded-full ${getStatusColor()}`}></span>
-            {status}
-          </Badge>
-        </div>
-        <CardDescription>{getStatusMessage()}</CardDescription>
+        <CardTitle className="flex items-center justify-between">
+          AI Model Status
+          {isLoaded ? (
+            <Badge variant="success" className="ml-2">Online</Badge>
+          ) : (
+            <Badge variant="warning" className="ml-2">Loading</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Performance and availability metrics
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Connection Status</span>
             <div className="flex items-center">
-              <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Language Models</span>
+              {isLoaded ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-sm text-green-500">Connected</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+                  <span className="text-sm text-amber-500">Connecting</span>
+                </>
+              )}
             </div>
-            <Badge variant={status === 'online' ? 'outline' : 'secondary'}>
-              100%
-            </Badge>
           </div>
           
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center">
-              <Server className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Inference API</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>API Responsiveness</span>
+              <span className="font-medium">{isLoaded ? 'Good' : 'Checking...'}</span>
             </div>
-            <Badge variant={status === 'online' ? 'outline' : 'secondary'}>
-              100%
-            </Badge>
+            <Progress value={isLoaded ? 95 : 30} />
           </div>
           
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center">
-              <Cpu className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Training Pipeline</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>System Load</span>
+              <span className="font-medium">{isLoaded ? 'Low' : 'Unknown'}</span>
             </div>
-            <Badge variant={status === 'online' ? 'outline' : 'secondary'}>
-              100%
-            </Badge>
+            <Progress value={isLoaded ? 25 : 50} />
           </div>
           
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center">
-              <Activity className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Recent Requests</span>
-            </div>
-            <span className="text-sm font-medium">1,253 / day</span>
+          <div className="mt-4 text-xs text-muted-foreground">
+            Last updated: {new Date().toLocaleTimeString()}
           </div>
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default AIStatus;

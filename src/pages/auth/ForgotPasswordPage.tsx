@@ -1,95 +1,156 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Loader2, ArrowLeft } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/EnhancedAuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Mail, AlertCircle, Check } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+// Validation schema
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+type FormValues = z.infer<typeof forgotPasswordSchema>;
 
 const ForgotPasswordPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { forgotPassword } = useAuth();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
-      return;
-    }
-    
-    setIsLoading(true);
-    
+  const { resetPassword } = useAuth();
+  const [submittedEmail, setSubmittedEmail] = useState("");
+  
+  // Define form with validation
+  const form = useForm<FormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+  
+  const { isSubmitting } = form.formState;
+  
+  const onSubmit = async (data: FormValues) => {
     try {
-      const success = await forgotPassword(email);
-      
-      if (success) {
-        setIsSubmitted(true);
-      }
-    } finally {
-      setIsLoading(false);
+      await resetPassword(data.email);
+      setSubmittedEmail(data.email);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error(error);
+      form.setError("email", { 
+        type: "manual",
+        message: "There was a problem sending the reset link. Please try again." 
+      });
     }
   };
-
+  
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
-        <CardDescription>
-          {!isSubmitted
-            ? "Enter your email address and we'll send you a link to reset your password"
-            : "Check your email for a password reset link"}
-        </CardDescription>
-      </CardHeader>
+    <div className="container max-w-md mx-auto px-4 py-16">
+      <Helmet>
+        <title>Reset Password - CILS Italian Citizenship</title>
+      </Helmet>
       
-      <CardContent>
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+          <CardDescription>
+            {isSubmitted 
+              ? "Check your email for reset instructions"
+              : "Enter your email address and we'll send you a link to reset your password"}
+          </CardDescription>
+        </CardHeader>
+        
         {!isSubmitted ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center">
-                <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending reset link...
-                </>
-              ) : (
-                "Send reset link"
-              )}
-            </Button>
-          </form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Email address
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email" 
+                          placeholder="name@example.com" 
+                          autoComplete="email"
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-4">
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Spinner className="mr-2 h-4 w-4" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+                <div className="text-center text-sm">
+                  <Link 
+                    to="/login" 
+                    className="text-primary hover:underline flex items-center justify-center gap-1"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Login
+                  </Link>
+                </div>
+              </CardFooter>
+            </form>
+          </Form>
         ) : (
-          <div className="bg-success/15 p-4 rounded-md text-success text-sm mb-4">
-            If an account exists with the email <strong>{email}</strong>, you'll receive a password reset link shortly.
-          </div>
+          <CardContent className="space-y-4">
+            <Alert variant="success" className="bg-green-50 border-green-200 text-green-800">
+              <Check className="h-4 w-4 text-green-500" />
+              <AlertTitle>Check your email</AlertTitle>
+              <AlertDescription>
+                We've sent a password reset link to <strong>{submittedEmail}</strong>.
+                It may take a few minutes to arrive. Be sure to check your spam folder.
+              </AlertDescription>
+            </Alert>
+            <div className="text-center pt-4">
+              <Link 
+                to="/login" 
+                className="text-primary hover:underline flex items-center justify-center gap-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Login
+              </Link>
+            </div>
+          </CardContent>
         )}
-      </CardContent>
-      
-      <CardFooter>
-        <div className="text-sm text-center w-full">
-          <Link to="/login" className="inline-flex items-center text-primary hover:underline font-medium">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to login
-          </Link>
-        </div>
-      </CardFooter>
-    </Card>
+      </Card>
+    </div>
   );
 };
 

@@ -24,7 +24,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useTheme } from '@/components/theme-provider';
+import { useTheme } from '@/components/ui/theme-provider';
 import { useNotifications } from '@/contexts/NotificationsContext';
 
 interface AdminHeaderProps {

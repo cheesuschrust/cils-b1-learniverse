@@ -2,47 +2,38 @@
 import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Spinner } from '@/components/ui/spinner';
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
-  redirectTo?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requireAdmin = false,
-  redirectTo = '/login'
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireAdmin = false 
 }) => {
-  const { user, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   
-  // While authentication state is loading, show a loading spinner
-  if (isLoading) {
+  // While authentication is being checked, show a loading state
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner size="lg" className="text-primary" />
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
   
-  // If user is not authenticated, redirect to login
-  if (!user) {
-    return <Navigate to={redirectTo} replace />;
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
   }
   
-  // For admin pages, check if user has admin role
-  // In a real implementation, this would check the user's roles in the database
-  if (requireAdmin) {
-    // Placeholder check - in a real app, this would query backend for admin status
-    const isAdmin = user.user_metadata?.role === 'admin';
-    
-    if (!isAdmin) {
-      return <Navigate to="/" replace />;
-    }
+  // If admin access is required but user is not an admin
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/dashboard" />;
   }
   
-  // User is authenticated and has required permissions
+  // If authenticated (and admin if required), render the children
   return <>{children}</>;
 };
 

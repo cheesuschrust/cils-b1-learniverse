@@ -1,190 +1,228 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import BilingualTitle from '@/components/language/BilingualTitle';
-import BilingualText from '@/components/language/BilingualText';
-import { useBilingualTitle } from '@/hooks/useBilingualTitle';
-import { SpeakableWord } from '@/components/ui/speakable-word';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Check, Headphones, MessageSquare, BookOpen } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Check, BookOpen, Trophy, FileText, BarChart3, Headphones, MessageCircle } from 'lucide-react';
 
-const HomePage: React.FC = () => {
-  const navigate = useNavigate();
-  const { language } = useLanguage();
-  
-  // Set the page title
-  useBilingualTitle(
-    'Italian Learning for CILS Citizenship Test', 
-    'Apprendimento Italiano per l\'Esame di Cittadinanza CILS'
-  );
-  
-  const features = [
-    {
-      icon: <BookOpen className="h-8 w-8 text-primary" />,
-      titleEnglish: "Reading Practice",
-      titleItalian: "Pratica di Lettura",
-      descriptionEnglish: "Practice reading comprehension with authentic texts",
-      descriptionItalian: "Esercita la comprensione della lettura con testi autentici"
-    },
-    {
-      icon: <Headphones className="h-8 w-8 text-primary" />,
-      titleEnglish: "Listening Practice",
-      titleItalian: "Pratica di Ascolto",
-      descriptionEnglish: "Improve your listening skills with native speakers",
-      descriptionItalian: "Migliora le tue capacità di ascolto con madrelingua"
-    },
-    {
-      icon: <MessageSquare className="h-8 w-8 text-primary" />,
-      titleEnglish: "Speaking Practice",
-      titleItalian: "Pratica di Conversazione",
-      descriptionEnglish: "Practice speaking with AI-powered conversation partners",
-      descriptionItalian: "Esercitati a parlare con partner di conversazione basati su AI"
-    }
-  ];
-  
-  const benefits = [
-    {
-      english: "Tailored specifically for the CILS citizenship test requirements",
-      italian: "Creato specificamente per i requisiti del test di cittadinanza CILS"
-    },
-    {
-      english: "Learn at your own pace with personalized learning paths",
-      italian: "Impara al tuo ritmo con percorsi di apprendimento personalizzati"
-    },
-    {
-      english: "Track your progress and identify areas for improvement",
-      italian: "Monitora i tuoi progressi e identifica aree di miglioramento"
-    },
-    {
-      english: "Practice with real exam-style questions and scenarios",
-      italian: "Esercitati con domande e scenari in stile esame reale"
-    }
-  ];
-  
+const HomePage = () => {
   return (
-    <div className="px-4 py-12 md:py-24">
+    <>
+      <Helmet>
+        <title>CILS B1 Italian Citizenship Test Prep</title>
+        <meta name="description" content="Prepare for the Italian citizenship language exam with our comprehensive CILS B1 learning platform." />
+      </Helmet>
+
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto text-center">
-        <div className="flex justify-center mb-8">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 bg-italian-green w-1/3 h-full"></div>
-            <div className="absolute inset-0 left-1/3 bg-italian-white w-1/3 h-full"></div>
-            <div className="absolute inset-0 left-2/3 bg-italian-red w-1/3 h-full"></div>
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center space-y-6 mb-12">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+              Master Italian for Your <span className="text-primary">Citizenship Test</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
+              Our AI-powered platform helps you prepare specifically for the CILS B1 Cittadinanza exam with personalized study plans.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
+              <Button asChild size="lg">
+                <Link to="/signup">Start Free Trial</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/mock-exam">Try Demo Exam</Link>
+              </Button>
+            </div>
           </div>
         </div>
-        
-        <BilingualTitle
-          english="Master Italian for Your Citizenship Journey"
-          italian="Padroneggia l'Italiano per il Tuo Percorso di Cittadinanza"
-          as="h1"
-          className="text-4xl md:text-6xl mb-4"
-          showSpeak
-        />
-        
-        <div className="max-w-3xl mx-auto mb-8">
-          <BilingualText
-            english="Prepare effectively for the CILS B1 Citizenship Test with our specialized platform. Build your Italian language skills through interactive exercises tailored to the exam requirements."
-            italian="Preparati efficacemente per l'Esame di Cittadinanza CILS B1 con la nostra piattaforma specializzata. Costruisci le tue competenze linguistiche italiane attraverso esercizi interattivi adattati ai requisiti dell'esame."
-            className="text-xl text-muted-foreground"
-          />
-        </div>
-        
-        <div className="flex flex-wrap justify-center gap-4 mb-16">
-          <Button size="lg" onClick={() => navigate('/signup')}>
-            {language === 'english' ? 'Get Started' : 
-             language === 'italian' ? 'Inizia Ora' : 
-             'Get Started / Inizia Ora'}
-          </Button>
-          <Button size="lg" variant="outline" onClick={() => navigate('/about')}>
-            {language === 'english' ? 'Learn More' : 
-             language === 'italian' ? 'Scopri di Più' : 
-             'Learn More / Scopri di Più'}
-          </Button>
-        </div>
       </section>
-      
+
       {/* Features Section */}
-      <section className="max-w-7xl mx-auto py-16">
-        <BilingualTitle
-          english="Complete Learning Experience"
-          italian="Esperienza di Apprendimento Completa"
-          as="h2"
-          className="text-3xl md:text-4xl text-center mb-12"
-        />
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <Card key={index} className="text-center">
-              <CardContent className="pt-6">
-                <div className="flex justify-center mb-4">
-                  {feature.icon}
+      <section id="features" className="py-20 px-4 bg-muted/30">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">Comprehensive CILS B1 Preparation</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to succeed in your Italian citizenship language test
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card>
+              <CardHeader>
+                <div className="bg-primary/10 p-2 w-10 h-10 rounded-full flex items-center justify-center mb-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  {language === 'english' ? feature.titleEnglish : 
-                   language === 'italian' ? feature.titleItalian : 
-                   `${feature.titleEnglish} / ${feature.titleItalian}`}
-                </h3>
-                <p className="text-muted-foreground">
-                  {language === 'english' ? feature.descriptionEnglish : 
-                   language === 'italian' ? feature.descriptionItalian : 
-                   feature.descriptionEnglish}
-                </p>
+                <CardTitle>Exam-Focused Content</CardTitle>
+                <CardDescription>
+                  Materials specifically designed for the Italian B1 Citizenship test requirements
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Official CILS B1 exam format practice</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Citizenship-related vocabulary focus</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Authentic exam-style questions</span>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
-          ))}
+
+            <Card>
+              <CardHeader>
+                <div className="bg-primary/10 p-2 w-10 h-10 rounded-full flex items-center justify-center mb-2">
+                  <Headphones className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle>Complete Skill Coverage</CardTitle>
+                <CardDescription>
+                  Practice all four language skills required for the exam
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Reading comprehension exercises</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Listening practice with native speakers</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Writing and speaking exercises with feedback</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="bg-primary/10 p-2 w-10 h-10 rounded-full flex items-center justify-center mb-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle>AI-Powered Learning</CardTitle>
+                <CardDescription>
+                  Personalized study experience based on your progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Adaptive learning path that focuses on your weak areas</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Progress tracking and performance analytics</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>AI-generated practice questions</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
-      
-      {/* Benefits Section */}
-      <section className="max-w-7xl mx-auto py-16 bg-muted/30 rounded-lg p-8">
-        <BilingualTitle
-          english="Why Choose Our Platform"
-          italian="Perché Scegliere la Nostra Piattaforma"
-          as="h2"
-          className="text-3xl md:text-4xl text-center mb-12"
-        />
-        
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="flex items-start gap-3">
-              <div className="mt-1 bg-primary rounded-full p-1 text-primary-foreground">
-                <Check className="h-4 w-4" />
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-20 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Four simple steps to prepare for your Italian citizenship language exam
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="space-y-12">
+              <div className="flex gap-4">
+                <div className="bg-primary/10 p-2 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary font-medium">1</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-medium mb-2">Sign Up For Free</h3>
+                  <p className="text-muted-foreground">
+                    Create your account and set your learning goals. Free users get access
+                    to one question per day in one of four key categories.
+                  </p>
+                </div>
               </div>
-              <div>
-                <BilingualText
-                  english={benefit.english}
-                  italian={benefit.italian}
-                />
+              
+              <div className="flex gap-4">
+                <div className="bg-primary/10 p-2 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary font-medium">2</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-medium mb-2">Take The Assessment</h3>
+                  <p className="text-muted-foreground">
+                    Complete our Italian language assessment to determine your current level
+                    and create a personalized study plan.
+                  </p>
+                </div>
               </div>
             </div>
-          ))}
+
+            <div className="space-y-12">
+              <div className="flex gap-4">
+                <div className="bg-primary/10 p-2 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary font-medium">3</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-medium mb-2">Practice Daily</h3>
+                  <p className="text-muted-foreground">
+                    Access daily personalized questions targeting your weak areas and 
+                    essential citizenship topics for the CILS B1 exam.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-4">
+                <div className="bg-primary/10 p-2 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary font-medium">4</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-medium mb-2">Track Your Progress</h3>
+                  <p className="text-muted-foreground">
+                    Monitor your improvement with detailed analytics and adjust your
+                    study plan accordingly as you prepare for the exam.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center">
+            <Button asChild size="lg">
+              <Link to="/signup">Get Started Today</Link>
+            </Button>
+          </div>
         </div>
       </section>
-      
-      {/* CTA Section */}
-      <section className="max-w-4xl mx-auto py-16 text-center">
-        <BilingualTitle
-          english="Ready to Start Your Journey?"
-          italian="Pronto a Iniziare il Tuo Percorso?"
-          as="h2"
-          className="text-3xl md:text-4xl mb-6"
-        />
-        
-        <BilingualText
-          english="Join thousands of successful students who have achieved their citizenship goals with our platform."
-          italian="Unisciti a migliaia di studenti di successo che hanno raggiunto i loro obiettivi di cittadinanza con la nostra piattaforma."
-          className="text-xl text-muted-foreground mb-8"
-        />
-        
-        <Button size="lg" onClick={() => navigate('/signup')}>
-          {language === 'english' ? 'Start Free Trial' : 
-           language === 'italian' ? 'Inizia Prova Gratuita' : 
-           'Start Free Trial / Inizia Prova Gratuita'}
-        </Button>
+
+      {/* Pricing CTA */}
+      <section className="py-20 px-4 bg-primary/5">
+        <div className="container mx-auto max-w-6xl text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to Start Your Journey?</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            Choose a plan that fits your needs and begin your preparation for the Italian citizenship test today.
+          </p>
+          <Button asChild size="lg">
+            <Link to="/pricing">View Pricing Plans</Link>
+          </Button>
+        </div>
       </section>
-    </div>
+    </>
   );
 };
 

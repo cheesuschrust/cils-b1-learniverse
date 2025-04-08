@@ -1,114 +1,119 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Default feature flags
-const defaultFeatures: Record<string, boolean> = {
-  aiAssistant: true,
-  voiceInput: true,
-  darkMode: true,
-  italianDialects: false,
-  subscriptionManagement: true,
-  advancedAnalytics: false,
-  betaFeatures: false,
-  communityFeatures: false,
+// Define all feature flags with their defaults
+export const FEATURES = {
+  // Premium features
+  premium: {
+    advancedExercises: { default: false, requiresAuth: true },
+    aiAssistant: { default: false, requiresAuth: true },
+    downloadableContent: { default: false, requiresAuth: true },
+    unlimitedPractice: { default: false, requiresAuth: true },
+    prioritySupport: { default: false, requiresAuth: true },
+    mockTests: { default: false, requiresAuth: true },
+  },
+  
+  // Features available to all users (potentially with limitations)
+  general: {
+    dailyQuestion: { default: true, requiresAuth: false },
+    basicFlashcards: { default: true, requiresAuth: false },
+    basicReading: { default: true, requiresAuth: false },
+    basicListening: { default: true, requiresAuth: false },
+    progressTracking: { default: true, requiresAuth: true },
+  },
+  
+  // Beta features
+  beta: {
+    newDesign: { default: false, requiresAuth: false },
+    voiceInput: { default: false, requiresAuth: false },
+  }
 };
 
-// Cache for feature flags
-let featureCache: Record<string, boolean> | null = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Local cache for override flags from localStorage
+let overrideFlags: Record<string, boolean> | null = null;
 
 // Check if a feature is enabled
-export function isFeatureEnabled(featureName: string): boolean {
-  if (!featureName) return false;
+export function isFeatureEnabled(featureKey: string, user: any = null): boolean {
+  // Find the feature in our feature groups
+  let featureConfig = null;
   
-  if (featureCache && featureName in featureCache) {
-    return featureCache[featureName];
+  // Check all feature categories
+  for (const category of Object.keys(FEATURES)) {
+    if (featureConfig) break;
+    if (FEATURES[category as keyof typeof FEATURES][featureKey as any]) {
+      featureConfig = FEATURES[category as keyof typeof FEATURES][featureKey as any];
+    }
   }
   
-  // If we don't have it in cache, fallback to defaults
-  return defaultFeatures[featureName] || false;
+  // Feature doesn't exist
+  if (!featureConfig) return false;
+  
+  // Check for localStorage override (useful for testing)
+  if (overrideFlags === null) {
+    try {
+      const stored = localStorage.getItem('feature_flags');
+      overrideFlags = stored ? JSON.parse(stored) : {};
+    } catch (e) {
+      overrideFlags = {};
+    }
+  }
+  
+  if (typeof overrideFlags[featureKey] === 'boolean') {
+    return overrideFlags[featureKey];
+  }
+  
+  // If feature requires auth and user isn't authenticated, disable it
+  if (featureConfig.requiresAuth && !user) {
+    return false;
+  }
+  
+  // For premium features, check if user has premium access
+  if (Object.keys(FEATURES.premium).includes(featureKey)) {
+    return user?.isPremium || false;
+  }
+  
+  // Return default value
+  return featureConfig.default;
 }
 
-// Hook to get and subscribe to feature flag changes
-export function useFeatureFlag(featureName: string): [boolean, (enabled: boolean) => void] {
-  const [isEnabled, setIsEnabled] = useState(() => isFeatureEnabled(featureName));
+// React hook for feature flags
+export function useFeatureFlag(featureKey: string): [boolean, (enabled: boolean) => void] {
+  const { user } = useAuth();
+  const [isEnabled, setIsEnabled] = useState(isFeatureEnabled(featureKey, user));
   
-  useEffect(() => {
-    // Initial load from cache or defaults
-    setIsEnabled(isFeatureEnabled(featureName));
-    
-    // Fetch feature flags if cache is stale
-    const fetchFlags = async () => {
-      if (featureCache && Date.now() - lastFetchTime < CACHE_DURATION) {
-        return;
-      }
-      
-      try {
-        // In a real app, we would fetch from a database or API
-        // const { data, error } = await supabase
-        //   .from('feature_flags')
-        //   .select('name, enabled');
-        
-        // if (error) throw error;
-        
-        // Update cache with current values
-        // featureCache = data.reduce((acc, flag) => {
-        //   acc[flag.name] = flag.enabled;
-        //   return acc;
-        // }, {} as Record<string, boolean>);
-        
-        // For now, use default values
-        featureCache = { ...defaultFeatures };
-        lastFetchTime = Date.now();
-        
-        // Update state if this specific feature changed
-        if (featureName in featureCache) {
-          setIsEnabled(featureCache[featureName]);
-        }
-      } catch (error) {
-        console.error('Error fetching feature flags:', error);
-      }
-    };
-    
-    fetchFlags();
-    
-    // In a real app, we might subscribe to realtime updates
-    // const subscription = supabase
-    //   .channel('feature-flags')
-    //   .on('postgres_changes', { event: '*', schema: 'public', table: 'feature_flags' }, handleChange)
-    //   .subscribe();
-    
-    // return () => {
-    //   supabase.removeChannel(subscription);
-    // };
-  }, [featureName]);
-  
-  // Function to toggle the feature (admin only)
-  const setFeatureEnabled = async (enabled: boolean) => {
+  // Toggle the feature flag (stores in localStorage)
+  const toggleFeature = (enabled: boolean) => {
     try {
-      // In a real app, we would update the database
-      // const { error } = await supabase
-      //   .from('feature_flags')
-      //   .update({ enabled })
-      //   .eq('name', featureName);
-      
-      // if (error) throw error;
-      
-      // Update local cache
-      if (featureCache) {
-        featureCache[featureName] = enabled;
-      }
-      
-      // Update state
+      const stored = localStorage.getItem('feature_flags') || '{}';
+      const flags = JSON.parse(stored);
+      flags[featureKey] = enabled;
+      localStorage.setItem('feature_flags', JSON.stringify(flags));
+      overrideFlags = flags;
       setIsEnabled(enabled);
-      
-      console.log(`Feature "${featureName}" ${enabled ? 'enabled' : 'disabled'}`);
-    } catch (error) {
-      console.error(`Error updating feature flag "${featureName}":`, error);
+    } catch (e) {
+      console.error('Error saving feature flag:', e);
     }
   };
   
-  return [isEnabled, setFeatureEnabled];
+  // Check if the feature status needs to be updated when user changes
+  useEffect(() => {
+    setIsEnabled(isFeatureEnabled(featureKey, user));
+  }, [user, featureKey]);
+  
+  return [isEnabled, toggleFeature];
+}
+
+// For admin usage - get all feature flags and their status
+export function getAllFeatureFlags(user: any = null): Record<string, boolean> {
+  const result: Record<string, boolean> = {};
+  
+  // Process all feature categories
+  Object.keys(FEATURES).forEach(category => {
+    Object.keys(FEATURES[category as keyof typeof FEATURES]).forEach(featureKey => {
+      result[featureKey] = isFeatureEnabled(featureKey, user);
+    });
+  });
+  
+  return result;
 }

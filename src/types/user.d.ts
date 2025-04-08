@@ -1,7 +1,18 @@
 
-export type UserRole = 'admin' | 'student' | 'teacher' | 'moderator' | 'editor';
+export type UserRole = 'user' | 'admin' | 'moderator' | 'teacher' | 'editor';
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending';
 export type UserSubscription = 'free' | 'premium' | 'enterprise' | 'educational';
+export type Language = 'english' | 'italian' | 'both';
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  notifications: boolean;
+  emailNotifications: boolean;
+  difficulty: Difficulty;
+  onboardingCompleted: boolean;
+}
 
 export interface User {
   id: string;
@@ -11,53 +22,46 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   role: UserRole;
+  isVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin?: Date;
+  lastActive?: Date;
   status: UserStatus;
   subscription: UserSubscription;
-  createdAt?: string;
-  lastActive?: string;
-  preferences?: {
-    language?: string;
-    notifications?: boolean;
-    theme?: 'light' | 'dark' | 'system';
-    accessibility?: {
-      highContrast?: boolean;
-      reduceMotion?: boolean;
-      fontSize?: 'small' | 'medium' | 'large';
-    };
+  phoneNumber?: string;
+  address?: string;
+  preferences: UserPreferences;
+  preferredLanguage: string;
+  language: string;
+  isPremiumUser?: boolean;
+  dailyQuestionCounts: {
+    flashcards: number;
+    multipleChoice: number;
+    speaking: number;
+    writing: number;
+    listening: number;
   };
-  level?: {
-    current: number;
-    experience: number;
-    nextLevel: number;
-  };
-  progress?: {
-    lessonsCompleted: number;
-    vocabularyLearned: number;
-    streakDays: number;
-    lastActivity: string;
-  };
-  metadata?: Record<string, any>;
 }
 
-export interface UserStats {
-  totalLessonsCompleted: number;
-  totalExercisesCompleted: number;
-  averageScore: number;
-  timeSpent: number;
-  learningStreak: number;
-  lastActive: string;
-}
-
-export interface UserProgress {
-  userId: string;
-  course: string;
-  lessonsCompleted: number;
-  currentLesson: number;
-  exercises: {
-    completed: number;
-    total: number;
+export interface UserProfile extends User {
+  biography?: string;
+  learningGoals?: string[];
+  experience?: number;
+  level?: number;
+  achievements?: string[];
+  streak?: number;
+  totalXP?: number;
+  totalQuizzes?: number;
+  totalCorrect?: number;
+  averageScore?: number;
+  completedCourses?: string[];
+  activeCourses?: string[];
+  certificates?: string[];
+  socialLinks?: {
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+    instagram?: string;
   };
-  accuracy: number;
-  startDate: string;
-  lastActivity: string;
 }
