@@ -1,5 +1,5 @@
 
-/// <reference path="./src/types/jest-types.d.ts" />
+/// <reference path="./src/types/jest-index.d.ts" />
 
 import type { Config } from 'jest';
 import { pathsToModuleNameMapper } from 'ts-jest';
