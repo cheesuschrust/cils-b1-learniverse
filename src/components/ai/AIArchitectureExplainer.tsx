@@ -3,233 +3,368 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const AIArchitectureExplainer: React.FC = () => {
   return (
-    <Card className="w-full">
+    <Card className="w-full shadow-sm">
       <CardHeader>
-        <CardTitle>AI Architecture Implementation</CardTitle>
+        <CardTitle>AI Architecture Overview</CardTitle>
         <CardDescription>
-          Detailed explanation of our AI implementation architecture, including client-side and server-side components
+          Detailed explanation of our hybrid AI architecture with client-side and server-side components
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="overview">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">System Overview</TabsTrigger>
-            <TabsTrigger value="client">Client-Side AI</TabsTrigger>
-            <TabsTrigger value="server">Server-Side AI</TabsTrigger>
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="client-side">Client-Side AI</TabsTrigger>
+            <TabsTrigger value="server-side">Server-Side AI</TabsTrigger>
+            <TabsTrigger value="training">Learning & Training</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-4 pt-4">
-            <div className="prose max-w-none">
-              <h3>Hybrid AI Implementation Architecture</h3>
-              <p>
-                Our system utilizes a hybrid approach to AI implementation, combining client-side and server-side models 
-                to optimize for performance, privacy, and capability.
+          <TabsContent value="overview" className="space-y-4">
+            <div className="p-4 bg-muted/20 rounded-md border">
+              <h3 className="text-lg font-medium mb-2">Hybrid Client-Server AI Architecture</h3>
+              <p className="text-sm text-muted-foreground">
+                Our application uses a hybrid AI architecture that combines the advantages of both 
+                client-side and server-side AI models. This approach provides:
               </p>
-              
-              <h4>Key Architectural Components:</h4>
-              <ul>
-                <li>
-                  <strong>Client-Side Models:</strong> Smaller, optimized models from Hugging Face that run directly in the user's browser 
-                  using WebAssembly and WebGPU (when available). These models handle tasks like speech recognition, translation, 
-                  text embeddings, and classification.
-                </li>
-                <li>
-                  <strong>Server-Side Models:</strong> Larger, more powerful models hosted on cloud infrastructure, 
-                  including Qwen models for complex generation tasks. These handle content generation, conversation, 
-                  and specialized language processing.
-                </li>
-                <li>
-                  <strong>Progressive Enhancement:</strong> The system intelligently falls back to server-side processing 
-                  when client capabilities are insufficient.
-                </li>
-                <li>
-                  <strong>Privacy-Focused Design:</strong> Whenever possible, processing happens locally on the client to minimize 
-                  data transmission and enhance privacy.
-                </li>
-              </ul>
-              
-              <h4>Learning vs. Inference:</h4>
-              <p>
-                Most models in our system operate in <strong>inference-only mode</strong>, meaning they don't learn or 
-                adapt from user interactions. They apply pre-trained knowledge to generate outputs. The exceptions are:
-              </p>
-              <ul>
-                <li>
-                  <strong>Content Recommendation Engine:</strong> Adapts based on user interactions to improve content suggestions (server-side).
-                </li>
-                <li>
-                  <strong>Specialized Italian Language Model:</strong> Periodically fine-tuned based on aggregated user data to improve 
-                  Italian language capabilities (server-side only).
-                </li>
+              <ul className="list-disc pl-6 text-sm text-muted-foreground mt-2 space-y-1">
+                <li><strong>Privacy:</strong> Client-side models run entirely in your browser, keeping sensitive data on your device</li>
+                <li><strong>Offline Support:</strong> Core functionality works without an internet connection after initial model download</li>
+                <li><strong>Low Latency:</strong> Client-side processing eliminates network delays for key interactive features</li>
+                <li><strong>Advanced Capabilities:</strong> Server-side models provide more sophisticated AI capabilities when needed</li>
+                <li><strong>Continuous Improvement:</strong> Server models learn and improve over time while respecting privacy</li>
               </ul>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="client" className="space-y-4 pt-4">
-            <div className="prose max-w-none">
-              <h3>Client-Side AI Implementation (Hugging Face)</h3>
-              
-              <p>
-                Our client-side AI implementation leverages Hugging Face Transformers.js, which allows running machine learning models 
-                directly in the browser without sending user data to external servers.
-              </p>
-              
-              <h4>Download & Storage:</h4>
-              <p>
-                Models are downloaded from Hugging Face's model hub the first time they're needed and then cached in the browser's 
-                IndexedDB storage. This means:
-              </p>
-              <ul>
-                <li>Initial load requires downloading models (50MB - 260MB each)</li>
-                <li>Subsequent visits use cached models with no download needed</li>
-                <li>Models can be updated when new versions are available</li>
-                <li>Users can manually clear the cache if storage space is a concern</li>
-              </ul>
-              
-              <h4>Performance Optimizations:</h4>
-              <ul>
-                <li>
-                  <strong>WebGPU Acceleration:</strong> On supported browsers/devices, models use GPU acceleration for faster inference.
-                </li>
-                <li>
-                  <strong>Quantized Models:</strong> We use 8-bit quantized models to reduce size and improve performance.
-                </li>
-                <li>
-                  <strong>Progressive Loading:</strong> UI remains responsive while models load in the background.
-                </li>
-                <li>
-                  <strong>Lazy Loading:</strong> Models are only loaded when needed for specific features.
-                </li>
-              </ul>
-              
-              <h4>Client-Side Models Implementation by Page:</h4>
-              <div className="not-prose">
-                <dl className="space-y-4 mt-4">
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      Flashcards Page
-                      <Badge variant="outline">MixedBread AI Embeddings</Badge>
-                      <Badge variant="outline">Opus MT Translation</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Uses text embeddings to measure similarity between user responses and correct answers. 
-                      Translation models convert content between English and Italian for bilingual flashcards. 
-                      All processing happens locally on device.
-                    </dd>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-md border bg-blue-50/50">
+                <h4 className="font-medium flex items-center">
+                  <Badge variant="outline" className="mr-2 bg-blue-100 text-blue-800">Client-Side</Badge>
+                  Browser-Based AI
+                </h4>
+                <p className="text-sm mt-2">
+                  Lightweight models downloaded and run directly in your browser using WebGPU when available.
+                  Total download size: ~295MB (downloaded progressively and cached).
+                </p>
+                <div className="mt-3 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Privacy Level:</span>
+                    <span className="font-medium">High</span>
                   </div>
-                  
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      Speaking Practice
-                      <Badge variant="outline">Whisper Tiny</Badge>
-                      <Badge variant="outline">MixedBread AI Embeddings</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Uses Whisper for speech recognition to transcribe user's spoken Italian. Text embeddings 
-                      compare transcription with expected text to evaluate pronunciation accuracy. 
-                      Processing happens entirely in the browser for privacy.
-                    </dd>
+                  <div className="flex justify-between">
+                    <span>Learning Capability:</span>
+                    <span className="font-medium">None (Inference Only)</span>
                   </div>
-                  
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      Writing Assessment
-                      <Badge variant="outline">DistilBERT</Badge>
-                      <Badge variant="outline">MixedBread AI Embeddings</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Uses DistilBERT for grammar analysis and text classification. Embeddings measure semantic 
-                      similarity between user writing and reference texts. Simple error detection happens client-side, 
-                      while complex analysis may leverage server-side processing.
-                    </dd>
+                  <div className="flex justify-between">
+                    <span>Internet Required:</span>
+                    <span className="font-medium">Only for initial download</span>
                   </div>
-                </dl>
+                </div>
+              </div>
+              
+              <div className="p-4 rounded-md border bg-green-50/50">
+                <h4 className="font-medium flex items-center">
+                  <Badge variant="outline" className="mr-2 bg-green-100 text-green-800">Server-Side</Badge>
+                  Cloud-Based AI
+                </h4>
+                <p className="text-sm mt-2">
+                  Powerful large language models running on secure cloud infrastructure.
+                  No downloads required, processing happens on our servers.
+                </p>
+                <div className="mt-3 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Privacy Level:</span>
+                    <span className="font-medium">Medium (data minimized)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Learning Capability:</span>
+                    <span className="font-medium">Full (Continuous improvement)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Internet Required:</span>
+                    <span className="font-medium">Yes (Always)</span>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
           
-          <TabsContent value="server" className="space-y-4 pt-4">
-            <div className="prose max-w-none">
-              <h3>Server-Side AI Implementation (Qwen & Others)</h3>
-              
-              <p>
-                Our server-side AI implementation uses Supabase Edge Functions to host API endpoints that leverage more powerful 
-                AI models for complex generation tasks.
+          <TabsContent value="client-side">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Client-Side Models (Hugging Face Transformers)</h3>
+              <p className="text-sm text-muted-foreground">
+                These models are downloaded to your device and run directly in your browser using WebAssembly and WebGPU 
+                (when available). After initial download, they're cached for offline use.
               </p>
               
-              <h4>Model Hosting:</h4>
-              <p>
-                Server-side models are hosted on cloud infrastructure and accessed via API endpoints. This approach allows using 
-                larger models that wouldn't fit in browser environments.
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Size</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Pages Used</TableHead>
+                    <TableHead>Learning</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      MixedBread AI Embeddings<br/>
+                      <span className="text-xs text-muted-foreground">mixedbread-ai/mxbai-embed-xsmall-v1</span>
+                    </TableCell>
+                    <TableCell>50MB</TableCell>
+                    <TableCell>Text embeddings, semantic similarity, content comparison</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">Flashcards</Badge>
+                        <Badge variant="outline" className="text-xs">Speaking Practice</Badge>
+                        <Badge variant="outline" className="text-xs">AI Assistant</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">Inference Only</Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      Whisper Tiny<br/>
+                      <span className="text-xs text-muted-foreground">onnx-community/whisper-tiny.en</span>
+                    </TableCell>
+                    <TableCell>75MB</TableCell>
+                    <TableCell>Speech recognition, audio transcription, pronunciation analysis</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">Speaking Practice</Badge>
+                        <Badge variant="outline" className="text-xs">Pronunciation</Badge>
+                        <Badge variant="outline" className="text-xs">AI Assistant</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">Inference Only</Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      Opus MT Translation<br/>
+                      <span className="text-xs text-muted-foreground">Helsinki-NLP/opus-mt-en-it & opus-mt-it-en</span>
+                    </TableCell>
+                    <TableCell>85MB each</TableCell>
+                    <TableCell>Text translation between English and Italian</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">Flashcards</Badge>
+                        <Badge variant="outline" className="text-xs">Content Generator</Badge>
+                        <Badge variant="outline" className="text-xs">AI Assistant</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">Inference Only</Badge>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              
+              <div className="p-4 bg-muted/20 rounded-md">
+                <h4 className="font-medium mb-2">Key Implementation Details</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <strong>Download Process:</strong> Models are downloaded progressively when needed and cached in IndexedDB 
+                    using the browser's Cache API.
+                  </li>
+                  <li>
+                    <strong>Hardware Acceleration:</strong> Models leverage WebGPU on compatible devices, with automatic 
+                    fallback to CPU if not available.
+                  </li>
+                  <li>
+                    <strong>Offline Support:</strong> Once downloaded, models can be used without an internet connection.
+                  </li>
+                  <li>
+                    <strong>Privacy:</strong> All processing happens locally in the browser, with no data sent to external servers.
+                  </li>
+                  <li>
+                    <strong>Learning Capability:</strong> These models do not learn or adapt from user data (inference only).
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="server-side">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Server-Side Models</h3>
+              <p className="text-sm text-muted-foreground">
+                These models run on our secure cloud infrastructure. They provide more advanced AI capabilities
+                and can learn and improve over time.
               </p>
               
-              <h4>Key Server-Side Capabilities:</h4>
-              <ul>
-                <li>
-                  <strong>Content Generation:</strong> Creating Italian learning content, examples, and exercises.
-                </li>
-                <li>
-                  <strong>Conversation:</strong> Powering the AI tutor for interactive Italian conversations.
-                </li>
-                <li>
-                  <strong>Question Generation:</strong> Creating custom quizzes and tests based on specific topics.
-                </li>
-                <li>
-                  <strong>Complex Analysis:</strong> Performing deep language analysis that exceeds client capabilities.
-                </li>
-              </ul>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Pages Used</TableHead>
+                    <TableHead>Learning</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      Qwen 7B Chat<br/>
+                      <span className="text-xs text-muted-foreground">Alibaba/Qwen/7B-Chat</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-green-50 text-green-700">Server-Side</Badge>
+                    </TableCell>
+                    <TableCell>Advanced conversational AI, complex content generation, writing evaluation</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">AI Assistant</Badge>
+                        <Badge variant="outline" className="text-xs">Content Generator</Badge>
+                        <Badge variant="outline" className="text-xs">Test Preparation</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="success">Learning Enabled</Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      Italian-finetuned LLM<br/>
+                      <span className="text-xs text-muted-foreground">Custom fine-tuned model (Planned)</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-green-50 text-green-700">Server-Side</Badge>
+                    </TableCell>
+                    <TableCell>Italian language generation, citizenship test preparation, cultural context</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">Citizenship Test</Badge>
+                        <Badge variant="outline" className="text-xs">Cultural Content</Badge>
+                        <Badge variant="outline" className="text-xs">Italian Conversation</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="success">Learning Enabled</Badge>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
               
-              <h4>Implementation Details:</h4>
-              <ul>
-                <li>Serverless architecture using Supabase Edge Functions</li>
-                <li>Rate limiting to manage resource consumption</li>
-                <li>Caching common requests to improve performance</li>
-                <li>User-specific context management for personalization</li>
-              </ul>
+              <div className="p-4 bg-muted/20 rounded-md">
+                <h4 className="font-medium mb-2">Key Implementation Details</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <strong>Hosting:</strong> Models are hosted on secure cloud infrastructure with scalable resources.
+                  </li>
+                  <li>
+                    <strong>Learning Process:</strong> Models are continuously improved using anonymized interaction data
+                    with explicit user consent.
+                  </li>
+                  <li>
+                    <strong>Data Privacy:</strong> Personal information is minimized, and data retention is limited to
+                    the necessary training period only.
+                  </li>
+                  <li>
+                    <strong>API Access:</strong> Client applications connect to these models via secure API endpoints with
+                    rate limiting and authentication.
+                  </li>
+                  <li>
+                    <strong>Fallback Mechanisms:</strong> System can fallback to simpler models during high load or service disruption.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="training">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Learning & Training Capabilities</h3>
+              <p className="text-sm text-muted-foreground">
+                Our AI system combines both non-learning client-side models and continuously improving server-side models.
+              </p>
               
-              <h4>Server-Side Models Implementation by Page:</h4>
-              <div className="not-prose">
-                <dl className="space-y-4 mt-4">
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      AI Assistant
-                      <Badge variant="secondary">Qwen 7B Chat</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Uses Qwen 7B Chat model to provide conversational Italian practice and answer questions about 
-                      Italian language and culture. The model maintains conversation context to provide coherent responses 
-                      across multiple turns. Hosted on serverless edge functions.
-                    </dd>
-                  </div>
-                  
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      Content Generator
-                      <Badge variant="secondary">Qwen 7B Chat</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Uses Qwen 7B to generate custom Italian learning content based on user specifications 
-                      (topic, difficulty level, etc.). Generates reading passages, dialogue examples, and 
-                      cultural explanations. Access controlled by user subscription tier.
-                    </dd>
-                  </div>
-                  
-                  <div className="border rounded-md p-3">
-                    <dt className="font-semibold flex items-center gap-2">
-                      Citizenship Test Prep
-                      <Badge variant="secondary">Italian-finetuned LLM</Badge>
-                      <Badge>Planned</Badge>
-                    </dt>
-                    <dd className="text-sm mt-1">
-                      Will use a specialized model fine-tuned with Italian citizenship test materials to generate 
-                      practice questions and provide explanations of Italian civics, history, and culture. 
-                      Currently in development with planned 2025 release.
-                    </dd>
-                  </div>
-                </dl>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Client-Side Models</CardTitle>
+                    <CardDescription>Inference-only models that run in your browser</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <strong>Learning Capability:</strong> 
+                        <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700">No Learning</Badge>
+                      </div>
+                      <p>
+                        Client-side models (Hugging Face Transformers) are pre-trained and do not learn from user interactions.
+                        They perform inference only, which means they apply their fixed knowledge to new inputs without 
+                        modifying their internal parameters.
+                      </p>
+                      <div className="mt-2">
+                        <strong>Benefits:</strong>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                          <li>Enhanced privacy as no data leaves your device</li>
+                          <li>Consistent performance without unexpected changes</li>
+                          <li>No ongoing training costs or complexity</li>
+                          <li>Works offline after initial download</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Server-Side Models</CardTitle>
+                    <CardDescription>Learning-enabled models that run on our servers</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <strong>Learning Capability:</strong> 
+                        <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">Continuous Learning</Badge>
+                      </div>
+                      <p>
+                        Server-side models (Qwen, Custom LLMs) can learn and improve over time based on anonymized 
+                        user interactions data. This enables them to enhance their performance, correct errors, and 
+                        adapt to user needs.
+                      </p>
+                      <div className="mt-2">
+                        <strong>Learning Process:</strong>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                          <li>Collect anonymized interaction data with consent</li>
+                          <li>Identify common patterns, errors, and improvement areas</li>
+                          <li>Regular retraining and fine-tuning cycles</li>
+                          <li>Validation against test sets before deployment</li>
+                          <li>Gradual rollout of improved models</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-3">
+                <h4 className="font-medium">Data Privacy in Training Process</h4>
+                <p className="text-sm text-muted-foreground">
+                  We take data privacy seriously in our AI training process. Here's how we protect your data:
+                </p>
+                <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
+                  <li>Explicit consent obtained before using data for training</li>
+                  <li>All personally identifiable information is removed before training</li>
+                  <li>Data is anonymized and aggregated to prevent individual identification</li>
+                  <li>Limited data retention period after which training data is deleted</li>
+                  <li>Opt-out option available at any time through user settings</li>
+                  <li>Transparency about which models learn and which don't</li>
+                </ul>
               </div>
             </div>
           </TabsContent>

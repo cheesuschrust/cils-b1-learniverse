@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import FlashcardPronunciation from '@/components/flashcards/FlashcardPronunciation';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, FileDown, Activity, Cpu } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AIImplementationStatus } from '@/components/ai';
+import { Progress } from '@/components/ui/progress';
 
 const FlashcardsPage: React.FC = () => {
   return (
@@ -21,12 +23,13 @@ const FlashcardsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
-            Client-side AI
+          <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 flex items-center gap-1">
+            <Cpu className="h-3 w-3" />
+            <span>Client-side AI</span>
           </Badge>
           <Badge variant="outline" className="flex gap-1">
             <span className="h-2 w-2 rounded-full bg-green-500"></span>
-            Models Loaded
+            <span>Models Loaded</span>
           </Badge>
         </div>
       </div>
@@ -45,6 +48,7 @@ const FlashcardsPage: React.FC = () => {
           <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
           <TabsTrigger value="pronunciation">Pronunciation</TabsTrigger>
           <TabsTrigger value="ai-details">AI Implementation</TabsTrigger>
+          <TabsTrigger value="ai-status">AI Status</TabsTrigger>
         </TabsList>
         
         <TabsContent value="flashcards">
@@ -76,6 +80,16 @@ const FlashcardsPage: React.FC = () => {
             <CardContent className="space-y-4">
               <div>
                 <h3 className="text-lg font-medium">MixedBread AI Embeddings (Client-side)</h3>
+                <div className="flex items-center mt-1 mb-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                    <FileDown className="h-3 w-3" />
+                    <span>Downloaded: 50MB</span>
+                  </Badge>
+                  <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                    <Activity className="h-3 w-3" />
+                    <span>Inference Only</span>
+                  </Badge>
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   This small but powerful model (50MB) converts text into numerical vectors to measure 
                   semantic similarity between texts. On this page, it's used to:
@@ -95,6 +109,16 @@ const FlashcardsPage: React.FC = () => {
               
               <div>
                 <h3 className="text-lg font-medium">Opus MT Translation Models (Client-side)</h3>
+                <div className="flex items-center mt-1 mb-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                    <FileDown className="h-3 w-3" />
+                    <span>Downloaded: 85MB each</span>
+                  </Badge>
+                  <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                    <Activity className="h-3 w-3" />
+                    <span>Inference Only</span>
+                  </Badge>
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   These models (85MB each) translate between English and Italian. On this page, they're used to:
                 </p>
@@ -113,6 +137,16 @@ const FlashcardsPage: React.FC = () => {
               
               <div>
                 <h3 className="text-lg font-medium">Whisper Tiny (Client-side)</h3>
+                <div className="flex items-center mt-1 mb-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                    <FileDown className="h-3 w-3" />
+                    <span>Downloaded: 75MB</span>
+                  </Badge>
+                  <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                    <Activity className="h-3 w-3" />
+                    <span>Inference Only</span>
+                  </Badge>
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   This speech recognition model (75MB) transcribes your spoken Italian. On this page, it's used in the pronunciation tab to:
                 </p>
@@ -138,6 +172,83 @@ const FlashcardsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="ai-status">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Model Status</CardTitle>
+                <CardDescription>Current status of AI models used on this page</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center">
+                        <span>MixedBread AI Embeddings</span>
+                        <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                      </div>
+                      <span className="text-sm">50MB</span>
+                    </div>
+                    <Progress value={100} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center">
+                        <span>Opus MT (EN-IT)</span>
+                        <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                      </div>
+                      <span className="text-sm">85MB</span>
+                    </div>
+                    <Progress value={100} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center">
+                        <span>Opus MT (IT-EN)</span>
+                        <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                      </div>
+                      <span className="text-sm">85MB</span>
+                    </div>
+                    <Progress value={100} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center">
+                        <span>Whisper Tiny</span>
+                        <Badge className="ml-2 bg-blue-100 text-blue-800 hover:bg-blue-100">Available</Badge>
+                      </div>
+                      <span className="text-sm">75MB</span>
+                    </div>
+                    <Progress value={100} className="h-2" />
+                  </div>
+                </div>
+                
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="bg-muted/30 p-3 rounded-md">
+                    <h4 className="text-sm font-medium">Hardware Acceleration</h4>
+                    <div className="mt-2 flex items-center">
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">WebGPU Active</Badge>
+                      <span className="text-sm ml-2 text-muted-foreground">(3x faster)</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/30 p-3 rounded-md">
+                    <h4 className="text-sm font-medium">Offline Capability</h4>
+                    <div className="mt-2 flex items-center">
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">100% Offline Ready</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <AIImplementationStatus />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -2,262 +2,338 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, LineChart, DonutChart } from '@/components/admin/charts';
-
-const mockClientSideUsageData = [
-  { name: 'Flashcards', value: 34, model: 'MixedBread Embeddings' },
-  { name: 'Speaking', value: 27, model: 'Whisper Tiny' },
-  { name: 'Translation', value: 21, model: 'Opus MT' },
-  { name: 'Writing', value: 18, model: 'DistilBERT' },
-];
-
-const mockServerSideUsageData = [
-  { name: 'Content Generation', value: 42, model: 'Qwen 7B' },
-  { name: 'Question Generation', value: 31, model: 'Qwen 7B' },
-  { name: 'Conversation', value: 27, model: 'Qwen 7B' },
-];
-
-const mockPerformanceData = [
-  { name: 'MixedBread Embeddings', accuracy: 92, latency: 120, userSatisfaction: 4.3 },
-  { name: 'Whisper Tiny', accuracy: 87, latency: 350, userSatisfaction: 3.9 },
-  { name: 'Opus MT EN-IT', accuracy: 89, latency: 180, userSatisfaction: 4.1 },
-  { name: 'Opus MT IT-EN', accuracy: 88, latency: 190, userSatisfaction: 4.0 },
-  { name: 'DistilBERT', accuracy: 90, latency: 150, userSatisfaction: 4.2 },
-  { name: 'Qwen 7B', accuracy: 94, latency: 850, userSatisfaction: 4.5 },
-];
-
-const mockClientPerformanceByDevice = [
-  { name: 'High-end Desktop', avgLatency: 110, success: 99 },
-  { name: 'Mid-range Laptop', avgLatency: 230, success: 97 },
-  { name: 'Budget Laptop', avgLatency: 450, success: 91 },
-  { name: 'Tablet', avgLatency: 380, success: 93 },
-  { name: 'High-end Mobile', avgLatency: 520, success: 89 },
-  { name: 'Mid-range Mobile', avgLatency: 780, success: 82 },
-  { name: 'Budget Mobile', avgLatency: 920, success: 76 },
-];
-
-const mockStorageUsage = [
-  { name: 'MixedBread Embeddings', size: 50 },
-  { name: 'Whisper Tiny', size: 75 },
-  { name: 'Opus MT Models', size: 170 },
-  { name: 'DistilBERT', size: 260 },
-  { name: 'Cached Data', size: 45 },
-];
-
-const mockModelUsageOverTime = [
-  { month: 'Jan', whisper: 120, embeddings: 230, translation: 180, classification: 90 },
-  { month: 'Feb', whisper: 150, embeddings: 280, translation: 170, classification: 110 },
-  { month: 'Mar', whisper: 180, embeddings: 310, translation: 220, classification: 130 },
-  { month: 'Apr', whisper: 220, embeddings: 350, translation: 250, classification: 160 },
-  { month: 'May', whisper: 270, embeddings: 380, translation: 290, classification: 190 },
-  { month: 'Jun', whisper: 310, embeddings: 420, translation: 330, classification: 230 },
-];
+import { LineChart, BarChart, PieChart, DonutChart } from '@/components/admin/charts';
+import { Badge } from '@/components/ui/badge';
 
 const AIModelUsageDashboard: React.FC = () => {
+  // Model usage data by type
+  const modelUsageData = [
+    { name: 'Embeddings (MixedBread)', value: 42, fill: '#8884d8' },
+    { name: 'Translation (Opus MT)', value: 28, fill: '#82ca9d' },
+    { name: 'Speech Recognition', value: 18, fill: '#ffc658' },
+    { name: 'Text Classification', value: 12, fill: '#ff8042' }
+  ];
+
+  // Model usage by page
+  const pageUsageData = [
+    { name: 'Flashcards', embeddings: 15, translation: 12, speech: 0, classification: 3 },
+    { name: 'Speaking Practice', embeddings: 8, translation: 5, speech: 12, classification: 2 },
+    { name: 'AI Assistant', embeddings: 12, translation: 10, speech: 6, classification: 4 },
+    { name: 'Test Preparation', embeddings: 7, translation: 1, speech: 0, classification: 3 }
+  ];
+
+  // Performance metrics
+  const performanceData = [
+    { name: 'Day 1', client: 1200, server: 350 },
+    { name: 'Day 2', client: 1300, server: 380 },
+    { name: 'Day 3', client: 1400, server: 410 },
+    { name: 'Day 4', client: 1350, server: 390 },
+    { name: 'Day 5', client: 1500, server: 430 },
+    { name: 'Day 6', client: 1600, server: 450 },
+    { name: 'Day 7', client: 1750, server: 470 }
+  ];
+
+  // Download size data
+  const downloadSizeData = [
+    { name: 'MixedBread Embeddings', size: 50, category: 'Embeddings' },
+    { name: 'Whisper Tiny', size: 75, category: 'Speech' },
+    { name: 'Opus MT (EN-IT)', size: 85, category: 'Translation' },
+    { name: 'Opus MT (IT-EN)', size: 85, category: 'Translation' }
+  ];
+
+  // Hardware acceleration usage
+  const hardwareAccelerationData = [
+    { name: 'WebGPU Supported', value: 68 },
+    { name: 'CPU Fallback', value: 32 }
+  ];
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Model Usage Dashboard</CardTitle>
-          <CardDescription>
-            Comprehensive overview of AI model usage, performance metrics, and resource consumption
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="usage">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="usage">Usage Distribution</TabsTrigger>
-              <TabsTrigger value="performance">Performance Metrics</TabsTrigger>
-              <TabsTrigger value="resources">Resource Consumption</TabsTrigger>
-              <TabsTrigger value="trends">Usage Trends</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="usage" className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Client-side Model Usage</CardTitle>
-                    <CardDescription>
-                      Distribution of client-side AI model usage across features
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <DonutChart 
-                      data={mockClientSideUsageData}
-                      dataKey="value"
-                      nameKey="name"
-                      colors={['#36A2EB', '#FFCE56', '#4BC0C0', '#FF6384']}
-                    />
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      <p className="font-medium">Note:</p>
-                      <p>Client-side models are downloaded and cached in the browser. The size of each model is shown in the Resources tab.</p>
-                      <p>These models run locally without sending user data to external servers, ensuring privacy.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Server-side Model Usage</CardTitle>
-                    <CardDescription>
-                      Distribution of server-side AI model usage across features
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <DonutChart 
-                      data={mockServerSideUsageData}
-                      dataKey="value"
-                      nameKey="name"
-                      colors={['#8D99AE', '#EF233C', '#2B2D42']}
-                    />
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      <p className="font-medium">Note:</p>
-                      <p>Server-side models are hosted on cloud infrastructure and accessed via API.</p>
-                      <p>These models are larger and more powerful but require internet connectivity.</p>
-                    </div>
-                  </CardContent>
-                </Card>
+    <Card className="w-full shadow-sm">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>AI Model Usage Dashboard</CardTitle>
+            <CardDescription>
+              Analytics on AI model usage, performance, and resource consumption
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              Client-side AI
+            </Badge>
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              Server-side AI
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="usage">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="usage">Usage Distribution</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="resources">Resource Usage</TabsTrigger>
+            <TabsTrigger value="pages">Page Analysis</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="usage" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Client-Side Model Usage</h3>
+                <div className="h-80">
+                  <PieChart 
+                    data={modelUsageData}
+                    dataKey="value"
+                    nameKey="name"
+                    legend={true}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Distribution of client-side AI model usage by type
+                </p>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="performance" className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Model Performance Comparison</CardTitle>
-                    <CardDescription>
-                      Accuracy, latency, and user satisfaction metrics by model
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <BarChart 
-                      data={mockPerformanceData}
-                      xAxisDataKey="name"
-                      bars={[
-                        { dataKey: "accuracy", fill: "#4BC0C0", name: "Accuracy (%)" },
-                        { dataKey: "latency", fill: "#FF6384", name: "Latency (ms)" },
-                        { dataKey: "userSatisfaction", fill: "#FFCE56", name: "User Rating (0-5)" }
-                      ]}
-                    />
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Client Performance by Device</CardTitle>
-                    <CardDescription>
-                      How client-side models perform across different devices
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <BarChart 
-                      data={mockClientPerformanceByDevice}
-                      xAxisDataKey="name"
-                      bars={[
-                        { dataKey: "avgLatency", fill: "#FF6384", name: "Avg. Latency (ms)" },
-                        { dataKey: "success", fill: "#4BC0C0", name: "Success Rate (%)" }
-                      ]}
-                    />
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      <p>Performance varies significantly by device capability. Lower-end devices may experience longer load times and processing delays.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="resources" className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Client-side Storage Usage</CardTitle>
-                    <CardDescription>
-                      Browser storage consumed by downloaded models and cached data
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <BarChart 
-                      data={mockStorageUsage}
-                      xAxisDataKey="name"
-                      bars={[
-                        { dataKey: "size", fill: "#36A2EB", name: "Size (MB)" }
-                      ]}
-                    />
-                    <div className="mt-4 text-xs text-muted-foreground">
-                      <p className="font-medium">Total Local Storage Usage: 600 MB</p>
-                      <p>Models are downloaded once and cached in the browser for future use.</p>
-                      <p>Users can clear cache to free up space, but models will need to be re-downloaded.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Resource Optimization</CardTitle>
-                    <CardDescription>
-                      Strategies for optimizing AI model resource usage
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-medium">Progressive Web App (PWA) Implementation</h4>
-                      <p className="text-sm text-muted-foreground">Using PWA features to manage model downloads and cache efficiently.</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">Quantized Models</h4>
-                      <p className="text-sm text-muted-foreground">Using 8-bit quantization to reduce model size by 65-75% with minimal accuracy loss.</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">WebGPU Acceleration</h4>
-                      <p className="text-sm text-muted-foreground">Leveraging WebGPU for up to 3x faster inference on supported browsers and devices.</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">Model Streaming</h4>
-                      <p className="text-sm text-muted-foreground">Streaming large models in chunks to allow immediate usage while still downloading.</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">Hybrid Execution</h4>
-                      <p className="text-sm text-muted-foreground">Switching between client and server models based on device capability and network conditions.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="trends" className="pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Model Usage Over Time</CardTitle>
-                  <CardDescription>
-                    Monthly usage trends for different AI models
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Model Usage Trends</h3>
+                <div className="h-80">
                   <LineChart 
-                    data={mockModelUsageOverTime}
-                    xAxisDataKey="month"
-                    lines={[
-                      { dataKey: "whisper", stroke: "#FF6384", name: "Speech Recognition" },
-                      { dataKey: "embeddings", stroke: "#36A2EB", name: "Text Embeddings" },
-                      { dataKey: "translation", stroke: "#FFCE56", name: "Translation" },
-                      { dataKey: "classification", stroke: "#4BC0C0", name: "Text Classification" }
+                    data={[
+                      { date: 'Mon', embeddings: 10, translation: 8, speech: 5, classification: 3 },
+                      { date: 'Tue', embeddings: 12, translation: 9, speech: 6, classification: 4 },
+                      { date: 'Wed', embeddings: 15, translation: 11, speech: 7, classification: 5 },
+                      { date: 'Thu', embeddings: 18, translation: 12, speech: 8, classification: 6 },
+                      { date: 'Fri', embeddings: 20, translation: 15, speech: 10, classification: 7 },
+                      { date: 'Sat', embeddings: 22, translation: 17, speech: 12, classification: 8 },
+                      { date: 'Sun', embeddings: 25, translation: 18, speech: 15, classification: 9 }
+                    ]}
+                    xAxisDataKey="date"
+                    series={[
+                      { dataKey: 'embeddings', name: 'Embeddings', color: '#8884d8' },
+                      { dataKey: 'translation', name: 'Translation', color: '#82ca9d' },
+                      { dataKey: 'speech', name: 'Speech', color: '#ffc658' },
+                      { dataKey: 'classification', name: 'Classification', color: '#ff8042' }
                     ]}
                   />
-                  <div className="mt-4 text-xs text-muted-foreground">
-                    <p>Client-side model usage has been steadily increasing as more users adopt the application.</p>
-                    <p>Speech recognition and embedding models are the most frequently used features.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Weekly trends in AI model usage by type
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="performance" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Processing Time Comparison</h3>
+                <div className="h-80">
+                  <LineChart 
+                    data={performanceData}
+                    xAxisDataKey="name"
+                    series={[
+                      { dataKey: 'client', name: 'Client-Side Processing (ms)', color: '#8884d8' },
+                      { dataKey: 'server', name: 'Server-Side Processing (ms)', color: '#82ca9d' }
+                    ]}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Comparison of client vs server processing times (milliseconds)
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Model Inference Accuracy</h3>
+                <div className="h-80">
+                  <BarChart 
+                    data={[
+                      { model: 'Embeddings', accuracy: 92 },
+                      { model: 'Translation', accuracy: 88 },
+                      { model: 'Speech', accuracy: 85 },
+                      { model: 'Classification', accuracy: 90 },
+                      { model: 'Server LLM', accuracy: 95 }
+                    ]}
+                    xAxisDataKey="model"
+                    series={[
+                      { dataKey: 'accuracy', name: 'Accuracy (%)', color: '#8884d8' }
+                    ]}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Model accuracy percentages based on evaluation metrics
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-4 bg-muted/20 rounded-md">
+              <h3 className="text-lg font-medium mb-2">Performance Optimization Tips</h3>
+              <ul className="list-disc pl-6 text-sm space-y-1">
+                <li>Enable WebGPU in your browser settings for up to 3x faster AI processing</li>
+                <li>Preload models for frequently used features to eliminate initial loading delays</li>
+                <li>For speech recognition, use a high-quality microphone in a quiet environment</li>
+                <li>Only load the models you need for your current activity to conserve memory</li>
+                <li>Check your hardware acceleration status in the Resources tab</li>
+              </ul>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="resources" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Model Download Sizes</h3>
+                <div className="h-80">
+                  <BarChart 
+                    data={downloadSizeData}
+                    xAxisDataKey="name"
+                    series={[
+                      { dataKey: 'size', name: 'Size (MB)', color: '#8884d8' }
+                    ]}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Download size of each client-side model in megabytes
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Hardware Acceleration Usage</h3>
+                <div className="h-80">
+                  <DonutChart 
+                    data={hardwareAccelerationData}
+                    dataKey="value"
+                    nameKey="name"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Percentage of users with WebGPU hardware acceleration
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-4 bg-muted/20 rounded-md">
+              <h3 className="text-lg font-medium mb-2">Resource Management</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-1">Storage Usage</h4>
+                  <ul className="text-sm space-y-1">
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Total Model Storage:</span>
+                        <span className="font-medium">295 MB</span>
+                      </div>
+                    </li>
+                    <li>
+                      <div className="flex justify-between">
+                        <span>User Data Cache:</span>
+                        <span className="font-medium">25 MB</span>
+                      </div>
+                    </li>
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Application Storage:</span>
+                        <span className="font-medium">15 MB</span>
+                      </div>
+                    </li>
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Total:</span>
+                        <span className="font-medium">335 MB</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-1">Memory Usage (Average)</h4>
+                  <ul className="text-sm space-y-1">
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Embeddings Model:</span>
+                        <span className="font-medium">120 MB</span>
+                      </div>
+                    </li>
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Translation Model:</span>
+                        <span className="font-medium">180 MB</span>
+                      </div>
+                    </li>
+                    <li>
+                      <div className="flex justify-between">
+                        <span>Speech Recognition:</span>
+                        <span className="font-medium">150 MB</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="pages" className="space-y-4">
+            <div className="mt-4">
+              <h3 className="text-lg font-medium mb-2">AI Usage by Page</h3>
+              <div className="h-80">
+                <BarChart 
+                  data={pageUsageData}
+                  xAxisDataKey="name"
+                  series={[
+                    { dataKey: 'embeddings', name: 'Embeddings', color: '#8884d8' },
+                    { dataKey: 'translation', name: 'Translation', color: '#82ca9d' },
+                    { dataKey: 'speech', name: 'Speech', color: '#ffc658' },
+                    { dataKey: 'classification', name: 'Classification', color: '#ff8042' }
+                  ]}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                Distribution of AI model usage across different pages
+              </p>
+            </div>
+            
+            <div className="mt-4 p-4 bg-muted/20 rounded-md">
+              <h3 className="text-lg font-medium mb-2">Page-Specific AI Implementation</h3>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-medium">Flashcards Page</h4>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>Embeddings:</strong> Used for semantic similarity between terms and definitions</li>
+                    <li><strong>Translation:</strong> Provides translations for flashcard content</li>
+                    <li><strong>Classification:</strong> Categorizes flashcards by difficulty and topic</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium">Speaking Practice</h4>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>Speech Recognition:</strong> Transcribes user's spoken Italian for evaluation</li>
+                    <li><strong>Embeddings:</strong> Compares spoken text similarity to expected phrases</li>
+                    <li><strong>Translation:</strong> Provides guidance in user's native language</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium">AI Assistant</h4>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>Server LLM:</strong> Powers conversational capabilities and complex interactions</li>
+                    <li><strong>Embeddings:</strong> Analyzes conversation context and retrieves relevant responses</li>
+                    <li><strong>Translation:</strong> Handles bilingual conversation capabilities</li>
+                    <li><strong>Speech:</strong> Enables voice interaction with the assistant</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium">Test Preparation</h4>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>Server LLM:</strong> Generates test questions and evaluates responses</li>
+                    <li><strong>Embeddings:</strong> Measures answer similarity and provides scoring</li>
+                    <li><strong>Classification:</strong> Identifies question types and difficulty levels</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
