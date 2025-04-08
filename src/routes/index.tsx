@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import RootLayout from '@/layouts/RootLayout';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import AuthLayout from '@/layouts/AuthLayout';
+import AdminLayout from '@/layouts/AdminLayout';
 import { Spinner } from '@/components/ui/spinner';
 
 // Loading fallback
@@ -32,6 +33,13 @@ const SpeakingPage = lazy(() => import('@/pages/learning/SpeakingPracticePage'))
 // Admin pages
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'));
+const ContentManager = lazy(() => import('@/pages/admin/ContentManager'));
+const AIManagement = lazy(() => import('@/pages/admin/AIManagement'));
+const SubscriptionManager = lazy(() => import('@/pages/admin/SubscriptionManager'));
+const SystemHealth = lazy(() => import('@/pages/admin/SystemHealth'));
+
+// Subscription page
+const SubscriptionPage = lazy(() => import('@/pages/subscription/SubscriptionPage'));
 
 const AppRoutes = () => {
   return (
@@ -53,6 +61,9 @@ const AppRoutes = () => {
             <Route path="writing" element={<WritingPage />} />
             <Route path="speaking" element={<SpeakingPage />} />
           </Route>
+          
+          {/* Subscription page */}
+          <Route path="subscription" element={<SubscriptionPage />} />
         </Route>
         
         {/* Auth routes */}
@@ -67,10 +78,14 @@ const AppRoutes = () => {
           <Route index element={<HomePage />} />
         </Route>
         
-        {/* Admin routes */}
-        <Route path="admin" element={<DashboardLayout />}>
+        {/* Admin routes - Updated to use AdminLayout */}
+        <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="content" element={<ContentManager />} />
+          <Route path="ai-management" element={<AIManagement />} />
+          <Route path="subscriptions" element={<SubscriptionManager />} />
+          <Route path="system-health" element={<SystemHealth />} />
         </Route>
         
         {/* 404 - Not Found */}

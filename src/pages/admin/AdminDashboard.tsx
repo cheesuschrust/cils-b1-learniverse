@@ -1,241 +1,217 @@
 
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { BarChart3, Users, FileText, ArrowUpRight, AlertCircle, Bot, CreditCard } from 'lucide-react';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-
-interface DashboardStat {
-  title: string;
-  value: string | number;
-  change?: number;
-  icon: React.ReactNode;
-}
-
-interface SystemStatus {
-  service: string;
-  status: 'operational' | 'degraded' | 'outage';
-  uptime: number;
-}
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, FileText, CreditCard, Activity, Coffee, BookOpen } from 'lucide-react';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AdminDashboard: React.FC = () => {
-  const { toast } = useToast();
-  const [stats, setStats] = useState<DashboardStat[]>([]);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // Fetch user count
-        const { count: userCount, error: userError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-          
-        if (userError) throw userError;
-        
-        // Fetch content count
-        const { count: contentCount, error: contentError } = await supabase
-          .from('content_items')
-          .select('*', { count: 'exact', head: true });
-          
-        if (contentError) throw contentError;
-        
-        // Fetch AI model performance average
-        const { data: aiData, error: aiError } = await supabase
-          .from('ai_model_performance')
-          .select('accuracy')
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        if (aiError) throw aiError;
-        
-        // Fetch subscription data
-        const { data: subscriptionData, error: subError } = await supabase
-          .from('users')
-          .select('subscription_tier')
-          .not('subscription_tier', 'eq', 'free');
-          
-        if (subError) throw subError;
-        
-        // Set the dashboard stats
-        setStats([
-          {
-            title: 'Total Users',
-            value: userCount || 0,
-            icon: <Users className="h-8 w-8 text-blue-500" />,
-          },
-          {
-            title: 'Content Items',
-            value: contentCount || 0, 
-            icon: <FileText className="h-8 w-8 text-purple-500" />,
-          },
-          {
-            title: 'AI Accuracy',
-            value: aiData && aiData.length > 0 ? `${(aiData[0].accuracy * 100).toFixed(1)}%` : 'N/A',
-            icon: <Bot className="h-8 w-8 text-green-500" />,
-          },
-          {
-            title: 'Paid Subscriptions',
-            value: subscriptionData?.length || 0,
-            icon: <CreditCard className="h-8 w-8 text-amber-500" />,
-          },
-        ]);
-        
-        // Set system status (mock data for now)
-        setSystemStatus([
-          { service: 'API Server', status: 'operational', uptime: 99.98 },
-          { service: 'Database', status: 'operational', uptime: 99.99 },
-          { service: 'AI Models', status: 'operational', uptime: 99.95 },
-          { service: 'Authentication', status: 'operational', uptime: 100 },
-          { service: 'Storage', status: 'operational', uptime: 99.99 },
-        ]);
-        
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load dashboard data. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchDashboardData();
-  }, [toast]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'operational': return 'bg-green-500';
-      case 'degraded': return 'bg-yellow-500';
-      case 'outage': return 'bg-red-500';
-      default: return 'bg-gray-300';
+  const { user } = useAuth();
+  
+  const stats = [
+    {
+      title: "Total Users",
+      value: "1,243",
+      description: "Active users this month",
+      icon: <Users className="h-4 w-4 text-muted-foreground" />,
+      change: "+12%"
+    },
+    {
+      title: "Premium Subscribers",
+      value: "349",
+      description: "28% of total users",
+      icon: <CreditCard className="h-4 w-4 text-muted-foreground" />,
+      change: "+5%"
+    },
+    {
+      title: "Total Questions",
+      value: "2,845",
+      description: "Across all categories",
+      icon: <FileText className="h-4 w-4 text-muted-foreground" />,
+      change: "+23%"
+    },
+    {
+      title: "Daily Active Users",
+      value: "523",
+      description: "42% of total users",
+      icon: <Activity className="h-4 w-4 text-muted-foreground" />,
+      change: "+8%"
     }
-  };
-
+  ];
+  
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="space-y-6">
-        <Helmet>
-          <title>Admin Dashboard - CILS Italian Citizenship</title>
-        </Helmet>
-        
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Badge variant="outline" className="text-sm">
-            Admin Panel
-          </Badge>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome to your admin dashboard, {user?.email?.split('@')[0] || 'Admin'}
+          </p>
         </div>
         
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {loading ? (
-            Array(4).fill(0).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-2">
-                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-8 w-16 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
-                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            stats.map((stat, i) => (
-              <Card key={i}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    {stat.icon}
-                  </div>
-                  {stat.change !== undefined && (
-                    <p className={`text-xs mt-2 flex items-center ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      <ArrowUpRight className="h-3 w-3 mr-1" />
-                      {stat.change > 0 ? '+' : ''}{stat.change}% from last month
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))
-          )}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                {stat.icon}
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground flex items-center">
+                  {stat.description}
+                  <span className="text-green-500 ml-1">{stat.change}</span>
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
         
-        {/* System Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <AlertCircle className="mr-2 h-5 w-5 text-muted-foreground" />
-              System Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {systemStatus.map((service, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`h-3 w-3 rounded-full mr-3 ${getStatusColor(service.status)}`}></div>
-                    <div>{service.service}</div>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <CardDescription>Latest user activities on the platform</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">New flashcard set created</p>
+                        <p className="text-xs text-muted-foreground">By user123 • 12 minutes ago</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">New premium subscription</p>
+                        <p className="text-xs text-muted-foreground">By maria85 • 47 minutes ago</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <Coffee className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Streak milestone (30 days)</p>
+                        <p className="text-xs text-muted-foreground">By john_doe • 2 hours ago</p>
+                      </div>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Content Stats</CardTitle>
+                  <CardDescription>Usage across different content types</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm">Flashcards</p>
+                      <p className="text-sm font-medium">78%</p>
+                    </div>
+                    <div className="bg-muted h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full" style={{ width: '78%' }}></div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-muted-foreground">{service.uptime}% uptime</span>
-                    <Badge variant={service.status === 'operational' ? 'outline' : 'destructive'} className="capitalize">
-                      {service.status}
-                    </Badge>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm">Reading Practice</p>
+                      <p className="text-sm font-medium">63%</p>
+                    </div>
+                    <div className="bg-muted h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full" style={{ width: '63%' }}></div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm">Listening Practice</p>
+                      <p className="text-sm font-medium">52%</p>
+                    </div>
+                    <div className="bg-muted h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full" style={{ width: '52%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm">Speaking Practice</p>
+                      <p className="text-sm font-medium">45%</p>
+                    </div>
+                    <div className="bg-muted h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full" style={{ width: '45%' }}></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>Common administrative tasks</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <button className="w-full flex items-center justify-between p-2 text-sm rounded-md hover:bg-accent transition-colors">
+                    <span className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Manage Users
+                    </span>
+                    <span>→</span>
+                  </button>
+                  <button className="w-full flex items-center justify-between p-2 text-sm rounded-md hover:bg-accent transition-colors">
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Add New Content
+                    </span>
+                    <span>→</span>
+                  </button>
+                  <button className="w-full flex items-center justify-between p-2 text-sm rounded-md hover:bg-accent transition-colors">
+                    <span className="flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      View Analytics
+                    </span>
+                    <span>→</span>
+                  </button>
+                  <button className="w-full flex items-center justify-between p-2 text-sm rounded-md hover:bg-accent transition-colors">
+                    <span className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Subscription Reports
+                    </span>
+                    <span>→</span>
+                  </button>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <BarChart3 className="mr-2 h-5 w-5 text-muted-foreground" />
-              Platform Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-sm font-medium">API Requests</div>
-                  <div className="text-sm text-muted-foreground">16,324 / 20,000</div>
-                </div>
-                <Progress value={81} className="h-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-sm font-medium">Storage Usage</div>
-                  <div className="text-sm text-muted-foreground">4.2 GB / 10 GB</div>
-                </div>
-                <Progress value={42} className="h-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-sm font-medium">AI Credits</div>
-                  <div className="text-sm text-muted-foreground">724 / 1,000</div>
-                </div>
-                <Progress value={72} className="h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
+          </TabsContent>
+          
+          <TabsContent value="analytics" className="p-6 bg-muted/20 rounded-md">
+            <p className="text-center text-muted-foreground">Detailed analytics will be displayed here.</p>
+          </TabsContent>
+          
+          <TabsContent value="reports" className="p-6 bg-muted/20 rounded-md">
+            <p className="text-center text-muted-foreground">System reports will be displayed here.</p>
+          </TabsContent>
+          
+          <TabsContent value="notifications" className="p-6 bg-muted/20 rounded-md">
+            <p className="text-center text-muted-foreground">System notifications will be displayed here.</p>
+          </TabsContent>
+        </Tabs>
       </div>
     </ProtectedRoute>
   );

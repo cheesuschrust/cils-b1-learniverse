@@ -1,103 +1,60 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  BarChart3,
-  Users,
-  FileText,
-  Settings,
+import { NavLink } from 'react-router-dom';
+import { 
+  Users, 
+  FileText, 
+  BarChart3, 
+  Settings, 
   Database,
-  MessageSquare,
-  Upload,
-  AlertCircle,
   Bot,
   CreditCard,
-  Search
+  ShieldAlert,
+  HelpCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-export interface AdminNavigationItem {
-  title: string;
-  href: string;
-  icon: React.ReactNode;
-  beta?: boolean;
-}
+import { cn } from '@/lib/utils';
 
 const AdminNavigation: React.FC = () => {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
-
-  const navItems: AdminNavigationItem[] = [
-    {
-      title: 'Dashboard',
-      href: '/admin/dashboard',
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      title: 'User Management',
-      href: '/admin/users',
-      icon: <Users className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Management',
-      href: '/admin/content',
-      icon: <FileText className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Upload',
-      href: '/admin/content-upload',
-      icon: <Upload className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Analysis',
-      href: '/admin/content-analysis',
-      icon: <Search className="h-5 w-5" />,
-    },
-    {
-      title: 'AI Management',
-      href: '/admin/ai-management',
-      icon: <Bot className="h-5 w-5" />,
-    },
-    {
-      title: 'Subscriptions',
-      href: '/admin/subscriptions',
-      icon: <CreditCard className="h-5 w-5" />,
-    },
-    {
-      title: 'Analytics',
-      href: '/admin/analytics',
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      title: 'Support Tickets',
-      href: '/admin/support-tickets',
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
-    {
-      title: 'System Health',
-      href: '/admin/system-health',
-      icon: <AlertCircle className="h-5 w-5" />,
-    }
+  const navItems = [
+    { name: 'Dashboard', path: '/admin', icon: <BarChart3 className="h-5 w-5" /> },
+    { name: 'User Management', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
+    { name: 'Content Management', path: '/admin/content', icon: <FileText className="h-5 w-5" /> },
+    { name: 'AI Management', path: '/admin/ai-management', icon: <Bot className="h-5 w-5" /> },
+    { name: 'Subscriptions', path: '/admin/subscriptions', icon: <CreditCard className="h-5 w-5" /> },
+    { name: 'System Health', path: '/admin/system-health', icon: <ShieldAlert className="h-5 w-5" /> },
+    { name: 'Settings', path: '/admin/settings', icon: <Settings className="h-5 w-5" /> },
   ];
-
+  
   return (
-    <nav className="flex-1 space-y-1">
+    <nav className="space-y-1">
       {navItems.map((item) => (
-        <Link key={item.href} to={item.href}>
-          <Button 
-            variant={isActive(item.href) ? "secondary" : "ghost"}
-            className="w-full justify-start"
-          >
-            {item.icon}
-            <span className="ml-3 flex-1">{item.title}</span>
-            {item.beta && (
-              <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-                Beta
-              </span>
-            )}
-          </Button>
-        </Link>
+        <NavLink
+          key={item.path}
+          to={item.path}
+          className={({ isActive }) => cn(
+            "flex items-center px-3 py-2 text-sm rounded-md",
+            isActive 
+              ? "bg-primary text-primary-foreground" 
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+          end={item.path === '/admin'}
+        >
+          <span className="mr-3">{item.icon}</span>
+          {item.name}
+        </NavLink>
       ))}
+      
+      <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <a 
+          href="https://docs.example.com/admin" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <HelpCircle className="h-5 w-5 mr-3" />
+          Admin Guide
+        </a>
+      </div>
     </nav>
   );
 };
