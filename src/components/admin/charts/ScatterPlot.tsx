@@ -5,11 +5,11 @@ import {
   Scatter,
   XAxis,
   YAxis,
-  ZAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ZAxis
 } from 'recharts';
 
 interface ScatterPlotProps {
@@ -17,37 +17,11 @@ interface ScatterPlotProps {
   xDataKey: string;
   yDataKey: string;
   zDataKey?: string;
-  nameKey?: string;
+  nameKey: string;
   height?: number;
-  xAxisLabel?: string;
-  yAxisLabel?: string;
-  colors?: string[];
+  color?: string;
+  name?: string;
 }
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  nameKey?: string;
-}
-
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, nameKey }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-background border border-border p-3 rounded-md shadow-md">
-        <p className="font-medium">{nameKey ? data[nameKey] : 'Point'}</p>
-        {Object.entries(data)
-          .filter(([key]) => key !== nameKey && !key.startsWith('_'))
-          .map(([key, value]) => (
-            <p key={key} className="text-sm">
-              {key}: {value as React.ReactNode}
-            </p>
-          ))}
-      </div>
-    );
-  }
-  return null;
-};
 
 const ScatterPlot: React.FC<ScatterPlotProps> = ({
   data,
@@ -56,48 +30,26 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   zDataKey,
   nameKey,
   height = 300,
-  xAxisLabel,
-  yAxisLabel,
-  colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+  color = '#8884d8',
+  name = 'Data'
 }) => {
-  // Group data by unique name values if nameKey is provided
-  const groupedData = nameKey
-    ? Array.from(new Set(data.map(item => item[nameKey]))).map(name => ({
-        name,
-        data: data.filter(item => item[nameKey] === name)
-      }))
-    : [{ name: 'Data', data }];
-
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RechartsScatterChart
-        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+        margin={{
+          top: 20,
+          right: 20,
+          bottom: 20,
+          left: 20,
+        }}
       >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis 
-          type="number" 
-          dataKey={xDataKey} 
-          name={xAxisLabel || xDataKey} 
-          label={xAxisLabel ? { value: xAxisLabel, position: 'bottom' } : undefined}
-        />
-        <YAxis 
-          type="number" 
-          dataKey={yDataKey} 
-          name={yAxisLabel || yDataKey} 
-          label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'left' } : undefined}
-        />
-        {zDataKey && <ZAxis type="number" dataKey={zDataKey} range={[50, 400]} />}
-        <Tooltip content={<CustomTooltip nameKey={nameKey} />} />
+        <CartesianGrid />
+        <XAxis type="number" dataKey={xDataKey} name={xDataKey} />
+        <YAxis type="number" dataKey={yDataKey} name={yDataKey} />
+        {zDataKey && <ZAxis type="number" dataKey={zDataKey} range={[60, 400]} name={zDataKey} />}
+        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
         <Legend />
-        
-        {groupedData.map((group, index) => (
-          <Scatter
-            key={`scatter-${group.name}`}
-            name={group.name}
-            data={group.data}
-            fill={colors[index % colors.length]}
-          />
-        ))}
+        <Scatter name={name} data={data} fill={color} />
       </RechartsScatterChart>
     </ResponsiveContainer>
   );

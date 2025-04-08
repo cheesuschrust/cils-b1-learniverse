@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, FileText, CreditCard, Activity, Coffee, BookOpen } from 'lucide-react';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import ImplementationStatusCard from '@/components/admin/ImplementationStatusCard';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -71,7 +72,7 @@ const AdminDashboard: React.FC = () => {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="implementation">Implementation Status</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
@@ -200,12 +201,12 @@ const AdminDashboard: React.FC = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="analytics" className="p-6 bg-muted/20 rounded-md">
-            <p className="text-center text-muted-foreground">Detailed analytics will be displayed here.</p>
+          <TabsContent value="implementation">
+            <ImplementationStatusCard />
           </TabsContent>
           
           <TabsContent value="reports" className="p-6 bg-muted/20 rounded-md">
-            <p className="text-center text-muted-foreground">System reports will be displayed here.</p>
+            <p className="text-center text-muted-foreground">Detailed reports will be displayed here.</p>
           </TabsContent>
           
           <TabsContent value="notifications" className="p-6 bg-muted/20 rounded-md">

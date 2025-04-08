@@ -49,5 +49,15 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }) {
+      addUtilities({
+        '.border-default': {
+          borderColor: 'hsl(var(--border))',
+          borderWidth: '1px',
+        },
+      });
+    },
+  ],
 }
