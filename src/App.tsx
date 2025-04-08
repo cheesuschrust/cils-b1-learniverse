@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AIUtilsProvider } from '@/contexts/AIUtilsContext';
 import { AIProvider } from '@/contexts/AIContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { HelmetProvider } from 'react-helmet-async';
 import AppRoutes from '@/routes';
 
@@ -17,8 +18,10 @@ const App: React.FC = () => {
           <AuthProvider>
             <AIProvider>
               <AIUtilsProvider>
-                <AppRoutes />
-                <Toaster />
+                <LanguageProvider>
+                  <AppRoutes />
+                  <Toaster />
+                </LanguageProvider>
               </AIUtilsProvider>
             </AIProvider>
           </AuthProvider>

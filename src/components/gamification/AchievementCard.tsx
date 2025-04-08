@@ -6,6 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Achievement } from '@/types/gamification';
+import { BilingualText } from '@/components/language/BilingualText';
+import { SpeakableWord } from '@/components/ui/speakable-word';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AchievementCardProps {
   achievement: Achievement;
@@ -20,6 +23,8 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
   progress = 0,
   className
 }) => {
+  const { language } = useLanguage();
+  
   // Get icon based on achievement category
   const getIcon = () => {
     switch (achievement.category) {
@@ -54,6 +59,12 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
     }
   };
 
+  const getAudioButtonLanguage = () => {
+    if (language === 'english') return 'en-US';
+    if (language === 'italian') return 'it-IT';
+    return achievement.nameItalian ? 'it-IT' : 'en-US'; // Default to Italian if available
+  };
+
   return (
     <Card className={cn("relative overflow-hidden transition-all", 
       unlocked ? "border-primary/20" : "border-muted-foreground/20 opacity-80",
@@ -76,25 +87,37 @@ const AchievementCard: React.FC<AchievementCardProps> = ({
             )}
           </div>
         </div>
-        <div>
-          <h3 className={cn(
-            "font-medium",
-            !unlocked && "text-muted-foreground"
-          )}>
-            {achievement.title}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {achievement.description}
-          </p>
+        
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <BilingualText
+              english={achievement.name}
+              italian={achievement.nameItalian || achievement.name}
+              className="font-medium"
+            />
+            {unlocked && achievement.name && (
+              <SpeakableWord 
+                word={language === 'italian' ? (achievement.nameItalian || achievement.name) : achievement.name} 
+                language={getAudioButtonLanguage()}
+                size="sm"
+                iconOnly
+              />
+            )}
+          </div>
+          
+          <BilingualText
+            english={achievement.description}
+            italian={achievement.descriptionItalian || achievement.description}
+            className="text-sm text-muted-foreground"
+          />
         </div>
         
-        {!unlocked && progress > 0 && progress < 100 && (
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Progress</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-1" />
+        {achievement.progressRequired && (
+          <div className="space-y-1">
+            <Progress value={(progress / achievement.progressRequired) * 100} className="h-2" />
+            <p className="text-xs text-muted-foreground text-right">
+              {progress}/{achievement.progressRequired}
+            </p>
           </div>
         )}
       </CardContent>
