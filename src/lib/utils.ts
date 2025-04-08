@@ -1,50 +1,61 @@
 
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+/**
+ * Merges Tailwind CSS classes with clsx
+ */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export function formatDate(input: string | number): string {
-  const date = new Date(input)
-  return date.toLocaleDateString("en-US", {
+/**
+ * Format a date to a readable string
+ */
+export function formatDate(date: Date | string) {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
     month: "long",
     day: "numeric",
-    year: "numeric",
-  })
+  });
 }
 
-export function formatDateTime(input: string | number): string {
-  const date = new Date(input)
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-  })
+/**
+ * Truncate a string to a maximum length
+ */
+export function truncateString(str: string, num: number) {
+  if (str.length <= num) {
+    return str;
+  }
+  return str.slice(0, num) + "...";
 }
 
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength) + "..."
+/**
+ * Convert a file to a base64 string
+ */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 }
 
-export function getInitials(name: string): string {
-  if (!name) return ""
+/**
+ * Generate a random ID
+ */
+export function generateId() {
+  return Math.random().toString(36).substring(2, 9);
+}
+
+/**
+ * Get the initials from a name
+ */
+export function getInitials(name: string) {
   return name
-    .split(" ")
-    .map(part => part.charAt(0))
-    .join("")
-    .toUpperCase()
-}
-
-export function calculateProgress(current: number, total: number): number {
-  if (total === 0) return 0
-  return Math.round((current / total) * 100)
-}
-
-export function generateRandomId(length: number = 8): string {
-  return Math.random().toString(36).substring(2, 2 + length)
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase();
 }
