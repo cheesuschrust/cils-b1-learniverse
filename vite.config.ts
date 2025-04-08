@@ -57,17 +57,15 @@ export default defineConfig(({ mode }) => {
       commonjsOptions: {  
         transformMixedEsModules: true  
       },  
-	rollupOptions: {  
-	output: {  
-    manualChunks(id: string) {  // Add type annotation here
-      if (id.includes('node_modules')) {  
-        return 'vendor';  
-      }
-      return undefined; // Add explicit return for non-matching paths
-    }
-  }  
-}
-
+      rollupOptions: {  
+        output: {  
+          manualChunks(id: string) {  
+            if (id.includes('node_modules')) {  
+              return 'vendor';  
+            }
+            return undefined; // Add explicit return for non-matching paths
+          }
+        }  
       }  
     },  
     

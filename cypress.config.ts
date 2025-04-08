@@ -1,4 +1,7 @@
 
+/// <reference types="cypress" />
+/// <reference path="./src/types/cypress-types.d.ts" />
+
 import { defineConfig } from 'cypress';
 
 export default defineConfig({
@@ -9,7 +12,7 @@ export default defineConfig({
     viewportHeight: 720,
     video: false,
     screenshotOnRunFailure: true,
-    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
+    setupNodeEvents(on, config) {
       // We'll add image snapshot and code coverage plugins when they're installed
       
       // Additional custom tasks can be added here
@@ -34,7 +37,7 @@ export default defineConfig({
       bundler: 'vite',
     },
     specPattern: 'src/**/*.cy.{js,jsx,ts,tsx}',
-    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
+    setupNodeEvents(on, config) {
       // We'll add image snapshot plugin when it's installed
       return config;
     },

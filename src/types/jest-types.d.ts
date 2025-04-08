@@ -14,6 +14,12 @@ declare module 'jest' {
     verbose?: boolean;
     testTimeout?: number;
     modulePathIgnorePatterns?: string[];
+    bail?: number;
+    clearMocks?: boolean;
+    restoreMocks?: boolean;
+    resetModules?: boolean;
+    watchPlugins?: string[];
+    maxWorkers?: string;
   }
 }
 
