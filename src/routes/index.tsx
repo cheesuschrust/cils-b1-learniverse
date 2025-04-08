@@ -37,6 +37,7 @@ const SupportPage = lazy(() => import('@/pages/Support'));
 const HelpCenterPage = lazy(() => import('@/pages/help/HelpCenterPage'));
 const FAQPage = lazy(() => import('@/pages/help/FAQPage'));
 const UserGuidePage = lazy(() => import('@/pages/help/UserGuidePage'));
+const TutorialsPage = lazy(() => import('@/pages/help/TutorialsPage'));
 
 // Practice pages
 const FlashcardsPage = lazy(() => import('@/pages/learning/FlashcardsPage'));
@@ -101,6 +102,7 @@ const AppRoutes = () => {
             <Route path="help" element={<HelpCenterPage />} />
             <Route path="help/faq" element={<FAQPage />} />
             <Route path="help/user-guide" element={<UserGuidePage />} />
+            <Route path="help/tutorials" element={<TutorialsPage />} />
             
             {/* Learning pages */}
             <Route path="flashcards" element={<FlashcardsPage />} />

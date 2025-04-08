@@ -63,7 +63,10 @@ const HelpNavigation: React.FC = () => {
           end={item.path === '/help'}
         >
           <span className="mr-3">{item.icon}</span>
-          {language === 'italian' ? item.nameItalian : item.name}
+          <BilingualText
+            english={item.name}
+            italian={item.nameItalian}
+          />
         </NavLink>
       ))}
     </nav>
