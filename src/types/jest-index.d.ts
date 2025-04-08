@@ -11,15 +11,24 @@ declare module 'jest' {
     collectCoverageFrom?: string[];
     coverageThreshold?: Record<string, any>;
     coverageReporters?: string[];
-    verbose?: boolean;
     testTimeout?: number;
     modulePathIgnorePatterns?: string[];
+    testPathIgnorePatterns?: string[]; // Added missing property
     bail?: number;
     clearMocks?: boolean;
     restoreMocks?: boolean;
     resetModules?: boolean;
     watchPlugins?: string[];
     maxWorkers?: string;
+    verbose?: boolean;
+  }
+
+  export interface ConfigAPI {
+    cache: boolean;
+    clearCache: () => void;
+    getTestEnvironment: (config: Config) => string;
+    getSerializers: () => any[];
+    getMaxWorkers: (config: Config) => number;
   }
 }
 

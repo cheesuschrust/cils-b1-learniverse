@@ -1,141 +1,127 @@
 
-/**
- * CILS B1 Exam types and interfaces
- */
+// Types for the CILS exam
 
-// Possible exam sections in CILS B1
-export type ExamSectionType = 
-  | 'reading' 
-  | 'writing' 
-  | 'listening' 
-  | 'speaking' 
-  | 'grammar' 
-  | 'vocabulary';
+export type CILSExamLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-// Exam difficulty levels
-export type ExamDifficultyLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+export type CILSExamSectionType = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary';
 
-// CILS B1 specific content types
 export interface CILSExamSection {
   id: string;
   title: string;
   description: string;
-  type: ExamSectionType;
+  type: CILSExamSectionType;
   timeAllowed: number; // in minutes
   questionCount: number;
-  passingScore: number;
+  questions?: CILSQuestion[];
 }
 
-// CILS exam structure
 export interface CILSExam {
   id: string;
   title: string;
+  level: CILSExamLevel;
   description: string;
-  level: ExamDifficultyLevel;
-  sections: CILSExamSection[];
   totalTime: number; // in minutes
-  passingScore: number;
+  sections: CILSExamSection[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-// User progress for a specific exam section
-export interface ExamSectionProgress {
-  sectionId: string;
-  completed: boolean;
-  score?: number;
-  timeSpent?: number;
-  lastAttempt?: Date;
-  attemptsCount: number;
-  correctAnswers?: number;
-  totalQuestions?: number;
+export type CILSQuestionType = 
+  | 'multiple-choice' 
+  | 'fill-in-blank' 
+  | 'matching' 
+  | 'ordering' 
+  | 'true-false' 
+  | 'short-answer' 
+  | 'essay' 
+  | 'listening-comprehension' 
+  | 'speaking-prompt';
+
+export interface CILSQuestion {
+  id: string;
+  questionText: string;
+  questionType: CILSQuestionType;
+  options?: string[];
+  correctAnswer?: string | string[];
+  points: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  explanation?: string;
+  attachments?: {
+    type: 'image' | 'audio' | 'video';
+    url: string;
+  }[];
 }
 
-// Overall user progress for an exam
 export interface ExamProgress {
-  examId: string;
+  id: string;
   userId: string;
-  startedAt: Date;
-  completedAt?: Date;
+  examId: string;
+  startedAt: string;
+  completedAt?: string;
+  currentSectionId?: string;
+  sectionsProgress: {
+    [sectionId: string]: {
+      completed: boolean;
+      score?: number;
+      answers?: {
+        [questionId: string]: string | string[];
+      };
+      startedAt?: string;
+      completedAt?: string;
+    };
+  };
   overallScore?: number;
-  sectionProgress: Record<string, ExamSectionProgress>;
-  isPractice: boolean;
+  isPassed?: boolean;
 }
 
-// Study plan structure
+export interface CILSExamResult {
+  id: string;
+  userId: string;
+  examId: string;
+  completedAt: string;
+  totalScore: number;
+  maxPossibleScore: number;
+  percentageScore: number;
+  isPassed: boolean;
+  sectionScores: {
+    [sectionId: string]: {
+      score: number;
+      maxPossibleScore: number;
+      percentageScore: number;
+      isPassed: boolean;
+    };
+  };
+  certificateUrl?: string;
+}
+
 export interface StudyPlan {
   id: string;
   userId: string;
-  targetExamDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  weeklyGoals: {
-    readingMinutes: number;
-    writingMinutes: number;
-    listeningMinutes: number;
-    speakingMinutes: number;
-    grammarMinutes: number;
-    vocabularyMinutes: number;
-  };
-  focusAreas: ExamSectionType[];
+  targetExamDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  weeks: StudyWeek[];
 }
 
-// Question models for different question types
-export interface BaseQuestion {
-  id: string;
-  text: string;
-  type: 'multiple-choice' | 'fill-blank' | 'matching' | 'ordering' | 'speaking' | 'writing';
-  difficulty: 'easy' | 'medium' | 'hard';
-  sectionType: ExamSectionType;
-  examLevel: ExamDifficultyLevel;
-  explanation?: string;
-  tags?: string[];
+export interface StudyWeek {
+  id: number;
+  title: string;
+  description: string;
+  progress: number;
+  isCompleted: boolean;
+  days: StudyDay[];
 }
 
-export interface MultipleChoiceQuestion extends BaseQuestion {
-  type: 'multiple-choice';
-  options: string[];
-  correctOption: number;
+export interface StudyDay {
+  id: number;
+  title: string;
+  activities: StudyActivity[];
 }
 
-export interface FillBlankQuestion extends BaseQuestion {
-  type: 'fill-blank';
-  blanks: {
-    position: number;
-    acceptableAnswers: string[];
-  }[];
+export interface StudyActivity {
+  id: number;
+  type: string;
+  title: string;
+  duration: number;
+  isCompleted: boolean;
 }
-
-export interface MatchingQuestion extends BaseQuestion {
-  type: 'matching';
-  items: {
-    left: string;
-    right: string;
-  }[];
-}
-
-export interface OrderingQuestion extends BaseQuestion {
-  type: 'ordering';
-  items: string[];
-  correctOrder: number[];
-}
-
-export interface SpeakingQuestion extends BaseQuestion {
-  type: 'speaking';
-  audioPrompt?: string;
-  imagePrompt?: string;
-  evaluationCriteria: string[];
-}
-
-export interface WritingQuestion extends BaseQuestion {
-  type: 'writing';
-  wordLimit?: number;
-  evaluationCriteria: string[];
-}
-
-// Union type for all question types
-export type Question = 
-  | MultipleChoiceQuestion 
-  | FillBlankQuestion 
-  | MatchingQuestion 
-  | OrderingQuestion 
-  | SpeakingQuestion 
-  | WritingQuestion;

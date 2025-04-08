@@ -1,7 +1,20 @@
 
+/// <reference path="./src/types/jest-index.d.ts" />
+
 import type { Config } from 'jest';
 import { pathsToModuleNameMapper } from 'ts-jest';
-import { compilerOptions } from './tsconfig.json';
+// Import from a static JSON to avoid parsing issues
+const compilerOptions = {
+  paths: {
+    "@/*": ["./src/*"],
+    "@components/*": ["./src/components/*"],
+    "@hooks/*": ["./src/hooks/*"],
+    "@utils/*": ["./src/utils/*"],
+    "@types/*": ["./src/types/*"],
+    "@context/*": ["./src/contexts/*"],
+    "@routes/*": ["./src/routes/*"]
+  }
+};
 
 const config: Config = {
   preset: 'ts-jest',

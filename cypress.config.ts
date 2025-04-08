@@ -1,4 +1,6 @@
 
+/// <reference path="./src/types/cypress-index.d.ts" />
+
 import { defineConfig } from 'cypress';
 
 export default defineConfig({
@@ -9,16 +11,14 @@ export default defineConfig({
     viewportHeight: 720,
     video: false,
     screenshotOnRunFailure: true,
-    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
-      // We'll add image snapshot and code coverage plugins when they're installed
-      
-      // Additional custom tasks can be added here
+    setupNodeEvents(on, config) {
+      // Register custom tasks
       on('task', {
-        log(message: string) {
+        log(message) {
           console.log(message);
           return null;
         },
-        table(message: unknown) {
+        table(message) {
           console.table(message);
           return null;
         }
@@ -34,10 +34,6 @@ export default defineConfig({
       bundler: 'vite',
     },
     specPattern: 'src/**/*.cy.{js,jsx,ts,tsx}',
-    setupNodeEvents(on: Cypress.PluginEvents, config: Cypress.PluginConfigOptions) {
-      // We'll add image snapshot plugin when it's installed
-      return config;
-    },
   },
   
   // Environment variables

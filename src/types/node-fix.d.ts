@@ -1,3 +1,4 @@
+
 // This fixes the emit issue in tsconfig.node.json
 declare module "node:*" {
   const value: any;
