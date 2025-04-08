@@ -1,4 +1,3 @@
-
 declare module "cypress" {
   export interface PluginEvents {
     (action: string, callback: (...args: any[]) => any): void;
