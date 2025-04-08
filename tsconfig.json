@@ -36,7 +36,7 @@
     // Compilation and Bundling
     "skipLibCheck": true,
     "isolatedModules": true,
-    "noEmit": false,  // CHANGED FROM true TO false
+    "noEmit": false,  // Changed from true to false
     
     // Path Aliases
     "baseUrl": ".",
