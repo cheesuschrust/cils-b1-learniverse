@@ -57,6 +57,7 @@ const AIManagement = lazy(() => import('@/pages/admin/AIManagement'));
 const SubscriptionManager = lazy(() => import('@/pages/admin/SubscriptionManager'));
 const SystemHealth = lazy(() => import('@/pages/admin/SystemHealth'));
 const SupportTickets = lazy(() => import('@/pages/admin/SupportTickets'));
+const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
 
 // Subscription page
 const SubscriptionPage = lazy(() => import('@/pages/subscription/SubscriptionPage'));
@@ -155,6 +156,7 @@ const AppRoutes = () => {
             <Route path="support-tickets" element={<SupportTickets />} />
             <Route path="subscriptions" element={<SubscriptionManager />} />
             <Route path="system-health" element={<SystemHealth />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
           </Route>
           
           {/* 404 - Not Found */}
