@@ -1,191 +1,200 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 
-export interface FeatureLimits {
+interface FeatureLimits {
   flashcards: {
-    maxCards: number;
-    maxSets: number;
     maxCardsPerDay: number;
     currentUsage: number;
   };
-  exercises: {
-    maxDailyLessons: number;
+  listening: {
+    maxExercisesPerDay: number;
+    currentUsage: number;
+  };
+  reading: {
+    maxExercisesPerDay: number;
+    currentUsage: number;
+  };
+  speaking: {
+    maxExercisesPerDay: number;
     currentUsage: number;
   };
   premium: {
     isPremium: boolean;
-    expiresAt: Date | null;
+    expiresAt: string | null;
   };
 }
 
-// Default limits for free and premium users
-const DEFAULT_FREE_LIMITS: FeatureLimits = {
-  flashcards: {
-    maxCards: 100,
-    maxSets: 5,
-    maxCardsPerDay: 50,
-    currentUsage: 0
-  },
-  exercises: {
-    maxDailyLessons: 3,
-    currentUsage: 0
-  },
-  premium: {
-    isPremium: false,
-    expiresAt: null
-  }
-};
+type FeatureType = 'flashcards' | 'listening' | 'reading' | 'speaking';
 
-const DEFAULT_PREMIUM_LIMITS: FeatureLimits = {
-  flashcards: {
-    maxCards: Infinity,
-    maxSets: Infinity,
-    maxCardsPerDay: Infinity,
-    currentUsage: 0
-  },
-  exercises: {
-    maxDailyLessons: Infinity,
-    currentUsage: 0
-  },
-  premium: {
-    isPremium: true,
-    expiresAt: null
-  }
-};
-
-export const useFeatureLimits = () => {
-  const { user, isAuthenticated } = useAuth();
-  const [limits, setLimits] = useState<FeatureLimits>(DEFAULT_FREE_LIMITS);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const fetchUserLimits = async () => {
-      if (!isAuthenticated || !user) {
-        setLimits(DEFAULT_FREE_LIMITS);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        // In a real app, this would fetch from Supabase
-        // For now, we'll simulate a fetch with a delay
-        setTimeout(() => {
-          // Example: check if user has premium based on user object
-          const isPremium = user.role === 'premium' || false;
-          
-          if (isPremium) {
-            setLimits({
-              ...DEFAULT_PREMIUM_LIMITS,
-              premium: {
-                isPremium: true,
-                // Set expiration date to 30 days from now for demo purposes
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-              }
-            });
-          } else {
-            // For free users, we would normally fetch their current usage
-            // Here we'll just use default limits with random usage
-            setLimits({
-              ...DEFAULT_FREE_LIMITS,
-              flashcards: {
-                ...DEFAULT_FREE_LIMITS.flashcards,
-                currentUsage: Math.floor(Math.random() * 30) // Random number for demo
-              },
-              exercises: {
-                ...DEFAULT_FREE_LIMITS.exercises,
-                currentUsage: Math.floor(Math.random() * 2) // Random number for demo
-              }
-            });
-          }
-          
-          setIsLoading(false);
-        }, 500);
-      } catch (error) {
-        console.error("Error fetching feature limits:", error);
-        setLimits(DEFAULT_FREE_LIMITS);
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserLimits();
-  }, [isAuthenticated, user]);
-
-  const incrementUsage = (feature: 'flashcards' | 'exercises', amount: number = 1) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to use this feature.",
-        variant: "destructive"
-      });
-      return false;
+const useFeatureLimits = () => {
+  const { user } = useAuth();
+  
+  // Default feature limits
+  const [limits, setLimits] = useState<FeatureLimits>({
+    flashcards: {
+      maxCardsPerDay: 20,
+      currentUsage: 0
+    },
+    listening: {
+      maxExercisesPerDay: 3,
+      currentUsage: 0
+    },
+    reading: {
+      maxExercisesPerDay: 3,
+      currentUsage: 0
+    },
+    speaking: {
+      maxExercisesPerDay: 3,
+      currentUsage: 0
+    },
+    premium: {
+      isPremium: false,
+      expiresAt: null
     }
-
-    setLimits(prev => {
-      const currentUsage = prev[feature].currentUsage;
-      const maxUsage = feature === 'flashcards' ? prev.flashcards.maxCardsPerDay : prev.exercises.maxDailyLessons;
+  });
+  
+  useEffect(() => {
+    if (user) {
+      // In a real implementation, fetch the user's feature limits from the database
+      // For now, just check if the user has premium features in their metadata
+      const isPremium = user.user_metadata?.isPremium || false;
       
-      // Check if adding amount would exceed limits
-      if (currentUsage + amount > maxUsage && !prev.premium.isPremium) {
-        toast({
-          title: "Usage Limit Reached",
-          description: `You've reached your daily ${feature} limit. Upgrade to Premium for unlimited usage.`,
-          variant: "destructive"
-        });
-        return prev;
+      if (isPremium) {
+        setLimits(prev => ({
+          ...prev,
+          flashcards: {
+            ...prev.flashcards,
+            maxCardsPerDay: 999 // Unlimited for premium
+          },
+          listening: {
+            ...prev.listening,
+            maxExercisesPerDay: 999
+          },
+          reading: {
+            ...prev.reading,
+            maxExercisesPerDay: 999
+          },
+          speaking: {
+            ...prev.speaking,
+            maxExercisesPerDay: 999
+          },
+          premium: {
+            isPremium: true,
+            expiresAt: user.user_metadata?.premiumExpires || null
+          }
+        }));
       }
       
-      // If user is within limits or is premium, increment usage
-      return {
+      // Load current usage from localStorage
+      const storedUsage = localStorage.getItem(`usage_${user.id}`);
+      if (storedUsage) {
+        try {
+          const usage = JSON.parse(storedUsage);
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Only use stored usage if it's from today
+          if (usage.date === today) {
+            setLimits(prev => ({
+              ...prev,
+              flashcards: {
+                ...prev.flashcards,
+                currentUsage: usage.flashcards || 0
+              },
+              listening: {
+                ...prev.listening,
+                currentUsage: usage.listening || 0
+              },
+              reading: {
+                ...prev.reading,
+                currentUsage: usage.reading || 0
+              },
+              speaking: {
+                ...prev.speaking,
+                currentUsage: usage.speaking || 0
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Error parsing stored usage:', error);
+        }
+      }
+    }
+  }, [user]);
+  
+  // Check if a user can use a feature based on their limits
+  const checkCanUseFeature = (feature: FeatureType): boolean => {
+    if (!user) return true; // Allow using features if not logged in
+    
+    if (limits.premium.isPremium) return true; // Premium users have unlimited access
+    
+    const featureLimits = limits[feature];
+    return featureLimits.currentUsage < featureLimits.maxCardsPerDay;
+  };
+  
+  // Increment the usage counter for a feature
+  const incrementUsage = (feature: FeatureType): void => {
+    if (!user) return;
+    
+    setLimits(prev => {
+      // Don't increment if user is premium
+      if (prev.premium.isPremium) return prev;
+      
+      const updatedLimits = {
         ...prev,
         [feature]: {
           ...prev[feature],
-          currentUsage: prev.premium.isPremium ? currentUsage : currentUsage + amount
+          currentUsage: prev[feature].currentUsage + 1
         }
       };
+      
+      // Store updated usage in localStorage
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`usage_${user.id}`, JSON.stringify({
+        date: today,
+        flashcards: updatedLimits.flashcards.currentUsage,
+        listening: updatedLimits.listening.currentUsage,
+        reading: updatedLimits.reading.currentUsage,
+        speaking: updatedLimits.speaking.currentUsage
+      }));
+      
+      return updatedLimits;
     });
-    
-    return true;
   };
-
-  const checkCanUseFeature = (feature: 'flashcards' | 'exercises', amount: number = 1): boolean => {
-    if (!isAuthenticated) {
-      return false;
-    }
+  
+  // Reset usage counters (e.g., at the start of a new day)
+  const resetUsage = (): void => {
+    if (!user) return;
     
-    if (limits.premium.isPremium) {
-      return true;
-    }
-    
-    const currentUsage = limits[feature].currentUsage;
-    const maxUsage = feature === 'flashcards' ? limits.flashcards.maxCardsPerDay : limits.exercises.maxDailyLessons;
-    
-    return currentUsage + amount <= maxUsage;
-  };
-
-  const resetDailyUsage = () => {
     setLimits(prev => ({
       ...prev,
       flashcards: {
         ...prev.flashcards,
         currentUsage: 0
       },
-      exercises: {
-        ...prev.exercises,
+      listening: {
+        ...prev.listening,
+        currentUsage: 0
+      },
+      reading: {
+        ...prev.reading,
+        currentUsage: 0
+      },
+      speaking: {
+        ...prev.speaking,
         currentUsage: 0
       }
     }));
+    
+    // Clear stored usage
+    localStorage.removeItem(`usage_${user.id}`);
   };
-
+  
   return {
     limits,
-    isLoading,
-    incrementUsage,
     checkCanUseFeature,
-    resetDailyUsage,
-    isPremium: limits.premium.isPremium
+    incrementUsage,
+    resetUsage
   };
 };
 

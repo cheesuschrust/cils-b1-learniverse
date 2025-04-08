@@ -1,46 +1,44 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase-client';
-import { useToast } from '@/components/ui/use-toast';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
 
-type User = {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-};
-
-interface AuthContextType {
+interface UserContextState {
   user: User | null;
-  loading: boolean;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>;
+  signup: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<boolean>;
+  updateUserProfile: (data: any) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<UserContextState>({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => false,
+  signup: async () => false,
+  logout: async () => {},
+  forgotPassword: async () => false,
+  updateUserProfile: async () => false,
+});
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            firstName: session.user.user_metadata?.firstName,
-            lastName: session.user.user_metadata?.lastName,
-          });
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
       }
     );
 
@@ -48,20 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            firstName: session.user.user_metadata?.firstName,
-            lastName: session.user.user_metadata?.lastName,
-          });
-        } else {
-          setUser(null);
-        }
+        setUser(session?.user ?? null);
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -75,161 +64,180 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         toast({
-          title: "Login failed",
+          title: 'Login Error',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
         });
         return false;
       }
       
       toast({
-        title: "Login successful",
-        description: "Welcome back!",
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
       });
-      
       return true;
     } catch (error: any) {
       toast({
-        title: "Login error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Login Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
       });
       return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, firstName: string, lastName: string): Promise<boolean> => {
+  const signup = async (email: string, password: string): Promise<boolean> => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            firstName,
-            lastName,
-          },
-        },
-      });
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
         toast({
-          title: "Signup failed",
+          title: 'Signup Error',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      if (data.user?.identities?.length === 0) {
+        toast({
+          title: 'User already exists',
+          description: 'This email is already registered. Please log in instead.',
+          variant: 'destructive',
         });
         return false;
       }
       
       toast({
-        title: "Signup successful",
-        description: "Please check your email for a verification link.",
+        title: 'Account created!',
+        description: 'Please check your email to confirm your account.',
       });
-      
       return true;
     } catch (error: any) {
       toast({
-        title: "Signup error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Signup Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
       });
       return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         toast({
-          title: "Logout failed",
+          title: 'Logout Error',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
         });
         return;
       }
       
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
       });
     } catch (error: any) {
       toast({
-        title: "Logout error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Logout Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const forgotPassword = async (email: string): Promise<boolean> => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) {
         toast({
-          title: "Password reset failed",
+          title: 'Reset Password Error',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Reset Password Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateUserProfile = async (userData: any): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        data: userData
+      });
+      
+      if (error) {
+        toast({
+          title: 'Profile Update Error',
+          description: error.message,
+          variant: 'destructive',
         });
         return false;
       }
       
       toast({
-        title: "Password reset email sent",
-        description: "Please check your email for the password reset link.",
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
       });
-      
       return true;
     } catch (error: any) {
       toast({
-        title: "Password reset error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Profile Update Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
       });
       return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    signup,
-    logout,
-    forgotPassword,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        signup,
+        logout,
+        forgotPassword,
+        updateUserProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export default useAuth;
