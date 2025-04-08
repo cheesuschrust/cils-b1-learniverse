@@ -6,6 +6,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import AdminLayout from '@/layouts/AdminLayout';
 import { Spinner } from '@/components/ui/spinner';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -17,6 +18,7 @@ const LoadingFallback = () => (
 // Lazily loaded page components
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const ProfilePage = lazy(() => import('@/pages/user/ProfilePage'));
+const ProgressPage = lazy(() => import('@/pages/user/ProgressPage'));
 const SettingsPage = lazy(() => import('@/pages/user/SettingsPage'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('@/pages/auth/SignupPage'));
@@ -40,6 +42,7 @@ const SystemHealth = lazy(() => import('@/pages/admin/SystemHealth'));
 
 // Subscription page
 const SubscriptionPage = lazy(() => import('@/pages/subscription/SubscriptionPage'));
+const SubscriptionManagementPage = lazy(() => import('@/pages/subscription/SubscriptionManagementPage'));
 
 const AppRoutes = () => {
   return (
@@ -50,8 +53,21 @@ const AppRoutes = () => {
           <Route index element={<HomePage />} />
           
           {/* User related pages */}
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="progress" element={
+            <ProtectedRoute>
+              <ProgressPage />
+            </ProtectedRoute>
+          } />
+          <Route path="settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
           
           {/* Learning pages */}
           <Route path="flashcards" element={<FlashcardsPage />} />
@@ -62,8 +78,13 @@ const AppRoutes = () => {
             <Route path="speaking" element={<SpeakingPage />} />
           </Route>
           
-          {/* Subscription page */}
+          {/* Subscription pages */}
           <Route path="subscription" element={<SubscriptionPage />} />
+          <Route path="subscription/manage" element={
+            <ProtectedRoute>
+              <SubscriptionManagementPage />
+            </ProtectedRoute>
+          } />
         </Route>
         
         {/* Auth routes */}
@@ -74,12 +95,20 @@ const AppRoutes = () => {
         </Route>
         
         {/* Dashboard layout */}
-        <Route path="dashboard" element={<DashboardLayout />}>
+        <Route path="dashboard" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }>
           <Route index element={<HomePage />} />
         </Route>
         
-        {/* Admin routes - Updated to use AdminLayout */}
-        <Route path="admin" element={<AdminLayout />}>
+        {/* Admin routes - Protected with requireAdmin flag */}
+        <Route path="admin" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="content" element={<ContentManager />} />

@@ -10,15 +10,24 @@ export interface UserPreferences {
   onboardingCompleted: boolean;
 }
 
+export interface UserMetrics {
+  totalQuestions: number;
+  correctAnswers: number;
+  streak: number;
+  lastActive?: Date;
+}
+
 export interface User {
   id: string;
   email: string;
   firstName?: string;
   lastName?: string;
   displayName?: string;
+  username?: string;
   photoURL?: string;
   role: UserRole;
   isVerified: boolean;
+  isAdmin?: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
   lastLogin?: Date | string;
@@ -30,6 +39,7 @@ export interface User {
   preferences: UserPreferences;
   preferredLanguage?: string;
   language?: string;
+  metrics?: UserMetrics;
   dailyQuestionCounts: {
     flashcards: number;
     multipleChoice: number;
