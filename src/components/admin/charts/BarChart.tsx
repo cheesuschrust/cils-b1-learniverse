@@ -1,6 +1,15 @@
 
 import React from 'react';
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 interface BarChartProps {
   data: any[];
@@ -8,45 +17,53 @@ interface BarChartProps {
   yField: string | string[];
   height?: number;
   showLegend?: boolean;
-  barColors?: string | string[];
-  stacked?: boolean;
+  barColor?: string | string[];
+  layout?: 'horizontal' | 'vertical';
 }
 
-const BarChart: React.FC<BarChartProps> = ({ 
-  data, 
-  xField, 
-  yField, 
+const BarChart: React.FC<BarChartProps> = ({
+  data,
+  xField,
+  yField,
   height = 300,
-  showLegend = false,
-  barColors = "#3b82f6",
-  stacked = false
+  showLegend = true,
+  barColor = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+  layout = 'horizontal'
 }) => {
-  // Convert string yField to array for consistent processing
   const yFields = Array.isArray(yField) ? yField : [yField];
-  const colors = Array.isArray(barColors) ? barColors : [barColors];
-
+  const barColors = Array.isArray(barColor) ? barColor : [barColor];
+  
+  const isVertical = layout === 'vertical';
+  
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RechartsBarChart
         data={data}
-        margin={{
-          top: 5,
-          right: 30,
-          left: 20,
-          bottom: 5,
-        }}
+        layout={layout}
+        margin={{ top: 5, right: 30, left: isVertical ? 80 : 20, bottom: 5 }}
       >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey={xField} />
-        <YAxis />
+        
+        {isVertical ? (
+          <>
+            <XAxis type="number" />
+            <YAxis type="category" dataKey={xField} />
+          </>
+        ) : (
+          <>
+            <XAxis dataKey={xField} />
+            <YAxis />
+          </>
+        )}
+        
         <Tooltip />
         {showLegend && <Legend />}
+        
         {yFields.map((field, index) => (
-          <Bar 
+          <Bar
             key={field}
-            dataKey={field} 
-            fill={colors[index % colors.length]} 
-            stackId={stacked ? 'a' : undefined}
+            dataKey={field}
+            fill={barColors[index % barColors.length]}
           />
         ))}
       </RechartsBarChart>

@@ -10,6 +10,12 @@ import {
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
+import UserDistributionCard from '@/components/admin/analytics/UserDistributionCard';
+import RevenueTrendsCard from '@/components/admin/analytics/RevenueTrendsCard';
+import AIModelComparisonCard from '@/components/admin/analytics/AIModelComparisonCard';
+import ModelUsageCard from '@/components/admin/analytics/ModelUsageCard';
+import AIAccuracyMetricsCard from '@/components/admin/analytics/AIAccuracyMetricsCard';
+import { useAI } from '@/hooks/useAI'; 
 
 // Mock data for user growth
 const userGrowthData = [
@@ -61,6 +67,66 @@ const aiUsageData = [
   { feature: 'Speech Recognition', usage: 210 },
 ];
 
+// Mock data for AI model performance
+const aiModelData = [
+  { 
+    modelName: 'GPT-4',
+    accuracy: 94,
+    latency: 320,
+    dataPoints: 7500,
+    confidenceScore: 92,
+    contentTypes: {
+      flashcards: 95,
+      multipleChoice: 94,
+      reading: 93,
+      writing: 91,
+      speaking: 89
+    }
+  },
+  { 
+    modelName: 'Claude-2',
+    accuracy: 92,
+    latency: 280,
+    dataPoints: 6800,
+    confidenceScore: 90,
+    contentTypes: {
+      flashcards: 92,
+      multipleChoice: 93,
+      reading: 91,
+      writing: 89,
+      speaking: 85
+    }
+  },
+  { 
+    modelName: 'Palm-2',
+    accuracy: 89,
+    latency: 180,
+    dataPoints: 6200,
+    confidenceScore: 87,
+    contentTypes: {
+      flashcards: 90,
+      multipleChoice: 91,
+      reading: 89,
+      writing: 84,
+      speaking: 82
+    }
+  },
+  { 
+    modelName: 'Llama-2',
+    accuracy: 85,
+    latency: 150,
+    dataPoints: 5800,
+    confidenceScore: 82,
+    contentTypes: {
+      flashcards: 87,
+      multipleChoice: 89,
+      reading: 85,
+      writing: 80,
+      speaking: 78
+    }
+  }
+];
+
 // Colors for pie chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -68,6 +134,7 @@ const AdminAnalytics: React.FC = () => {
   const { language } = useLanguage();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const ai = useAI();
   
   useEffect(() => {
     // Simulate data loading
@@ -84,6 +151,15 @@ const AdminAnalytics: React.FC = () => {
       description: language === 'italian' 
         ? 'I dati sono stati esportati con successo' 
         : 'The data has been successfully exported',
+    });
+  };
+
+  const handleDeployModel = (modelName: string) => {
+    toast({
+      title: language === 'italian' ? 'Modello distribuito' : 'Model deployed',
+      description: language === 'italian' 
+        ? `Il modello ${modelName} è stato distribuito con successo` 
+        : `The ${modelName} model has been successfully deployed`,
     });
   };
   
@@ -141,59 +217,68 @@ const AdminAnalytics: React.FC = () => {
                 italian="Analisi Utilizzo IA"
               />
             </TabsTrigger>
+            <TabsTrigger value="ai-performance">
+              <BilingualText
+                english="AI Performance"
+                italian="Prestazioni IA"
+              />
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <BilingualText
-                    english="User Growth"
-                    italian="Crescita Utenti"
-                  />
-                </CardTitle>
-                <CardDescription>
-                  <BilingualText
-                    english="Monthly user registration trends"
-                    italian="Tendenze mensili di registrazione utenti"
-                  />
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
-                    <p className="text-muted-foreground">
-                      <BilingualText
-                        english="Loading chart data..."
-                        italian="Caricamento dati del grafico..."
-                      />
-                    </p>
-                  </div>
-                ) : (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={userGrowthData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="users" 
-                          stroke="#8884d8" 
-                          activeDot={{ r: 8 }} 
-                          name={language === 'italian' ? 'Utenti' : 'Users'}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <BilingualText
+                      english="User Growth"
+                      italian="Crescita Utenti"
+                    />
+                  </CardTitle>
+                  <CardDescription>
+                    <BilingualText
+                      english="Monthly user registration trends"
+                      italian="Tendenze mensili di registrazione utenti"
+                    />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
+                      <p className="text-muted-foreground">
+                        <BilingualText
+                          english="Loading chart data..."
+                          italian="Caricamento dati del grafico..."
                         />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={userGrowthData}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="users" 
+                            stroke="#8884d8" 
+                            activeDot={{ r: 8 }} 
+                            name={language === 'italian' ? 'Utenti' : 'Users'}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <UserDistributionCard />
+            </div>
           </TabsContent>
           
           <TabsContent value="content" className="space-y-4">
@@ -248,109 +333,123 @@ const AdminAnalytics: React.FC = () => {
                 )}
               </CardContent>
             </Card>
+            <AIAccuracyMetricsCard />
           </TabsContent>
           
           <TabsContent value="subscription" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <BilingualText
-                    english="Subscription Revenue"
-                    italian="Entrate da Abbonamenti"
-                  />
-                </CardTitle>
-                <CardDescription>
-                  <BilingualText
-                    english="Monthly revenue trends"
-                    italian="Tendenze mensili delle entrate"
-                  />
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
-                    <p className="text-muted-foreground">
-                      <BilingualText
-                        english="Loading chart data..."
-                        italian="Caricamento dati del grafico..."
-                      />
-                    </p>
-                  </div>
-                ) : (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={revenueData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => ['$' + value, language === 'italian' ? 'Entrate' : 'Revenue']} />
-                        <Legend />
-                        <Bar 
-                          dataKey="revenue" 
-                          fill="#82ca9d" 
-                          name={language === 'italian' ? 'Entrate ($)' : 'Revenue ($)'}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <BilingualText
+                      english="Subscription Revenue"
+                      italian="Entrate da Abbonamenti"
+                    />
+                  </CardTitle>
+                  <CardDescription>
+                    <BilingualText
+                      english="Monthly revenue trends"
+                      italian="Tendenze mensili delle entrate"
+                    />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
+                      <p className="text-muted-foreground">
+                        <BilingualText
+                          english="Loading chart data..."
+                          italian="Caricamento dati del grafico..."
                         />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={revenueData}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip formatter={(value) => ['$' + value, language === 'italian' ? 'Entrate' : 'Revenue']} />
+                          <Legend />
+                          <Bar 
+                            dataKey="revenue" 
+                            fill="#82ca9d" 
+                            name={language === 'italian' ? 'Entrate ($)' : 'Revenue ($)'}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <RevenueTrendsCard />
+            </div>
           </TabsContent>
           
           <TabsContent value="ai" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <BilingualText
-                    english="AI Feature Usage"
-                    italian="Utilizzo Funzionalità IA"
-                  />
-                </CardTitle>
-                <CardDescription>
-                  <BilingualText
-                    english="Usage statistics for AI-powered features"
-                    italian="Statistiche di utilizzo per funzionalità basate su IA"
-                  />
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
-                    <p className="text-muted-foreground">
-                      <BilingualText
-                        english="Loading chart data..."
-                        italian="Caricamento dati del grafico..."
-                      />
-                    </p>
-                  </div>
-                ) : (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={aiUsageData}
-                        margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="feature" />
-                        <Tooltip />
-                        <Legend />
-                        <Bar 
-                          dataKey="usage" 
-                          fill="#8884d8" 
-                          name={language === 'italian' ? 'Utilizzo' : 'Usage'}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <BilingualText
+                      english="AI Feature Usage"
+                      italian="Utilizzo Funzionalità IA"
+                    />
+                  </CardTitle>
+                  <CardDescription>
+                    <BilingualText
+                      english="Usage statistics for AI-powered features"
+                      italian="Statistiche di utilizzo per funzionalità basate su IA"
+                    />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="h-[300px] bg-muted/40 rounded-md flex items-center justify-center">
+                      <p className="text-muted-foreground">
+                        <BilingualText
+                          english="Loading chart data..."
+                          italian="Caricamento dati del grafico..."
                         />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={aiUsageData}
+                          margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis type="category" dataKey="feature" />
+                          <Tooltip />
+                          <Legend />
+                          <Bar 
+                            dataKey="usage" 
+                            fill="#8884d8" 
+                            name={language === 'italian' ? 'Utilizzo' : 'Usage'}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <ModelUsageCard />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="ai-performance" className="space-y-4">
+            <AIModelComparisonCard 
+              models={aiModelData}
+              onModelSelect={(modelName) => handleDeployModel(modelName)}
+            />
           </TabsContent>
         </Tabs>
       </div>
