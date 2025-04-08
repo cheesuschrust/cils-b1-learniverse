@@ -1,135 +1,223 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
-import FAQSection from './FAQSection';
-import { BilingualText } from '@/components/language/BilingualText';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, Bookmark, BookOpen, HelpCircle, MessageSquare } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import BilingualText from '@/components/language/BilingualText';
 
-const FAQS = [
-  {
-    question: "What is the CILS Citizenship Test?",
-    questionItalian: "Cos'è l'esame di cittadinanza CILS?",
-    answer: "The CILS (Certificazione di Italiano come Lingua Straniera) is a certification of Italian language proficiency required for citizenship applications. The B1 level is typically required for citizenship purposes.",
-    answerItalian: "Il CILS (Certificazione di Italiano come Lingua Straniera) è una certificazione di competenza linguistica italiana richiesta per le domande di cittadinanza. Il livello B1 è generalmente richiesto per scopi di cittadinanza.",
-    category: "exam"
-  },
-  {
-    question: "How does this platform help me prepare?",
-    questionItalian: "Come mi aiuta questa piattaforma a prepararmi?",
-    answer: "Our platform provides daily practice questions, flashcards, reading and listening exercises, and mock tests specifically designed for the CILS B1 citizenship test requirements.",
-    answerItalian: "La nostra piattaforma offre domande di pratica quotidiane, flashcard, esercizi di lettura e ascolto, e test simulati progettati specificamente per i requisiti dell'esame di cittadinanza CILS B1.",
-    category: "platform"
-  },
-  {
-    question: "What is the difference between free and premium plans?",
-    questionItalian: "Qual è la differenza tra i piani gratuiti e premium?",
-    answer: "The free plan provides limited access to basic practice questions and flashcards. The premium plan offers unlimited access to all features including mock tests, AI-powered feedback, and advanced exercises.",
-    answerItalian: "Il piano gratuito offre accesso limitato a domande di pratica di base e flashcard. Il piano premium offre accesso illimitato a tutte le funzionalità, inclusi test simulati, feedback basato su AI ed esercizi avanzati.",
-    category: "subscription"
-  },
-  {
-    question: "How do I track my progress?",
-    questionItalian: "Come posso monitorare i miei progressi?",
-    answer: "Your progress is automatically tracked in the dashboard. You can see your improvement over time, weak areas that need more practice, and your success rate for different question types.",
-    answerItalian: "I tuoi progressi vengono automaticamente monitorati nella dashboard. Puoi vedere il tuo miglioramento nel tempo, le aree deboli che necessitano di più pratica e il tuo tasso di successo per diversi tipi di domande.",
-    category: "platform"
-  },
-  {
-    question: "Can I practice on mobile devices?",
-    questionItalian: "Posso esercitarmi su dispositivi mobili?",
-    answer: "Yes! Our platform is fully responsive and works on all devices including smartphones and tablets, allowing you to practice anywhere.",
-    answerItalian: "Sì! La nostra piattaforma è completamente responsive e funziona su tutti i dispositivi, inclusi smartphone e tablet, permettendoti di esercitarti ovunque.",
-    category: "technical"
-  },
-  {
-    question: "What are the requirements for the Italian citizenship test?",
-    questionItalian: "Quali sono i requisiti per il test di cittadinanza italiana?",
-    answer: "Italian citizenship applicants typically need to demonstrate a B1 level of language proficiency through an approved certification like CILS. The test covers reading, writing, listening, and speaking skills.",
-    answerItalian: "I richiedenti la cittadinanza italiana in genere devono dimostrare un livello B1 di competenza linguistica attraverso una certificazione approvata come il CILS. Il test copre le competenze di lettura, scrittura, ascolto e conversazione.",
-    category: "exam"
-  },
-  {
-    question: "How do I cancel my premium subscription?",
-    questionItalian: "Come posso annullare il mio abbonamento premium?",
-    answer: "You can cancel your subscription at any time from your account settings. You'll continue to have premium access until the end of your current billing period.",
-    answerItalian: "Puoi annullare il tuo abbonamento in qualsiasi momento dalle impostazioni del tuo account. Continuerai ad avere accesso premium fino alla fine del tuo periodo di fatturazione corrente.",
-    category: "subscription"
-  },
-  {
-    question: "Is there a guarantee I'll pass the test?",
-    questionItalian: "C'è una garanzia che supererò il test?",
-    answer: "While we can't guarantee everyone will pass, our platform is specifically designed to prepare you thoroughly for the CILS B1 requirements, and consistent practice using our resources significantly increases your chances of success.",
-    answerItalian: "Sebbene non possiamo garantire che tutti supereranno l'esame, la nostra piattaforma è specificamente progettata per prepararti a fondo per i requisiti CILS B1, e l'esercizio costante utilizzando le nostre risorse aumenta significativamente le tue possibilità di successo.",
-    category: "platform"
-  }
-];
+// FAQ Item component
+const FAQItem: React.FC<{ question: string, answer: string }> = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="border-b border-border py-4">
+      <button 
+        className="flex w-full justify-between items-start text-left focus:outline-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h3 className="font-medium">{question}</h3>
+        <span className="ml-2 flex-shrink-0">
+          {isOpen ? (
+            <HelpCircle className="h-5 w-5 text-primary" />
+          ) : (
+            <HelpCircle className="h-5 w-5 text-muted-foreground" />
+          )}
+        </span>
+      </button>
+      
+      {isOpen && (
+        <div className="mt-2 text-muted-foreground">
+          <p>{answer}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const HelpCenter: React.FC = () => {
-  const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const { language } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState('');
   
+  // Define FAQ items with bilingual support
+  const faqItems = [
+    {
+      id: 'faq-1',
+      question: language === 'italian' 
+        ? 'Come posso iniziare con la piattaforma?' 
+        : 'How do I get started with the platform?',
+      answer: language === 'italian'
+        ? 'Inizia creando un account e completando il test di livello. Ti consiglieremo lezioni e materiali didattici in base al tuo livello attuale.'
+        : 'Start by creating an account and completing the level test. We will recommend lessons and teaching materials based on your current level.'
+    },
+    {
+      id: 'faq-2',
+      question: language === 'italian'
+        ? 'Qual è la differenza tra i piani gratuiti e premium?'
+        : 'What is the difference between free and premium plans?',
+      answer: language === 'italian'
+        ? 'Il piano gratuito offre accesso a lezioni di base, flashcard e quiz. Il piano premium include tutte le funzionalità, contenuti esclusivi, valutazione AI e supporto prioritario.'
+        : 'The free plan provides access to basic lessons, flashcards, and quizzes. The premium plan includes all features, exclusive content, AI assessment, and priority support.'
+    },
+    {
+      id: 'faq-3',
+      question: language === 'italian'
+        ? 'Posso accedere ai contenuti offline?'
+        : 'Can I access content offline?',
+      answer: language === 'italian'
+        ? 'Gli utenti premium possono scaricare lezioni, flashcard e materiali audio per l\'uso offline nell\'app mobile.'
+        : 'Premium users can download lessons, flashcards, and audio materials for offline use in the mobile app.'
+    }
+  ];
+  
+  // Filter FAQ items based on search
   const filteredFAQs = searchQuery
-    ? FAQS.filter(faq => 
-        faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.questionItalian?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.answer.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.answerItalian?.toLowerCase().includes(searchQuery.toLowerCase())
+    ? faqItems.filter(item => 
+        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.answer.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : FAQS;
-
+    : faqItems;
+  
   return (
-    <div className="space-y-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <BilingualText
+            english="Help Center"
+            italian="Centro Assistenza"
+          />
+        </CardTitle>
+        <CardDescription>
+          <BilingualText
+            english="Find answers to common questions and learn how to use the platform"
+            italian="Trova risposte alle domande comuni e impara a utilizzare la piattaforma"
+          />
+        </CardDescription>
+        
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search for help topics..."
             className="pl-10"
+            placeholder={language === 'italian' ? 'Cerca aiuto...' : 'Search for help...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              className="absolute right-0 top-0 h-full"
-              onClick={() => setSearchQuery('')}
-            >
-              <BilingualText
-                english="Clear"
-                italian="Cancella"
-                className="inline-flex"
-              />
-            </Button>
-          )}
         </div>
-      </div>
-
-      <FAQSection
-        title="Frequently Asked Questions"
-        titleItalian="Domande Frequenti"
-        description={searchQuery ? `Search results for "${searchQuery}"` : "Find answers to common questions about our platform and the Italian citizenship test."}
-        descriptionItalian={searchQuery ? `Risultati della ricerca per "${searchQuery}"` : "Trova risposte alle domande comuni sulla nostra piattaforma e sull'esame di cittadinanza italiana."}
-        categories={["exam", "platform", "subscription", "technical"]}
-        items={filteredFAQs}
-      />
+      </CardHeader>
       
-      <div className="text-center">
-        <BilingualText
-          english="Can't find what you're looking for?"
-          italian="Non riesci a trovare quello che stai cercando?"
-          className="text-muted-foreground mb-4"
-        />
-        <Button asChild>
-          <a href="#ticket">
-            <BilingualText
-              english="Contact Support"
-              italian="Contatta il Supporto"
-              className="inline-flex"
-            />
-          </a>
-        </Button>
-      </div>
-    </div>
+      <CardContent>
+        <Tabs defaultValue="faq" className="mt-2">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="faq">
+              <HelpCircle className="h-4 w-4 mr-2" />
+              <BilingualText english="FAQ" italian="FAQ" />
+            </TabsTrigger>
+            <TabsTrigger value="guides">
+              <BookOpen className="h-4 w-4 mr-2" />
+              <BilingualText english="Guides" italian="Guide" />
+            </TabsTrigger>
+            <TabsTrigger value="contact">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              <BilingualText english="Contact" italian="Contatti" />
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="faq">
+            <div className="space-y-1">
+              {filteredFAQs.length > 0 ? (
+                filteredFAQs.map(item => (
+                  <FAQItem 
+                    key={item.id} 
+                    question={item.question} 
+                    answer={item.answer} 
+                  />
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BilingualText
+                    english="No results found. Try a different search term or browse our guides."
+                    italian="Nessun risultato trovato. Prova un termine di ricerca diverso o sfoglia le nostre guide."
+                  />
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="guides">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="p-4">
+                  <CardTitle className="text-base flex items-center">
+                    <Bookmark className="h-4 w-4 mr-2 text-primary" />
+                    <BilingualText 
+                      english="Getting Started Guide" 
+                      italian="Guida Introduttiva" 
+                    />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <p className="text-sm text-muted-foreground">
+                    <BilingualText
+                      english="Learn the basics of the platform and how to set up your account."
+                      italian="Impara le basi della piattaforma e come configurare il tuo account."
+                    />
+                  </p>
+                  <Button variant="link" className="px-0 py-1 h-auto">
+                    <BilingualText english="Read guide" italian="Leggi la guida" />
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="p-4">
+                  <CardTitle className="text-base flex items-center">
+                    <Bookmark className="h-4 w-4 mr-2 text-primary" />
+                    <BilingualText 
+                      english="Using Flashcards" 
+                      italian="Utilizzare le Flashcard" 
+                    />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <p className="text-sm text-muted-foreground">
+                    <BilingualText
+                      english="Learn how to create and use flashcards to improve your vocabulary."
+                      italian="Impara come creare e utilizzare le flashcard per migliorare il tuo vocabolario."
+                    />
+                  </p>
+                  <Button variant="link" className="px-0 py-1 h-auto">
+                    <BilingualText english="Read guide" italian="Leggi la guida" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="contact">
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                <BilingualText
+                  english="Can't find what you're looking for? Get in touch with our support team."
+                  italian="Non riesci a trovare quello che stai cercando? Contatta il nostro team di supporto."
+                />
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button className="sm:flex-1">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  <BilingualText english="Live Chat" italian="Chat dal vivo" />
+                </Button>
+                <Button variant="outline" className="sm:flex-1">
+                  <BilingualText english="Submit a Ticket" italian="Invia un Ticket" />
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 

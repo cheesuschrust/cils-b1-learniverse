@@ -30,6 +30,8 @@ const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const EULAPage = lazy(() => import('@/pages/EULAPage'));
 const GDPRPage = lazy(() => import('@/pages/GDPRPage'));
 const CookiesPage = lazy(() => import('@/pages/CookiesPage'));
+const SupportCenter = lazy(() => import('@/pages/SupportCenter'));
+const SupportPage = lazy(() => import('@/pages/Support'));
 
 // Practice pages
 const FlashcardsPage = lazy(() => import('@/pages/learning/FlashcardsPage'));
@@ -47,6 +49,7 @@ const FileUploader = lazy(() => import('@/pages/admin/FileUploader'));
 const AIManagement = lazy(() => import('@/pages/admin/AIManagement'));
 const SubscriptionManager = lazy(() => import('@/pages/admin/SubscriptionManager'));
 const SystemHealth = lazy(() => import('@/pages/admin/SystemHealth'));
+const SupportTickets = lazy(() => import('@/pages/admin/SupportTickets'));
 
 // Subscription page
 const SubscriptionPage = lazy(() => import('@/pages/subscription/SubscriptionPage'));
@@ -84,6 +87,10 @@ const AppRoutes = () => {
             <Route path="eula" element={<EULAPage />} />
             <Route path="gdpr" element={<GDPRPage />} />
             <Route path="cookies" element={<CookiesPage />} />
+            
+            {/* Support pages */}
+            <Route path="support" element={<SupportPage />} />
+            <Route path="support-center" element={<SupportCenter />} />
             
             {/* Learning pages */}
             <Route path="flashcards" element={<FlashcardsPage />} />
@@ -131,6 +138,7 @@ const AppRoutes = () => {
             <Route path="content-upload" element={<ContentUploader />} />
             <Route path="file-uploader" element={<FileUploader />} />
             <Route path="ai-management" element={<AIManagement />} />
+            <Route path="support-tickets" element={<SupportTickets />} />
             <Route path="subscriptions" element={<SubscriptionManager />} />
             <Route path="system-health" element={<SystemHealth />} />
           </Route>

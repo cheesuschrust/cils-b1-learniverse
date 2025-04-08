@@ -1,61 +1,46 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 
-export type LanguageOption = 'english' | 'italian' | 'both';
+type LanguageType = 'english' | 'italian' | 'both';
 
 interface LanguageContextType {
-  language: LanguageOption;
-  setLanguage: (language: LanguageOption) => void;
-  toggleLanguage: () => void;
+  language: LanguageType;
+  setLanguage: (language: LanguageType) => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const useLanguage = () => {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
-};
+export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [language, setLanguageState] = useState<LanguageType>(() => {
+    // Check if language preference is stored in localStorage
+    const storedLanguage = localStorage.getItem('language') as LanguageType;
+    return storedLanguage || 'english'; // Default to English
+  });
 
-interface LanguageProviderProps {
-  children: ReactNode;
-}
-
-export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const { user, updateProfile } = useAuth();
-  const [language, setLanguageState] = useState<LanguageOption>(
-    (user?.preferredLanguage as LanguageOption) || 'both'
-  );
+  const setLanguage = (newLanguage: LanguageType) => {
+    setLanguageState(newLanguage);
+    localStorage.setItem('language', newLanguage);
+  };
 
   useEffect(() => {
-    if (user?.preferredLanguage) {
-      setLanguageState(user.preferredLanguage as LanguageOption);
+    // Set html lang attribute for accessibility
+    const htmlTag = document.querySelector('html');
+    if (htmlTag) {
+      htmlTag.setAttribute('lang', language === 'italian' ? 'it' : 'en');
     }
-  }, [user?.preferredLanguage]);
-
-  const setLanguage = (newLanguage: LanguageOption) => {
-    setLanguageState(newLanguage);
-    if (user && updateProfile) {
-      updateProfile({ preferredLanguage: newLanguage });
-    } else {
-      localStorage.setItem('preferredLanguage', newLanguage);
-    }
-  };
-
-  const toggleLanguage = () => {
-    const nextLanguage: LanguageOption = 
-      language === 'english' ? 'italian' : 
-      language === 'italian' ? 'both' : 'english';
-    
-    setLanguage(nextLanguage);
-  };
+  }, [language]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage }}>
+    <LanguageContext.Provider value={{ language, setLanguage }}>
       {children}
     </LanguageContext.Provider>
   );
+};
+
+export const useLanguage = (): LanguageContextType => {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
 };
