@@ -6,7 +6,14 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import { Spinner } from '@/components/ui/spinner';
 
-// Lazily loaded page components with descriptive names
+// Loading fallback
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center w-full h-[50vh]">
+    <Spinner size="lg" className="text-primary" />
+  </div>
+);
+
+// Lazily loaded page components
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const ProfilePage = lazy(() => import('@/pages/user/ProfilePage'));
 const SettingsPage = lazy(() => import('@/pages/user/SettingsPage'));
@@ -25,13 +32,6 @@ const SpeakingPage = lazy(() => import('@/pages/learning/SpeakingPracticePage'))
 // Admin pages
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'));
-
-// Loading fallback
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center w-full h-[50vh]">
-    <Spinner size="lg" className="text-primary" />
-  </div>
-);
 
 const AppRoutes = () => {
   return (
@@ -65,14 +65,12 @@ const AppRoutes = () => {
         {/* Dashboard layout */}
         <Route path="dashboard" element={<DashboardLayout />}>
           <Route index element={<HomePage />} />
-          {/* Add dashboard specific routes here */}
         </Route>
         
         {/* Admin routes */}
         <Route path="admin" element={<DashboardLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
-          {/* Add more admin routes as needed */}
         </Route>
         
         {/* 404 - Not Found */}

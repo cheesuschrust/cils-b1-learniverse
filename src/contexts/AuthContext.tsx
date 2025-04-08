@@ -1,245 +1,109 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
   id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  isPremiumUser?: boolean;
-}
-
-interface UserProfile {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  display_name?: string;
-  avatar_url?: string;
+  name?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  profile: UserProfile | null;
   loading: boolean;
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  isPremium: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  profile: null,
   loading: true,
-  isAuthenticated: false,
-  isAdmin: false,
-  isPremium: false,
-  login: async () => ({ success: false }),
-  signup: async () => ({ success: false }),
+  login: async () => {},
+  signup: async () => {},
   logout: async () => {},
-  resetPassword: async () => ({ success: false }),
+  forgotPassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
-    // Initialize auth from Supabase
-    const initAuth = async () => {
-      setLoading(true);
-      
-      try {
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          // User is logged in
-          const { id, email, user_metadata } = session.user;
-          
-          const user: User = {
-            id,
-            email: email || '',
-            firstName: user_metadata?.first_name,
-            lastName: user_metadata?.last_name,
-            isPremiumUser: user_metadata?.is_premium_user
-          };
-          
-          setUser(user);
-          setIsPremium(!!user.isPremiumUser);
-          
-          // Check if admin (would normally be in a claim or role system)
-          setIsAdmin(user_metadata?.is_admin || false);
-          
-          // Fetch user profile for additional details
-          try {
-            const { data: profileData } = await supabase
-              .from('user_profiles')
-              .select('*')
-              .eq('id', id)
-              .single();
-              
-            if (profileData) {
-              setProfile(profileData);
-            }
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-          }
-        } else {
-          // No active session
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-          setIsPremium(false);
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        setUser(null);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    initAuth();
-    
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          const { id, email, user_metadata } = session.user;
-          
-          const user: User = {
-            id,
-            email: email || '',
-            firstName: user_metadata?.first_name,
-            lastName: user_metadata?.last_name,
-            isPremiumUser: user_metadata?.is_premium_user
-          };
-          
-          setUser(user);
-          setIsPremium(!!user.isPremiumUser);
-          setIsAdmin(user_metadata?.is_admin || false);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-          setIsPremium(false);
-        }
-        
-        setLoading(false);
-      }
-    );
-    
-    // Cleanup subscription
-    return () => {
-      subscription.unsubscribe();
-    };
+    // Check if user is stored in localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
-  
+
   const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        return { success: false, error: error.message };
-      }
-      
-      return { success: true };
+      // For demonstration - replace with actual authentication logic
+      const mockUser = { id: '1', email };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Login failed' 
-      };
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const signup = async (
-    email: string, 
-    password: string, 
-    firstName?: string, 
-    lastName?: string
-  ) => {
+
+  const signup = async (email: string, password: string, name: string) => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
-        },
-      });
-      
-      if (error) {
-        return { success: false, error: error.message };
-      }
-      
-      return { success: true };
+      // For demonstration - replace with actual authentication logic
+      const mockUser = { id: '2', email, name };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Signup failed' 
-      };
+      console.error('Signup error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
-  
+
   const logout = async () => {
-    await supabase.auth.signOut();
-  };
-  
-  const resetPassword = async (email: string) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) {
-        return { success: false, error: error.message };
-      }
-      
-      return { success: true };
+      localStorage.removeItem('user');
+      setUser(null);
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Password reset failed' 
-      };
+      console.error('Logout error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
-  
+
+  const forgotPassword = async (email: string) => {
+    setLoading(true);
+    try {
+      // For demonstration - replace with actual password reset logic
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     user,
-    profile,
     loading,
-    isAuthenticated: !!user,
-    isAdmin,
-    isPremium,
     login,
     signup,
     logout,
-    resetPassword,
+    forgotPassword,
   };
-  
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
