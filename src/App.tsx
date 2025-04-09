@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AIProvider } from '@/contexts/AIContext';
+import ContentManagement from './pages/admin/ContentManagement';
 
 const HomePage = lazy(() => import('@/pages/Home'));
 const PricingPage = lazy(() => import('@/pages/Pricing'));
@@ -35,7 +36,6 @@ const SpeakingPage = lazy(() => import('@/pages/Speaking'));
 const MockExamPage = lazy(() => import('@/pages/exam/MockExamPage'));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/Dashboard'));
 const DailyQuestionPage = lazy(() => import('@/pages/DailyQuestion'));
-//const LearningPage = lazy(() => import('@/pages/learning/LearningPage'));
 const PracticePage = lazy(() => import('@/pages/Practice'));
 const AchievementsPage = lazy(() => import('@/pages/Achievements'));
 const ProgressPage = lazy(() => import('@/pages/Progress'));
@@ -358,6 +358,10 @@ function App() {
               </DashboardLayout>
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/admin/content-management"
+          element={<ContentManagement />}
         />
         <Route
           path="*"

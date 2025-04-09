@@ -8,6 +8,7 @@ import { BrainCircuit, Database, Volume2, Sliders } from 'lucide-react';
 import AIModelSelector from '@/components/ai/AIModelSelector';
 import VoiceSystemManager from '@/components/ai/VoiceSystemManager';
 import TrainingDataManager from '@/components/ai/TrainingDataManager';
+import AIAdvancedSettings from '@/components/ai/AIAdvancedSettings';
 
 const AITrainingManagerWrapper: React.FC = () => {
   return (
@@ -55,24 +56,7 @@ const AITrainingManagerWrapper: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Advanced AI Settings</CardTitle>
-              <CardDescription>
-                Configure system-wide AI settings and performance optimizations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-12 text-center">
-                <BrainCircuit className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                <h3 className="text-lg font-medium mb-2">Advanced Settings Coming Soon</h3>
-                <p className="text-muted-foreground mb-4">
-                  We're working on advanced AI configuration options for system administrators.
-                  Check back in the next update.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <AIAdvancedSettings />
         </TabsContent>
       </Tabs>
     </div>
