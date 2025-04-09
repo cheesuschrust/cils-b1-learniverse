@@ -1,192 +1,378 @@
-
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import './App.css';
+import { SiteHeader } from '@/components/layout/SiteHeader';
+import { SiteFooter } from '@/components/layout/SiteFooter';
+import { AuthProvider } from '@/contexts/EnhancedAuthContext';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { Toaster } from '@/components/ui/toaster';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AIProvider } from '@/contexts/AIContext';
 
-// Layout Components
-import Header from './components/layout/Header';
-import Footer from './components/Footer';
-
-// Main Pages
-import Dashboard from './components/Dashboard';
-import HomePage from './pages/HomePage';
-import FeaturePage from './pages/FeaturePage';
-import PricingPage from './pages/PricingPage';
-import PrivacyPage from './pages/PrivacyPage';
-import CheckoutPage from './pages/CheckoutPage';
-
-// Learning Pages
-import ExamPrepDashboard from './pages/exam/ExamPrepDashboard';
-import FlashcardsPage from './pages/learning/FlashcardsPage';
-import ListeningPracticePage from './pages/learning/ListeningPracticePage';
-import ReadingPracticePage from './pages/learning/ReadingPracticePage';
-import WritingExercisePage from './pages/learning/WritingExercisePage';
-import SpeakingPracticePage from './pages/learning/SpeakingPracticePage';
-import MockExamPage from './pages/exam/MockExamPage';
-import StudyPlanPage from './pages/exam/StudyPlanPage';
-
-// Gamification
-import GamificationDashboard from './pages/dashboard/GamificationDashboard';
-
-// User Pages
-import ProfilePage from './pages/user/ProfilePage';
-import SettingsPage from './pages/user/SettingsPage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import AuthCallback from './pages/auth/AuthCallback';
-
-// Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UserManagement from './pages/admin/UserManagement';
-import ContentManagement from './pages/admin/ContentManagement';
-import AIConfigurator from './pages/admin/AIConfigurator';
-import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
-import SubscriptionManagement from './pages/admin/SubscriptionManagement';
-import SupportTickets from './pages/admin/SupportTickets';
-
-// Contexts
-import { ExamProvider } from './contexts/ExamContext';
-import { AuthProvider } from './contexts/EnhancedAuthContext';
-import AIModelProvider from './contexts/AIModelContext';
-
-// Auth Components
-import ProtectedRoute from './components/auth/ProtectedRoute';
+const HomePage = lazy(() => import('@/pages/Home'));
+const PricingPage = lazy(() => import('@/pages/Pricing'));
+const ContactPage = lazy(() => import('@/pages/Contact'));
+const AboutPage = lazy(() => import('@/pages/About'));
+const TermsPage = lazy(() => import('@/pages/Terms'));
+const PrivacyPage = lazy(() => import('@/pages/Privacy'));
+const NotFoundPage = lazy(() => import('@/pages/NotFound'));
+const LoginPage = lazy(() => import('@/pages/auth/Login'));
+const RegisterPage = lazy(() => import('@/pages/auth/Register'));
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPassword'));
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPassword'));
+const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallback'));
+const DashboardPage = lazy(() => import('@/pages/Dashboard'));
+const ProfilePage = lazy(() => import('@/pages/Profile'));
+const SettingsPage = lazy(() => import('@/pages/Settings'));
+const FlashcardsPage = lazy(() => import('@/pages/Flashcards'));
+const ReadingPage = lazy(() => import('@/pages/reading/index'));
+const ReadingExercise = lazy(() => import('@/pages/reading/ReadingExercise'));
+const ReadingPractice = lazy(() => import('@/pages/reading/practice'));
+const ReadingHistory = lazy(() => import('@/pages/reading/history'));
+const ListeningPage = lazy(() => import('@/pages/Listening'));
+const SpeakingPage = lazy(() => import('@/pages/Speaking'));
+const MockExamPage = lazy(() => import('@/pages/exam/MockExamPage'));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/Dashboard'));
+const DailyQuestionPage = lazy(() => import('@/pages/DailyQuestion'));
+//const LearningPage = lazy(() => import('@/pages/learning/LearningPage'));
+const PracticePage = lazy(() => import('@/pages/Practice'));
+const AchievementsPage = lazy(() => import('@/pages/Achievements'));
+const ProgressPage = lazy(() => import('@/pages/Progress'));
+const ChatPage = lazy(() => import('@/pages/Chat'));
+const AITutorPage = lazy(() => import('@/pages/AITutor'));
 
 function App() {
   return (
-    <HelmetProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <ExamProvider>
-            <AIModelProvider>
-              <div className="min-h-screen flex flex-col">
-                <Header />
-                <main className="flex-1">
-                  <Routes>
-                    {/* Marketing Pages */}
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/features" element={<FeaturePage />} />
-                    <Route path="/pricing" element={<PricingPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    <Route path="/checkout" element={<CheckoutPage />} />
-                    
-                    {/* Auth Pages */}
-                    <Route path="/auth/login" element={<LoginPage />} />
-                    <Route path="/auth/register" element={<RegisterPage />} />
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    
-                    {/* Protected Routes */}
-                    <Route path="/dashboard" element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/gamification" element={
-                      <ProtectedRoute>
-                        <GamificationDashboard />
-                      </ProtectedRoute>
-                    } />
-                    
-                    {/* Learning Pages */}
-                    <Route path="/exam-prep" element={
-                      <ProtectedRoute>
-                        <ExamPrepDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/flashcards" element={
-                      <ProtectedRoute>
-                        <FlashcardsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/practice/listening" element={
-                      <ProtectedRoute>
-                        <ListeningPracticePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/practice/reading" element={
-                      <ProtectedRoute>
-                        <ReadingPracticePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/practice/writing" element={
-                      <ProtectedRoute>
-                        <WritingExercisePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/practice/speaking" element={
-                      <ProtectedRoute>
-                        <SpeakingPracticePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/mock-exam" element={
-                      <ProtectedRoute>
-                        <MockExamPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/study-plan" element={
-                      <ProtectedRoute>
-                        <StudyPlanPage />
-                      </ProtectedRoute>
-                    } />
-                    
-                    {/* User Pages */}
-                    <Route path="/profile" element={
-                      <ProtectedRoute>
-                        <ProfilePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <ProtectedRoute>
-                        <SettingsPage />
-                      </ProtectedRoute>
-                    } />
-                    
-                    {/* Admin Pages */}
-                    <Route path="/admin" element={
-                      <ProtectedRoute requireAdmin>
-                        <AdminDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/users" element={
-                      <ProtectedRoute requireAdmin>
-                        <UserManagement />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/content" element={
-                      <ProtectedRoute requireAdmin>
-                        <ContentManagement />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/ai" element={
-                      <ProtectedRoute requireAdmin>
-                        <AIConfigurator />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/analytics" element={
-                      <ProtectedRoute requireAdmin>
-                        <AnalyticsDashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/subscriptions" element={
-                      <ProtectedRoute requireAdmin>
-                        <SubscriptionManagement />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/support" element={
-                      <ProtectedRoute requireAdmin>
-                        <SupportTickets />
-                      </ProtectedRoute>
-                    } />
-                  </Routes>
-                </main>
-                <Footer />
-              </div>
-            </AIModelProvider>
-          </ExamProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </HelmetProvider>
+    <div className="App">
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <HomePage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/pricing"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <PricingPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <ContactPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <AboutPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <TermsPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <PrivacyPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/auth/login"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <LoginPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/auth/register"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <RegisterPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/auth/forgot-password"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <ForgotPasswordPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/auth/reset-password"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <ResetPasswordPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={
+            <Suspense fallback={<div>Loading...</div>}>
+              <AuthCallbackPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <DashboardPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ProfilePage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <SettingsPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flashcards"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <FlashcardsPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* Reading Section */}
+        <Route path="/reading" element={<ReadingPage />} />
+        <Route path="/reading/exercise/:exerciseId" element={<ReadingExercise />} />
+        <Route path="/reading/practice" element={<ReadingPractice />} />
+        <Route path="/reading/history" element={<ReadingHistory />} />
+        <Route
+          path="/listening"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ListeningPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/speaking"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <SpeakingPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <MockExamPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <AdminDashboardPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/daily-question"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <DailyQuestionPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/*<Route
+          path="/learning"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <LearningPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />*/}
+        <Route
+          path="/practice"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <PracticePage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/achievements"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <AchievementsPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/progress"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ProgressPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ChatPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-tutor"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <AITutorPage />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <>
+              <SiteHeader />
+              <Suspense fallback={<div>Loading...</div>}>
+                <NotFoundPage />
+              </Suspense>
+              <SiteFooter />
+            </>
+          }
+        />
+      </Routes>
+    </div>
   );
 }
 

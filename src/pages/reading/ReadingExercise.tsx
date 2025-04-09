@@ -31,7 +31,7 @@ const mockExercise = {
   questions: [
     {
       id: 1,
-      question: 'Quale percentuale dei viaggiatori italiani considera l'impatto ambientale quando pianifica le vacanze?',
+      question: 'Quale percentuale dei viaggiatori italiani considera l\'impatto ambientale quando pianifica le vacanze?',
       options: [
         { id: 'a', text: '45%' },
         { id: 'b', text: '65%' },
@@ -39,11 +39,11 @@ const mockExercise = {
         { id: 'd', text: '85%' }
       ],
       correctAnswer: 'b',
-      explanation: 'Secondo il testo, oltre il 65% dei viaggiatori italiani considera l'impatto ambientale quando pianifica le vacanze.'
+      explanation: 'Secondo il testo, oltre il 65% dei viaggiatori italiani considera l\'impatto ambientale quando pianifica le vacanze.'
     },
     {
       id: 2,
-      question: 'Quale regione italiana ha lanciato l'iniziativa "Toscana Green"?',
+      question: 'Quale regione italiana ha lanciato l\'iniziativa "Toscana Green"?',
       options: [
         { id: 'a', text: 'Lombardia' },
         { id: 'b', text: 'Sicilia' },
@@ -51,7 +51,7 @@ const mockExercise = {
         { id: 'd', text: 'Veneto' }
       ],
       correctAnswer: 'c',
-      explanation: 'Il testo menziona che la Toscana ha lanciato l'iniziativa "Toscana Green" che certifica le strutture ricettive che adottano pratiche ecologiche.'
+      explanation: 'Il testo menziona che la Toscana ha lanciato l\'iniziativa "Toscana Green" che certifica le strutture ricettive che adottano pratiche ecologiche.'
     },
     {
       id: 3,
@@ -67,7 +67,7 @@ const mockExercise = {
     },
     {
       id: 4,
-      question: 'Quale percentuale di visitatori internazionali sarebbe disposta a pagare di più per un'esperienza di viaggio sostenibile in Italia?',
+      question: 'Quale percentuale di visitatori internazionali sarebbe disposta a pagare di più per un\'esperienza di viaggio sostenibile in Italia?',
       options: [
         { id: 'a', text: '38%' },
         { id: 'b', text: '48%' },
@@ -75,11 +75,11 @@ const mockExercise = {
         { id: 'd', text: '68%' }
       ],
       correctAnswer: 'c',
-      explanation: 'Il testo indica che il 58% dei visitatori internazionali sarebbe disposto a pagare di più per un'esperienza di viaggio più sostenibile in Italia.'
+      explanation: 'Il testo indica che il 58% dei visitatori internazionali sarebbe disposto a pagare di più per un\'esperienza di viaggio più sostenibile in Italia.'
     },
     {
       id: 5,
-      question: 'Qual è uno dei benefici del turismo sostenibile menzionato nell'articolo?',
+      question: 'Qual è uno dei benefici del turismo sostenibile menzionato nell\'articolo?',
       options: [
         { id: 'a', text: 'Aumento dei prezzi degli hotel' },
         { id: 'b', text: 'Riduzione del sovraffollamento nelle principali destinazioni turistiche' },
