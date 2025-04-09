@@ -33,9 +33,9 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"]  
   },  
   "include": [  
-    "vite.config.ts",   
-    "cypress.config.ts",  
-    "*.config.ts"  // Catch any other config files  
+    "./vite.config.ts",   
+    "./cypress.config.ts",  
+    "./*.config.ts"  // Catch any other config files  
   ],  
   "exclude": [  
     "node_modules",  
