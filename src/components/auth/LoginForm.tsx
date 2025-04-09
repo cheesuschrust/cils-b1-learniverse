@@ -4,8 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +24,25 @@ const LoginForm: React.FC = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to CILS B1 Prep!",
+        });
         navigate('/dashboard');
+      } else {
+        toast({
+          title: "Login failed",
+          description: result.error || "Please check your credentials and try again.",
+          variant: "destructive",
+        });
       }
+    } catch (error) {
+      toast({
+        title: "Login error",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }

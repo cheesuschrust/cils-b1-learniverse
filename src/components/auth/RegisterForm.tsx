@@ -1,29 +1,34 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useAuth } from '@/contexts/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const RegisterForm: React.FC = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
   const { signup } = useAuth();
   const navigate = useNavigate();
-  
+  const { toast } = useToast();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!agreeTerms) {
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -32,13 +37,30 @@ const RegisterForm: React.FC = () => {
     try {
       const result = await signup(email, password, firstName, lastName);
       if (result.success) {
+        toast({
+          title: "Registration successful",
+          description: "Welcome to CILS B1 Prep!",
+        });
         navigate('/dashboard');
+      } else {
+        toast({
+          title: "Registration failed",
+          description: result.error || "There was a problem creating your account.",
+          variant: "destructive",
+        });
       }
+    } catch (error) {
+      toast({
+        title: "Registration error",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -48,7 +70,7 @@ const RegisterForm: React.FC = () => {
             <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
               id="firstName" 
-              placeholder="First name" 
+              placeholder="John" 
               className="pl-10"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -60,14 +82,18 @@ const RegisterForm: React.FC = () => {
         
         <div className="space-y-2">
           <Label htmlFor="lastName">Last Name</Label>
-          <Input 
-            id="lastName" 
-            placeholder="Last name" 
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              id="lastName" 
+              placeholder="Doe" 
+              className="pl-10"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
         </div>
       </div>
       
@@ -99,8 +125,8 @@ const RegisterForm: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            disabled={isLoading}
             minLength={8}
+            disabled={isLoading}
           />
           <Button
             type="button"
@@ -118,30 +144,35 @@ const RegisterForm: React.FC = () => {
             <span className="sr-only">Toggle password visibility</span>
           </Button>
         </div>
-        
-        {password && (
-          <div className="text-xs text-muted-foreground mt-2">
-            Password must be at least 8 characters long
-          </div>
-        )}
       </div>
       
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="terms" 
-          checked={agreeTerms} 
-          onCheckedChange={(checked) => setAgreeTerms(!!checked)} 
-          disabled={isLoading}
-        />
-        <Label htmlFor="terms" className="text-sm leading-none">
-          I agree to the <a href="/terms" className="text-primary underline-offset-4 hover:underline">Terms of Service</a> and{" "}
-          <a href="/privacy" className="text-primary underline-offset-4 hover:underline">Privacy Policy</a>
-        </Label>
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            id="confirmPassword" 
+            type={showPassword ? "text" : "password"} 
+            className="pl-10"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={8}
+            disabled={isLoading}
+          />
+        </div>
       </div>
       
-      <Button type="submit" className="w-full" disabled={isLoading || !agreeTerms}>
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Creating Account..." : "Create Account"}
       </Button>
+      
+      <div className="text-center text-sm">
+        <span className="text-muted-foreground">Already have an account? </span>
+        <Link to="/auth/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
+      </div>
     </form>
   );
 };
