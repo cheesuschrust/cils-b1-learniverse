@@ -8,7 +8,13 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, FileDown, Activity, Cpu, Bot } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AIImplementationStatus, AIModelUsageDashboard, AIArchitectureExplainer } from '@/components/ai';
+import { 
+  AIImplementationStatus, 
+  AIModelUsageDashboard, 
+  AIArchitectureExplainer,
+  AIPlatformDetails,
+  AIImplementationTimeline
+} from '@/components/ai';
 import { Progress } from '@/components/ui/progress';
 
 const FlashcardsPage: React.FC = () => {
@@ -50,6 +56,7 @@ const FlashcardsPage: React.FC = () => {
           <TabsTrigger value="ai-details">AI Implementation</TabsTrigger>
           <TabsTrigger value="ai-status">AI Status</TabsTrigger>
           <TabsTrigger value="ai-architecture">AI Architecture</TabsTrigger>
+          <TabsTrigger value="ai-timeline">Implementation Timeline</TabsTrigger>
         </TabsList>
         
         <TabsContent value="flashcards">
@@ -256,7 +263,12 @@ const FlashcardsPage: React.FC = () => {
           <div className="space-y-6">
             <AIModelUsageDashboard />
             <AIArchitectureExplainer />
+            <AIPlatformDetails />
           </div>
+        </TabsContent>
+        
+        <TabsContent value="ai-timeline">
+          <AIImplementationTimeline />
         </TabsContent>
       </Tabs>
     </div>
