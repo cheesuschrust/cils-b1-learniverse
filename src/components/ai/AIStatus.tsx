@@ -1,68 +1,59 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge-fixed';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import { useAI } from '@/hooks/useAI';
 
 export const AIStatus: React.FC = () => {
-  const ai = useAI();
-  const isLoaded = !ai.isProcessing;
+  const { status, isModelLoaded } = useAI();
+  
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'loading':
+        return <AlertCircle className="h-5 w-5 text-amber-500" />;
+      case 'error':
+      case 'inactive':
+      default:
+        return <XCircle className="h-5 w-5 text-red-500" />;
+    }
+  };
+  
+  const getStatusText = () => {
+    switch (status) {
+      case 'active':
+        return 'All AI systems operational';
+      case 'loading':
+        return 'AI models are loading';
+      case 'error':
+        return 'AI service unavailable';
+      case 'inactive':
+      default:
+        return 'AI services inactive';
+    }
+  };
   
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between">
-          AI Model Status
-          {isLoaded ? (
-            <Badge variant="success" className="ml-2">Online</Badge>
-          ) : (
-            <Badge variant="warning" className="ml-2">Loading</Badge>
-          )}
-        </CardTitle>
-        <CardDescription>
-          Performance and availability metrics
-        </CardDescription>
+        <CardTitle>AI System Status</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Connection Status</span>
-            <div className="flex items-center">
-              {isLoaded ? (
-                <>
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-500">Connected</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
-                  <span className="text-sm text-amber-500">Connecting</span>
-                </>
-              )}
-            </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {getStatusIcon()}
+            <span>{getStatusText()}</span>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>API Responsiveness</span>
-              <span className="font-medium">{isLoaded ? 'Good' : 'Checking...'}</span>
-            </div>
-            <Progress value={isLoaded ? 95 : 30} />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>System Load</span>
-              <span className="font-medium">{isLoaded ? 'Low' : 'Unknown'}</span>
-            </div>
-            <Progress value={isLoaded ? 25 : 50} />
-          </div>
-          
-          <div className="mt-4 text-xs text-muted-foreground">
-            Last updated: {new Date().toLocaleTimeString()}
-          </div>
+          <Badge variant={isModelLoaded ? "default" : "outline"}>
+            {isModelLoaded ? "Models Loaded" : "Models Not Loaded"}
+          </Badge>
+        </div>
+        <div className="mt-4 text-sm text-muted-foreground">
+          {isModelLoaded 
+            ? "Client-side AI models are loaded and ready for use" 
+            : "Click 'Load Models' in AI settings to enable client-side processing"}
         </div>
       </CardContent>
     </Card>

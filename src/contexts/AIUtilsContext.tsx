@@ -1,24 +1,43 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { 
-  AIGenerationResult, 
-  AIQuestion,
-  QuestionGenerationParams,
-  AIProcessingOptions,
-  TTSOptions,
-  AIGeneratedQuestion,
-  ItalianTestSection,
-  AIUtilsContextType
-} from '@/types/ai';
-import { AISettings } from '@/types/ai-settings';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useAIModel } from './AIModelContext';
+import { useToast } from '@/hooks/use-toast';
 
-// Create context with default values
-const AIUtilsContext = createContext<AIUtilsContextType>({
-  processContent: async () => [],
-  generateQuestions: async () => ({ questions: [] }),
+type AIUtilsContextType = {
+  processContent: (content: string, options?: any) => Promise<any>;
+  generateQuestions: (params: any) => Promise<any>;
+  analyzeGrammar: (text: string, language?: string) => Promise<any>;
+  translateText: (text: string, targetLanguage?: string) => Promise<any>;
+  generateText: (prompt: string, options?: any) => Promise<string>;
+  evaluateWriting: (text: string, level?: string) => Promise<any>;
+  isProcessing: boolean;
+  isGenerating: boolean;
+  remainingCredits: number;
+  usageLimit: number;
+  isAIEnabled: boolean;
+  speak: (text: string | any, options?: any) => Promise<void>;
+  isSpeaking: boolean;
+  status: string;
+  isModelLoaded: boolean;
+  compareTexts: (text1: string, text2: string) => Promise<any>;
+  loadModel: () => Promise<boolean>;
+  classifyText: (text: string, categories: string[]) => Promise<any>;
+  transcribeSpeech: (audioData: Blob) => Promise<any>;
+  processAudioStream: (stream: MediaStream) => Promise<any>;
+  stopAudioProcessing: () => void;
+  isTranscribing: boolean;
+  hasActiveMicrophone: boolean;
+  checkMicrophoneAccess: () => Promise<boolean>;
+  generateContent: (prompt: string, options?: any) => Promise<any>;
+  analyzeContent: (content: string, contentType: string) => Promise<any>;
+};
+
+const defaultContext: AIUtilsContextType = {
+  processContent: async () => ({}),
+  generateQuestions: async () => ({}),
   analyzeGrammar: async () => ({}),
-  translateText: async () => "",
-  generateText: async () => "",
+  translateText: async () => '',
+  generateText: async () => '',
   evaluateWriting: async () => ({}),
   isProcessing: false,
   isGenerating: false,
@@ -27,254 +46,357 @@ const AIUtilsContext = createContext<AIUtilsContextType>({
   isAIEnabled: true,
   speak: async () => {},
   isSpeaking: false,
-  status: 'ready',
-  isModelLoaded: true,
+  status: 'inactive',
+  isModelLoaded: false,
   compareTexts: async () => ({ similarity: 0, differences: [] }),
-  loadModel: async () => {},
+  loadModel: async () => false,
   classifyText: async () => ({ category: '', confidence: 0 }),
   transcribeSpeech: async () => ({ text: '', confidence: 0 }),
-  processAudioStream: async () => {},
+  processAudioStream: async () => ({}),
   stopAudioProcessing: () => {},
   isTranscribing: false,
   hasActiveMicrophone: false,
   checkMicrophoneAccess: async () => false,
-  generateContent: async () => ({}),
-  analyzeContent: async () => ({})
-});
+  generateContent: async () => ({ content: '' }),
+  analyzeContent: async () => ({ analysis: {} }),
+};
 
-export function AIUtilsProvider({ children }: { children: React.ReactNode }) {
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [remainingCredits, setRemainingCredits] = useState<number>(100);
-  const [usageLimit] = useState<number>(100);
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [status, setStatus] = useState<string>('ready');
-  const [isModelLoaded, setIsModelLoaded] = useState<boolean>(true);
-  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [hasActiveMicrophone, setHasActiveMicrophone] = useState<boolean>(false);
+const AIUtilsContext = createContext<AIUtilsContextType>(defaultContext);
 
-  // Process content
-  const processContent = useCallback(async (content: string, options?: AIProcessingOptions) => {
+export const useAIUtils = () => useContext(AIUtilsContext);
+
+interface AIUtilsProviderProps {
+  children: ReactNode;
+}
+
+export const AIUtilsProvider: React.FC<AIUtilsProviderProps> = ({ children }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(false);
+  const { models, loadModel: loadModelFromContext } = useAIModel();
+  const { toast } = useToast();
+  
+  // For demonstration purposes
+  const remainingCredits = 75;
+  const usageLimit = 100;
+  const isAIEnabled = true;
+  const status = models.some(m => m.isLoaded) ? 'active' : 'inactive';
+  const isModelLoaded = models.some(m => m.isLoaded);
+  
+  // Placeholder AI functions
+  const processContent = async (content: string, options?: any) => {
+    if (!isModelLoaded) {
+      toast({
+        title: "AI Models Not Loaded",
+        description: "Please load AI models first to use this feature.",
+        variant: "destructive",
+      });
+      return {};
+    }
+    
     setIsProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return [{ label: 'Sample', score: 0.85 }];
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { processed: true, content };
     } finally {
       setIsProcessing(false);
     }
-  }, []);
-
-  // Generate questions
-  const generateQuestions = useCallback(async (params: QuestionGenerationParams): Promise<AIGenerationResult> => {
+  };
+  
+  const generateQuestions = async (params: any) => {
     setIsGenerating(true);
     try {
-      // Mock implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockQuestions: AIGeneratedQuestion[] = [
-        {
-          id: '1',
-          text: 'Sample question',
-          options: ['Option A', 'Option B', 'Option C', 'Option D'],
-          correctAnswer: 'Option A',
-          explanation: 'This is an explanation',
-          type: (params.contentTypes?.[0] || 'grammar') as ItalianTestSection,
-          difficulty: params.difficulty || 'intermediate',
-          questionType: 'multiple-choice',
-          isCitizenshipRelevant: false
-        }
-      ];
-      
-      setRemainingCredits(prev => Math.max(0, prev - 1));
-      
-      return { questions: mockQuestions };
-    } catch (error) {
-      console.error('Error generating questions:', error);
-      return { questions: [], error: error instanceof Error ? error.message : 'Unknown error' };
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return {
+        questions: [
+          {
+            id: '1',
+            question: 'Come ti chiami?',
+            questionTranslation: 'What is your name?',
+            type: 'open_ended',
+            difficulty: 'beginner',
+          },
+          {
+            id: '2',
+            question: 'Qual è la capitale d\'Italia?',
+            questionTranslation: 'What is the capital of Italy?',
+            type: 'multiple_choice',
+            options: ['Roma', 'Milano', 'Napoli', 'Firenze'],
+            optionsTranslations: ['Rome', 'Milan', 'Naples', 'Florence'],
+            correctAnswer: 'Roma',
+            difficulty: 'beginner',
+          },
+        ]
+      };
     } finally {
       setIsGenerating(false);
     }
-  }, []);
-
-  // Analyze grammar
-  const analyzeGrammar = useCallback(async (text: string, language?: string) => {
+  };
+  
+  const analyzeGrammar = async (text: string, language?: string) => {
     setIsProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { analysis: true, corrections: [] };
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
-
-  // Translate text
-  const translateText = useCallback(async (text: string, targetLanguage?: string) => {
-    setIsProcessing(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return `Translated: ${text}`;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
-
-  // Generate text
-  const generateText = useCallback(async (prompt: string, options?: any) => {
-    setIsProcessing(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return `Generated text based on: ${prompt}`;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
-
-  // Evaluate writing
-  const evaluateWriting = useCallback(async (text: string, level?: string) => {
-    setIsProcessing(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { 
-        score: 85, 
-        feedback: 'Good work!',
-        corrections: []
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        errors: [],
+        suggestions: ['Sample suggestion'],
+        correctedText: text,
       };
     } finally {
       setIsProcessing(false);
     }
-  }, []);
-
-  // Text-to-speech
-  const speak = useCallback(async (text: string | TTSOptions, options?: TTSOptions | string) => {
-    setIsSpeaking(true);
+  };
+  
+  const translateText = async (text: string, targetLanguage?: string) => {
+    setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
-      console.log(`Speaking: ${typeof text === 'string' ? text : text.text || ''}`);
+      // Simple demo translation
+      if (text.toLowerCase().includes('hello')) {
+        return targetLanguage === 'it' ? 'Ciao' : 'Hello';
+      }
+      return text + ' (translated)';
     } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const generateText = async (prompt: string, options?: any) => {
+    setIsGenerating(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      return `Generated text based on: ${prompt}`;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  const evaluateWriting = async (text: string, level?: string) => {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return {
+        score: 85,
+        feedback: 'Good writing sample, with minor grammar issues.',
+        areas: {
+          grammar: 80,
+          vocabulary: 85,
+          structure: 90,
+        }
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const speak = async (text: string | any, options?: any) => {
+    setIsSpeaking(true);
+    try {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(
+          typeof text === 'string' ? text : text.text
+        );
+        
+        if (options) {
+          if (typeof options === 'string') {
+            // Language code passed directly
+            utterance.lang = options;
+          } else {
+            // Options object
+            if (options.voice) {
+              const voices = window.speechSynthesis.getVoices();
+              const selectedVoice = voices.find(voice => 
+                voice.name.includes(options.voice) || 
+                voice.voiceURI.includes(options.voice)
+              );
+              if (selectedVoice) utterance.voice = selectedVoice;
+            }
+            
+            if (options.speed) utterance.rate = options.speed;
+            if (options.pitch) utterance.pitch = options.pitch;
+          }
+        }
+        
+        window.speechSynthesis.speak(utterance);
+        
+        return new Promise<void>((resolve) => {
+          utterance.onend = () => {
+            setIsSpeaking(false);
+            resolve();
+          };
+          utterance.onerror = () => {
+            setIsSpeaking(false);
+            resolve();
+          };
+        });
+      } else {
+        console.error('Speech synthesis not supported');
+        setIsSpeaking(false);
+      }
+    } catch (error) {
+      console.error('Speech synthesis error:', error);
       setIsSpeaking(false);
     }
-  }, []);
-
-  // Compare texts
-  const compareTexts = useCallback(async (text1: string, text2: string) => {
-    return { similarity: 0.8, differences: [] };
-  }, []);
-
-  // Load AI model
-  const loadModel = useCallback(async (modelName?: string) => {
-    console.log(`Loading model: ${modelName || 'default'}`);
-    setIsModelLoaded(true);
-    return true;
-  }, []);
-
-  // Classify text
-  const classifyText = useCallback(async (text: string, categories: string[]) => {
-    return { category: categories[0] || 'unknown', confidence: 0.9 };
-  }, []);
-
-  // Speech-to-text
-  const transcribeSpeech = useCallback(async (audioData: Blob) => {
-    return { text: "Transcribed text", confidence: 0.8 };
-  }, []);
-
-  // Process audio stream
-  const processAudioStream = useCallback(async (stream: MediaStream) => {
+  };
+  
+  const compareTexts = async (text1: string, text2: string) => {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const similarity = 0.85; // Mock similarity score
+      return {
+        similarity,
+        differences: ['sample difference']
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const loadModelFunc = async () => {
+    try {
+      const results = await Promise.all(
+        models
+          .filter(model => model.isActive && !model.isLoaded)
+          .map(model => loadModelFromContext(model.id))
+      );
+      
+      return results.some(result => result === true);
+    } catch (error) {
+      console.error('Error loading models:', error);
+      return false;
+    }
+  };
+  
+  const classifyText = async (text: string, categories: string[]) => {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 700));
+      return {
+        category: categories[0],
+        confidence: 0.85
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const transcribeSpeech = async (audioData: Blob) => {
     setIsTranscribing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return {
+        text: "This is a sample transcription from audio.",
+        confidence: 0.78
+      };
     } finally {
       setIsTranscribing(false);
     }
-  }, []);
-
-  // Stop audio processing
-  const stopAudioProcessing = useCallback(() => {
-    setIsTranscribing(false);
-  }, []);
-
-  // Check microphone access
-  const checkMicrophoneAccess = useCallback(async () => {
+  };
+  
+  const processAudioStream = async (stream: MediaStream) => {
+    setIsTranscribing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return {
+        text: "This is a sample transcription from a live audio stream.",
+        confidence: 0.82
+      };
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+  
+  const stopAudioProcessing = () => {
+    setIsTranscribing(false);
+  };
+  
+  const checkMicrophoneAccess = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
       setHasActiveMicrophone(true);
       return true;
     } catch (error) {
+      console.error('Microphone access error:', error);
       setHasActiveMicrophone(false);
       return false;
     }
-  }, []);
-
-  // Generate content
-  const generateContent = useCallback(async (prompt: string, options?: any) => {
+  };
+  
+  const generateContent = async (prompt: string, options?: any) => {
     setIsGenerating(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      return { content: `Generated content for: ${prompt}` };
+      await new Promise(resolve => setTimeout(resolve, 1300));
+      return { 
+        content: `Generated content based on the prompt: ${prompt}`,
+        metadata: {
+          model: 'sample-model',
+          tokens: 42,
+          processingTime: 1.2
+        }
+      };
     } finally {
       setIsGenerating(false);
     }
-  }, []);
-
-  // Analyze content
-  const analyzeContent = useCallback(async (content: string, contentType: string) => {
+  };
+  
+  const analyzeContent = async (content: string, contentType: string) => {
     setIsProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 900));
       return { 
-        analysis: { 
-          type: contentType,
+        analysis: {
           sentiment: 'positive',
-          complexity: 'medium',
-          topics: ['grammar', 'vocabulary']
-        } 
+          topics: ['italian', 'learning'],
+          complexity: 'intermediate'
+        },
+        metadata: {
+          model: 'sample-model',
+          processingTime: 0.9
+        }
       };
     } finally {
       setIsProcessing(false);
     }
-  }, []);
-
-  const contextValue: AIUtilsContextType = {
-    processContent,
-    generateQuestions,
-    analyzeGrammar,
-    translateText,
-    generateText,
-    evaluateWriting,
-    isProcessing,
-    isGenerating,
-    remainingCredits,
-    usageLimit,
-    isAIEnabled: true,
-    speak,
-    isSpeaking,
-    status,
-    isModelLoaded,
-    compareTexts,
-    loadModel,
-    classifyText,
-    transcribeSpeech,
-    processAudioStream,
-    stopAudioProcessing,
-    isTranscribing,
-    hasActiveMicrophone,
-    checkMicrophoneAccess,
-    generateContent,
-    analyzeContent
   };
-
+  
   return (
-    <AIUtilsContext.Provider value={contextValue}>
+    <AIUtilsContext.Provider
+      value={{
+        processContent,
+        generateQuestions,
+        analyzeGrammar,
+        translateText,
+        generateText,
+        evaluateWriting,
+        isProcessing,
+        isGenerating,
+        remainingCredits,
+        usageLimit,
+        isAIEnabled,
+        speak,
+        isSpeaking,
+        status,
+        isModelLoaded,
+        compareTexts,
+        loadModel: loadModelFunc,
+        classifyText,
+        transcribeSpeech,
+        processAudioStream,
+        stopAudioProcessing,
+        isTranscribing,
+        hasActiveMicrophone,
+        checkMicrophoneAccess,
+        generateContent,
+        analyzeContent
+      }}
+    >
       {children}
     </AIUtilsContext.Provider>
   );
-}
+};
 
-export function useAIUtils(): AIUtilsContextType {
-  const context = useContext(AIUtilsContext);
-  if (context === undefined) {
-    throw new Error('useAIUtils must be used within an AIUtilsProvider');
-  }
-  return context;
-}
-
-export { AIUtilsContext };
+export default AIUtilsContext;

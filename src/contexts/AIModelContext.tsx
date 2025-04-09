@@ -1,120 +1,159 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { AIModel } from '@/types/ai-types';
+import { useToast } from '@/hooks/use-toast';
 
-interface AIModel {
-  id: string;
-  name: string;
-  provider: string;
-  type: string;
-  endpoint: string;
-  apiKey?: string;
-  isActive: boolean;
-}
-
-interface AIProviderConfig {
-  id: string;
-  name: string;
-  apiKeyRequired: boolean;
-  endpointRequired: boolean;
-  modelTypes: string[];
-  isConfigured: boolean;
-}
-
-interface AIModelContextType {
+type AIModelContextType = {
   models: AIModel[];
-  providers: AIProviderConfig[];
-  activeModel: AIModel | null;
-  setActiveModel: (model: AIModel) => void;
-  addModel: (model: AIModel) => void;
-  updateModel: (id: string, updates: Partial<AIModel>) => void;
-  deleteModel: (id: string) => void;
+  loadModel: (modelId: string) => Promise<boolean>;
+  unloadModel: (modelId: string) => void;
+  isModelLoaded: (modelId: string) => boolean;
+  activeModels: AIModel[];
   isLoading: boolean;
   error: string | null;
-}
-
-const AIModelContext = createContext<AIModelContextType | undefined>(undefined);
-
-export const useAIModel = () => {
-  const context = useContext(AIModelContext);
-  if (!context) {
-    throw new Error('useAIModel must be used within an AIModelProvider');
-  }
-  return context;
 };
+
+const defaultContext: AIModelContextType = {
+  models: [],
+  loadModel: async () => false,
+  unloadModel: () => {},
+  isModelLoaded: () => false,
+  activeModels: [],
+  isLoading: false,
+  error: null,
+};
+
+const AIModelContext = createContext<AIModelContextType>(defaultContext);
+
+export const useAIModel = () => useContext(AIModelContext);
 
 interface AIModelProviderProps {
   children: ReactNode;
 }
 
+// Sample models for development purposes
+const SAMPLE_MODELS: AIModel[] = [
+  {
+    id: 'embed-model',
+    name: 'MixedBread Embeddings',
+    type: 'embedding',
+    size: 50,
+    isLoaded: false,
+    isActive: true,
+    accuracy: 0.92,
+    version: '1.0',
+  },
+  {
+    id: 'trans-model',
+    name: 'Opus MT Translation',
+    type: 'translation',
+    size: 85,
+    isLoaded: false,
+    isActive: true,
+    accuracy: 0.89,
+    version: '1.2',
+  },
+  {
+    id: 'speech-model',
+    name: 'Whisper Tiny',
+    type: 'speech',
+    size: 75,
+    isLoaded: false,
+    isActive: true,
+    accuracy: 0.78,
+    version: '1.1',
+  },
+];
+
 const AIModelProvider: React.FC<AIModelProviderProps> = ({ children }) => {
-  const [models, setModels] = useState<AIModel[]>([
-    {
-      id: '1',
-      name: 'HuggingFace Chat Model',
-      provider: 'huggingface',
-      type: 'text-generation',
-      endpoint: 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
-      isActive: true
-    },
-    {
-      id: '2',
-      name: 'HuggingFace Embedding Model',
-      provider: 'huggingface',
-      type: 'feature-extraction',
-      endpoint: 'https://api-inference.huggingface.co/models/mixedbread-ai/mxbai-embed-xsmall-v1',
-      isActive: true
-    }
-  ]);
-  
-  const [providers, setProviders] = useState<AIProviderConfig[]>([
-    {
-      id: 'huggingface',
-      name: 'HuggingFace',
-      apiKeyRequired: true,
-      endpointRequired: true,
-      modelTypes: ['text-generation', 'feature-extraction', 'text-classification', 'token-classification'],
-      isConfigured: false
-    },
-    {
-      id: 'openai',
-      name: 'OpenAI',
-      apiKeyRequired: true,
-      endpointRequired: false,
-      modelTypes: ['text-generation', 'embeddings'],
-      isConfigured: false
-    }
-  ]);
-  
-  const [activeModel, setActiveModel] = useState<AIModel | null>(models[0]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [models, setModels] = useState<AIModel[]>(SAMPLE_MODELS);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const addModel = (model: AIModel) => {
-    setModels([...models, model]);
+  // For demonstration purposes, this simulates loading a model
+  const loadModel = async (modelId: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Find the model
+      const modelIndex = models.findIndex(m => m.id === modelId);
+      if (modelIndex === -1) {
+        throw new Error(`Model with ID ${modelId} not found`);
+      }
+      
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update model state
+      const updatedModels = [...models];
+      updatedModels[modelIndex] = {
+        ...updatedModels[modelIndex],
+        isLoaded: true,
+      };
+      
+      setModels(updatedModels);
+      
+      toast({
+        title: "Model Loaded",
+        description: `${models[modelIndex].name} has been loaded successfully.`,
+      });
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error loading model';
+      setError(errorMessage);
+      
+      toast({
+        title: "Failed to Load Model",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const updateModel = (id: string, updates: Partial<AIModel>) => {
-    setModels(models.map(model => model.id === id ? { ...model, ...updates } : model));
+  
+  const unloadModel = (modelId: string) => {
+    const modelIndex = models.findIndex(m => m.id === modelId);
+    if (modelIndex !== -1) {
+      const updatedModels = [...models];
+      updatedModels[modelIndex] = {
+        ...updatedModels[modelIndex],
+        isLoaded: false,
+      };
+      
+      setModels(updatedModels);
+      
+      toast({
+        title: "Model Unloaded",
+        description: `${models[modelIndex].name} has been unloaded.`,
+      });
+    }
   };
-
-  const deleteModel = (id: string) => {
-    setModels(models.filter(model => model.id !== id));
+  
+  const isModelLoaded = (modelId: string): boolean => {
+    const model = models.find(m => m.id === modelId);
+    return model ? model.isLoaded : false;
   };
-
-  const value = {
-    models,
-    providers,
-    activeModel,
-    setActiveModel,
-    addModel,
-    updateModel,
-    deleteModel,
-    isLoading,
-    error
-  };
-
+  
+  const activeModels = models.filter(model => model.isActive && model.isLoaded);
+  
   return (
-    <AIModelContext.Provider value={value}>
+    <AIModelContext.Provider
+      value={{
+        models,
+        loadModel,
+        unloadModel,
+        isModelLoaded,
+        activeModels,
+        isLoading,
+        error,
+      }}
+    >
       {children}
     </AIModelContext.Provider>
   );
