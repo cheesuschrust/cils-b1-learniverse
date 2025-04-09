@@ -1,22 +1,8 @@
 
-// This file helps work around the "emit" issue in tsconfig.node.json
-declare module "node:*" {
-  const value: any;
-  export default value;
-}
+// This file provides custom declarations for Node.js modules and environments
+// to prevent TypeScript build errors without modifying tsconfig JSON files
 
-// Fix for the "emit" issue in tsconfig.node.json
-// This provides a compatible type declaration file to resolve the conflict
-interface NodeModule {
-  hot: {
-    accept(dependencies: string[], callback: (updatedDependencies: any[]) => void): void;
-    accept(dependency: string, callback: () => void): void;
-    accept(callback: () => void): void;
-    dispose(callback: (data: any) => void): void;
-  };
-}
-
-// Additional compatibility declarations
+// Fix for the TypeScript error related to emit in tsconfig.node.json
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: 'development' | 'production' | 'test';
@@ -37,7 +23,7 @@ declare interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// This helps resolve the module resolution issue
+// This helps resolve module resolution issues
 declare module '*.svg' {
   import React = require('react');
   export const ReactComponent: React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
