@@ -1,42 +1,44 @@
 
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { Card, CardContent } from '@/components/ui/card';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { useAuth } from '@/contexts/EnhancedAuthContext';
 
 const RegisterPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     // If already authenticated, redirect to dashboard
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoading) {
       navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>
-          Enter your information to create an account
-        </CardDescription>
-      </CardHeader>
+      <Helmet>
+        <title>Create Account | CILS B1 Italian Prep</title>
+        <meta name="description" content="Create your account to start preparing for the CILS B1 Italian citizenship test." />
+      </Helmet>
       
-      <CardContent>
-        <RegisterForm />
-      </CardContent>
-      
-      <CardFooter>
-        <div className="text-sm text-muted-foreground text-center w-full">
-          Already have an account?{" "}
-          <Link to="/auth/login" className="text-primary underline-offset-4 hover:underline">
-            Log in
-          </Link>
-        </div>
-      </CardFooter>
+      <div className="container max-w-md mx-auto py-12 px-4">
+        <Card>
+          <CardContent className="pt-6">
+            <RegisterForm />
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 };

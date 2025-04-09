@@ -1,7 +1,7 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,200 +9,104 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/hooks/useAuth";
-import { Bell, Menu, X, LogOut, User as UserIcon, Settings } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { User, LogOut, BookOpen, Settings, Home, Award, BarChart } from 'lucide-react';
 
-export const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+const Header: React.FC = () => {
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      ?.split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase() || '?';
+    navigate('/');
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background">
-      <div className="container flex h-16 items-center justify-between py-4">
-        {/* Logo and Navigation */}
-        <div className="flex items-center gap-4 md:gap-8">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold">CILS B1</span>
+            <span className="font-bold text-xl">CILS B1 Prep</span>
           </Link>
           
-          <nav className="hidden md:flex gap-6">
-            <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
-              Dashboard
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link to="/" className="transition-colors hover:text-foreground/80">
+              Home
             </Link>
-            <Link to="/flashcards" className="text-sm font-medium transition-colors hover:text-primary">
-              Flashcards
+            <Link to="/features" className="transition-colors hover:text-foreground/80">
+              Features
             </Link>
-            <Link to="/citizenship-test" className="text-sm font-medium transition-colors hover:text-primary">
-              Citizenship Test
+            <Link to="/pricing" className="transition-colors hover:text-foreground/80">
+              Pricing
             </Link>
-            <Link to="/practice" className="text-sm font-medium transition-colors hover:text-primary">
-              Practice
-            </Link>
-          </nav>
-        </div>
-
-        {/* User Menu - Desktop */}
-        <div className="hidden md:flex items-center gap-4">
-          <ThemeToggle />
-          
-          {isAuthenticated ? (
-            <>
-              <Button variant="outline" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.photoURL} alt={user?.email || "User"} />
-                      <AvatarFallback>{getInitials(user?.email || "")}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile">
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild>
-                <Link to="/login">Sign in</Link>
-              </Button>
-              <Button asChild>
-                <Link to="/signup">Sign up</Link>
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile Menu Toggle */}
-        <div className="md:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle Menu"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden container py-4 pb-6 border-t">
-          <nav className="flex flex-col space-y-4">
-            <Link 
-              to="/" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
-            <Link 
-              to="/flashcards" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Flashcards
-            </Link>
-            <Link 
-              to="/citizenship-test" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Citizenship Test
-            </Link>
-            <Link 
-              to="/practice" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Practice
-            </Link>
-            
-            {isAuthenticated ? (
+            {isAuthenticated && (
               <>
-                <div className="border-t pt-4 mt-2"></div>
-                <Link 
-                  to="/profile" 
-                  className="text-sm font-medium transition-colors hover:text-primary flex items-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  Profile
+                <Link to="/dashboard" className="transition-colors hover:text-foreground/80">
+                  Dashboard
                 </Link>
-                <Link 
-                  to="/settings" 
-                  className="text-sm font-medium transition-colors hover:text-primary flex items-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                <Link to="/flashcards" className="transition-colors hover:text-foreground/80">
+                  Flashcards
                 </Link>
-                <button 
-                  onClick={() => {
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="text-sm font-medium transition-colors hover:text-primary flex items-center text-left"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="border-t pt-4 mt-2"></div>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" asChild>
-                    <Link to="/login" onClick={() => setIsMenuOpen(false)}>Sign in</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link to="/signup" onClick={() => setIsMenuOpen(false)}>Sign up</Link>
-                  </Button>
-                </div>
+                <Link to="/exam-prep" className="transition-colors hover:text-foreground/80">
+                  Exam Prep
+                </Link>
               </>
             )}
           </nav>
         </div>
-      )}
+        
+        <div className="flex items-center gap-4">
+          {isLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+          ) : isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <User className="h-5 w-5" />
+                  <span className="sr-only">User menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {user?.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <Home className="mr-2 h-4 w-4" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/flashcards')}>
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Study Materials
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link to="/auth/login">Sign in</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/auth/register">Get Started</Link>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
     </header>
   );
 };

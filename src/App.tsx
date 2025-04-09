@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -32,7 +33,8 @@ import GamificationDashboard from './pages/dashboard/GamificationDashboard';
 import ProfilePage from './pages/user/ProfilePage';
 import SettingsPage from './pages/user/SettingsPage';
 import LoginPage from './pages/auth/LoginPage';
-import SignupPage from './pages/auth/SignupPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import AuthCallback from './pages/auth/AuthCallback';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -45,8 +47,11 @@ import SupportTickets from './pages/admin/SupportTickets';
 
 // Contexts
 import { ExamProvider } from './contexts/ExamContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/EnhancedAuthContext';
 import AIModelProvider from './contexts/AIModelContext';
+
+// Auth Components
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
@@ -67,35 +72,112 @@ function App() {
                     <Route path="/checkout" element={<CheckoutPage />} />
                     
                     {/* Auth Pages */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignupPage />} />
+                    <Route path="/auth/login" element={<LoginPage />} />
+                    <Route path="/auth/register" element={<RegisterPage />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     
-                    {/* User Dashboard */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/gamification" element={<GamificationDashboard />} />
+                    {/* Protected Routes */}
+                    <Route path="/dashboard" element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/gamification" element={
+                      <ProtectedRoute>
+                        <GamificationDashboard />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* Learning Pages */}
-                    <Route path="/exam-prep" element={<ExamPrepDashboard />} />
-                    <Route path="/flashcards" element={<FlashcardsPage />} />
-                    <Route path="/practice/listening" element={<ListeningPracticePage />} />
-                    <Route path="/practice/reading" element={<ReadingPracticePage />} />
-                    <Route path="/practice/writing" element={<WritingExercisePage />} />
-                    <Route path="/practice/speaking" element={<SpeakingPracticePage />} />
-                    <Route path="/mock-exam" element={<MockExamPage />} />
-                    <Route path="/study-plan" element={<StudyPlanPage />} />
+                    <Route path="/exam-prep" element={
+                      <ProtectedRoute>
+                        <ExamPrepDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/flashcards" element={
+                      <ProtectedRoute>
+                        <FlashcardsPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/practice/listening" element={
+                      <ProtectedRoute>
+                        <ListeningPracticePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/practice/reading" element={
+                      <ProtectedRoute>
+                        <ReadingPracticePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/practice/writing" element={
+                      <ProtectedRoute>
+                        <WritingExercisePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/practice/speaking" element={
+                      <ProtectedRoute>
+                        <SpeakingPracticePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/mock-exam" element={
+                      <ProtectedRoute>
+                        <MockExamPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/study-plan" element={
+                      <ProtectedRoute>
+                        <StudyPlanPage />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* User Pages */}
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings" element={
+                      <ProtectedRoute>
+                        <SettingsPage />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* Admin Pages */}
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/users" element={<UserManagement />} />
-                    <Route path="/admin/content" element={<ContentManagement />} />
-                    <Route path="/admin/ai" element={<AIConfigurator />} />
-                    <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
-                    <Route path="/admin/subscriptions" element={<SubscriptionManagement />} />
-                    <Route path="/admin/support" element={<SupportTickets />} />
+                    <Route path="/admin" element={
+                      <ProtectedRoute requireAdmin>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/users" element={
+                      <ProtectedRoute requireAdmin>
+                        <UserManagement />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/content" element={
+                      <ProtectedRoute requireAdmin>
+                        <ContentManagement />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/ai" element={
+                      <ProtectedRoute requireAdmin>
+                        <AIConfigurator />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/analytics" element={
+                      <ProtectedRoute requireAdmin>
+                        <AnalyticsDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/subscriptions" element={
+                      <ProtectedRoute requireAdmin>
+                        <SubscriptionManagement />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/support" element={
+                      <ProtectedRoute requireAdmin>
+                        <SupportTickets />
+                      </ProtectedRoute>
+                    } />
                   </Routes>
                 </main>
                 <Footer />

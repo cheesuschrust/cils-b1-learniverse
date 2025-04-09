@@ -1,39 +1,43 @@
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
   requireAdmin?: boolean;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requireAdmin = false 
 }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   
-  // While authentication is being checked, show a loading state
-  if (loading) {
+  // Check if user is an admin (simplified implementation)
+  // In a real app, you would fetch roles from the database
+  const isAdmin = user?.email?.includes('admin') || false;
+
+  if (isLoading) {
+    // Show loading indicator while checking auth status
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
-  
-  // If not authenticated, redirect to login
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    // Redirect to login if not authenticated
+    return <Navigate to="/auth/login" replace />;
   }
-  
-  // If admin access is required but user is not an admin
+
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" />;
+    // Redirect to dashboard if admin access is required but user is not an admin
+    return <Navigate to="/dashboard" replace />;
   }
-  
-  // If authenticated (and admin if required), render the children
+
+  // Render children if all conditions pass
   return <>{children}</>;
 };
 

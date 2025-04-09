@@ -1,223 +1,242 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft, ChevronRight, RotateCcw, Volume2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import FlashcardComponent from './FlashcardComponent';
+import { supabase } from '@/lib/supabase-client';
 import { useToast } from '@/hooks/use-toast';
 
-interface Flashcard {
-  id: string;
-  italian: string;
-  english: string;
-  example?: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
-}
+// Sample categories - in a full implementation, these would come from the database
+const categories = [
+  { id: 'vocabulary', name: 'Vocabulary', color: 'bg-blue-500' },
+  { id: 'grammar', name: 'Grammar', color: 'bg-green-500' },
+  { id: 'phrases', name: 'Common Phrases', color: 'bg-purple-500' },
+  { id: 'verbs', name: 'Verb Conjugation', color: 'bg-orange-500' },
+  { id: 'culture', name: 'Cultural Knowledge', color: 'bg-pink-500' },
+];
 
-const mockFlashcards: Flashcard[] = [
+// Sample flashcards - in a full implementation, these would come from the database
+const sampleFlashcards = [
   {
     id: '1',
-    italian: 'Buongiorno',
-    english: 'Good morning',
-    example: 'Buongiorno, come stai oggi?',
-    difficulty: 'beginner',
-    category: 'greetings'
+    category: 'vocabulary',
+    italian: 'la casa',
+    english: 'the house',
+    examples: ['Abito in una casa grande.'],
+    level: 1,
+    mastered: false,
   },
   {
     id: '2',
-    italian: 'Arrivederci',
-    english: 'Goodbye',
-    example: 'Arrivederci, a domani!',
-    difficulty: 'beginner',
-    category: 'greetings'
+    category: 'vocabulary',
+    italian: 'il cane',
+    english: 'the dog',
+    examples: ['Ho un cane nero.'],
+    level: 1,
+    mastered: false,
   },
   {
     id: '3',
-    italian: 'Per favore',
-    english: 'Please',
-    example: 'Per favore, mi passi il sale?',
-    difficulty: 'beginner',
-    category: 'common phrases'
+    category: 'grammar',
+    italian: 'Io sono',
+    english: 'I am',
+    examples: ['Io sono italiano.'],
+    level: 1,
+    mastered: false,
   },
   {
     id: '4',
-    italian: 'Cittadinanza',
-    english: 'Citizenship',
-    example: 'Ho ottenuto la cittadinanza italiana l\'anno scorso.',
-    difficulty: 'intermediate',
-    category: 'CILS B1'
+    category: 'phrases',
+    italian: 'Come stai?',
+    english: 'How are you?',
+    examples: ['Ciao, come stai oggi?'],
+    level: 1,
+    mastered: false,
   },
   {
     id: '5',
-    italian: 'Permesso di soggiorno',
-    english: 'Residence permit',
-    example: 'Devo rinnovare il mio permesso di soggiorno.',
-    difficulty: 'intermediate',
-    category: 'CILS B1'
-  }
+    category: 'verbs',
+    italian: 'parlare - io parlo',
+    english: 'to speak - I speak',
+    examples: ['Io parlo italiano.'],
+    level: 1,
+    mastered: false,
+  },
 ];
 
 const FlashcardModule: React.FC = () => {
-  const [cards, setCards] = useState<Flashcard[]>(mockFlashcards);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [filteredCards, setFilteredCards] = useState<Flashcard[]>(cards);
+  const [activeTab, setActiveTab] = useState('vocabulary');
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [userFlashcards, setUserFlashcards] = useState(sampleFlashcards);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
+  // Filter flashcards by active category
+  const filteredCards = userFlashcards.filter(card => card.category === activeTab);
+  const currentCard = filteredCards[currentCardIndex] || null;
+
   useEffect(() => {
-    if (selectedCategory === 'all') {
-      setFilteredCards(cards);
+    // Reset card index when changing tabs
+    setCurrentCardIndex(0);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+      if (!user) return;
+
+      try {
+        setIsLoading(true);
+        // In a real implementation, this would fetch from Supabase
+        // For now, we're using the sample data with a delay to simulate loading
+        setTimeout(() => {
+          setUserFlashcards(sampleFlashcards);
+          setIsLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error('Error fetching flashcards:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load flashcards',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
+    };
+
+    fetchFlashcards();
+  }, [user, toast]);
+
+  const handleNextCard = () => {
+    if (currentCardIndex < filteredCards.length - 1) {
+      setCurrentCardIndex(currentCardIndex + 1);
     } else {
-      setFilteredCards(cards.filter(card => card.category === selectedCategory));
+      // Cycle back to the first card
+      setCurrentCardIndex(0);
     }
-    setCurrentIndex(0);
-    setIsFlipped(false);
-  }, [selectedCategory, cards]);
+  };
 
-  const handleNext = () => {
-    if (currentIndex < filteredCards.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setIsFlipped(false);
+  const handlePrevCard = () => {
+    if (currentCardIndex > 0) {
+      setCurrentCardIndex(currentCardIndex - 1);
     } else {
-      toast({
-        title: "End of deck",
-        description: "You've reached the end of this flashcard deck.",
-      });
+      // Cycle to the last card
+      setCurrentCardIndex(filteredCards.length - 1);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-      setIsFlipped(false);
-    }
+  const handleRating = async (rating: number) => {
+    // In a real implementation, this would update the rating in Supabase
+    console.log(`Rating card ${currentCard?.id} with ${rating}`);
+    
+    // For now, just move to the next card
+    handleNextCard();
   };
 
-  const handleFlip = () => {
-    setIsFlipped(!isFlipped);
+  const handleSkip = () => {
+    handleNextCard();
   };
 
-  const handleSpeakText = () => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(
-        filteredCards[currentIndex]?.italian
-      );
-      utterance.lang = 'it-IT';
-      window.speechSynthesis.speak(utterance);
-    } else {
-      toast({
-        title: "Not supported",
-        description: "Text-to-speech is not supported in your browser.",
-        variant: "destructive"
-      });
-    }
+  const handleMarkAsMastered = async () => {
+    if (!currentCard) return;
+    
+    // In a real implementation, this would update mastery status in Supabase
+    const updatedFlashcards = userFlashcards.map(card => {
+      if (card.id === currentCard.id) {
+        return { ...card, mastered: !card.mastered };
+      }
+      return card;
+    });
+    
+    setUserFlashcards(updatedFlashcards);
   };
-
-  const categories = ['all', ...Array.from(new Set(cards.map(card => card.category)))];
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="mb-4 overflow-auto">
-          {categories.map(category => (
-            <TabsTrigger 
-              key={category} 
-              value={category}
-              onClick={() => setSelectedCategory(category)}
-              className="capitalize"
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <TabsList className="bg-muted/50 overflow-x-auto max-w-full flex-grow">
+            {categories.map(category => (
+              <TabsTrigger 
+                key={category.id} 
+                value={category.id}
+                className="min-w-[110px]"
+              >
+                {category.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="whitespace-nowrap">
+              {filteredCards.length} cards
+            </Badge>
+            
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleMarkAsMastered}
+              disabled={!currentCard}
             >
-              {category}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {filteredCards.length > 0 ? (
-        <div className="space-y-6">
-          <div className="perspective w-full">
-            <Card 
-              className={`transition-all duration-500 ${isFlipped ? 'rotate-y-180' : ''}`}
-              onClick={handleFlip}
-            >
-              <div className="backface-hidden w-full">
-                <CardContent className="p-6 text-center min-h-[200px] flex flex-col justify-center items-center">
-                  <h3 className="text-2xl font-semibold mb-2">
-                    {filteredCards[currentIndex]?.italian}
-                  </h3>
-                  {!isFlipped && filteredCards[currentIndex]?.example && (
-                    <p className="text-muted-foreground italic">
-                      {filteredCards[currentIndex]?.example}
-                    </p>
-                  )}
-                </CardContent>
-              </div>
+              {currentCard?.mastered ? 'Unmark as Mastered' : 'Mark as Mastered'}
+            </Button>
+          </div>
+        </div>
+        
+        {categories.map(category => (
+          <TabsContent key={category.id} value={category.id} className="mt-0">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>{category.name} Flashcards</CardTitle>
+                <CardDescription>
+                  Practice your Italian {category.name.toLowerCase()} skills
+                </CardDescription>
+              </CardHeader>
               
-              <div className="absolute inset-0 backface-hidden rotate-y-180">
-                <CardContent className="p-6 text-center min-h-[200px] flex flex-col justify-center items-center">
-                  <h3 className="text-2xl font-semibold mb-2">
-                    {filteredCards[currentIndex]?.english}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Tap card to flip back
-                  </p>
-                </CardContent>
-              </div>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : filteredCards.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No flashcards available for this category.</p>
+                    <Button className="mt-4" variant="outline">
+                      Add New Flashcard
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between mb-4">
+                      <Button onClick={handlePrevCard} variant="outline" size="sm">
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground pt-1">
+                        {currentCardIndex + 1} of {filteredCards.length}
+                      </span>
+                      <Button onClick={handleNextCard} variant="outline" size="sm">
+                        Next
+                      </Button>
+                    </div>
+                    
+                    {currentCard && (
+                      <FlashcardComponent
+                        card={currentCard}
+                        onRating={handleRating}
+                        onSkip={handleSkip}
+                        showPronunciation={true}
+                      />
+                    )}
+                  </>
+                )}
+              </CardContent>
             </Card>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleNext}
-                disabled={currentIndex === filteredCards.length - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              {currentIndex + 1} of {filteredCards.length}
-            </p>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleSpeakText}
-                title="Speak Italian text"
-              >
-                <Volume2 className="h-4 w-4" />
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleFlip}
-                title="Flip card"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No flashcards available in this category.</p>
-        </div>
-      )}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
