@@ -15,3 +15,32 @@ interface NodeModule {
     dispose(callback: (data: any) => void): void;
   };
 }
+
+// Additional compatibility declarations
+declare namespace NodeJS {
+  interface ProcessEnv {
+    NODE_ENV: 'development' | 'production' | 'test';
+    VITE_SUPABASE_URL?: string;
+    VITE_SUPABASE_ANON_KEY?: string;
+    [key: string]: string | undefined;
+  }
+}
+
+// Allow importing environment variables
+declare interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
+  [key: string]: string | undefined;
+}
+
+declare interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
+// This helps resolve the module resolution issue
+declare module '*.svg' {
+  import React = require('react');
+  export const ReactComponent: React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
+  const src: string;
+  export default src;
+}

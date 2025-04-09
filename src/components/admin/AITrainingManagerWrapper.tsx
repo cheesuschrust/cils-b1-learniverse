@@ -1,93 +1,76 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { AIStatus } from '@/components/ai/AIStatus';
-import { ModelPerformanceChart } from '@/components/admin/ModelPerformanceChart';
-import { AIModelSelector } from '@/components/admin/AIModelSelector';
-import { TrainingDataTable } from '@/components/admin/TrainingDataTable';
+import { BrainCircuit, Database, Volume2, Sliders } from 'lucide-react';
+
+import AIModelSelector from '@/components/ai/AIModelSelector';
+import VoiceSystemManager from '@/components/ai/VoiceSystemManager';
+import TrainingDataManager from '@/components/ai/TrainingDataManager';
 
 const AITrainingManagerWrapper: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">AI Training Management</h2>
-        <Badge variant="outline" className="ml-2">Admin Only</Badge>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">AI Training Management</h2>
+          <p className="text-muted-foreground">Configure, optimize and manage AI models and training data</p>
+        </div>
+        <Badge variant="outline" className="ml-auto">
+          Admin Access
+        </Badge>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <AIStatus />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Model Performance</CardTitle>
-            <CardDescription>
-              Current model accuracy and confidence metrics
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ModelPerformanceChart />
-          </CardContent>
-        </Card>
-        <AIModelSelector />
-      </div>
-      
-      <Tabs defaultValue="training-data" className="w-full">
-        <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="training-data">Training Data</TabsTrigger>
-          <TabsTrigger value="model-versions">Model Versions</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="configuration">Configuration</TabsTrigger>
+      <Tabs defaultValue="models" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="models" className="flex items-center">
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            AI Models
+          </TabsTrigger>
+          <TabsTrigger value="voice" className="flex items-center">
+            <Volume2 className="mr-2 h-4 w-4" />
+            Voice System
+          </TabsTrigger>
+          <TabsTrigger value="training" className="flex items-center">
+            <Database className="mr-2 h-4 w-4" />
+            Training Data
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center">
+            <Sliders className="mr-2 h-4 w-4" />
+            Advanced Settings
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="training-data" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Training Data Management</CardTitle>
-              <CardDescription>
-                Review and manage data used for model training
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TrainingDataTable />
-            </CardContent>
-          </Card>
+        
+        <TabsContent value="models">
+          <AIModelSelector />
         </TabsContent>
-        <TabsContent value="model-versions" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Model Version History</CardTitle>
-              <CardDescription>
-                Compare performance across model versions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Model version comparison will be displayed here.</p>
-            </CardContent>
-          </Card>
+        
+        <TabsContent value="voice">
+          <VoiceSystemManager />
         </TabsContent>
-        <TabsContent value="performance" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Analytics</CardTitle>
-              <CardDescription>
-                Detailed performance metrics for AI models
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Performance analytics will be displayed here.</p>
-            </CardContent>
-          </Card>
+        
+        <TabsContent value="training">
+          <TrainingDataManager />
         </TabsContent>
-        <TabsContent value="configuration" className="mt-6">
+        
+        <TabsContent value="settings">
           <Card>
             <CardHeader>
-              <CardTitle>Configuration</CardTitle>
+              <CardTitle>Advanced AI Settings</CardTitle>
               <CardDescription>
-                Configure model parameters and thresholds
+                Configure system-wide AI settings and performance optimizations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Configuration options will be displayed here.</p>
+              <div className="p-12 text-center">
+                <BrainCircuit className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
+                <h3 className="text-lg font-medium mb-2">Advanced Settings Coming Soon</h3>
+                <p className="text-muted-foreground mb-4">
+                  We're working on advanced AI configuration options for system administrators.
+                  Check back in the next update.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
