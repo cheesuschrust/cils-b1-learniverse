@@ -1,377 +1,299 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
-interface Question {
-  id: string;
+const SAMPLE_AUDIOS = [
+  {
+    id: 1,
+    title: "Introducing Yourself",
+    level: "A2-B1",
+    duration: "1:30",
+    url: "https://example.com/sample1.mp3",
+    transcript: "Ciao! Mi chiamo Marco e sono di Milano. Ho trent'anni e lavoro come ingegnere. Nel tempo libero mi piace leggere e andare in bicicletta. E tu, come ti chiami? Di dove sei?"
+  },
+  {
+    id: 2,
+    title: "At the Restaurant",
+    level: "B1",
+    duration: "2:15",
+    url: "https://example.com/sample2.mp3",
+    transcript: "Buonasera, vorrei prenotare un tavolo per due persone per domani sera alle otto, è possibile? Preferirei un tavolo vicino alla finestra, se disponibile. Grazie mille."
+  },
+  {
+    id: 3,
+    title: "Daily Routine",
+    level: "B1",
+    duration: "1:45",
+    url: "https://example.com/sample3.mp3",
+    transcript: "Di solito mi sveglio alle sette del mattino. Faccio colazione, mi vesto e vado al lavoro in autobus. Lavoro fino alle cinque del pomeriggio, poi torno a casa. La sera guardo la TV o leggo un libro."
+  }
+];
+
+type Question = {
+  id: number;
   text: string;
   options: string[];
   correctAnswer: string;
-}
+};
 
-interface ListeningExercise {
-  id: string;
-  title: string;
-  audioUrl: string;
-  transcript: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  questions: Question[];
-  category: string;
-}
-
-// Sample data - in a real app, this would come from Supabase
-const sampleExercise: ListeningExercise = {
-  id: "1",
-  title: "At the Italian Market",
-  audioUrl: "https://example.com/audio/italian-market.mp3", // This would be a real URL in production
-  transcript: "Buongiorno, vorrei due etti di parmigiano. Quanto costa al chilo? Venti euro al chilo. Va bene, prendo anche mezzo chilo di prosciutto crudo e un po' di olive nere.",
-  difficulty: "intermediate",
-  category: "Shopping",
-  questions: [
+const SAMPLE_QUESTIONS: Record<number, Question[]> = {
+  1: [
     {
-      id: "q1",
-      text: "Cosa vuole comprare la persona?",
-      options: [
-        "Due etti di mozzarella",
-        "Due etti di parmigiano",
-        "Due chili di parmigiano",
-        "Due pacchi di pasta"
-      ],
-      correctAnswer: "Due etti di parmigiano"
+      id: 1,
+      text: "Come si chiama la persona che parla?",
+      options: ["Paolo", "Marco", "Luca", "Gianni"],
+      correctAnswer: "Marco"
     },
     {
-      id: "q2",
-      text: "Quanto costa il parmigiano al chilo?",
-      options: [
-        "Dieci euro",
-        "Quindici euro",
-        "Venti euro",
-        "Venticinque euro"
-      ],
-      correctAnswer: "Venti euro"
+      id: 2,
+      text: "Quanti anni ha?",
+      options: ["Venti", "Venticinque", "Trenta", "Quaranta"],
+      correctAnswer: "Trenta"
     },
     {
-      id: "q3",
-      text: "Cosa compra in più la persona?",
-      options: [
-        "Prosciutto cotto e olive verdi",
-        "Prosciutto crudo e olive nere",
-        "Prosciutto crudo e pomodori",
-        "Pane e olive nere"
-      ],
-      correctAnswer: "Prosciutto crudo e olive nere"
+      id: 3,
+      text: "Che lavoro fa?",
+      options: ["Medico", "Insegnante", "Ingegnere", "Avvocato"],
+      correctAnswer: "Ingegnere"
+    }
+  ],
+  2: [
+    {
+      id: 1,
+      text: "Per quante persone si vuole prenotare un tavolo?",
+      options: ["Una", "Due", "Tre", "Quattro"],
+      correctAnswer: "Due"
+    },
+    {
+      id: 2,
+      text: "Per quando si vuole prenotare?",
+      options: ["Oggi a pranzo", "Oggi a cena", "Domani a pranzo", "Domani a cena"],
+      correctAnswer: "Domani a cena"
+    },
+    {
+      id: 3,
+      text: "Dove vorrebbe sedersi la persona?",
+      options: ["Vicino alla porta", "Vicino alla finestra", "In terrazza", "In centro"],
+      correctAnswer: "Vicino alla finestra"
+    }
+  ],
+  3: [
+    {
+      id: 1,
+      text: "A che ora si sveglia la persona?",
+      options: ["Alle sei", "Alle sette", "Alle otto", "Alle nove"],
+      correctAnswer: "Alle sette"
+    },
+    {
+      id: 2,
+      text: "Come va al lavoro?",
+      options: ["In macchina", "In treno", "In autobus", "A piedi"],
+      correctAnswer: "In autobus"
+    },
+    {
+      id: 3,
+      text: "Cosa fa la sera?",
+      options: ["Esce con gli amici", "Guarda la TV o legge", "Studia", "Va in palestra"],
+      correctAnswer: "Guarda la TV o legge"
     }
   ]
 };
 
 const ListeningModule: React.FC = () => {
-  const [currentExercise, setCurrentExercise] = useState<ListeningExercise>(sampleExercise);
+  const [selectedAudio, setSelectedAudio] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Initialize audio element
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('durationchange', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('durationchange', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Update audio element when isPlaying changes
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.play().catch(error => {
-        console.error("Error playing audio:", error);
-        toast({
-          title: "Playback Error",
-          description: "Could not play the audio. Please try again.",
-          variant: "destructive"
-        });
-        setIsPlaying(false);
-      });
-    } else {
-      audio.pause();
-    }
-  }, [isPlaying, toast]);
-
-  useEffect(() => {
-    // Update volume
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    audio.volume = isMuted ? 0 : volume;
-  }, [volume, isMuted]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  const handleAudioSelect = (audioId: number) => {
+    setSelectedAudio(audioId);
+    setShowTranscript(false);
+    setUserAnswers({});
+    setHasSubmitted(false);
   };
 
-  const handlePlayPause = () => {
+  const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
+    // In a real implementation, this would control the audio playback
   };
 
-  const handleRewind = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 5);
-    }
-  };
-
-  const handleForward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 5);
-    }
-  };
-
-  const handleVolumeToggle = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
+  const handleAnswerSelect = (questionId: number, answer: string) => {
+    if (hasSubmitted) return;
     
-    if (audioRef.current) {
-      audioRef.current.currentTime = pos * duration;
-    }
-  };
-
-  const handleAnswerSelect = (questionId: string, answer: string) => {
-    if (isSubmitted) return;
-    
-    setSelectedAnswers(prev => ({
+    setUserAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }));
   };
 
   const handleSubmit = () => {
-    if (isSubmitted) return;
+    if (!selectedAudio) return;
     
-    let correctCount = 0;
-    currentExercise.questions.forEach(question => {
-      if (selectedAnswers[question.id] === question.correctAnswer) {
-        correctCount++;
-      }
-    });
+    const questions = SAMPLE_QUESTIONS[selectedAudio];
+    if (!questions) return;
     
-    const newScore = Math.round((correctCount / currentExercise.questions.length) * 100);
-    setScore(newScore);
-    setIsSubmitted(true);
+    // Check if all questions are answered
+    const allAnswered = questions.every(q => userAnswers[q.id] !== undefined);
+    
+    if (!allAnswered) {
+      toast({
+        title: "Please answer all questions",
+        description: "You need to answer all questions before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setHasSubmitted(true);
+    
+    // Calculate score
+    const correctAnswers = questions.filter(q => userAnswers[q.id] === q.correctAnswer);
+    const score = (correctAnswers.length / questions.length) * 100;
     
     toast({
-      title: "Exercise Completed!",
-      description: `Your score: ${newScore}%`,
-      variant: newScore >= 70 ? "default" : "destructive"
+      title: "Quiz Submitted",
+      description: `Your score: ${score.toFixed(0)}% (${correctAnswers.length}/${questions.length})`,
+      variant: score >= 70 ? "default" : "destructive"
     });
   };
 
-  const handleNext = () => {
-    // In a real app, this would load the next exercise
-    toast({
-      title: "Coming Soon",
-      description: "More listening exercises will be available soon!",
-    });
+  const resetExercise = () => {
+    setUserAnswers({});
+    setHasSubmitted(false);
+    setShowTranscript(false);
   };
-
-  const currentQuestion = currentExercise.questions[currentQuestionIndex];
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>{currentExercise.title}</CardTitle>
-              <CardDescription>
-                {currentExercise.category} - {currentExercise.difficulty.charAt(0).toUpperCase() + currentExercise.difficulty.slice(1)} Level
-              </CardDescription>
+    <div className="space-y-6">
+      <Tabs defaultValue="exercises" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="library">Audio Library</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="exercises" className="space-y-4 mt-4">
+          {!selectedAudio ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Select an audio from the Library tab to start a listening exercise.</p>
+              <Button onClick={() => document.querySelector('[value="library"]')?.dispatchEvent(new Event('click'))}>
+                Browse Audio Library
+              </Button>
             </div>
-            <Badge variant="outline" className="capitalize">
-              {currentExercise.difficulty}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Audio Player */}
-          <div className="bg-muted p-4 rounded-md">
-            <audio ref={audioRef} src={currentExercise.audioUrl} preload="metadata" />
-            
-            <div 
-              className="h-2 bg-secondary rounded-full overflow-hidden cursor-pointer mb-4"
-              onClick={handleProgressClick}
-            >
-              <div 
-                className="h-full bg-primary transition-all"
-                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-              />
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-muted-foreground">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="icon" onClick={handleRewind}>
-                  <SkipBack className="h-4 w-4" />
-                </Button>
-                
-                <Button variant="default" size="icon" onClick={handlePlayPause}>
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-                
-                <Button variant="outline" size="icon" onClick={handleForward}>
-                  <SkipForward className="h-4 w-4" />
-                </Button>
-                
-                <Button variant="ghost" size="icon" onClick={handleVolumeToggle}>
-                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                </Button>
-                
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={volume}
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-20"
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Transcript Toggle */}
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowTranscript(!showTranscript)}>
-              {showTranscript ? "Hide Transcript" : "Show Transcript"}
-            </Button>
-          </div>
-          
-          {/* Transcript */}
-          {showTranscript && (
-            <div className="bg-muted p-4 rounded-md">
-              <h3 className="font-medium mb-2">Transcript:</h3>
-              <p className="italic text-muted-foreground">{currentExercise.transcript}</p>
-            </div>
-          )}
-          
-          {/* Questions */}
-          <div className="pt-4 border-t">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Comprehension Questions</h3>
-              <div className="text-sm text-muted-foreground">
-                Question {currentQuestionIndex + 1} of {currentExercise.questions.length}
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-medium mb-3">{currentQuestion.text}</h4>
-                <div className="space-y-2">
-                  {currentQuestion.options.map((option, index) => (
-                    <div 
-                      key={index}
-                      className={`p-3 rounded-md border cursor-pointer transition-colors ${
-                        selectedAnswers[currentQuestion.id] === option 
-                          ? 'bg-primary/10 border-primary' 
-                          : 'hover:bg-muted'
-                      } ${
-                        isSubmitted && option === currentQuestion.correctAnswer
-                          ? 'bg-green-100 border-green-500'
-                          : isSubmitted && selectedAnswers[currentQuestion.id] === option && option !== currentQuestion.correctAnswer
-                            ? 'bg-red-100 border-red-500'
-                            : ''
-                      }`}
-                      onClick={() => handleAnswerSelect(currentQuestion.id, option)}
-                    >
-                      {option}
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>{SAMPLE_AUDIOS.find(a => a.id === selectedAudio)?.title}</CardTitle>
+                  <CardDescription>
+                    Level: {SAMPLE_AUDIOS.find(a => a.id === selectedAudio)?.level} | 
+                    Duration: {SAMPLE_AUDIOS.find(a => a.id === selectedAudio)?.duration}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-6 flex justify-center items-center space-x-4">
+                    <Button onClick={togglePlayPause} variant="outline">
+                      {isPlaying ? "Pause" : "Play"}
+                    </Button>
+                    <Button onClick={() => setShowTranscript(!showTranscript)} variant="outline">
+                      {showTranscript ? "Hide Transcript" : "Show Transcript"}
+                    </Button>
+                  </div>
+                  
+                  {showTranscript && (
+                    <div className="bg-muted p-4 rounded-md mb-6">
+                      <p className="italic text-muted-foreground">
+                        {SAMPLE_AUDIOS.find(a => a.id === selectedAudio)?.transcript}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  Previous Question
-                </Button>
-                
-                {currentQuestionIndex < currentExercise.questions.length - 1 ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentQuestionIndex(prev => Math.min(currentExercise.questions.length - 1, prev + 1))}
+                  )}
+                  
+                  <div className="space-y-6">
+                    {SAMPLE_QUESTIONS[selectedAudio]?.map((question) => (
+                      <div key={question.id} className="space-y-2">
+                        <h3 className="font-medium">{question.text}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {question.options.map((option) => (
+                            <Button 
+                              key={option} 
+                              variant={userAnswers[question.id] === option 
+                                ? (hasSubmitted 
+                                  ? (option === question.correctAnswer ? "default" : "destructive")
+                                  : "default") 
+                                : (hasSubmitted && option === question.correctAnswer
+                                  ? "outline"
+                                  : "outline")}
+                              className={hasSubmitted && option === question.correctAnswer ? "border-green-500" : ""}
+                              onClick={() => handleAnswerSelect(question.id, option)}
+                            >
+                              {option}
+                            </Button>
+                          ))}
+                        </div>
+                        {hasSubmitted && userAnswers[question.id] !== question.correctAnswer && (
+                          <p className="text-sm text-red-500">
+                            Correct answer: {question.correctAnswer}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6 flex justify-end space-x-2">
+                    <Button onClick={resetExercise} variant="outline">
+                      Reset
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={hasSubmitted}>
+                      Submit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="library" className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {SAMPLE_AUDIOS.map((audio) => (
+              <Card 
+                key={audio.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${selectedAudio === audio.id ? 'border-primary' : ''}`}
+                onClick={() => handleAudioSelect(audio.id)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{audio.title}</CardTitle>
+                  <CardDescription>
+                    Level: {audio.level} | Duration: {audio.duration}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {audio.transcript.substring(0, 80)}...
+                  </p>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto mt-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAudioSelect(audio.id);
+                      setTimeout(() => {
+                        document.querySelector('[value="exercises"]')?.dispatchEvent(new Event('click'));
+                      }, 100);
+                    }}
                   >
-                    Next Question
+                    Start Exercise
                   </Button>
-                ) : (
-                  !isSubmitted ? (
-                    <Button 
-                      variant="default" 
-                      onClick={handleSubmit}
-                      disabled={Object.keys(selectedAnswers).length !== currentExercise.questions.length}
-                    >
-                      Submit Answers
-                    </Button>
-                  ) : (
-                    <Button variant="default" onClick={handleNext}>
-                      Next Exercise
-                    </Button>
-                  )
-                )}
-              </div>
-            </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-        {isSubmitted && (
-          <CardFooter className="border-t pt-4">
-            <div className="w-full space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Your Score:</span>
-                <span className={`font-bold ${score >= 70 ? 'text-green-600' : 'text-red-600'}`}>{score}%</span>
-              </div>
-              <Progress value={score} className="h-2" />
-            </div>
-          </CardFooter>
-        )}
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

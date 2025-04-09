@@ -1,353 +1,358 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, CornerDownRight, Check, X } from 'lucide-react';
 
-interface Question {
-  id: string;
+const SAMPLE_TEXTS = [
+  {
+    id: 1,
+    title: "La vita in città",
+    level: "B1",
+    content: `Vivere in una grande città italiana offre molti vantaggi. Innanzitutto, ci sono numerosi mezzi di trasporto pubblico: autobus, tram e metropolitana rendono facile spostarsi senza automobile. Inoltre, le città italiane sono ricche di storia e cultura, con musei, monumenti e eventi culturali disponibili tutto l'anno.
+
+Naturalmente, la vita urbana presenta anche alcuni svantaggi. Il costo della vita è generalmente più alto, specialmente per quanto riguarda gli affitti. Il traffico può essere intenso nelle ore di punta e l'inquinamento è un problema in molte grandi città.
+
+Nonostante questi aspetti negativi, molti italiani preferiscono vivere in città per le opportunità lavorative e la vita sociale più vivace. I giovani, in particolare, sono attratti dalla varietà di attività e dalla possibilità di incontrare persone con interessi simili.`
+  },
+  {
+    id: 2,
+    title: "Le tradizioni gastronomiche italiane",
+    level: "B1",
+    content: `La cucina italiana è famosa in tutto il mondo per la sua varietà e qualità. Ogni regione d'Italia ha le proprie specialità e tradizioni culinarie uniche.
+
+Al nord, in Lombardia e Piemonte, sono popolari piatti ricchi come il risotto e la polenta. In Emilia-Romagna troviamo la pasta fresca, come le tagliatelle e i tortellini, spesso servita con ragù.
+
+Nel centro Italia, la Toscana è conosciuta per piatti semplici ma saporiti, come la ribollita e la bistecca alla fiorentina. A Roma sono famosi i piatti come la carbonara e l'amatriciana.
+
+Al sud, la Campania ha dato al mondo la pizza e la mozzarella di bufala. In Sicilia, i dolci come il cannolo e la cassata sono irresistibili.
+
+Queste diverse tradizioni riflettono la storia e la geografia di ogni regione, creando una ricchezza gastronomica unica nel suo genere.`
+  },
+  {
+    id: 3,
+    title: "Il sistema scolastico italiano",
+    level: "B1",
+    content: `Il sistema scolastico italiano è organizzato in diversi livelli. I bambini iniziano con la scuola dell'infanzia (asilo) dai 3 ai 6 anni, che non è obbligatoria ma frequentata dalla maggior parte dei bambini.
+
+L'istruzione obbligatoria inizia con la scuola primaria (elementare) a 6 anni e dura cinque anni. Segue la scuola secondaria di primo grado (media), che dura tre anni.
+
+Dopo le medie, gli studenti scelgono tra diversi tipi di scuola secondaria di secondo grado: licei (classico, scientifico, linguistico, artistico), istituti tecnici o professionali. Questi percorsi durano cinque anni e terminano con l'esame di maturità.
+
+L'anno scolastico inizia a settembre e finisce a giugno, con pause per le vacanze di Natale, Pasqua e altre festività nazionali. Le lezioni si svolgono generalmente dal lunedì al sabato mattina.
+
+Dopo la maturità, gli studenti possono accedere all'università, che offre corsi di laurea (3 anni), laurea magistrale (2 anni aggiuntivi) e dottorati di ricerca.`
+  }
+];
+
+type Question = {
+  id: number;
   text: string;
-  options: string[];
+  options?: string[];
   correctAnswer: string;
-}
+  type: 'multiple' | 'text';
+};
 
-interface ReadingExercise {
-  id: string;
-  title: string;
-  content: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
-  questions: Question[];
-  vocabulary?: {
-    word: string;
-    definition: string;
-    example?: string;
-  }[];
-}
-
-// Sample data - in a real app, this would come from Supabase
-const sampleExercise: ReadingExercise = {
-  id: "1",
-  title: "La Vita in Italia",
-  content: `L'Italia è un paese con una ricca storia e cultura. Situata nel cuore del Mediterraneo, l'Italia ha influenzato profondamente la civiltà occidentale. La sua capitale, Roma, è stata il centro dell'Impero Romano, uno dei più grandi imperi del mondo antico.
-
-Gli italiani sono noti per il loro amore per il buon cibo, l'arte, la famiglia e la socialità. La cucina italiana è famosa in tutto il mondo, con piatti come la pasta, la pizza e il gelato che sono diventati popolari a livello internazionale.
-
-L'Italia è anche conosciuta per i suoi numerosi siti storici e artistici. Il Colosseo a Roma, la Torre di Pisa e il Duomo di Milano sono solo alcuni dei monumenti più famosi. Inoltre, l'Italia è la patria di artisti leggendari come Leonardo da Vinci, Michelangelo e Raffaello.
-
-Oggi, l'Italia è una repubblica democratica e membro dell'Unione Europea. Nonostante le sfide economiche, il paese mantiene un alto standard di vita e continua ad essere una meta turistica molto popolare.`,
-  difficulty: "intermediate",
-  category: "Culture",
-  questions: [
+const SAMPLE_QUESTIONS: Record<number, Question[]> = {
+  1: [
     {
-      id: "q1",
-      text: "Qual è la capitale dell'Italia?",
-      options: ["Milano", "Firenze", "Roma", "Venezia"],
-      correctAnswer: "Roma"
+      id: 1,
+      text: "Quali mezzi di trasporto sono menzionati nel testo?",
+      options: ["Treno, taxi e metropolitana", "Autobus, tram e metropolitana", "Autobus, bicicletta e taxi", "Tram, taxi e treno"],
+      correctAnswer: "Autobus, tram e metropolitana",
+      type: 'multiple'
     },
     {
-      id: "q2",
-      text: "Per cosa sono conosciuti gli italiani secondo il testo?",
-      options: [
-        "Solo per la loro cucina",
-        "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità",
-        "Per la loro influenza politica nel Mediterraneo",
-        "Per i loro monumenti"
-      ],
-      correctAnswer: "Per il loro amore per il buon cibo, l'arte, la famiglia e la socialità"
+      id: 2,
+      text: "Qual è uno svantaggio della vita in città menzionato nel testo?",
+      options: ["La mancanza di eventi culturali", "Il costo della vita più alto", "La scarsità di mezzi di trasporto", "La mancanza di opportunità lavorative"],
+      correctAnswer: "Il costo della vita più alto",
+      type: 'multiple'
     },
     {
-      id: "q3",
-      text: "Quale dei seguenti NON è menzionato come un famoso artista italiano?",
-      options: ["Leonardo da Vinci", "Michelangelo", "Raffaello", "Donatello"],
-      correctAnswer: "Donatello"
-    },
-    {
-      id: "q4",
-      text: "Cosa è l'Italia oggi secondo il testo?",
-      options: [
-        "Una monarchia costituzionale",
-        "Un impero",
-        "Una repubblica democratica e membro dell'UE",
-        "Un paese sottosviluppato"
-      ],
-      correctAnswer: "Una repubblica democratica e membro dell'UE"
+      id: 3,
+      text: "Secondo il testo, perché i giovani sono attratti dalla vita in città?",
+      type: 'text',
+      correctAnswer: "Per le opportunità lavorative e la vita sociale più vivace"
     }
   ],
-  vocabulary: [
+  2: [
     {
-      word: "ricca",
-      definition: "wealthy, rich",
-      example: "Una famiglia ricca = A wealthy family"
+      id: 1,
+      text: "Quali piatti sono tipici del nord Italia secondo il testo?",
+      options: ["Pizza e pasta", "Risotto e polenta", "Carbonara e amatriciana", "Cannolo e cassata"],
+      correctAnswer: "Risotto e polenta",
+      type: 'multiple'
     },
     {
-      word: "situata",
-      definition: "located, situated",
-      example: "La casa è situata vicino al mare = The house is located near the sea"
+      id: 2,
+      text: "Da quale regione proviene la pizza secondo il testo?",
+      options: ["Toscana", "Sicilia", "Campania", "Emilia-Romagna"],
+      correctAnswer: "Campania",
+      type: 'multiple'
     },
     {
-      word: "influenzato",
-      definition: "influenced",
-      example: "Il suo stile è influenzato dall'arte classica = His style is influenced by classical art"
+      id: 3,
+      text: "Completa la frase: 'Queste diverse tradizioni riflettono la _____ e la _____ di ogni regione.'",
+      type: 'text',
+      correctAnswer: "storia e la geografia"
+    }
+  ],
+  3: [
+    {
+      id: 1,
+      text: "Qual è l'età in cui i bambini iniziano la scuola primaria in Italia?",
+      options: ["3 anni", "5 anni", "6 anni", "7 anni"],
+      correctAnswer: "6 anni",
+      type: 'multiple'
     },
     {
-      word: "sfide",
-      definition: "challenges",
-      example: "Affronta molte sfide nel suo lavoro = He faces many challenges in his job"
+      id: 2,
+      text: "Qual è la durata della scuola secondaria di primo grado (media)?",
+      options: ["3 anni", "5 anni", "8 anni", "13 anni"],
+      correctAnswer: "3 anni",
+      type: 'multiple'
+    },
+    {
+      id: 3,
+      text: "Quando finisce l'anno scolastico in Italia?",
+      type: 'text',
+      correctAnswer: "giugno"
     }
   ]
 };
 
 const ReadingModule: React.FC = () => {
-  const [currentExercise, setCurrentExercise] = useState<ReadingExercise>(sampleExercise);
-  const [showQuestions, setShowQuestions] = useState(false);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [highlightedWord, setHighlightedWord] = useState<string | null>(null);
-  
+  const [selectedText, setSelectedText] = useState<number | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
-  const handleStartQuiz = () => {
-    setShowQuestions(true);
+  const handleTextSelect = (textId: number) => {
+    setSelectedText(textId);
+    setUserAnswers({});
+    setHasSubmitted(false);
   };
 
-  const handleAnswerSelect = (questionId: string, answer: string) => {
-    if (isSubmitted) return;
+  const handleAnswerSelect = (questionId: number, answer: string) => {
+    if (hasSubmitted) return;
     
-    setSelectedAnswers(prev => ({
+    setUserAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }));
   };
 
   const handleSubmit = () => {
-    if (isSubmitted) return;
+    if (!selectedText) return;
     
-    let correctCount = 0;
-    currentExercise.questions.forEach(question => {
-      if (selectedAnswers[question.id] === question.correctAnswer) {
-        correctCount++;
-      }
-    });
+    const questions = SAMPLE_QUESTIONS[selectedText];
+    if (!questions) return;
     
-    const newScore = Math.round((correctCount / currentExercise.questions.length) * 100);
-    setScore(newScore);
-    setIsSubmitted(true);
+    // Check if all questions are answered
+    const allAnswered = questions.every(q => userAnswers[q.id] !== undefined);
     
-    toast({
-      title: "Reading Comprehension Completed!",
-      description: `Your score: ${newScore}%`,
-      variant: newScore >= 70 ? "default" : "destructive"
-    });
-  };
-
-  const handleWordClick = (word: string) => {
-    // Strip punctuation from the clicked word
-    const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
-    
-    // Find the vocabulary item for this word if it exists
-    const vocabularyItem = currentExercise.vocabulary?.find(
-      item => item.word.toLowerCase() === cleanWord
-    );
-    
-    if (vocabularyItem) {
-      setHighlightedWord(vocabularyItem.word);
-    } else {
-      setHighlightedWord(null);
-    }
-  };
-
-  const handleNext = () => {
-    // In a real app, this would load the next exercise
-    toast({
-      title: "Coming Soon",
-      description: "More reading exercises will be available soon!",
-    });
-  };
-
-  // Process the text to make words clickable
-  const processText = () => {
-    const paragraphs = currentExercise.content.split('\n\n');
-    
-    return paragraphs.map((paragraph, pIndex) => {
-      const words = paragraph.split(' ');
-      
-      const processedWords = words.map((word, wIndex) => {
-        // Check if this word (without punctuation) is in our vocabulary list
-        const cleanWord = word.replace(/[.,;!?()"']/g, '').toLowerCase();
-        const isVocabWord = currentExercise.vocabulary?.some(
-          item => item.word.toLowerCase() === cleanWord
-        );
-        
-        return (
-          <span 
-            key={`${pIndex}-${wIndex}`}
-            className={`${isVocabWord ? 'cursor-pointer hover:text-primary underline decoration-dotted underline-offset-4' : ''}`}
-            onClick={() => isVocabWord && handleWordClick(cleanWord)}
-          >
-            {word}{' '}
-          </span>
-        );
+    if (!allAnswered) {
+      toast({
+        title: "Please answer all questions",
+        description: "You need to answer all questions before submitting.",
+        variant: "destructive"
       });
+      return;
+    }
+    
+    setHasSubmitted(true);
+    
+    // Calculate score
+    const correctAnswers = questions.filter(q => {
+      const userAnswer = userAnswers[q.id]?.trim().toLowerCase();
+      const correctAnswer = q.correctAnswer.toLowerCase();
       
-      return (
-        <p key={pIndex} className="mb-4">
-          {processedWords}
-        </p>
-      );
+      // For text inputs, check if answer contains key words
+      if (q.type === 'text') {
+        return correctAnswer.split(' ').some(word => 
+          word.length > 3 && userAnswer.includes(word.toLowerCase())
+        );
+      }
+      
+      return userAnswer === correctAnswer;
+    });
+    
+    const score = (correctAnswers.length / questions.length) * 100;
+    
+    toast({
+      title: "Quiz Submitted",
+      description: `Your score: ${score.toFixed(0)}% (${correctAnswers.length}/${questions.length})`,
+      variant: score >= 70 ? "default" : "destructive"
     });
   };
 
-  const VocabularyDefinition = () => {
-    if (!highlightedWord) return null;
-    
-    const vocab = currentExercise.vocabulary?.find(
-      item => item.word.toLowerCase() === highlightedWord.toLowerCase()
-    );
-    
-    if (!vocab) return null;
-    
-    return (
-      <div className="bg-primary/10 p-4 rounded-md border border-primary/20 mt-4">
-        <div className="flex items-start space-x-2">
-          <CornerDownRight className="h-5 w-5 text-primary mt-1" />
-          <div>
-            <h4 className="font-medium text-primary">{vocab.word}</h4>
-            <p className="text-sm">{vocab.definition}</p>
-            {vocab.example && (
-              <p className="text-xs text-muted-foreground mt-1 italic">{vocab.example}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const resetExercise = () => {
+    setUserAnswers({});
+    setHasSubmitted(false);
   };
+
+  const filteredTexts = SAMPLE_TEXTS.filter(text => 
+    searchQuery === '' || 
+    text.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    text.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>{currentExercise.title}</CardTitle>
-              <CardDescription>
-                {currentExercise.category} - {currentExercise.difficulty.charAt(0).toUpperCase() + currentExercise.difficulty.slice(1)} Level
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="capitalize">
-              {currentExercise.difficulty}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {!showQuestions ? (
-            <div className="space-y-4">
-              <div className="bg-muted p-6 rounded-md">
-                <div className="prose prose-sm max-w-none">
-                  {processText()}
-                </div>
-                
-                {VocabularyDefinition()}
-                
-                <div className="flex justify-center mt-6">
-                  <Button onClick={handleStartQuiz} className="mt-4">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Start Comprehension Questions
-                  </Button>
-                </div>
-              </div>
-              
-              {currentExercise.vocabulary && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium mb-2">Vocabulary Help</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Click on the underlined words in the text to see their definitions.
-                  </p>
-                </div>
-              )}
+    <div className="space-y-6">
+      <Tabs defaultValue="exercises" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="library">Reading Library</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="exercises" className="space-y-4 mt-4">
+          {!selectedText ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Select a text from the Library tab to start a reading exercise.</p>
+              <Button onClick={() => document.querySelector('[value="library"]')?.dispatchEvent(new Event('click'))}>
+                Browse Reading Library
+              </Button>
             </div>
           ) : (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Comprehension Questions</h3>
+              <Card>
+                <CardHeader>
+                  <CardTitle>{SAMPLE_TEXTS.find(t => t.id === selectedText)?.title}</CardTitle>
+                  <CardDescription>
+                    Level: {SAMPLE_TEXTS.find(t => t.id === selectedText)?.level}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose max-w-none mb-8">
+                    {SAMPLE_TEXTS.find(t => t.id === selectedText)?.content.split('\n\n').map((paragraph, idx) => (
+                      <p key={idx}>{paragraph}</p>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
               
-              {currentExercise.questions.map((question, index) => (
-                <div key={question.id} className="space-y-3">
-                  <h4 className="font-medium">
-                    {index + 1}. {question.text}
-                  </h4>
-                  <div className="space-y-2">
-                    {question.options.map((option) => (
-                      <div 
-                        key={option}
-                        className={`p-3 rounded-md border cursor-pointer transition-colors ${
-                          selectedAnswers[question.id] === option 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'hover:bg-muted'
-                        } ${
-                          isSubmitted && option === question.correctAnswer
-                            ? 'bg-green-100 border-green-500'
-                            : isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer
-                              ? 'bg-red-100 border-red-500'
-                              : ''
-                        }`}
-                        onClick={() => handleAnswerSelect(question.id, option)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{option}</span>
-                          {isSubmitted && option === question.correctAnswer && (
-                            <Check className="h-5 w-5 text-green-600" />
-                          )}
-                          {isSubmitted && selectedAnswers[question.id] === option && option !== question.correctAnswer && (
-                            <X className="h-5 w-5 text-red-600" />
-                          )}
-                        </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comprehension Questions</CardTitle>
+                  <CardDescription>
+                    Read the text carefully and answer the following questions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {SAMPLE_QUESTIONS[selectedText]?.map((question) => (
+                      <div key={question.id} className="space-y-2">
+                        <h3 className="font-medium">{question.text}</h3>
+                        
+                        {question.type === 'multiple' && question.options && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {question.options.map((option) => (
+                              <Button 
+                                key={option} 
+                                variant={userAnswers[question.id] === option 
+                                  ? (hasSubmitted 
+                                    ? (option === question.correctAnswer ? "default" : "destructive")
+                                    : "default") 
+                                  : (hasSubmitted && option === question.correctAnswer
+                                    ? "outline"
+                                    : "outline")}
+                                className={hasSubmitted && option === question.correctAnswer ? "border-green-500" : ""}
+                                onClick={() => handleAnswerSelect(question.id, option)}
+                              >
+                                {option}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {question.type === 'text' && (
+                          <div>
+                            <Input
+                              value={userAnswers[question.id] || ''}
+                              onChange={(e) => handleAnswerSelect(question.id, e.target.value)}
+                              disabled={hasSubmitted}
+                              placeholder="Your answer..."
+                              className={hasSubmitted ? (
+                                userAnswers[question.id]?.toLowerCase().includes(question.correctAnswer.toLowerCase()) 
+                                  ? "border-green-500" 
+                                  : "border-red-500"
+                              ) : ""}
+                            />
+                            {hasSubmitted && !userAnswers[question.id]?.toLowerCase().includes(question.correctAnswer.toLowerCase()) && (
+                              <p className="text-sm text-red-500 mt-1">
+                                Suggested answer includes: {question.correctAnswer}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-              
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowQuestions(false)}
-                >
-                  Back to Reading
-                </Button>
-                
-                {!isSubmitted ? (
-                  <Button 
-                    variant="default" 
-                    onClick={handleSubmit}
-                    disabled={Object.keys(selectedAnswers).length !== currentExercise.questions.length}
-                  >
-                    Submit Answers
-                  </Button>
-                ) : (
-                  <Button variant="default" onClick={handleNext}>
-                    Next Exercise
-                  </Button>
-                )}
-              </div>
+                  
+                  <div className="mt-6 flex justify-end space-x-2">
+                    <Button onClick={resetExercise} variant="outline">
+                      Reset
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={hasSubmitted}>
+                      Submit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </CardContent>
-        {isSubmitted && (
-          <CardFooter className="border-t pt-4">
-            <div className="w-full space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Your Score:</span>
-                <span className={`font-bold ${score >= 70 ? 'text-green-600' : 'text-red-600'}`}>{score}%</span>
-              </div>
-              <Progress value={score} className="h-2" />
-            </div>
-          </CardFooter>
-        )}
-      </Card>
+        </TabsContent>
+        
+        <TabsContent value="library" className="mt-4">
+          <div className="mb-4">
+            <Input
+              placeholder="Search texts by title or content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTexts.map((text) => (
+              <Card 
+                key={text.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${selectedText === text.id ? 'border-primary' : ''}`}
+                onClick={() => handleTextSelect(text.id)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{text.title}</CardTitle>
+                  <CardDescription>
+                    Level: {text.level}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {text.content.substring(0, 150)}...
+                  </p>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto mt-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTextSelect(text.id);
+                      setTimeout(() => {
+                        document.querySelector('[value="exercises"]')?.dispatchEvent(new Event('click'));
+                      }, 100);
+                    }}
+                  >
+                    Start Exercise
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

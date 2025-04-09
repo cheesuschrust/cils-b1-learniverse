@@ -1,337 +1,356 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Timer, Send, RefreshCw, Lightbulb } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-interface WritingPrompt {
-  id: string;
-  title: string;
-  description: string;
-  prompt: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  wordLimit: number;
-  suggestedTime: number; // in minutes
-  exampleResponse?: string;
-  category: string;
-  tips?: string[];
-}
+const WRITING_PROMPTS = [
+  {
+    id: 1,
+    title: "Mi presento",
+    description: "Scrivi un'email ad un amico italiano per presentarti. Includi informazioni su di te, la tua famiglia, i tuoi interessi e chiedi informazioni sul tuo amico.",
+    minWords: 80,
+    maxWords: 120,
+    level: "B1",
+    example: "Caro Marco,\n\nMi chiamo Elena e sono una studentessa americana. Ho 22 anni e studio lingue all'università. La mia famiglia è composta da mia madre, mio padre e mio fratello minore. Nei miei tempi liberi mi piace leggere, ascoltare musica e fare escursioni. Sto imparando l'italiano perché..."
+  },
+  {
+    id: 2,
+    title: "Un viaggio memorabile",
+    description: "Descrivi un viaggio che hai fatto di recente. Dove sei andato/a? Cosa hai visto? Quali esperienze hai avuto?",
+    minWords: 100,
+    maxWords: 150,
+    level: "B1",
+    example: "L'estate scorsa ho visitato Roma per la prima volta. È stata un'esperienza indimenticabile. La città è ricca di storia e cultura, con monumenti antichi ad ogni angolo. Ho visitato il Colosseo, i Musei Vaticani e la Fontana di Trevi. Il cibo era delizioso e..."
+  },
+  {
+    id: 3,
+    title: "Il mio quartiere",
+    description: "Descrivi il quartiere in cui vivi. Com'è? Cosa c'è? Cosa ti piace e cosa non ti piace del tuo quartiere?",
+    minWords: 90,
+    maxWords: 130,
+    level: "B1",
+    example: "Vivo in un quartiere tranquillo nella zona est della città. È un'area residenziale con molte case a due piani e piccoli giardini. Ci sono diversi parchi dove posso fare jogging la mattina. Nel centro del quartiere c'è una piazza con alcuni negozi, un supermercato e un paio di caffè. Mi piace la tranquillità, ma..."
+  }
+];
 
-// Sample data - in a real app, this would come from Supabase
-const samplePrompt: WritingPrompt = {
-  id: "1",
-  title: "La Mia Città Preferita",
-  description: "Write about your favorite city in Italy or in your home country.",
-  prompt: "Descrivi la tua città preferita. Perché ti piace? Cosa puoi fare lì? Quali sono i luoghi più interessanti da visitare?",
-  difficulty: "intermediate",
-  wordLimit: 150,
-  suggestedTime: 15,
-  category: "Travel",
-  tips: [
-    "Use different adjectives to describe the city",
-    "Write about specific locations in the city",
-    "Include some information about the history or culture",
-    "Explain what makes this city special to you"
-  ],
-  exampleResponse: "La mia città preferita è Firenze. Mi piace molto perché è una città piena di storia e arte. A Firenze, puoi visitare molti musei famosi come gli Uffizi e la Galleria dell'Accademia, dove si trova il David di Michelangelo. Il centro storico è bellissimo, con la sua cattedrale Santa Maria del Fiore e il famoso Ponte Vecchio. Mi piace camminare lungo l'Arno, specialmente al tramonto quando la luce è magica. La cucina toscana è anche deliziosa – la bistecca alla fiorentina è il mio piatto preferito! Firenze è speciale per me perché ho studiato italiano lì per tre mesi e ho incontrato amici da tutto il mondo."
-};
+// Simulated AI feedback for demo purposes
+const SIMULATED_FEEDBACK = [
+  "Buon uso dei tempi verbali. Hai utilizzato correttamente il passato prossimo e l'imperfetto.",
+  "Buona struttura generale del testo. I paragrafi sono ben organizzati.",
+  "Attenzione all'accordo tra aggettivi e sostantivi. Ricorda che in italiano gli aggettivi devono concordare in genere e numero con i sostantivi.",
+  "Potresti ampliare il tuo vocabolario utilizzando sinonimi per evitare ripetizioni.",
+  "Fai attenzione alle preposizioni, specialmente con i verbi di movimento.",
+  "Buon uso dei connettivi per collegare le frasi."
+];
 
 const WritingModule: React.FC = () => {
-  const [prompt, setPrompt] = useState<WritingPrompt>(samplePrompt);
-  const [response, setResponse] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(prompt.suggestedTime * 60); // convert to seconds
-  const [timerActive, setTimerActive] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<number | null>(null);
+  const [userText, setUserText] = useState('');
   const [showExample, setShowExample] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [feedback, setFeedback] = useState<string[]>([]);
+  const [confidenceScore, setConfidenceScore] = useState<number | null>(null);
+  const [skillLevels, setSkillLevels] = useState<Record<string, number>>({});
   const { toast } = useToast();
-  
-  useEffect(() => {
-    // Update word count whenever response changes
-    setWordCount(response.trim() ? response.trim().split(/\s+/).length : 0);
-  }, [response]);
-  
-  useEffect(() => {
-    // Timer logic
-    let interval: NodeJS.Timeout;
+
+  const handlePromptSelect = (promptId: number) => {
+    setSelectedPrompt(promptId);
+    setUserText('');
+    setShowExample(false);
+    setFeedback([]);
+    setConfidenceScore(null);
+    setSkillLevels({});
+  };
+
+  const countWords = (text: string) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
+  const getWordCountColor = () => {
+    if (!selectedPrompt) return "text-muted-foreground";
     
-    if (timerActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setTimerActive(false);
-      toast({
-        title: "Time's Up!",
-        description: "The suggested time has ended, but you can still complete your response.",
-      });
-    }
+    const prompt = WRITING_PROMPTS.find(p => p.id === selectedPrompt);
+    if (!prompt) return "text-muted-foreground";
     
-    return () => clearInterval(interval);
-  }, [timerActive, timeLeft, toast]);
-  
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const wordCount = countWords(userText);
+    
+    if (wordCount < prompt.minWords) return "text-yellow-500";
+    if (wordCount > prompt.maxWords) return "text-red-500";
+    return "text-green-500";
   };
-  
-  const startTimer = () => {
-    setTimerActive(true);
-    // Focus on textarea when timer starts
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  };
-  
-  const stopTimer = () => {
-    setTimerActive(false);
-  };
-  
-  const resetTimer = () => {
-    setTimeLeft(prompt.suggestedTime * 60);
-    setTimerActive(false);
-  };
-  
-  const handleResponseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (isSubmitted) return;
-    setResponse(e.target.value);
-  };
-  
-  const handleSubmit = () => {
-    if (response.trim().length === 0) {
+
+  const handleAnalyze = () => {
+    if (!selectedPrompt) return;
+    
+    const prompt = WRITING_PROMPTS.find(p => p.id === selectedPrompt);
+    if (!prompt) return;
+    
+    const wordCount = countWords(userText);
+    
+    if (wordCount < prompt.minWords) {
       toast({
-        title: "Empty Response",
-        description: "Please write something before submitting.",
+        title: "Too few words",
+        description: `Your text has ${wordCount} words. Please write at least ${prompt.minWords} words.`,
         variant: "destructive"
       });
       return;
     }
     
-    setIsSubmitted(true);
-    stopTimer();
+    setIsAnalyzing(true);
     
-    // Generate mock feedback (in a real app, this would call an API)
-    generateFeedback();
-    
-    toast({
-      title: "Response Submitted",
-      description: "Your writing has been submitted for feedback.",
-    });
-  };
-  
-  const generateFeedback = () => {
-    // In a real app, this would come from an API
-    // For now, we'll generate some mock feedback
+    // Simulate AI analysis
     setTimeout(() => {
-      const mockFeedback = `
-Your writing shows a good understanding of Italian vocabulary related to describing places. You've used some appropriate adjectives and connected your ideas well.
-
-Grammar:
-- Pay attention to gender agreement with adjectives
-- Make sure to use the correct prepositions with locations
-
-Vocabulary:
-- You've used appropriate vocabulary for this topic
-- Try to incorporate more varied descriptive terms
-
-Structure:
-- Good opening and explanation of why you like the place
-- Consider adding more about personal experiences
-
-Keep practicing and expanding your vocabulary!`;
+      // Select random feedback points (3-5)
+      const randomFeedback = [...SIMULATED_FEEDBACK]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, Math.floor(Math.random() * 3) + 3);
       
-      setFeedback(mockFeedback);
-    }, 1500);
+      // Generate random skill levels
+      const skills = {
+        'Grammar': Math.random() * 0.3 + 0.6, // 60-90%
+        'Vocabulary': Math.random() * 0.3 + 0.6, // 60-90%
+        'Coherence': Math.random() * 0.3 + 0.6, // 60-90%
+        'Task Completion': Math.random() * 0.2 + 0.7 // 70-90%
+      };
+      
+      // Calculate overall confidence score (weighted average)
+      const overallScore = (
+        skills['Grammar'] * 0.3 +
+        skills['Vocabulary'] * 0.3 +
+        skills['Coherence'] * 0.2 +
+        skills['Task Completion'] * 0.2
+      ) * 100;
+      
+      setFeedback(randomFeedback);
+      setSkillLevels(skills);
+      setConfidenceScore(Math.round(overallScore));
+      setIsAnalyzing(false);
+      
+      toast({
+        title: "Analysis Complete",
+        description: `Your text has been analyzed with a confidence level of ${Math.round(overallScore)}%.`,
+      });
+    }, 2000);
   };
-  
-  const handleStartNew = () => {
-    setResponse("");
-    setIsSubmitted(false);
-    setFeedback(null);
-    resetTimer();
-    setShowExample(false);
-    
-    // In a real app, this would fetch a new prompt
+
+  const handleSave = () => {
     toast({
-      title: "Coming Soon",
-      description: "More writing prompts will be available soon!",
+      title: "Writing Saved",
+      description: "Your writing has been saved successfully.",
     });
   };
-  
-  const toggleShowExample = () => {
-    setShowExample(!showExample);
-  };
-  
+
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>{prompt.title}</CardTitle>
-              <CardDescription>
-                {prompt.category} - {prompt.difficulty.charAt(0).toUpperCase() + prompt.difficulty.slice(1)} Level
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="capitalize">
-              {prompt.difficulty}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-muted p-4 rounded-md">
-            <h3 className="font-medium mb-2">Writing Prompt:</h3>
-            <p>{prompt.description}</p>
-            <p className="mt-2 font-medium">{prompt.prompt}</p>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <span className="text-sm font-medium mr-2">Word Limit:</span>
-                <Badge variant={wordCount > prompt.wordLimit ? "destructive" : "outline"}>
-                  {wordCount} / {prompt.wordLimit}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center">
-                <span className="text-sm font-medium mr-2">Time:</span>
-                <Badge 
-                  variant={timerActive ? "default" : "outline"}
-                  className="flex items-center"
-                >
-                  <Timer className="h-3 w-3 mr-1" />
-                  {formatTime(timeLeft)}
-                </Badge>
-              </div>
-            </div>
-            
-            <div className="flex space-x-2">
-              {!timerActive ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={startTimer}
-                  disabled={isSubmitted}
-                >
-                  Start Timer
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={stopTimer}
-                  disabled={isSubmitted}
-                >
-                  Pause Timer
-                </Button>
-              )}
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={resetTimer}
-                disabled={isSubmitted}
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Reset
+    <div className="space-y-6">
+      <Tabs defaultValue="write" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="write">Write</TabsTrigger>
+          <TabsTrigger value="prompts">Prompts</TabsTrigger>
+          <TabsTrigger value="analysis" disabled={!feedback.length}>Analysis</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="write" className="space-y-4 mt-4">
+          {!selectedPrompt ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Select a writing prompt to start your exercise.</p>
+              <Button onClick={() => document.querySelector('[value="prompts"]')?.dispatchEvent(new Event('click'))}>
+                Browse Writing Prompts
               </Button>
             </div>
-          </div>
-          
-          {prompt.tips && (
-            <div className="bg-muted/50 p-4 rounded-md border border-dashed">
-              <h3 className="font-medium flex items-center mb-2">
-                <Lightbulb className="h-4 w-4 mr-2 text-amber-500" />
-                Writing Tips:
-              </h3>
-              <ul className="text-sm space-y-1 list-disc pl-5">
-                {prompt.tips.map((tip, index) => (
-                  <li key={index}>{tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          <div className="space-y-2">
-            <Textarea
-              ref={textareaRef}
-              placeholder="Write your response in Italian..."
-              className="min-h-[200px] resize-y"
-              value={response}
-              onChange={handleResponseChange}
-              disabled={isSubmitted}
-            />
-            
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Write in Italian</span>
-              <span className={wordCount > prompt.wordLimit ? "text-red-500" : ""}>
-                {wordCount} / {prompt.wordLimit} words
-              </span>
-            </div>
-          </div>
-          
-          {prompt.exampleResponse && (
-            <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleShowExample}
-                className="text-sm"
-              >
-                {showExample ? "Hide Example Response" : "Show Example Response"}
-              </Button>
-              
-              {showExample && (
-                <div className="mt-2 bg-muted/30 p-4 rounded-md border border-dashed">
-                  <h3 className="font-medium mb-2">Example Response:</h3>
-                  <p className="text-sm italic">{prompt.exampleResponse}</p>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {feedback && (
-            <div className="bg-primary/10 p-4 rounded-md border border-primary/20">
-              <h3 className="font-medium flex items-center mb-2">
-                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                Feedback on Your Writing:
-              </h3>
-              <div className="text-sm whitespace-pre-line">
-                {feedback}
-              </div>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-between">
-          {!isSubmitted ? (
-            <Button
-              variant="default"
-              onClick={handleSubmit}
-              disabled={response.trim().length === 0}
-              className="ml-auto"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Submit
-            </Button>
           ) : (
-            <Button
-              variant="default"
-              onClick={handleStartNew}
-              className="ml-auto"
-            >
-              Start New Writing Exercise
-            </Button>
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>{WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.title}</CardTitle>
+                    <CardDescription className="mt-1">
+                      {WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.description}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline">
+                    Level: {WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.level}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowExample(!showExample)}
+                  >
+                    {showExample ? "Hide Example" : "Show Example"}
+                  </Button>
+                </div>
+                
+                {showExample && (
+                  <div className="bg-muted p-4 rounded-md mb-4">
+                    <p className="italic text-muted-foreground whitespace-pre-line">
+                      {WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.example}
+                    </p>
+                  </div>
+                )}
+                
+                <Textarea
+                  placeholder="Start writing here..."
+                  value={userText}
+                  onChange={(e) => setUserText(e.target.value)}
+                  className="min-h-[200px]"
+                />
+                
+                <div className="flex justify-between items-center mt-2">
+                  <span className={getWordCountColor()}>
+                    Words: {countWords(userText)} / 
+                    {WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.minWords}-
+                    {WRITING_PROMPTS.find(p => p.id === selectedPrompt)?.maxWords}
+                  </span>
+                  
+                  {confidenceScore !== null && (
+                    <div className="flex items-center">
+                      <span className="text-sm mr-2">Overall Score:</span>
+                      <Badge variant={confidenceScore >= 70 ? "default" : "outline"}>
+                        {confidenceScore}%
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSave}
+                  disabled={countWords(userText) === 0}
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  onClick={handleAnalyze} 
+                  disabled={countWords(userText) === 0 || isAnalyzing}
+                >
+                  {isAnalyzing ? "Analyzing..." : "Analyze Text"}
+                </Button>
+              </CardFooter>
+            </Card>
           )}
-        </CardFooter>
-      </Card>
+        </TabsContent>
+        
+        <TabsContent value="prompts" className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {WRITING_PROMPTS.map((prompt) => (
+              <Card 
+                key={prompt.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${selectedPrompt === prompt.id ? 'border-primary' : ''}`}
+                onClick={() => handlePromptSelect(prompt.id)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{prompt.title}</CardTitle>
+                  <CardDescription>
+                    Level: {prompt.level} | Words: {prompt.minWords}-{prompt.maxWords}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {prompt.description}
+                  </p>
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto mt-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePromptSelect(prompt.id);
+                      setTimeout(() => {
+                        document.querySelector('[value="write"]')?.dispatchEvent(new Event('click'));
+                      }, 100);
+                    }}
+                  >
+                    Start Writing
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="analysis" className="mt-4">
+          {feedback.length > 0 && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Analysis Results</CardTitle>
+                  <CardDescription>
+                    AI assessment of your writing skills
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">Overall Score</h3>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={confidenceScore || 0} className="w-full" />
+                        <span className="text-sm font-medium">{confidenceScore}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">Skills Breakdown</h3>
+                      <div className="space-y-3">
+                        {Object.entries(skillLevels).map(([skill, level]) => (
+                          <div key={skill} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>{skill}</span>
+                              <span>{Math.round(level * 100)}%</span>
+                            </div>
+                            <Progress value={level * 100} className="w-full h-2" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">Feedback</h3>
+                      <ul className="space-y-2">
+                        {feedback.map((item, index) => (
+                          <li key={index} className="text-sm">
+                            • {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Feedback</CardTitle>
+                  <CardDescription>
+                    Detailed analysis of your writing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Textarea 
+                    value={`Ecco un'analisi del tuo testo:
+
+${feedback.join('\n\n')}
+
+Continua a esercitarti e vedrai miglioramenti nella tua scrittura in italiano. Ricorda di leggere regolarmente testi in italiano per arricchire il tuo vocabolario.`}
+                    readOnly
+                    className="min-h-[200px]"
+                  />
+                  <Button className="mt-4" variant="outline" onClick={() => document.querySelector('[value="write"]')?.dispatchEvent(new Event('click'))}>
+                    Back to Writing
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
