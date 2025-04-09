@@ -2,9 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mic, MicOff, RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, RefreshCw, Volume2, VolumeX, HelpCircle } from 'lucide-react';
 import { useAI } from '@/hooks/useAI';
 import { useToast } from '@/hooks/use-toast';
+import { HelpTooltip } from '@/components/help/HelpTooltip';
 
 const VoiceEnabledAssistant: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
@@ -101,14 +102,35 @@ const VoiceEnabledAssistant: React.FC = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Voice Assistant</span>
+          <div className="flex items-center gap-2">
+            <span>Voice Assistant</span>
+            <HelpTooltip 
+              content="This assistant allows you to interact using your voice. Click the microphone button to start speaking, and the assistant will respond accordingly."
+            />
+          </div>
           <Button 
             variant="outline" 
             size="icon" 
             onClick={toggleMute}
             className="h-8 w-8"
           >
-            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            {isMuted ? (
+              <div className="flex items-center">
+                <VolumeX className="h-4 w-4" />
+                <HelpTooltip 
+                  content="Audio output is currently muted. Click to unmute."
+                  className="ml-1"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <Volume2 className="h-4 w-4" />
+                <HelpTooltip 
+                  content="Audio output is currently enabled. Click to mute."
+                  className="ml-1"
+                />
+              </div>
+            )}
           </Button>
         </CardTitle>
       </CardHeader>
@@ -145,6 +167,10 @@ const VoiceEnabledAssistant: React.FC = () => {
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Reset
+          <HelpTooltip 
+            content="Clear the current conversation and start fresh."
+            className="ml-1"
+          />
         </Button>
         
         <Button 
@@ -157,11 +183,19 @@ const VoiceEnabledAssistant: React.FC = () => {
             <>
               <MicOff className="h-4 w-4 mr-2" />
               Stop Listening
+              <HelpTooltip 
+                content="Currently listening to your voice. Click to stop."
+                className="ml-1"
+              />
             </>
           ) : (
             <>
               <Mic className="h-4 w-4 mr-2" />
               Start Listening
+              <HelpTooltip 
+                content="Click to activate your microphone and start speaking to the assistant."
+                className="ml-1"
+              />
             </>
           )}
         </Button>

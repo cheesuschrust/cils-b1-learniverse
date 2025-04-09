@@ -1,107 +1,158 @@
 
 /**
- * StructuredDataService - A service for generating and managing structured data (JSON-LD)
- * for better SEO and rich snippets in search results
+ * Service for handling JSON-LD structured data injection and removal
  */
-export class StructuredDataService {
+class StructuredDataService {
+  private static readonly SCRIPT_ID = 'structured-data-json-ld';
+
   /**
-   * Generate FAQ Page structured data
+   * Injects JSON-LD structured data into the page
+   * @param data The structured data object to inject
    */
-  static generateFAQPage(faqs: Array<{ question: string; answer: string }>) {
+  public static injectStructuredData(data: object): void {
+    // Remove any existing structured data first
+    this.removeStructuredData();
+    
+    // Create a new script element for the structured data
+    const script = document.createElement('script');
+    script.id = this.SCRIPT_ID;
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(data);
+    
+    // Add it to the head of the document
+    document.head.appendChild(script);
+  }
+
+  /**
+   * Removes the JSON-LD structured data from the page
+   */
+  public static removeStructuredData(): void {
+    const existingScript = document.getElementById(this.SCRIPT_ID);
+    if (existingScript) {
+      existingScript.remove();
+    }
+  }
+
+  /**
+   * Create standard structured data for an organization
+   * @param name Organization name
+   * @param url Website URL
+   * @param logo Logo URL
+   * @param description Organization description
+   * @returns Organization structured data object
+   */
+  public static createOrganizationData(
+    name: string, 
+    url: string, 
+    logo: string,
+    description: string
+  ): object {
     return {
       "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": faqs.map(faq => ({
-        "@type": "Question",
-        "name": faq.question,
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": faq.answer
-        }
+      "@type": "Organization",
+      "name": name,
+      "url": url,
+      "logo": logo,
+      "description": description
+    };
+  }
+
+  /**
+   * Create structured data for a website breadcrumb
+   * @param items Breadcrumb items
+   * @returns Breadcrumb structured data object
+   */
+  public static createBreadcrumbData(
+    items: Array<{name: string, url: string}>
+  ): object {
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": items.map((item, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "name": item.name,
+        "item": item.url
       }))
     };
   }
-  
+
   /**
-   * Generate Course structured data
+   * Create structured data for an article
+   * @param headline Article headline
+   * @param description Article description
+   * @param authorName Author name
+   * @param publisherName Publisher name
+   * @param publisherLogo Publisher logo URL
+   * @param datePublished Publication date
+   * @param dateModified Modification date
+   * @param imageUrl Featured image URL
+   * @returns Article structured data object
    */
-  static generateCourse(course: {
-    name: string;
-    description: string;
-    provider: string;
-    url: string;
-  }) {
+  public static createArticleData(
+    headline: string,
+    description: string,
+    authorName: string,
+    publisherName: string,
+    publisherLogo: string,
+    datePublished: string,
+    dateModified: string,
+    imageUrl: string
+  ): object {
     return {
       "@context": "https://schema.org",
-      "@type": "Course",
-      "name": course.name,
-      "description": course.description,
-      "provider": {
+      "@type": "Article",
+      "headline": headline,
+      "description": description,
+      "author": {
+        "@type": "Person",
+        "name": authorName
+      },
+      "publisher": {
         "@type": "Organization",
-        "name": course.provider,
-        "sameAs": course.url
-      }
+        "name": publisherName,
+        "logo": {
+          "@type": "ImageObject",
+          "url": publisherLogo
+        }
+      },
+      "datePublished": datePublished,
+      "dateModified": dateModified,
+      "image": imageUrl
     };
   }
-  
+
   /**
-   * Generate Product structured data for subscription plans
+   * Create structured data for a product
+   * @param name Product name
+   * @param description Product description
+   * @param imageUrl Product image URL
+   * @param price Product price
+   * @param priceCurrency Price currency code
+   * @param availability Product availability
+   * @returns Product structured data object
    */
-  static generateProduct(product: {
-    name: string;
-    description: string;
-    price: string;
-    currency: string;
-    sku: string;
-    brand: string;
-    url: string;
-  }) {
+  public static createProductData(
+    name: string,
+    description: string,
+    imageUrl: string,
+    price: number,
+    priceCurrency: string,
+    availability: string
+  ): object {
     return {
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": product.name,
-      "description": product.description,
-      "brand": {
-        "@type": "Brand",
-        "name": product.brand
-      },
-      "sku": product.sku,
+      "name": name,
+      "description": description,
+      "image": imageUrl,
       "offers": {
         "@type": "Offer",
-        "price": product.price,
-        "priceCurrency": product.currency,
-        "url": product.url,
-        "availability": "https://schema.org/InStock"
+        "price": price,
+        "priceCurrency": priceCurrency,
+        "availability": availability
       }
     };
-  }
-  
-  /**
-   * Inject JSON-LD structured data into the page
-   */
-  static injectStructuredData(data: object): void {
-    // Remove any existing JSON-LD scripts with the same ID
-    const existingScript = document.getElementById('structured-data-jsonld');
-    if (existingScript) {
-      existingScript.remove();
-    }
-    
-    // Create and inject the new script
-    const script = document.createElement('script');
-    script.id = 'structured-data-jsonld';
-    script.type = 'application/ld+json';
-    script.innerHTML = JSON.stringify(data);
-    document.head.appendChild(script);
-  }
-  
-  /**
-   * Remove JSON-LD structured data from the page
-   */
-  static removeStructuredData(): void {
-    const existingScript = document.getElementById('structured-data-jsonld');
-    if (existingScript) {
-      existingScript.remove();
-    }
   }
 }
 
