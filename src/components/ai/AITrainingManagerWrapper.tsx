@@ -3,13 +3,14 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { BrainCircuit, Database, Volume2, Sliders, BarChart3, Activity } from 'lucide-react';
+import { BrainCircuit, Database, Volume2, Sliders, BarChart3, Activity, Shield } from 'lucide-react';
 import { HelpTooltip } from '@/components/help/HelpTooltip';
 
 import AIModelSelector from '@/components/ai/AIModelSelector';
 import VoiceSystemManager from '@/components/ai/VoiceSystemManager';
 import TrainingDataManager from '@/components/ai/TrainingDataManager';
 import AIAdvancedSettings from '@/components/ai/AIAdvancedSettings';
+import AISecurityMonitor from '@/components/ai/AISecurityMonitor';
 
 const AITrainingManagerWrapper: React.FC = () => {
   return (
@@ -141,6 +142,14 @@ const AITrainingManagerWrapper: React.FC = () => {
               className="ml-1"
             />
           </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center">
+            <Shield className="mr-2 h-4 w-4" />
+            Security
+            <HelpTooltip 
+              content="Configure security settings for your AI models and data."
+              className="ml-1"
+            />
+          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center">
             <Sliders className="mr-2 h-4 w-4" />
             Settings
@@ -161,6 +170,10 @@ const AITrainingManagerWrapper: React.FC = () => {
         
         <TabsContent value="data" className="mt-6">
           <TrainingDataManager />
+        </TabsContent>
+        
+        <TabsContent value="security" className="mt-6">
+          <AISecurityMonitor />
         </TabsContent>
         
         <TabsContent value="settings" className="mt-6">
