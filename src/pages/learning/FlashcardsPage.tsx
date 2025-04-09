@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import FlashcardPronunciation from '@/components/flashcards/FlashcardPronunciation';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, FileDown, Activity, Cpu } from 'lucide-react';
+import { AlertCircle, FileDown, Activity, Cpu, Bot } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AIImplementationStatus } from '@/components/ai';
+import { AIImplementationStatus, AIModelUsageDashboard, AIArchitectureExplainer } from '@/components/ai';
 import { Progress } from '@/components/ui/progress';
 
 const FlashcardsPage: React.FC = () => {
@@ -49,6 +49,7 @@ const FlashcardsPage: React.FC = () => {
           <TabsTrigger value="pronunciation">Pronunciation</TabsTrigger>
           <TabsTrigger value="ai-details">AI Implementation</TabsTrigger>
           <TabsTrigger value="ai-status">AI Status</TabsTrigger>
+          <TabsTrigger value="ai-architecture">AI Architecture</TabsTrigger>
         </TabsList>
         
         <TabsContent value="flashcards">
@@ -248,6 +249,13 @@ const FlashcardsPage: React.FC = () => {
             </Card>
             
             <AIImplementationStatus />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="ai-architecture">
+          <div className="space-y-6">
+            <AIModelUsageDashboard />
+            <AIArchitectureExplainer />
           </div>
         </TabsContent>
       </Tabs>
