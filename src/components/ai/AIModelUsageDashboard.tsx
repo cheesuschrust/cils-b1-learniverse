@@ -1,303 +1,209 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Cpu, FileDown, Database, Clock, ArrowUpCircle } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { BrainCircuit, Cpu, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+
+const modelUsageData = [
+  {
+    name: 'Jan',
+    embeddings: 2400,
+    translation: 1800,
+    speech: 800,
+  },
+  {
+    name: 'Feb',
+    embeddings: 3000,
+    translation: 2200,
+    speech: 1200,
+  },
+  {
+    name: 'Mar',
+    embeddings: 2800,
+    translation: 2600,
+    speech: 1600,
+  },
+  {
+    name: 'Apr',
+    embeddings: 3600,
+    translation: 2900,
+    speech: 2100,
+  },
+  {
+    name: 'May',
+    embeddings: 4200,
+    translation: 3200,
+    speech: 2400,
+  },
+  {
+    name: 'Jun',
+    embeddings: 3800,
+    translation: 3000,
+    speech: 2200,
+  },
+];
+
+const modelDistributionData = [
+  { name: 'MixedBread Embeddings', value: 45, color: '#8884d8' },
+  { name: 'Opus MT Translation', value: 35, color: '#82ca9d' },
+  { name: 'Whisper Tiny', value: 20, color: '#ffc658' },
+];
+
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
 
 const AIModelUsageDashboard: React.FC = () => {
   return (
-    <Card>
+    <Card className="w-full shadow-md">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Bot className="mr-2 h-5 w-5" />
-          AI Model Usage Dashboard
-        </CardTitle>
-        <CardDescription>
-          Detailed metrics on AI model usage, performance, and integration
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center">
+              <BrainCircuit className="mr-2 h-5 w-5 text-primary" />
+              AI Model Usage Dashboard
+            </CardTitle>
+            <CardDescription>
+              Analytics for AI model usage across the platform
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="ml-2">
+            Last 6 Months
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="usage">
-          <TabsList className="mb-4">
-            <TabsTrigger value="usage">Usage & Performance</TabsTrigger>
-            <TabsTrigger value="integration">Integration Map</TabsTrigger>
-            <TabsTrigger value="resource">Resource Usage</TabsTrigger>
+        <Tabs defaultValue="usage" className="w-full">
+          <TabsList className="w-full grid grid-cols-2 mb-4">
+            <TabsTrigger value="usage" className="flex items-center">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Usage Trends
+            </TabsTrigger>
+            <TabsTrigger value="distribution" className="flex items-center">
+              <PieChartIcon className="mr-2 h-4 w-4" />
+              Model Distribution
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="usage" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Client-side models */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Client-side Models</CardTitle>
-                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Browser</Badge>
-                  </div>
-                  <CardDescription>Models running in user's browser</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <div className="text-sm font-medium">MixedBread AI Embeddings</div>
-                      <div className="text-sm text-muted-foreground">50 MB</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={100} className="h-2 flex-1" />
-                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">Active</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Runs entirely in browser, no data sent to servers. Used for text similarity and matching.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <div className="text-sm font-medium">Opus MT (IT-EN/EN-IT)</div>
-                      <div className="text-sm text-muted-foreground">85 MB each</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={100} className="h-2 flex-1" />
-                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">Active</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Translation models that run in the browser. No external API calls for basic translation tasks.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <div className="text-sm font-medium">Whisper Tiny</div>
-                      <div className="text-sm text-muted-foreground">75 MB</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={100} className="h-2 flex-1" />
-                      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">Available</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Speech recognition for pronunciation exercises. Only loaded when needed.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Server-side models */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Server-side Models</CardTitle>
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Cloud</Badge>
-                  </div>
-                  <CardDescription>Models running on our servers</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <div className="text-sm font-medium">Qwen 7B Chat</div>
-                      <div className="text-sm text-muted-foreground">14 GB</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={70} className="h-2 flex-1" />
-                      <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 text-xs">In Progress</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Language model for content generation and chat interfaces. Runs on our servers.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <div className="text-sm font-medium">Italian Fine-tuned LLM</div>
-                      <div className="text-sm text-muted-foreground">7 GB</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={30} className="h-2 flex-1" />
-                      <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200 text-xs">Planned</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Specialized language model for Italian learning. The only model with continuous learning capability.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Model Learning & Training Status</CardTitle>
-                <CardDescription>How models are updated and trained in the system</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="border rounded-lg p-3">
-                      <h4 className="text-sm font-semibold mb-2 flex items-center">
-                        <Cpu className="h-4 w-4 mr-1 text-blue-500" />
-                        Client-side Models
-                      </h4>
-                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 mb-2">
-                        Inference Only
-                      </Badge>
-                      <p className="text-xs text-muted-foreground">
-                        These models are pre-trained and do not learn from user data. They perform inference only.
-                      </p>
-                    </div>
-                    
-                    <div className="border rounded-lg p-3">
-                      <h4 className="text-sm font-semibold mb-2 flex items-center">
-                        <Database className="h-4 w-4 mr-1 text-green-500" />
-                        Qwen 7B Chat
-                      </h4>
-                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 mb-2">
-                        Inference Only
-                      </Badge>
-                      <p className="text-xs text-muted-foreground">
-                        This server-side model uses a fixed model that does not update from user interactions.
-                      </p>
-                    </div>
-                    
-                    <div className="border rounded-lg p-3">
-                      <h4 className="text-sm font-semibold mb-2 flex items-center">
-                        <ArrowUpCircle className="h-4 w-4 mr-1 text-purple-500" />
-                        Italian Fine-tuned LLM
-                      </h4>
-                      <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 mb-2">
-                        Continuous Learning
-                      </Badge>
-                      <p className="text-xs text-muted-foreground">
-                        This model has continuous learning capability from user interactions and feedback.
-                      </p>
-                    </div>
-                  </div>
+          <TabsContent value="usage" className="space-y-4">
+            <div className="bg-muted/40 p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-3 flex items-center">
+                <Cpu className="h-4 w-4 mr-2 text-blue-600" />
+                Monthly API Calls by Model Type
+              </h3>
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={modelUsageData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="embeddings" name="Embeddings" fill="#8884d8" />
+                    <Bar dataKey="translation" name="Translation" fill="#82ca9d" />
+                    <Bar dataKey="speech" name="Speech Recognition" fill="#ffc658" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-4 text-center text-sm">
+                <div className="flex flex-col items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#8884d8] mb-1"></div>
+                  <span className="font-medium">Embeddings</span>
+                  <span className="text-muted-foreground text-xs">MixedBread Models</span>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="integration" className="space-y-4">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Flashcards page */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Flashcards Page</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">MixedBread Embeddings</Badge>
-                      </div>
-                      <p className="text-muted-foreground">
-                        Used to compare answer similarity and group related flashcards.
-                      </p>
-                    </div>
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Opus MT</Badge>
-                      </div>
-                      <p className="text-muted-foreground">
-                        Powers the translation feature in flashcards for dual-language display.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Speaking Practice */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Speaking Practice</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Whisper Tiny</Badge>
-                      </div>
-                      <p className="text-muted-foreground">
-                        Transcribes user speech for pronunciation assessment.
-                      </p>
-                    </div>
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">MixedBread Embeddings</Badge>
-                      </div>
-                      <p className="text-muted-foreground">
-                        Compares user pronunciation with expected text semantically.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Content Generator */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Content Generator</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Qwen 7B Chat</Badge>
-                      </div>
-                      <p className="text-muted-foreground">
-                        Generates customized learning content and exercises.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="flex flex-col items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#82ca9d] mb-1"></div>
+                  <span className="font-medium">Translation</span>
+                  <span className="text-muted-foreground text-xs">Opus MT Models</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-3 h-3 rounded-full bg-[#ffc658] mb-1"></div>
+                  <span className="font-medium">Speech</span>
+                  <span className="text-muted-foreground text-xs">Whisper Models</span>
+                </div>
               </div>
             </div>
+            
+            <div className="bg-muted/40 p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-2">Analysis</h3>
+              <p className="text-sm text-muted-foreground">
+                Embeddings models show the highest usage across all months, with consistent growth. 
+                Translation models show seasonal fluctuations, while speech recognition is steadily 
+                increasing as more users discover voice features.
+              </p>
+            </div>
           </TabsContent>
           
-          <TabsContent value="resource" className="space-y-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Resource Requirements</CardTitle>
-                <CardDescription>Hardware and network resources for AI functionality</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Client-side Requirements</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex justify-between">
-                        <span>Disk Space (Models):</span>
-                        <span className="font-medium">~210 MB total</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>RAM Usage (Peak):</span>
-                        <span className="font-medium">~300 MB</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>WebGPU Acceleration:</span>
-                        <span className="font-medium text-green-600">3x Performance Boost</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>Initial Download:</span>
-                        <span className="font-medium">One-time, cached</span>
-                      </li>
-                    </ul>
+          <TabsContent value="distribution" className="space-y-4">
+            <div className="bg-muted/40 p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-3">Overall API Call Distribution</h3>
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={modelDistributionData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {modelDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-4 text-center text-sm">
+                {modelDistributionData.map((entry, index) => (
+                  <div key={`legend-${index}`} className="flex flex-col items-center">
+                    <div className="w-3 h-3 rounded-full mb-1" style={{ backgroundColor: entry.color }}></div>
+                    <span className="font-medium">{entry.name}</span>
+                    <span className="text-muted-foreground text-xs">{entry.value}% of calls</span>
                   </div>
-                  
-                  <div className="pt-2 border-t">
-                    <h3 className="text-sm font-medium mb-2">Server-side Resources</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex justify-between">
-                        <span>GPU Compute:</span>
-                        <span className="font-medium">On-demand scaling</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>Response Time:</span>
-                        <span className="font-medium">~600ms average</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>Data Privacy:</span>
-                        <span className="font-medium">Session data only</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
+            
+            <div className="bg-muted/40 p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-2">Model Usage Insights</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-[#8884d8] mt-1.5 mr-2"></div>
+                  <span>Embedding models are primarily used for semantic search and content recommendations</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-[#82ca9d] mt-1.5 mr-2"></div>
+                  <span>Translation models power the bilingual content and user interface elements</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-[#ffc658] mt-1.5 mr-2"></div>
+                  <span>Speech recognition is growing in usage as pronunciation features gain popularity</span>
+                </li>
+              </ul>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
