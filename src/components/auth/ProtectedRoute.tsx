@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,7 +23,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Show loading indicator while checking auth status
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <Loader2 className="animate-spin h-12 w-12 text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Verifying your credentials...</p>
+        </div>
       </div>
     );
   }
