@@ -36,7 +36,7 @@
     // Compilation and Bundling
     "skipLibCheck": true,
     "isolatedModules": true,
-    "noEmit": false,
+    "noEmit": true,  // Changed back to true to be compatible with tsconfig.node.json
     
     // Path Aliases
     "baseUrl": ".",
@@ -62,7 +62,10 @@
     "node_modules",
     "dist",
     "build"
-  ]
+  ],
   
-  // Removed project references to fix the build error
+  // Keep project references, but make sure they're compatible
+  "references": [
+    { "path": "./tsconfig.node.json" }
+  ]
 }
