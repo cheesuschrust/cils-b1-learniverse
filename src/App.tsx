@@ -13,9 +13,9 @@ import ContentManagement from './pages/admin/ContentManagement';
 import NewsletterManagement from './pages/admin/NewsletterManagement';
 
 const HomePage = lazy(() => import('@/pages/Home'));
-const PricingPage = lazy(() => import('@/pages/Pricing'));
-const ContactPage = lazy(() => import('@/pages/Contact'));
-const AboutPage = lazy(() => import('@/pages/About'));
+const PricingPage = lazy(() => import('@/pages/PricingPage'));
+const ContactPage = lazy(() => import('@/pages/ContactPage'));
+const AboutPage = lazy(() => import('@/pages/AboutPage'));
 const TermsPage = lazy(() => import('@/pages/Terms'));
 const PrivacyPage = lazy(() => import('@/pages/Privacy'));
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
