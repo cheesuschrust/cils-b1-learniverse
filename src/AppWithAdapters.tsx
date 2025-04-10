@@ -1,18 +1,18 @@
 
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { HelmetWrapper } from '@/components/common/HelmetWrapper';
 import App from './App';
 
 const AppWithAdapters: React.FC = () => {
   return (
     <Router>
-      <HelmetProvider context={{}}>
+      <HelmetWrapper>
         <AuthProvider>
           <App />
         </AuthProvider>
-      </HelmetProvider>
+      </HelmetWrapper>
     </Router>
   );
 };

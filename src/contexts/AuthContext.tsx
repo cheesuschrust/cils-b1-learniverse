@@ -1,99 +1,87 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
-  isAuthenticated: boolean;
+  user: User | null;
+  session: Session | null;
   isLoading: boolean;
-  user: any | null;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  isAdmin: boolean;
 }
 
-const defaultAuthContext: AuthContextType = {
-  isAuthenticated: false,
-  isLoading: true,
+const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
+  isLoading: true,
   signIn: async () => ({ error: new Error('Not implemented') }),
   signUp: async () => ({ error: new Error('Not implemented') }),
   signOut: async () => {},
-};
-
-const AuthContext = createContext<AuthContextType>(defaultAuthContext);
-
-export const useAuth = () => useContext(AuthContext);
+  isAdmin: false,
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    const getSession = async () => {
-      setIsLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user || null);
-      } catch (error) {
-        console.error('Error getting session:', error);
-        setUser(null);
-      } finally {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Check if user is admin (mock implementation)
+        if (session?.user) {
+          setIsAdmin(session.user.email?.includes('admin') || false);
+        } else {
+          setIsAdmin(false);
+        }
+
         setIsLoading(false);
       }
-    };
+    );
 
-    getSession();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // Check if user is admin (mock implementation)
+      if (session?.user) {
+        setIsAdmin(session.user.email?.includes('admin') || false);
+      }
+      
       setIsLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
   };
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
-    try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { data: metadata }
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    return { error };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+    await supabase.auth.signOut();
   };
 
-  const value = {
-    isAuthenticated: !!user,
-    isLoading,
-    user,
-    signIn,
-    signUp,
-    signOut,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut, isAdmin }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+export const useAuth = () => useContext(AuthContext);

@@ -1,158 +1,89 @@
 
 import { useState, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
 
 export interface UseAIResult {
-  isProcessing: boolean;
-  generateQuestions: (params: {
-    contentTypes: string[];
-    topics: string[];
-    difficulty: string;
-    count: number;
-    isCitizenshipFocused?: boolean;
-  }) => Promise<{
-    questions?: any[];
-    error?: string;
-  }>;
-  processDocument: (
-    content: string,
-    includeInTraining?: boolean
-  ) => Promise<{
-    contentType: string;
-    questions: any[];
-    analysis: {
-      confidence: number;
-      difficultyLevel: string;
-      topicsDetected: string[];
-    };
-  }>;
-  loadModel: () => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
+  isTranscribing: boolean;
+  hasActiveMicrophone: boolean;
+  isSpeaking: boolean;
+  processAudioStream: (stream: MediaStream) => Promise<{ text: string } | null>;
+  stopAudioProcessing: () => void;
+  speak: (text: string) => void;
+  loadModel: () => Promise<{ success: boolean }>;
+  generateQuestions: (topic: string, options?: any) => Promise<any>;
+  processDocument: (document: File, options?: any) => Promise<any>;
 }
 
 export const useAI = (): UseAIResult => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { toast } = useToast();
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [hasActiveMicrophone, setHasActiveMicrophone] = useState(true);
 
-  // Placeholder function to generate questions
-  const generateQuestions = useCallback(async (params: {
-    contentTypes: string[];
-    topics: string[];
-    difficulty: string;
-    count: number;
-    isCitizenshipFocused?: boolean;
-  }) => {
-    setIsProcessing(true);
+  const processAudioStream = useCallback(async (stream: MediaStream) => {
+    setIsTranscribing(true);
+    
     try {
-      // Mock implementation - in a real app this would call an API
-      console.log('Generating questions with params:', params);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Return mock questions
-      return {
-        questions: Array(params.count).fill(0).map((_, i) => ({
-          id: `q-${i}`,
-          text: `Sample ${params.contentTypes[0]} question ${i + 1} (${params.difficulty})`,
-          type: 'multiple-choice',
-          options: ['Option A', 'Option B', 'Option C', 'Option D'],
-          correctAnswer: 'Option A',
-          explanation: 'This is the explanation for the correct answer.'
-        }))
-      };
-    } catch (error: any) {
-      console.error('Error generating questions:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate questions",
-        variant: "destructive",
-      });
-      return { error: error.message || "Unknown error occurred" };
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [toast]);
-
-  // Placeholder function to process documents
-  const processDocument = useCallback(async (
-    content: string,
-    includeInTraining: boolean = true
-  ) => {
-    setIsProcessing(true);
-    try {
-      console.log('Processing document:', { contentLength: content.length, includeInTraining });
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Return mock processed data
-      return {
-        contentType: 'flashcards',
-        questions: [
-          {
-            id: 'q1',
-            text: 'What is the capital of Italy?',
-            type: 'multiple-choice',
-            options: ['Rome', 'Milan', 'Florence', 'Venice'],
-            correctAnswer: 'Rome',
-            explanation: 'Rome is the capital city of Italy.'
-          },
-          {
-            id: 'q2',
-            text: 'How do you say "hello" in Italian?',
-            type: 'multiple-choice',
-            options: ['Ciao', 'Grazie', 'Prego', 'Arrivederci'],
-            correctAnswer: 'Ciao',
-            explanation: '"Ciao" is the Italian word for hello.'
-          }
-        ],
-        analysis: {
-          confidence: 0.92,
-          difficultyLevel: 'intermediate',
-          topicsDetected: ['greetings', 'geography', 'italian culture']
-        }
-      };
-    } catch (error: any) {
-      console.error('Error processing document:', error);
-      toast({
-        title: "Processing Failed",
-        description: error.message || "Failed to process document",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [toast]);
-
-  // Placeholder function to load AI model
-  const loadModel = useCallback(async () => {
-    setIsProcessing(true);
-    try {
-      console.log('Loading AI model...');
-      
-      // Simulate API call delay
+      // Mock implementation
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error loading model:', error);
-      return { 
-        success: false, 
-        error: error.message || "Failed to load AI model" 
-      };
+      return { text: "This is a mock transcription from the audio" };
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      return null;
     } finally {
-      setIsProcessing(false);
+      setIsTranscribing(false);
     }
   }, []);
 
+  const stopAudioProcessing = useCallback(() => {
+    setIsTranscribing(false);
+  }, []);
+
+  const speak = useCallback((text: string) => {
+    setIsSpeaking(true);
+    
+    // Mock speech synthesis
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const loadModel = useCallback(async () => {
+    // Mock model loading
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { success: true };
+  }, []);
+
+  const generateQuestions = useCallback(async (topic: string, options?: any) => {
+    // Mock question generation
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return [
+      { id: '1', question: `What is the main concept of ${topic}?`, answer: `This is about ${topic}.` },
+      { id: '2', question: `Describe the history of ${topic}.`, answer: `${topic} has a rich history.` }
+    ];
+  }, []);
+
+  const processDocument = useCallback(async (document: File, options?: any) => {
+    // Mock document processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return {
+      success: true,
+      documentType: document.type,
+      pages: 5,
+      content: `Processed content from ${document.name}`,
+      summary: `This document discusses various aspects of ${document.name}.`
+    };
+  }, []);
+
   return {
-    isProcessing,
+    isTranscribing,
+    hasActiveMicrophone,
+    isSpeaking,
+    processAudioStream,
+    stopAudioProcessing,
+    speak,
+    loadModel,
     generateQuestions,
-    processDocument,
-    loadModel
+    processDocument
   };
 };
+
+export default useAI;
