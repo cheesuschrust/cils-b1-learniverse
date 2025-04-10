@@ -27,7 +27,7 @@
 
     // Output Control  
     "isolatedModules": true,  
-    "noEmit": false,  // Changed from true to false
+    "noEmit": true,  // This needs to match with the main tsconfig or be set to true
 
     // Library Support  
     "lib": ["ES2023", "DOM", "DOM.Iterable"]  
