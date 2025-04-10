@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase-client';
 
 interface NewsletterSubscriptionProps {
   compact?: boolean;
@@ -44,9 +45,18 @@ const NewsletterSubscription: React.FC<NewsletterSubscriptionProps> = ({
     setLoading(true);
     
     try {
-      // In a real implementation, this would connect to a newsletter API
-      // Mock API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Store the subscription in Supabase
+      const { error } = await supabase
+        .from('newsletter_subscriptions')
+        .insert([
+          { 
+            email,
+            status: 'pending',
+            source: window.location.pathname
+          }
+        ]);
+        
+      if (error) throw error;
       
       toast({
         title: "Subscription successful!",
@@ -84,7 +94,7 @@ const NewsletterSubscription: React.FC<NewsletterSubscriptionProps> = ({
           size="icon"
           disabled={loading}
         >
-          <Send className="h-4 w-4" />
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </form>
     );
@@ -115,10 +125,7 @@ const NewsletterSubscription: React.FC<NewsletterSubscriptionProps> = ({
         >
           {loading ? (
             <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <Loader2 className="animate-spin mr-2 h-4 w-4" />
               Subscribing...
             </span>
           ) : (

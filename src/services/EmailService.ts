@@ -32,6 +32,8 @@ export interface EmailSettings {
     verification: EmailTemplate;
     passwordReset: EmailTemplate;
     welcome: EmailTemplate;
+    newsletter: EmailTemplate;
+    unsubscribe: EmailTemplate;
   };
   temporaryInboxDuration?: number;
 }
@@ -63,5 +65,23 @@ export const sendWelcomeEmail = async (
   settings: EmailSettings
 ): Promise<boolean> => {
   console.log(`Sending welcome email to ${email}`);
+  return true;
+};
+
+export const sendNewsletterEmail = async (
+  recipients: string[],
+  subject: string,
+  content: string,
+  settings: EmailSettings
+): Promise<boolean> => {
+  console.log(`Sending newsletter "${subject}" to ${recipients.length} recipients`);
+  return true;
+};
+
+export const sendUnsubscribeConfirmation = async (
+  email: string,
+  settings: EmailSettings
+): Promise<boolean> => {
+  console.log(`Sending unsubscribe confirmation to ${email}`);
   return true;
 };
