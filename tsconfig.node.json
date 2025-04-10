@@ -27,7 +27,7 @@
 
     // Output Control  
     "isolatedModules": true,  
-    "noEmit": false,  
+    "noEmit": true,  
     "emitDeclarationOnly": true,  // Add this line to only emit declarations
 
     // Library Support  
