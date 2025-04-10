@@ -1,103 +1,222 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  BarChart3,
-  Users,
-  FileText,
-  Settings,
-  Database,
-  MessageSquare,
-  Upload,
-  AlertCircle,
-  Bot,
-  CreditCard,
-  Search
+import { NavLink } from 'react-router-dom';
+import { 
+  Users, 
+  FileText, 
+  BarChart2, 
+  AlertCircle, 
+  Database, 
+  Shield, 
+  CreditCard, 
+  LifeBuoy, 
+  Bot, 
+  Mic, 
+  Search,
+  Mail,
+  Layout,
+  Send
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-export interface AdminNavigationItem {
-  title: string;
-  href: string;
-  icon: React.ReactNode;
-  beta?: boolean;
-}
 
 const AdminNavigation: React.FC = () => {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
-
-  const navItems: AdminNavigationItem[] = [
-    {
-      title: 'Dashboard',
-      href: '/admin/dashboard',
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      title: 'User Management',
-      href: '/admin/users',
-      icon: <Users className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Management',
-      href: '/admin/content',
-      icon: <FileText className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Upload',
-      href: '/admin/content-upload',
-      icon: <Upload className="h-5 w-5" />,
-    },
-    {
-      title: 'Content Analysis',
-      href: '/admin/content-analysis',
-      icon: <Search className="h-5 w-5" />,
-    },
-    {
-      title: 'AI Management',
-      href: '/admin/ai-management',
-      icon: <Bot className="h-5 w-5" />,
-    },
-    {
-      title: 'Subscriptions',
-      href: '/admin/subscriptions',
-      icon: <CreditCard className="h-5 w-5" />,
-    },
-    {
-      title: 'Analytics',
-      href: '/admin/analytics',
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      title: 'Support Tickets',
-      href: '/admin/support-tickets',
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
-    {
-      title: 'System Health',
-      href: '/admin/system-health',
-      icon: <AlertCircle className="h-5 w-5" />,
-    }
-  ];
-
   return (
-    <nav className="flex-1 space-y-1">
-      {navItems.map((item) => (
-        <Link key={item.href} to={item.href}>
-          <Button 
-            variant={isActive(item.href) ? "secondary" : "ghost"}
-            className="w-full justify-start"
-          >
-            {item.icon}
-            <span className="ml-3 flex-1">{item.title}</span>
-            {item.beta && (
-              <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-                Beta
-              </span>
-            )}
-          </Button>
-        </Link>
-      ))}
+    <nav className="space-y-1">
+      <NavLink
+        to="/admin"
+        end
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <BarChart2 className="mr-2 h-4 w-4" />
+        Dashboard
+      </NavLink>
+
+      <NavLink
+        to="/admin/users"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Users className="mr-2 h-4 w-4" />
+        User Management
+      </NavLink>
+
+      <NavLink
+        to="/admin/content"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <FileText className="mr-2 h-4 w-4" />
+        Content Management
+      </NavLink>
+
+      <NavLink
+        to="/admin/analytics"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <BarChart2 className="mr-2 h-4 w-4" />
+        Analytics
+      </NavLink>
+
+      <NavLink
+        to="/admin/logs"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <AlertCircle className="mr-2 h-4 w-4" />
+        System Logs
+      </NavLink>
+
+      <NavLink
+        to="/admin/database"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Database className="mr-2 h-4 w-4" />
+        Database Performance
+      </NavLink>
+
+      <NavLink
+        to="/admin/security"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Shield className="mr-2 h-4 w-4" />
+        Security Settings
+      </NavLink>
+
+      <NavLink
+        to="/admin/billing"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <CreditCard className="mr-2 h-4 w-4" />
+        Billing & Subscription
+      </NavLink>
+
+      <NavLink
+        to="/admin/support"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <LifeBuoy className="mr-2 h-4 w-4" />
+        Support Tickets
+      </NavLink>
+      
+      <NavLink
+        to="/admin/ai-models"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Bot className="mr-2 h-4 w-4" />
+        AI Model Management
+      </NavLink>
+      
+      <NavLink
+        to="/admin/voice-system"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Mic className="mr-2 h-4 w-4" />
+        Voice System
+      </NavLink>
+      
+      <NavLink
+        to="/admin/newsletter"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Send className="mr-2 h-4 w-4" />
+        Newsletter & Autoblog
+      </NavLink>
+      
+      <NavLink
+        to="/admin/seo"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Search className="mr-2 h-4 w-4" />
+        SEO Management
+      </NavLink>
+      
+      <NavLink
+        to="/admin/email-configuration"
+        className={({ isActive }) =>
+          `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:text-primary hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+          }`
+        }
+      >
+        <Mail className="mr-2 h-4 w-4" />
+        Email Configuration
+      </NavLink>
     </nav>
   );
 };

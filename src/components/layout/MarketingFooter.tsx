@@ -2,27 +2,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Send, ArrowRight } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Mail, ArrowRight } from 'lucide-react';
+import NewsletterSubscription from '@/components/marketing/NewsletterSubscription';
 
 const MarketingFooter: React.FC = () => {
-  const { toast } = useToast();
-  const [email, setEmail] = React.useState('');
-  
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    
-    // In a real implementation, this would connect to a newsletter service
-    toast({
-      title: "Thanks for subscribing!",
-      description: "You'll receive our Italian learning tips soon.",
-    });
-    
-    setEmail('');
-  };
-  
   return (
     <footer className="bg-gray-50 border-t">
       <div className="container max-w-7xl mx-auto px-4 py-12">
@@ -124,27 +107,10 @@ const MarketingFooter: React.FC = () => {
           {/* Newsletter */}
           <div className="lg:col-span-1">
             <h3 className="text-base font-semibold mb-4">Get Italian Tips</h3>
-            <p className="text-gray-600 mb-4">
-              Subscribe to our newsletter for CILS preparation tips and Italian learning resources.
+            <NewsletterSubscription compact />
+            <p className="text-xs text-gray-500 mt-2">
+              We respect your privacy. Unsubscribe at any time.
             </p>
-            <form onSubmit={handleSubscribe} className="space-y-3">
-              <div className="flex">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="rounded-r-none"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Button type="submit" className="rounded-l-none" size="icon">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500">
-                We respect your privacy. Unsubscribe at any time.
-              </p>
-            </form>
           </div>
         </div>
         

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { RouteObject } from "react-router-dom";
 
@@ -13,6 +14,9 @@ import BillingAndSubscription from "@/pages/admin/BillingAndSubscription";
 import SupportTickets from "@/pages/admin/SupportTickets";
 import AIModelManagement from "@/pages/admin/AIModelManagement";
 import VoiceSystemAdmin from "@/pages/admin/VoiceSystemAdmin";
+import NewsletterManagement from "@/pages/admin/NewsletterManagement";
+import EmailConfigurationPage from "@/pages/admin/EmailConfigurationPanel";
+import SEODashboardPage from "@/pages/admin/SEODashboardPage";
 
 const adminRoutes: RouteObject[] = [
   {
@@ -55,10 +59,21 @@ const adminRoutes: RouteObject[] = [
     path: "ai-models",
     element: <AIModelManagement />,
   },
-  // Add Voice System Admin Page
   {
     path: "voice-system",
     element: <VoiceSystemAdmin />,
+  },
+  {
+    path: "newsletter",
+    element: <NewsletterManagement />,
+  },
+  {
+    path: "email-configuration",
+    element: <EmailConfigurationPage />,
+  },
+  {
+    path: "seo",
+    element: <SEODashboardPage />,
   },
 ];
 
