@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
         '@utils': path.resolve(__dirname, 'src/utils'),  
         '@types': path.resolve(__dirname, 'src/types'),  
         '@routes': path.resolve(__dirname, 'src/routes'),  
-        '@context': path.resolve(__dirname, 'src/contexts'),  // Fixed path from context to contexts
+        '@context': path.resolve(__dirname, 'src/contexts'),
       }  
     },  
     
@@ -53,7 +53,8 @@ export default defineConfig(({ mode }) => {
     build: {  
       outDir: 'dist',  
       sourcemap: mode === 'development',  
-      minify: mode === 'production',  
+      minify: mode === 'production',
+      target: 'es2020', // Align with tsconfig.json
       commonjsOptions: {  
         transformMixedEsModules: true  
       },  
@@ -69,7 +70,7 @@ export default defineConfig(({ mode }) => {
       }  
     },  
     
-    // CSS Configuration - Added to ensure Tailwind is processed correctly
+    // CSS Configuration
     css: {
       postcss: './postcss.config.cjs',
     },
@@ -83,6 +84,11 @@ export default defineConfig(({ mode }) => {
         provider: 'v8',  
         reporter: ['text', 'json', 'html']  
       }  
-    }  
+    },
+
+    // TypeScript Configuration
+    esbuild: {
+      logOverride: { 'this-is-undefined-in-esm': 'silent' }
+    }
   };
 });
