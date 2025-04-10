@@ -1,18 +1,19 @@
 
 import React from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { AuthProvider } from '@/contexts/AuthContext';
 import App from './App';
-import AppProviders from './providers';
-import './adapters';
 
-/**
- * This wrapper component ensures our adapter files are loaded
- * before the main App is rendered, and wraps the app with all necessary providers.
- */
-const AppWithAdapters = () => {
+const AppWithAdapters: React.FC = () => {
   return (
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <HelmetProvider>
+      <Router>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </Router>
+    </HelmetProvider>
   );
 };
 

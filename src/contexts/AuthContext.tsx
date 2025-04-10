@@ -1,158 +1,146 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase-client';
-import type { User } from '@/types/user';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { User } from '@/lib/auth-helpers';
+import * as authHelpers from '@/lib/auth-helpers';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
   user: User | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>;
+  register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean, error?: string }>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  isLoading: true,
   user: null,
-  loading: true,
-  signIn: async () => ({ error: null }),
-  signOut: async () => {},
-  signUp: async () => ({ error: null }),
+  login: async () => ({ success: false }),
+  register: async () => ({ success: false }),
+  logout: async () => {},
+  updateProfile: async () => false,
 });
 
-export const useAuth = () => useContext(AuthContext);
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check for active session
-    const getSession = async () => {
+    const loadUser = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data.session) {
-          const userData = data.session.user;
-          
-          // Shape user data to match our User type
-          setUser({
-            id: userData.id,
-            email: userData.email || '',
-            firstName: '',
-            lastName: '',
-            role: 'user',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            preferences: {
-              theme: 'system',
-              language: 'english',
-              notifications: true,
-              onboardingCompleted: false,
-              difficulty: 'beginner'
-            },
-            dailyQuestionCounts: {
-              flashcards: 0,
-              multipleChoice: 0,
-              speaking: 0,
-              writing: 0,
-              listening: 0
-            }
-          });
-        }
+        const currentUser = await authHelpers.getCurrentUser();
+        setUser(currentUser);
       } catch (error) {
-        console.error('Error checking auth session:', error);
+        console.error('Error loading user:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    getSession();
-
-    // Subscribe to auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            firstName: '',
-            lastName: '',
-            role: 'user',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            preferences: {
-              theme: 'system',
-              language: 'english',
-              notifications: true,
-              onboardingCompleted: false,
-              difficulty: 'beginner'
-            },
-            dailyQuestionCounts: {
-              flashcards: 0,
-              multipleChoice: 0,
-              speaking: 0,
-              writing: 0,
-              listening: 0
-            }
-          });
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    loadUser();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      setIsLoading(true);
+      await authHelpers.signOut(); // Clear any existing session
+      const { error } = await authHelpers.signInWithEmail(email, password);
+      
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      
+      const currentUser = await authHelpers.getCurrentUser();
+      setUser(currentUser);
+      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'An unknown error occurred' 
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, firstName?: string, lastName?: string) => {
+    try {
+      setIsLoading(true);
+      // Implementation depends on your auth provider, but generally similar to login
+      // For now, let's simulate a successful registration
+      
+      // In a real implementation, we would store first name, last name, etc.
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'An unknown error occurred' 
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      await authHelpers.signOut();
+      setUser(null);
+      toast({
+        title: "Logged out successfully",
+        description: "Come back soon!",
       });
-      return { error };
     } catch (error) {
-      console.error('Error signing in:', error);
-      return { error };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "Please try again.",
+        variant: "destructive",
       });
-      return { error };
-    } catch (error) {
-      console.error('Error signing up:', error);
-      return { error };
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    signIn,
-    signOut,
-    signUp,
+  const updateProfile = async (data: Partial<User>) => {
+    try {
+      // Implementation depends on your auth provider
+      // For now, let's simulate a successful profile update
+      setUser(user => user ? { ...user, ...data } : null);
+      return true;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return false;
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        isAuthenticated: !!user,
+        isLoading,
+        user,
+        login,
+        register,
+        logout,
+        updateProfile
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

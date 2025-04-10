@@ -1,44 +1,66 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import RootLayout from '@/layouts/RootLayout';
+import MarketingLayout from '@/layouts/MarketingLayout';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { Button } from '@/components/ui/button';
-
-// Create a simple Home page for now
-const HomePage = () => {
-  return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Welcome to Italian Language Learning</h1>
-      <p className="mb-4">
-        This application helps you prepare for your Italian citizenship test.
-      </p>
-      <div className="flex gap-4 mt-8">
-        <Button>Get Started</Button>
-        <Button variant="outline">Learn More</Button>
-      </div>
-    </div>
-  );
-};
-
-// Simple 404 page
-const NotFoundPage = () => {
-  return (
-    <div className="container mx-auto py-10 text-center">
-      <h1 className="text-3xl font-bold mb-6">404 - Page Not Found</h1>
-      <p>The page you are looking for does not exist.</p>
-    </div>
-  );
-};
+import HomePage from '@/pages/HomePage';
+import LandingPage from '@/pages/marketing/LandingPage';
+import NotFound from '@/pages/NotFound';
+import { useAuth } from '@/hooks/useAuth';
+import AuthPage from '@/pages/auth/AuthPage';
+import DashboardPage from '@/pages/DashboardPage';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const App = () => {
   return (
     <ErrorBoundary>
       <Routes>
-        <Route path="/" element={<RootLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="*" element={<NotFoundPage />} />
+        {/* Marketing Routes */}
+        <Route path="/" element={<MarketingLayout />}>
+          <Route index element={<LandingPage />} />
+          <Route path="features" element={<div>Features Page</div>} />
+          <Route path="about" element={<div>About Page</div>} />
+          <Route path="pricing" element={<div>Pricing Page</div>} />
+          <Route path="support-center" element={<div>Support Center</div>} />
         </Route>
+        
+        {/* Authentication Routes */}
+        <Route path="/auth" element={<MarketingLayout />}>
+          <Route path="login" element={<AuthPage />} />
+          <Route path="register" element={<AuthPage />} />
+          <Route path="forgot-password" element={<div>Forgot Password Page</div>} />
+        </Route>
+        
+        {/* Application Routes - Protected */}
+        <Route path="/app" element={
+          <ProtectedRoute>
+            <RootLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="flashcards" element={<div>Flashcards Page</div>} />
+          <Route path="practice" element={<div>Practice Page</div>} />
+          <Route path="progress" element={<div>Progress Page</div>} />
+          <Route path="profile" element={<div>Profile Page</div>} />
+          <Route path="settings" element={<div>Settings Page</div>} />
+        </Route>
+        
+        {/* Admin Routes - Protected with Admin Check */}
+        <Route path="/admin" element={
+          <ProtectedRoute requireAdmin>
+            <RootLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<div>Admin Dashboard</div>} />
+          <Route path="users" element={<div>User Management</div>} />
+          <Route path="content" element={<div>Content Management</div>} />
+        </Route>
+        
+        {/* 404 Page */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ErrorBoundary>
   );

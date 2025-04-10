@@ -1,97 +1,145 @@
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, List, User, Settings, LogOut } from 'lucide-react';
+import { Calendar, BookOpen, BarChart3, User } from 'lucide-react';
 
-const DashboardPage = () => {
-  const { user, logout } = useAuth();
+const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
   
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Welcome, {user.firstName || 'User'}!</h1>
-        <Button variant="ghost" onClick={logout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+    <>
+      <Helmet>
+        <title>Dashboard | CILS B1 Italian Prep</title>
+      </Helmet>
+      
+      <div className="container mx-auto py-6 px-4">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Welcome back{user?.firstName ? `, ${user.firstName}` : ''}!</h1>
+          <p className="text-muted-foreground">Continue your Italian language learning journey</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Calendar className="mr-2 h-5 w-5 text-primary" />
+                Daily Streak
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">7 days</p>
+              <p className="text-sm text-muted-foreground">Keep practicing daily!</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <BookOpen className="mr-2 h-5 w-5 text-primary" />
+                Vocabulary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">248 words</p>
+              <p className="text-sm text-muted-foreground">Words learned</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <BarChart3 className="mr-2 h-5 w-5 text-primary" />
+                Proficiency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">B1</p>
+              <p className="text-sm text-muted-foreground">Current level</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <User className="mr-2 h-5 w-5 text-primary" />
+                Citizenship
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">64%</p>
+              <p className="text-sm text-muted-foreground">Exam readiness</p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Continue Learning</CardTitle>
+              <CardDescription>Pick up where you left off</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Italian Grammar: Present Tense</h3>
+                  <div className="bg-gray-100 h-2 rounded-full mb-2">
+                    <div className="bg-primary h-2 rounded-full w-[70%]"></div>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Progress: 70%</span>
+                    <span>15 min remaining</span>
+                  </div>
+                  <Button className="mt-4" asChild>
+                    <Link to="/app/practice">Continue Learning</Link>
+                  </Button>
+                </div>
+                
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Citizenship Vocabulary</h3>
+                  <div className="bg-gray-100 h-2 rounded-full mb-2">
+                    <div className="bg-primary h-2 rounded-full w-[45%]"></div>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Progress: 45%</span>
+                    <span>20 min remaining</span>
+                  </div>
+                  <Button className="mt-4" asChild>
+                    <Link to="/app/flashcards">Continue Flashcards</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Practice</CardTitle>
+              <CardDescription>Keep your skills sharp</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Button className="w-full" asChild>
+                  <Link to="/app/flashcards">Flashcards</Link>
+                </Button>
+                <Button className="w-full" variant="outline" asChild>
+                  <Link to="/app/practice">Listening Practice</Link>
+                </Button>
+                <Button className="w-full" variant="outline" asChild>
+                  <Link to="/app/practice">Multiple Choice</Link>
+                </Button>
+                <Button className="w-full" variant="outline" asChild>
+                  <Link to="/app/practice">Speaking Practice</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BookOpen className="h-5 w-5 mr-2 text-italian-green" />
-              Italian Language
-            </CardTitle>
-            <CardDescription>Practice your Italian language skills</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Build vocabulary and grammar skills required for the CILS B1 exam.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Start Learning</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <List className="h-5 w-5 mr-2 text-italian-red" />
-              Citizenship Test
-            </CardTitle>
-            <CardDescription>Prepare for your citizenship test</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Learn about Italian culture, history, and civic knowledge needed for citizenship.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Practice Tests</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <User className="h-5 w-5 mr-2 text-italian-blue" />
-              My Progress
-            </CardTitle>
-            <CardDescription>Track your learning journey</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>View your progress, achievements, and areas for improvement.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">View Progress</Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">No recent activity found. Start learning to see your progress!</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-8 flex justify-center">
-        <Button variant="outline" className="flex items-center">
-          <Settings className="h-4 w-4 mr-2" />
-          Settings
-        </Button>
-      </div>
-    </div>
+    </>
   );
 };
 
