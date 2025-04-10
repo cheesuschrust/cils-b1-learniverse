@@ -1,91 +1,110 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
+import { errorMonitoringService } from '@/services/ErrorMonitoringService';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-interface Props {
-  children: ReactNode;
-  showDetails?: boolean;
-  reportErrors?: boolean;
-  onError?: (error: Error, info: ErrorInfo) => void;
-  fallback?: ReactNode;
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  resetOnPropsChange?: boolean;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  errorInfo: React.ErrorInfo | null;
 }
 
-class EnhancedErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-  };
-
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+export class EnhancedErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Optional error reporting
-    if (this.props.reportErrors) {
-      console.error("Uncaught error:", error, errorInfo);
-    }
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // Update state with error details
+    this.setState({
+      errorInfo
+    });
     
-    // Call the onError callback if provided
+    // Report to error monitoring service
+    errorMonitoringService.captureError(error, {
+      componentStack: errorInfo.componentStack,
+      context: 'ErrorBoundary'
+    });
+    
+    // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-    
-    this.setState({ errorInfo });
   }
 
-  private handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Reset error state if props changed and resetOnPropsChange is true
+    if (
+      this.state.hasError &&
+      this.props.resetOnPropsChange &&
+      prevProps.children !== this.props.children
+    ) {
+      this.resetErrorBoundary();
+    }
+  }
+
+  resetErrorBoundary = (): void => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
   };
 
-  public render() {
+  render(): React.ReactNode {
     if (this.state.hasError) {
+      // Use custom fallback if provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
       
+      // Default error UI
       return (
-        <Card className="w-full max-w-md mx-auto my-8 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-red-600">Something went wrong</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive" className="mb-4">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
-                {this.state.error?.toString()}
-              </AlertDescription>
-            </Alert>
-            
-            {this.props.showDetails && this.state.errorInfo && (
-              <div className="mt-4">
-                <details className="bg-gray-100 dark:bg-gray-800 p-4 rounded">
-                  <summary className="font-medium cursor-pointer">Stack trace</summary>
-                  <pre className="mt-2 text-xs overflow-auto p-2 bg-gray-200 dark:bg-gray-700 rounded">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                </details>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={this.handleReset} variant="outline">
-              Try again
-            </Button>
-          </CardFooter>
-        </Card>
+        <div className="p-4 flex flex-col items-center justify-center min-h-[200px]">
+          <Alert variant="destructive" className="mb-4 max-w-lg">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription className="mt-2">
+              {this.state.error?.message || 'An unexpected error occurred'}
+              {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+                <pre className="mt-2 text-xs overflow-auto p-2 bg-muted rounded whitespace-pre-wrap">
+                  {this.state.errorInfo.componentStack}
+                </pre>
+              )}
+            </AlertDescription>
+          </Alert>
+          <Button 
+            onClick={this.resetErrorBoundary} 
+            variant="outline" 
+            size="sm"
+            className="mt-2"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
       );
     }
 
+    // Render children if no error
     return this.props.children;
   }
 }

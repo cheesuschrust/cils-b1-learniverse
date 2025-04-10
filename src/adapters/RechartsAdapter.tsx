@@ -1,72 +1,53 @@
 
 import React from 'react';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ScatterChart,
-  Scatter,
-  Cell
+  LineChart as RLineChart,
+  Line as RLine,
+  BarChart as RBarChart,
+  Bar as RBar,
+  PieChart as RPieChart,
+  Pie as RPie,
+  AreaChart as RAreaChart,
+  Area as RArea,
+  XAxis as RXAxis,
+  YAxis as RYAxis,
+  CartesianGrid as RCartesianGrid,
+  Tooltip as RTooltip,
+  Legend as RLegend,
+  ResponsiveContainer as RResponsiveContainer,
+  RadarChart as RRadarChart,
+  Radar as RRadar,
+  PolarGrid as RPolarGrid,
+  PolarAngleAxis as RPolarAngleAxis,
+  PolarRadiusAxis as RPolarRadiusAxis,
+  ScatterChart as RScatterChart,
+  Scatter as RScatter,
+  Cell as RCell
 } from 'recharts';
 
-// Create wrapper components for Recharts components
-export const XAxisWrapper: React.FC<any> = (props) => <XAxis {...props} />;
-export const YAxisWrapper: React.FC<any> = (props) => <YAxis {...props} />;
-export const LineWrapper: React.FC<any> = (props) => <Line {...props} />;
-export const BarWrapper: React.FC<any> = (props) => <Bar {...props} />;
-export const PieWrapper: React.FC<any> = (props) => <Pie {...props} />;
-export const AreaWrapper: React.FC<any> = (props) => <Area {...props} />;
-export const TooltipWrapper: React.FC<any> = (props) => <Tooltip {...props} />;
-export const LegendWrapper: React.FC<any> = (props) => <Legend {...props} />;
-export const CartesianGridWrapper: React.FC<any> = (props) => <CartesianGrid {...props} />;
-export const CellWrapper: React.FC<any> = (props) => <Cell {...props} />;
-export const RadarWrapper: React.FC<any> = (props) => <Radar {...props} />;
-export const PolarGridWrapper: React.FC<any> = (props) => <PolarGrid {...props} />;
-export const PolarAngleAxisWrapper: React.FC<any> = (props) => <PolarAngleAxis {...props} />;
-export const PolarRadiusAxisWrapper: React.FC<any> = (props) => <PolarRadiusAxis {...props} />;
-export const ScatterWrapper: React.FC<any> = (props) => <Scatter {...props} />;
-
-// Continue to re-export the original components for non-JSX usage
-export {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ScatterChart,
-  Scatter,
-  Cell
-};
+// Create component wrappers for Recharts to support JSX properly
+export const LineChart: React.FC<any> = (props) => <RLineChart {...props} />;
+export const Line: React.FC<any> = (props) => <RLine {...props} />;
+export const BarChart: React.FC<any> = (props) => <RBarChart {...props} />;
+export const Bar: React.FC<any> = (props) => <RBar {...props} />;
+export const PieChart: React.FC<any> = (props) => <RPieChart {...props} />;
+export const Pie: React.FC<any> = (props) => <RPie {...props} />;
+export const AreaChart: React.FC<any> = (props) => <RAreaChart {...props} />;
+export const Area: React.FC<any> = (props) => <RArea {...props} />;
+export const XAxis: React.FC<any> = (props) => <RXAxis {...props} />;
+export const YAxis: React.FC<any> = (props) => <RYAxis {...props} />;
+export const CartesianGrid: React.FC<any> = (props) => <RCartesianGrid {...props} />;
+export const Tooltip: React.FC<any> = (props) => <RTooltip {...props} />;
+export const Legend: React.FC<any> = (props) => <RLegend {...props} />;
+export const ResponsiveContainer: React.FC<any> = (props) => <RResponsiveContainer {...props} />;
+export const RadarChart: React.FC<any> = (props) => <RRadarChart {...props} />;
+export const Radar: React.FC<any> = (props) => <RRadar {...props} />;
+export const PolarGrid: React.FC<any> = (props) => <RPolarGrid {...props} />;
+export const PolarAngleAxis: React.FC<any> = (props) => <RPolarAngleAxis {...props} />;
+export const PolarRadiusAxis: React.FC<any> = (props) => <RPolarRadiusAxis {...props} />;
+export const ScatterChart: React.FC<any> = (props) => <RScatterChart {...props} />;
+export const Scatter: React.FC<any> = (props) => <RScatter {...props} />;
+export const Cell: React.FC<any> = (props) => <RCell {...props} />;
 
 // Helper wrapper component with simplified types
 export const ChartWrapper: React.FC<{
@@ -74,7 +55,7 @@ export const ChartWrapper: React.FC<{
   height?: number | string;
   width?: number | string;
 }> = ({ children, height = 300, width = '100%' }) => (
-  <ResponsiveContainer width={width} height={height}>
+  <RResponsiveContainer width={width} height={height}>
     {children}
-  </ResponsiveContainer>
+  </RResponsiveContainer>
 );
