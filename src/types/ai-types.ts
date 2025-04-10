@@ -1,65 +1,89 @@
 
-export type AIProcessingOptions = {
-  confidenceThreshold?: number;
-  language?: 'italian' | 'english' | 'both';
-  includeTranslation?: boolean;
-  includeFeedback?: boolean;
-  maxTokens?: number;
-  processingType?: 'grammar' | 'vocabulary' | 'culture' | 'citizenship';
-};
+// AI Model types and interfaces
 
-export type AIModelStatus = 'active' | 'loading' | 'error' | 'inactive';
-
-export type AIModelType = 'embedding' | 'translation' | 'speech' | 'text-generation' | 'chat';
-
-export type AIModel = {
+export interface AIModel {
   id: string;
   name: string;
-  type: AIModelType;
-  size: number; // size in MB
-  isLoaded: boolean;
+  provider: string;
+  capabilities: string[];
+  accuracy: number;
+  confidenceScore: number;
   isActive: boolean;
-  accuracy: number; // 0-1
+  lastTrainedAt?: Date;
   version: string;
-};
+}
 
-export type ItalianQuestionGenerationParams = {
-  contentType: 'multiple_choice' | 'open_ended' | 'fill_in_blank';
-  topics: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  count: number;
-  includeTranslation?: boolean;
-};
+export interface AIProcessingOptions {
+  language?: string;
+  confidenceThreshold?: number;
+  maxResults?: number;
+  processingMode?: 'fast' | 'accurate';
+  filterProfanity?: boolean;
+}
 
-export type AIGeneratedQuestion = {
-  id: string;
-  question: string;
-  questionTranslation?: string;
-  type: 'multiple_choice' | 'open_ended' | 'fill_in_blank';
-  options?: string[];
-  optionsTranslations?: string[];
-  correctAnswer?: string | number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-};
-
-export type TextToSpeechOptions = {
+export interface TextToSpeechOptions {
   text: string;
-  voice?: string; 
+  voice?: string;
   speed?: number;
-};
+  pitch?: number;
+}
 
-export type TTSOptions = {
+export type TTSOptions = string | {
   voice?: string;
   speed?: number;
   pitch?: number;
 };
 
-export type AIGenerationResult = {
-  content: string;
-  confidence?: number;
-  metadata?: {
-    processingTime?: number;
-    modelUsed?: string;
-    tokensUsed?: number;
+export interface ItalianQuestionGenerationParams {
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  topics?: string[];
+  numberOfQuestions?: number;
+  includeExplanations?: boolean;
+  format?: 'multiple-choice' | 'fill-in-blank' | 'true-false';
+}
+
+export interface AIGeneratedQuestion {
+  id: string;
+  questionText: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+  difficulty: string;
+  confidenceScore: number;
+  topic: string;
+}
+
+export interface AIGenerationResult {
+  questions: AIGeneratedQuestion[];
+  metadata: {
+    model: string;
+    generationTime: number;
+    confidence: number;
   };
-};
+}
+
+export interface AIPerformanceMetrics {
+  accuracy: number;
+  responseTime: number;
+  userSatisfaction: number;
+  errorRate: number;
+  queryVolume: number;
+}
+
+export interface AITrainingData {
+  id: string;
+  content: string;
+  label: string;
+  source: string;
+  languageLevel: string;
+  dateAdded: Date;
+  isVerified: boolean;
+}
+
+export interface AIConfidenceScore {
+  overall: number;
+  breakdown: {
+    [key: string]: number;
+  };
+  lastUpdated: Date;
+}

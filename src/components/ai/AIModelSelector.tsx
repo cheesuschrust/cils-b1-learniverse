@@ -1,391 +1,356 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Cpu, Lightning, Save, Server, Shield, Sliders, Zap } from 'lucide-react';
-
-interface ModelOption {
-  id: string;
-  name: string;
-  size: string;
-  performance: number;
-  accuracy: number;
-  isLocal: boolean;
-}
-
-interface ConfigOption {
-  id: string;
-  name: string;
-  description: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-}
+import { useToast } from '@/hooks/use-toast';
+import { BrainCircuit, Zap, Cpu, Server, Gauge, Plus } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { AIModel } from '@/types/ai-types';
 
 const AIModelSelector: React.FC = () => {
-  // Sample model data
-  const embeddingModels: ModelOption[] = [
-    { id: 'mxbai-small', name: 'MixedBread Embed Small', size: '50MB', performance: 85, accuracy: 88, isLocal: true },
-    { id: 'mxbai-base', name: 'MixedBread Embed Base', size: '110MB', performance: 75, accuracy: 92, isLocal: true },
-    { id: 'mxbai-large', name: 'MixedBread Embed Large', size: '320MB', performance: 60, accuracy: 96, isLocal: false },
-  ];
+  const { toast } = useToast();
   
-  const translationModels: ModelOption[] = [
-    { id: 'opus-tiny', name: 'Opus MT Tiny (EN-IT)', size: '40MB', performance: 90, accuracy: 82, isLocal: true },
-    { id: 'opus-base', name: 'Opus MT Base (EN-IT)', size: '85MB', performance: 80, accuracy: 88, isLocal: true },
-    { id: 'opus-large', name: 'Opus MT Large (EN-IT)', size: '220MB', performance: 65, accuracy: 94, isLocal: false },
-  ];
+  const [availableModels, setAvailableModels] = useState<AIModel[]>([
+    { 
+      id: '1', 
+      name: 'Italian Language Assistant', 
+      provider: 'HuggingFace', 
+      capabilities: ['text-generation', 'translation', 'grammar-check'], 
+      accuracy: 0.92, 
+      confidenceScore: 0.89, 
+      isActive: true, 
+      version: '1.2.0',
+      lastTrainedAt: new Date('2025-03-15')
+    },
+    { 
+      id: '2', 
+      name: 'CILS Question Generator', 
+      provider: 'Local Model', 
+      capabilities: ['question-generation', 'assessment'], 
+      accuracy: 0.87, 
+      confidenceScore: 0.85, 
+      isActive: true, 
+      version: '0.9.4',
+      lastTrainedAt: new Date('2025-03-20')
+    },
+    { 
+      id: '3', 
+      name: 'Italian Speech Recognition', 
+      provider: 'HuggingFace', 
+      capabilities: ['speech-to-text', 'accent-detection'], 
+      accuracy: 0.85, 
+      confidenceScore: 0.82, 
+      isActive: false, 
+      version: '0.8.1',
+      lastTrainedAt: new Date('2025-02-28')
+    },
+    { 
+      id: '4', 
+      name: 'Cultural Context Engine', 
+      provider: 'Local Model', 
+      capabilities: ['cultural-context', 'relevance-analysis'], 
+      accuracy: 0.91, 
+      confidenceScore: 0.88, 
+      isActive: true, 
+      version: '1.0.5',
+      lastTrainedAt: new Date('2025-03-10')
+    }
+  ]);
   
-  const speechModels: ModelOption[] = [
-    { id: 'whisper-tiny', name: 'Whisper Tiny', size: '75MB', performance: 88, accuracy: 85, isLocal: true },
-    { id: 'whisper-base', name: 'Whisper Base', size: '150MB', performance: 78, accuracy: 90, isLocal: true },
-    { id: 'whisper-small', name: 'Whisper Small', size: '460MB', performance: 62, accuracy: 95, isLocal: false },
-  ];
+  const [settings, setSettings] = useState({
+    confidenceThreshold: 0.75,
+    enableGPUAcceleration: true,
+    debugMode: false,
+    cacheResponses: true,
+    maxTokens: 1024,
+    temperatureValue: 0.7,
+    useAdvancedFeatures: true
+  });
   
-  // Configuration options
-  const configOptions: ConfigOption[] = [
-    { id: 'temperature', name: 'Temperature', description: 'Controls randomness of outputs', value: 0.7, min: 0, max: 1, step: 0.1 },
-    { id: 'topP', name: 'Top P', description: 'Controls diversity via nucleus sampling', value: 0.9, min: 0, max: 1, step: 0.05 },
-    { id: 'cacheSize', name: 'Cache Size (MB)', description: 'Maximum local storage for models', value: 500, min: 100, max: 1000, step: 100 },
-    { id: 'batchSize', name: 'Batch Size', description: 'Number of parallel operations', value: 8, min: 1, max: 32, step: 1 },
-  ];
-  
-  // State for selected models and configurations
-  const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState(embeddingModels[0].id);
-  const [selectedTranslationModel, setSelectedTranslationModel] = useState(translationModels[0].id);
-  const [selectedSpeechModel, setSelectedSpeechModel] = useState(speechModels[0].id);
-  const [offlineMode, setOfflineMode] = useState(true);
-  const [configValues, setConfigValues] = useState<Record<string, number>>(
-    configOptions.reduce((acc, option) => ({ ...acc, [option.id]: option.value }), {})
-  );
-  
-  // Handle configuration change
-  const handleConfigChange = (id: string, value: number) => {
-    setConfigValues(prev => ({ ...prev, [id]: value }));
-  };
-  
-  // Handle save configuration
-  const handleSaveConfig = () => {
-    console.log('Saving configuration:', {
-      models: {
-        embedding: selectedEmbeddingModel,
-        translation: selectedTranslationModel,
-        speech: selectedSpeechModel,
-      },
-      offlineMode,
-      configValues,
+  const toggleModelActive = (id: string) => {
+    setAvailableModels(models => 
+      models.map(model => 
+        model.id === id 
+          ? { ...model, isActive: !model.isActive } 
+          : model
+      )
+    );
+    
+    const model = availableModels.find(m => m.id === id);
+    
+    toast({
+      title: model?.isActive ? "Model Deactivated" : "Model Activated",
+      description: `${model?.name} has been ${model?.isActive ? "deactivated" : "activated"} successfully.`,
     });
-    // In a real app, this would save to API or local storage
   };
   
+  const handleSettingChange = (key: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  const saveSettings = () => {
+    toast({
+      title: "Settings Saved",
+      description: "AI model settings have been updated successfully.",
+    });
+  };
+  
+  const trainModel = (id: string) => {
+    toast({
+      title: "Training Started",
+      description: "Model training has been initiated. This may take some time.",
+    });
+  };
+
   return (
-    <Card className="w-full shadow-md">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center">
-          <Brain className="mr-2 h-5 w-5 text-primary" />
-          AI Model Configuration
-        </CardTitle>
-        <CardDescription>
-          Select and configure AI models for different learning tasks
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="models" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="models" className="flex items-center">
-              <Cpu className="mr-2 h-4 w-4" />
-              Models Selection
-            </TabsTrigger>
-            <TabsTrigger value="advanced" className="flex items-center">
-              <Sliders className="mr-2 h-4 w-4" />
-              Advanced Configuration
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="models" className="space-y-6">
-            <div className="space-y-6 mt-4">
-              {/* Embedding Models */}
-              <div className="space-y-2">
+    <div className="space-y-6">
+      <Tabs defaultValue="active-models">
+        <TabsList>
+          <TabsTrigger value="active-models" className="flex items-center">
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            Active Models
+          </TabsTrigger>
+          <TabsTrigger value="available-models" className="flex items-center">
+            <Server className="mr-2 h-4 w-4" />
+            Available Models
+          </TabsTrigger>
+          <TabsTrigger value="model-settings" className="flex items-center">
+            <Gauge className="mr-2 h-4 w-4" />
+            Model Settings
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="active-models" className="mt-6 space-y-4">
+          {availableModels.filter(model => model.isActive).map(model => (
+            <Card key={model.id}>
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Embedding Models</Label>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    for recommendations & search
-                  </Badge>
-                </div>
-                
-                <div className="border rounded-lg p-4">
-                  <Select value={selectedEmbeddingModel} onValueChange={setSelectedEmbeddingModel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select embedding model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {embeddingModels.map(model => (
-                        <SelectItem key={model.id} value={model.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{model.name}</span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {model.size}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Performance</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 rounded-full" 
-                          style={{ 
-                            width: `${embeddingModels.find(m => m.id === selectedEmbeddingModel)?.performance || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Accuracy</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 rounded-full" 
-                          style={{ 
-                            width: `${embeddingModels.find(m => m.id === selectedEmbeddingModel)?.accuracy || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
+                  <div>
+                    <CardTitle className="flex items-center">
+                      {model.name}
+                      <Badge className="ml-2" variant="outline">v{model.version}</Badge>
+                    </CardTitle>
+                    <CardDescription>Provider: {model.provider}</CardDescription>
                   </div>
-                </div>
-              </div>
-              
-              {/* Translation Models */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Translation Models</Label>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    for language translation
-                  </Badge>
-                </div>
-                
-                <div className="border rounded-lg p-4">
-                  <Select value={selectedTranslationModel} onValueChange={setSelectedTranslationModel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select translation model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {translationModels.map(model => (
-                        <SelectItem key={model.id} value={model.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{model.name}</span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {model.size}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Performance</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 rounded-full" 
-                          style={{ 
-                            width: `${translationModels.find(m => m.id === selectedTranslationModel)?.performance || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Accuracy</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 rounded-full" 
-                          style={{ 
-                            width: `${translationModels.find(m => m.id === selectedTranslationModel)?.accuracy || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Speech Recognition Models */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Speech Recognition Models</Label>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    for pronunciation practice
-                  </Badge>
-                </div>
-                
-                <div className="border rounded-lg p-4">
-                  <Select value={selectedSpeechModel} onValueChange={setSelectedSpeechModel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select speech model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {speechModels.map(model => (
-                        <SelectItem key={model.id} value={model.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{model.name}</span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {model.size}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Performance</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 rounded-full" 
-                          style={{ 
-                            width: `${speechModels.find(m => m.id === selectedSpeechModel)?.performance || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Accuracy</Label>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 rounded-full" 
-                          style={{ 
-                            width: `${speechModels.find(m => m.id === selectedSpeechModel)?.accuracy || 0}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Offline Mode Toggle */}
-              <div className="border rounded-lg p-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label className="text-base font-medium flex items-center" htmlFor="offline-mode">
-                    <Shield className="mr-2 h-4 w-4 text-green-600" />
-                    Offline Mode
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Process all AI tasks locally for privacy and offline use
-                  </p>
-                </div>
-                <Switch
-                  id="offline-mode"
-                  checked={offlineMode}
-                  onCheckedChange={setOfflineMode}
-                />
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="advanced" className="space-y-6">
-            <div className="space-y-6 mt-4">
-              {/* Advanced Configuration Options */}
-              {configOptions.map(option => (
-                <div key={option.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base">{option.name}</Label>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="number"
-                        value={configValues[option.id]}
-                        onChange={(e) => handleConfigChange(option.id, parseFloat(e.target.value))}
-                        className="w-20 text-right"
-                        min={option.min}
-                        max={option.max}
-                        step={option.step}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{option.description}</p>
-                  <Slider
-                    defaultValue={[configValues[option.id]]}
-                    max={option.max}
-                    min={option.min}
-                    step={option.step}
-                    onValueChange={(value) => handleConfigChange(option.id, value[0])}
+                  <Switch 
+                    checked={model.isActive} 
+                    onCheckedChange={() => toggleModelActive(model.id)}
                   />
                 </div>
-              ))}
-              
-              {/* Fallback Options */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <Label className="text-base font-medium flex items-center">
-                    <Server className="mr-2 h-4 w-4 text-purple-600" />
-                    Server Fallback Settings
-                  </Label>
-                </div>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm" htmlFor="fallback-enabled">Allow server fallback for complex tasks</Label>
-                    <Switch id="fallback-enabled" defaultChecked={true} />
+                  <div>
+                    <div className="flex items-center justify-between mb-1 text-sm">
+                      <span>Accuracy</span>
+                      <span>{(model.accuracy * 100).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={model.accuracy * 100} className="h-2" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm" htmlFor="privacy-mode">Enhanced privacy mode</Label>
-                    <Switch id="privacy-mode" defaultChecked={true} />
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-1 text-sm">
+                      <span>Confidence Score</span>
+                      <span>{(model.confidenceScore * 100).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={model.confidenceScore * 100} className="h-2" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm" htmlFor="auto-optimization">Automatic model optimization</Label>
-                    <Switch id="auto-optimization" defaultChecked={true} />
+                  
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {model.capabilities.map((cap, idx) => (
+                      <Badge key={idx} variant="secondary" className="capitalize">
+                        {cap.replace(/-/g, ' ')}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
+              </CardContent>
+              <CardFooter className="flex justify-between border-t pt-4">
+                <div className="text-sm text-muted-foreground">
+                  Last trained: {model.lastTrainedAt?.toLocaleDateString()}
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => trainModel(model.id)}
+                >
+                  Retrain Model
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+          
+          {availableModels.filter(model => model.isActive).length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No active models. Activate models from the Available Models tab.
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="available-models" className="mt-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {availableModels.map(model => (
+              <Card key={model.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{model.name}</CardTitle>
+                      <CardDescription>Provider: {model.provider}</CardDescription>
+                    </div>
+                    <Switch 
+                      checked={model.isActive} 
+                      onCheckedChange={() => toggleModelActive(model.id)}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <Zap className="h-4 w-4 mr-2 text-yellow-500" />
+                      <span>Accuracy: {(model.accuracy * 100).toFixed(1)}%</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <Cpu className="h-4 w-4 mr-2 text-blue-500" />
+                      <span>Version: {model.version}</span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {model.capabilities.map((cap, idx) => (
+                        <Badge key={idx} variant="secondary" className="capitalize">
+                          {cap.replace(/-/g, ' ')}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            <Card className="border-dashed flex flex-col justify-center items-center p-6">
+              <Plus className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">Add New Model</p>
+              <Button variant="outline" size="sm" className="mt-4">
+                Import Model
+              </Button>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="model-settings" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Model Configuration</CardTitle>
+              <CardDescription>Advanced settings for AI model behavior</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="gpu-acceleration">GPU Acceleration</Label>
+                  <p className="text-sm text-muted-foreground">Use WebGPU for faster processing</p>
+                </div>
+                <Switch 
+                  id="gpu-acceleration" 
+                  checked={settings.enableGPUAcceleration}
+                  onCheckedChange={(checked) => handleSettingChange('enableGPUAcceleration', checked)}
+                />
               </div>
               
-              {/* System Status */}
-              <div className="border rounded-lg p-4 bg-muted/30">
-                <div className="flex items-center justify-between mb-4">
-                  <Label className="text-base font-medium flex items-center">
-                    <Zap className="mr-2 h-4 w-4 text-amber-500" />
-                    System Status
-                  </Label>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="cache-responses">Cache Responses</Label>
+                  <p className="text-sm text-muted-foreground">Store responses for frequently asked questions</p>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">WebGPU Support:</span>
-                    <Badge variant="outline" className="bg-green-100 text-green-800">Available</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Storage Usage:</span>
-                    <span>175MB / 500MB</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current Models:</span>
-                    <span>3 local, 0 remote</span>
-                  </div>
-                </div>
+                <Switch 
+                  id="cache-responses" 
+                  checked={settings.cacheResponses}
+                  onCheckedChange={(checked) => handleSettingChange('cacheResponses', checked)}
+                />
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-        
-        <div className="flex justify-end mt-6">
-          <Button onClick={handleSaveConfig} className="flex items-center">
-            <Save className="mr-2 h-4 w-4" />
-            Save Configuration
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="debug-mode">Debug Mode</Label>
+                  <p className="text-sm text-muted-foreground">Show detailed model information</p>
+                </div>
+                <Switch 
+                  id="debug-mode" 
+                  checked={settings.debugMode}
+                  onCheckedChange={(checked) => handleSettingChange('debugMode', checked)}
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="confidence-threshold">Confidence Threshold</Label>
+                  <span className="text-sm">{(settings.confidenceThreshold * 100).toFixed(0)}%</span>
+                </div>
+                <Slider 
+                  id="confidence-threshold"
+                  min={0} 
+                  max={100} 
+                  step={1}
+                  value={[settings.confidenceThreshold * 100]} 
+                  onValueChange={(value) => handleSettingChange('confidenceThreshold', value[0] / 100)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Responses below this confidence level will be filtered
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="temperature">Temperature</Label>
+                  <span className="text-sm">{settings.temperatureValue.toFixed(1)}</span>
+                </div>
+                <Slider 
+                  id="temperature"
+                  min={0} 
+                  max={1} 
+                  step={0.1}
+                  value={[settings.temperatureValue]} 
+                  onValueChange={(value) => handleSettingChange('temperatureValue', value[0])}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Higher values produce more creative responses
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="max-tokens">Max Tokens</Label>
+                  <span className="text-sm">{settings.maxTokens}</span>
+                </div>
+                <Slider 
+                  id="max-tokens"
+                  min={128} 
+                  max={2048} 
+                  step={128}
+                  value={[settings.maxTokens]} 
+                  onValueChange={(value) => handleSettingChange('maxTokens', value[0])}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum length of generated responses
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t pt-4">
+              <Button onClick={saveSettings} className="ml-auto">
+                Save Settings
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

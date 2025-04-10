@@ -1,25 +1,66 @@
 
-export type AIModelType = 'local' | 'cloud' | 'hybrid';
+// AI Settings types and interfaces
 
-export type AIOptions = {
-  model: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-};
+export interface AIModelSettings {
+  id: string;
+  name: string;
+  isActive: boolean;
+  confidenceThreshold: number;
+  usageLimit: number;
+  processingMode: 'fast' | 'accurate';
+  cacheResponses: boolean;
+  useWebGPU: boolean;
+}
 
-export type AIStatus = {
-  isModelLoaded: boolean;
+export interface VoiceSettings {
+  enabled: boolean;
+  defaultVoice: string;
+  defaultSpeed: number;
+  defaultPitch: number;
+  availableVoices: string[];
+}
+
+export interface AIUsageStatistics {
+  totalQueries: number;
+  averageResponseTime: number;
+  averageAccuracy: number;
+  dailyUsage: {
+    date: string;
+    count: number;
+  }[];
+  modelUsage: {
+    model: string;
+    count: number;
+  }[];
+}
+
+export interface AISystemStatus {
   isOnline: boolean;
-  error: string | null;
-  availableModels: string[];
-};
+  lastUpdated: Date;
+  services: {
+    name: string;
+    status: 'operational' | 'degraded' | 'outage';
+    uptime: number;
+  }[];
+  memoryUsage: number;
+  processingLoad: number;
+}
 
-export type AIFeedbackSettings = {
-  provideHints: boolean;
-  explainErrors: boolean;
-  suggestImprovements: boolean;
-  translationFeedback: boolean;
-};
+export interface AISecuritySettings {
+  encryptResponses: boolean;
+  logSensitiveData: boolean;
+  maxQueriesPerMinute: number;
+  userDataRetention: number; // days
+  accessControls: {
+    role: string;
+    permissions: string[];
+  }[];
+}
 
-export type AIModelSize = 'small' | 'medium' | 'large';
+export interface AITrainingSettings {
+  autoTrain: boolean;
+  trainingFrequency: 'daily' | 'weekly' | 'monthly';
+  minimumDataPoints: number;
+  validateBeforeTraining: boolean;
+  notifyAdminOnComplete: boolean;
+}
