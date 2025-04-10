@@ -1,4 +1,3 @@
-
 /// <reference types="vite/client" />  
 import { defineConfig } from 'vite';  
 import react from '@vitejs/plugin-react';  
@@ -11,7 +10,7 @@ export default defineConfig(({ mode }) => {
         jsxRuntime: 'automatic',
         jsxImportSource: 'react',
       }),
-    ].filter(Boolean),
+    ],
     
     // Server Configuration  
     server: {  
@@ -19,6 +18,9 @@ export default defineConfig(({ mode }) => {
       host: true,  
       open: true, 
       strictPort: true,
+      hmr: {
+        overlay: true,
+      },
     },  
     
     // Resolve Aliases  
@@ -46,6 +48,7 @@ export default defineConfig(({ mode }) => {
         'lucide-react',
         'tailwind-merge',
         'react-hook-form',
+        '@tailwindcss/postcss',
       ],  
       force: true  
     },  
@@ -74,6 +77,9 @@ export default defineConfig(({ mode }) => {
     // CSS Configuration
     css: {
       postcss: './postcss.config.cjs',
+      modules: {
+        localsConvention: 'camelCase',
+      },
     },
     
     // Testing Configuration  
