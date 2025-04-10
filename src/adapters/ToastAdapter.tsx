@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useToast as useOriginalToast } from '@/hooks/use-toast';
+import { useToast as useOriginalToast } from '@/components/ui/use-toast';
 
 // Standardize toast variants across the application
 type StandardToastVariant = 'default' | 'success' | 'error' | 'warning';
