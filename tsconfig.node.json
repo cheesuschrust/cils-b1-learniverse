@@ -29,6 +29,7 @@
     "isolatedModules": true,  
     "noEmit": false,  
     "emitDeclarationOnly": true, 
+    "outDir": "./dist",
 
     // Library Support  
     "lib": ["ES2023", "DOM", "DOM.Iterable"]  
