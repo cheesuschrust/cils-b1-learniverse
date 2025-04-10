@@ -33,6 +33,7 @@
       "@types/*": ["./src/types/*"],
       "@routes/*": ["./src/routes/*"],
       "@context/*": ["./src/contexts/*"]
+      "@adapters/*": ["./src/adapters/*"]
     }
   },
   "include": ["src", "cypress"],
