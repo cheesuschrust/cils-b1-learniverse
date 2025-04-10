@@ -8,7 +8,7 @@ import App from './App';
 const AppWithAdapters: React.FC = () => {
   return (
     <Router>
-      <HelmetProvider>
+      <HelmetProvider context={{}}>
         <AuthProvider>
           <App />
         </AuthProvider>

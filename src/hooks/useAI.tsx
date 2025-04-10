@@ -1,169 +1,158 @@
 
-import { useCallback } from 'react';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { 
-  AIProcessingOptions,
-  ItalianQuestionGenerationParams,
-  AIGeneratedQuestion,
-  TextToSpeechOptions,
-  TTSOptions,
-  AIGenerationResult
-} from '@/types/ai-types';
+import { useState, useCallback } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 
-export function useAI() {
-  const aiUtils = useAIUtils();
-  
-  // Rename or destructure all the fields for clarity
-  const {
-    processContent: processContentAI,
-    generateQuestions: generateQuestionsAI,
-    analyzeGrammar: analyzeGrammarAI,
-    translateText: translateTextAI,
-    generateText: generateTextAI,
-    evaluateWriting: evaluateWritingAI,
-    isProcessing,
-    isGenerating,
-    remainingCredits,
-    usageLimit,
-    isAIEnabled,
-    speak: speakAI,
-    isSpeaking,
-    status,
-    isModelLoaded,
-    compareTexts: compareTextsAI,
-    loadModel: loadModelAI,
-    classifyText: classifyTextAI,
-    transcribeSpeech: transcribeSpeechAI,
-    processAudioStream: processAudioStreamAI,
-    stopAudioProcessing: stopAudioProcessingAI,
-    isTranscribing,
-    hasActiveMicrophone,
-    checkMicrophoneAccess: checkMicrophoneAccessAI,
-    generateContent: generateContentAI,
-    analyzeContent: analyzeContentAI
-  } = aiUtils;
-
-  // Wrap all functions to maintain consistent naming
-  const processContent = useCallback(async (content: string, options?: AIProcessingOptions) => {
-    return await processContentAI(content, options);
-  }, [processContentAI]);
-
-  const generateQuestions = useCallback(async (params: ItalianQuestionGenerationParams) => {
-    const result = await generateQuestionsAI(params);
-    return result.questions as AIGeneratedQuestion[];
-  }, [generateQuestionsAI]);
-
-  const analyzeGrammar = useCallback(async (text: string, language?: string) => {
-    return await analyzeGrammarAI(text, language);
-  }, [analyzeGrammarAI]);
-
-  const translateText = useCallback(async (text: string, targetLanguage?: string) => {
-    return await translateTextAI(text, targetLanguage);
-  }, [translateTextAI]);
-
-  const generateText = useCallback(async (prompt: string, options?: any) => {
-    return await generateTextAI?.(prompt, options) || '';
-  }, [generateTextAI]);
-
-  const evaluateWriting = useCallback(async (text: string, level?: string) => {
-    return await evaluateWritingAI(text, level);
-  }, [evaluateWritingAI]);
-
-  const speak = useCallback(async (text: string | TextToSpeechOptions, options?: string | TTSOptions) => {
-    if (speakAI) {
-      return await speakAI(text, options);
-    }
-  }, [speakAI]);
-  
-  const compareTexts = useCallback(async (text1: string, text2: string) => {
-    if (compareTextsAI) {
-      return await compareTextsAI(text1, text2);
-    }
-    return { similarity: 0, differences: [] };
-  }, [compareTextsAI]);
-  
-  const loadModel = useCallback(async () => {
-    if (loadModelAI) {
-      return await loadModelAI();
-    }
-  }, [loadModelAI]);
-  
-  const classifyText = useCallback(async (text: string, categories: string[]) => {
-    if (classifyTextAI) {
-      return await classifyTextAI(text, categories);
-    }
-    return { category: '', confidence: 0 };
-  }, [classifyTextAI]);
-  
-  const transcribeSpeech = useCallback(async (audioData: Blob) => {
-    if (transcribeSpeechAI) {
-      return await transcribeSpeechAI(audioData);
-    }
-    return { text: '', confidence: 0 };
-  }, [transcribeSpeechAI]);
-
-  const processAudioStream = useCallback(async (stream: MediaStream) => {
-    if (processAudioStreamAI) {
-      return await processAudioStreamAI(stream);
-    }
-  }, [processAudioStreamAI]);
-
-  const stopAudioProcessing = useCallback(() => {
-    if (stopAudioProcessingAI) {
-      stopAudioProcessingAI();
-    }
-  }, [stopAudioProcessingAI]);
-
-  const checkMicrophoneAccess = useCallback(async () => {
-    if (checkMicrophoneAccessAI) {
-      return await checkMicrophoneAccessAI();
-    }
-    return false;
-  }, [checkMicrophoneAccessAI]);
-
-  const generateContent = useCallback(async (prompt: string, options?: any) => {
-    if (generateContentAI) {
-      return await generateContentAI(prompt, options);
-    }
-    return { content: "" };
-  }, [generateContentAI]);
-
-  const analyzeContent = useCallback(async (content: string, contentType: string) => {
-    if (analyzeContentAI) {
-      return await analyzeContentAI(content, contentType);
-    }
-    return { analysis: {} };
-  }, [analyzeContentAI]);
-
-  // Return all the functions and properties with consistent naming
-  return {
-    processContent,
-    generateQuestions,
-    analyzeGrammar,
-    translateText,
-    generateText,
-    evaluateWriting,
-    isProcessing,
-    speak,
-    isAIEnabled,
-    status,
-    isModelLoaded,
-    compareTexts,
-    loadModel,
-    classifyText,
-    transcribeSpeech,
-    isGenerating,
-    remainingCredits,
-    usageLimit,
-    isSpeaking,
-    processAudioStream,
-    stopAudioProcessing,
-    isTranscribing,
-    hasActiveMicrophone,
-    checkMicrophoneAccess,
-    generateContent,
-    analyzeContent
-  };
+export interface UseAIResult {
+  isProcessing: boolean;
+  generateQuestions: (params: {
+    contentTypes: string[];
+    topics: string[];
+    difficulty: string;
+    count: number;
+    isCitizenshipFocused?: boolean;
+  }) => Promise<{
+    questions?: any[];
+    error?: string;
+  }>;
+  processDocument: (
+    content: string,
+    includeInTraining?: boolean
+  ) => Promise<{
+    contentType: string;
+    questions: any[];
+    analysis: {
+      confidence: number;
+      difficultyLevel: string;
+      topicsDetected: string[];
+    };
+  }>;
+  loadModel: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 }
 
-export default useAI;
+export const useAI = (): UseAIResult => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  // Placeholder function to generate questions
+  const generateQuestions = useCallback(async (params: {
+    contentTypes: string[];
+    topics: string[];
+    difficulty: string;
+    count: number;
+    isCitizenshipFocused?: boolean;
+  }) => {
+    setIsProcessing(true);
+    try {
+      // Mock implementation - in a real app this would call an API
+      console.log('Generating questions with params:', params);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Return mock questions
+      return {
+        questions: Array(params.count).fill(0).map((_, i) => ({
+          id: `q-${i}`,
+          text: `Sample ${params.contentTypes[0]} question ${i + 1} (${params.difficulty})`,
+          type: 'multiple-choice',
+          options: ['Option A', 'Option B', 'Option C', 'Option D'],
+          correctAnswer: 'Option A',
+          explanation: 'This is the explanation for the correct answer.'
+        }))
+      };
+    } catch (error: any) {
+      console.error('Error generating questions:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate questions",
+        variant: "destructive",
+      });
+      return { error: error.message || "Unknown error occurred" };
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toast]);
+
+  // Placeholder function to process documents
+  const processDocument = useCallback(async (
+    content: string,
+    includeInTraining: boolean = true
+  ) => {
+    setIsProcessing(true);
+    try {
+      console.log('Processing document:', { contentLength: content.length, includeInTraining });
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Return mock processed data
+      return {
+        contentType: 'flashcards',
+        questions: [
+          {
+            id: 'q1',
+            text: 'What is the capital of Italy?',
+            type: 'multiple-choice',
+            options: ['Rome', 'Milan', 'Florence', 'Venice'],
+            correctAnswer: 'Rome',
+            explanation: 'Rome is the capital city of Italy.'
+          },
+          {
+            id: 'q2',
+            text: 'How do you say "hello" in Italian?',
+            type: 'multiple-choice',
+            options: ['Ciao', 'Grazie', 'Prego', 'Arrivederci'],
+            correctAnswer: 'Ciao',
+            explanation: '"Ciao" is the Italian word for hello.'
+          }
+        ],
+        analysis: {
+          confidence: 0.92,
+          difficultyLevel: 'intermediate',
+          topicsDetected: ['greetings', 'geography', 'italian culture']
+        }
+      };
+    } catch (error: any) {
+      console.error('Error processing document:', error);
+      toast({
+        title: "Processing Failed",
+        description: error.message || "Failed to process document",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toast]);
+
+  // Placeholder function to load AI model
+  const loadModel = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      console.log('Loading AI model...');
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error loading model:', error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to load AI model" 
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  return {
+    isProcessing,
+    generateQuestions,
+    processDocument,
+    loadModel
+  };
+};

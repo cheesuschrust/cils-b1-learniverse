@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase-client';
 
 // Define known table types
@@ -17,17 +16,17 @@ export type KnownTables =
   | 'content'
   | 'content_categories';
 
-// Generic table access - use with caution and any type
+// Generic table access - use with caution
 export const getTable = (tableName: string) => {
   return supabase.from(tableName as any);
 };
 
-// Type-safe table access for known tables (with any type for now to avoid complex typings)
+// Type-safe table access for known tables
 export const getKnownTable = (tableName: KnownTables) => {
   return supabase.from(tableName as any);
 };
 
-// Helper for RPC calls (with any type for now)
+// Helper for RPC calls
 export const callRPC = (
   functionName: string,
   params?: Record<string, any>

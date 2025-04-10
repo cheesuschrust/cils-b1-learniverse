@@ -1,10 +1,6 @@
 
-// Recharts adapter for improved TypeScript compatibility
-import * as React from 'react';
-import * as RechartsModule from 'recharts';
-
-// Re-export components separately to make TypeScript happy
-export const {
+import React from 'react';
+import {
   LineChart,
   Line,
   BarChart,
@@ -27,9 +23,35 @@ export const {
   ScatterChart,
   Scatter,
   Cell
-} = RechartsModule;
+} from 'recharts';
 
-// Helper wrapper components with simplified types
+// Re-export components
+export {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ScatterChart,
+  Scatter,
+  Cell
+};
+
+// Helper wrapper component with simplified types
 export const ChartWrapper: React.FC<{
   children: React.ReactNode;
   height?: number | string;
@@ -39,6 +61,3 @@ export const ChartWrapper: React.FC<{
     {children}
   </ResponsiveContainer>
 );
-
-// Re-export all Recharts
-export default RechartsModule;

@@ -1,5 +1,6 @@
 
-import * as React from 'react';
+// Import React properly
+import React from 'react';
 
 // Re-export React and its hooks
 export default React;

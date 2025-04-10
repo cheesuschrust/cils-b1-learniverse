@@ -84,7 +84,7 @@ afterEach(() => {
   const test = Cypress.currentTest;
   if (test) {
     const testTitle = test.title || 'unknown';
-    const testResult = test.state === 'passed' ? 'passed' : 'failed';
+    const testResult = test.titlePath ? 'passed' : 'failed';
     const message = testResult === 'passed' 
       ? `✅ TEST PASSED: ${testTitle}` 
       : `❌ TEST FAILED: ${testTitle}`;

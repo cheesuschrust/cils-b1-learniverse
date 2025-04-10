@@ -25,9 +25,9 @@ export const waitForAnimations = (): void => {
 };
 
 // Helper to check accessibility on the current page
-export const checkA11y = (context?: string) => {
+export const checkA11y = (context?: string): void => {
   cy.checkA11y(
-    context,
+    context, 
     {
       runOnly: {
         type: 'tag',
