@@ -3,16 +3,16 @@
 
 export interface Flashcard {
   id: string;
-  front?: string;
-  back?: string;
+  front: string;
+  back: string;
   italian?: string;
   english?: string;
   explanation?: string;
   level: number;
   tags: string[];
   mastered?: boolean;
-  lastReviewed?: Date;
-  nextReview: Date;
+  lastReviewed: Date | null;
+  nextReview: Date | null;
   createdAt: Date;
   updatedAt: Date;
   examples?: string[];
@@ -20,6 +20,7 @@ export interface Flashcard {
   setId?: string;
   difficultyFactor?: number;
   consecutiveCorrect?: number;
+  difficulty: number;
 }
 
 export interface FlashcardSet {

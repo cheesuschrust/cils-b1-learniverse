@@ -2,7 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase-client';
-import { FlashcardSet, Flashcard } from '@/types';
+import { FlashcardSet, Flashcard } from '@/types/interface-fixes';
+import { convertDbFlashcardToFlashcard, convertFlashcardToDbFormat } from '@/utils/flashcardUtils';
+import { safeParseDate, ensureDate } from '@/utils/dateUtils';
 
 interface FlashcardsContextType {
   flashcards: Flashcard[];
@@ -60,11 +62,13 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
-      setFlashcardSets(data.map(set => ({
+      const formattedSets = data.map((set: any) => ({
         ...set,
-        createdAt: new Date(set.created_at),
-        updatedAt: new Date(set.updated_at)
-      })));
+        createdAt: ensureDate(set.created_at),
+        updatedAt: ensureDate(set.updated_at)
+      })) as FlashcardSet[];
+      
+      setFlashcardSets(formattedSets);
     } catch (err: any) {
       console.error('Error fetching flashcard sets:', err);
       setError(err.message);
@@ -88,11 +92,13 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
-      setPublicFlashcardSets(data.map(set => ({
+      const formattedSets = data.map((set: any) => ({
         ...set,
-        createdAt: new Date(set.created_at),
-        updatedAt: new Date(set.updated_at)
-      })));
+        createdAt: ensureDate(set.created_at),
+        updatedAt: ensureDate(set.updated_at)
+      })) as FlashcardSet[];
+      
+      setPublicFlashcardSets(formattedSets);
     } catch (err: any) {
       console.error('Error fetching public flashcard sets:', err);
       setError(err.message);
@@ -120,14 +126,13 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
-      setFlashcardSets(prev => [
-        {
-          ...newSet,
-          createdAt: new Date(newSet.created_at),
-          updatedAt: new Date(newSet.updated_at)
-        },
-        ...prev
-      ]);
+      const formattedSet = {
+        ...newSet,
+        createdAt: ensureDate(newSet.created_at),
+        updatedAt: ensureDate(newSet.updated_at)
+      } as FlashcardSet;
+      
+      setFlashcardSets(prev => [formattedSet, ...prev]);
       
       return newSet.id;
     } catch (err: any) {
@@ -157,15 +162,14 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
+      const formattedSet = {
+        ...updatedSet,
+        createdAt: ensureDate(updatedSet.created_at),
+        updatedAt: ensureDate(updatedSet.updated_at)
+      } as FlashcardSet;
+      
       setFlashcardSets(prev => prev.map(set => 
-        set.id === id 
-          ? {
-              ...set,
-              ...updatedSet,
-              createdAt: new Date(updatedSet.created_at),
-              updatedAt: new Date(updatedSet.updated_at)
-            }
-          : set
+        set.id === id ? formattedSet : set
       ));
       
       return true;
@@ -221,14 +225,12 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
-      const cards = data.map(card => ({
-        ...card,
-        createdAt: new Date(card.created_at),
-        updatedAt: new Date(card.updated_at)
-      }));
+      const formattedCards = data.map((card: any) => 
+        convertDbFlashcardToFlashcard(card)
+      );
       
-      setFlashcards(cards);
-      return cards;
+      setFlashcards(formattedCards);
+      return formattedCards;
     } catch (err: any) {
       console.error('Error fetching flashcards:', err);
       setError(err.message);
@@ -251,9 +253,9 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       return {
         ...data,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
-      };
+        createdAt: ensureDate(data.created_at),
+        updatedAt: ensureDate(data.updated_at)
+      } as FlashcardSet;
     } catch (err: any) {
       console.error('Error fetching flashcard set:', err);
       return null;
@@ -268,10 +270,13 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setError(null);
     
     try {
+      // Convert the data to database format
+      const dbData = convertFlashcardToDbFormat(data);
+      
       const { data: newCard, error } = await supabase
         .from('flashcards')
         .insert([{
-          ...data,
+          ...dbData,
           user_id: user.id
         }])
         .select()
@@ -279,11 +284,7 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
-      const formattedCard = {
-        ...newCard,
-        createdAt: new Date(newCard.created_at),
-        updatedAt: new Date(newCard.updated_at)
-      };
+      const formattedCard = convertDbFlashcardToFlashcard(newCard);
       
       setFlashcards(prev => [formattedCard, ...prev]);
       
@@ -305,9 +306,12 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setError(null);
     
     try {
+      // Convert the data to database format
+      const dbData = convertFlashcardToDbFormat(data);
+      
       const { data: updatedCard, error } = await supabase
         .from('flashcards')
-        .update(data)
+        .update(dbData)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
@@ -315,15 +319,10 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       if (error) throw error;
       
+      const formattedCard = convertDbFlashcardToFlashcard(updatedCard);
+      
       setFlashcards(prev => prev.map(card => 
-        card.id === id 
-          ? {
-              ...card,
-              ...updatedCard,
-              createdAt: new Date(updatedCard.created_at),
-              updatedAt: new Date(updatedCard.updated_at)
-            }
-          : card
+        card.id === id ? formattedCard : card
       ));
       
       return true;
@@ -431,15 +430,14 @@ export const FlashcardsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       // Update local state
       if (newSets) {
-        setFlashcardSets(newSets.map(set => ({
+        const formattedSets = newSets.map((set: any) => ({
           ...set,
-          createdAt: new Date(set.created_at),
-          updatedAt: new Date(set.updated_at)
-        })));
+          createdAt: ensureDate(set.created_at),
+          updatedAt: ensureDate(set.updated_at)
+        })) as FlashcardSet[];
+        
+        setFlashcardSets(formattedSets);
       }
-      
-      // For cards, we'd need to map old set IDs to new ones
-      // Implement if needed
       
       return true;
     } catch (err: any) {
