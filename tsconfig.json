@@ -36,7 +36,7 @@
     // Compilation and Bundling
     "skipLibCheck": true,
     "isolatedModules": true,
-    "noEmit": false,  // Changed to false to be compatible with tsconfig.node.json
+    "noEmit": true,  // Changed to true to resolve the conflict
     
     // Path Aliases
     "baseUrl": ".",
