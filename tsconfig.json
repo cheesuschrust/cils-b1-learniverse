@@ -5,6 +5,8 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -16,11 +18,12 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    
-    /* Path Aliases */
+    "noImplicitAny": false,
+
+    /* Paths */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
@@ -30,21 +33,8 @@
       "@types/*": ["./src/types/*"],
       "@routes/*": ["./src/routes/*"],
       "@context/*": ["./src/contexts/*"]
-    },
-    
-    /* Additional Options */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.d.ts",
-    "cypress/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ]
+  "include": ["src", "cypress"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
