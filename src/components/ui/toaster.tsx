@@ -1,34 +1,10 @@
 
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
-import { useToast } from "@/hooks/use-toast"
+import React from 'react';
 
-export function Toaster() {
-  const { toasts } = useToast()
-
+export const Toaster: React.FC = () => {
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
-}
+    <div className="fixed top-0 right-0 z-50 p-4 space-y-4 w-full max-w-xs sm:max-w-md">
+      {/* Toast notifications will appear here via portals */}
+    </div>
+  );
+};
