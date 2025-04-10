@@ -27,8 +27,8 @@
 
     // Output Control  
     "isolatedModules": true,  
-    "noEmit": false,  // Changed from true to false
-    "emitDeclarationOnly": true,  // Added this line to only emit declarations
+    "noEmit": false,  
+    "emitDeclarationOnly": true, 
 
     // Library Support  
     "lib": ["ES2023", "DOM", "DOM.Iterable"]  
