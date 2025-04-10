@@ -36,7 +36,7 @@
     // Compilation and Bundling
     "skipLibCheck": true,
     "isolatedModules": true,
-    "noEmit": true,  // Keep this true for the main config
+    "noEmit": true,
     
     // Path Aliases
     "baseUrl": ".",
@@ -63,7 +63,4 @@
     "dist",
     "build"
   ]
-  
-  // IMPORTANT: Remove the references section completely
-  // This is what's causing the error
 }
