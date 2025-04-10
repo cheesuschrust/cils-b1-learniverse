@@ -1,44 +1,26 @@
 {
   "compilerOptions": {
-    // Target and Language
     "target": "ES2020",
-    "module": "ESNext",
+    "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    
-    // Module Resolution
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    
-    // Strict Typing
-    "strict": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    
-    // Additional Checks - Some relaxed for compatibility
-    "noImplicitAny": false,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    
-    // Unused and Unreachable Code - Relaxed for development
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    
-    // React and JSX
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    
-    // Compilation and Bundling
+    "module": "ESNext",
     "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
     
-    // Path Aliases
+    /* Path Aliases */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
@@ -46,12 +28,15 @@
       "@hooks/*": ["./src/hooks/*"],
       "@utils/*": ["./src/utils/*"],
       "@types/*": ["./src/types/*"],
-      "@context/*": ["./src/contexts/*"],
-      "@routes/*": ["./src/routes/*"]
-    }
+      "@routes/*": ["./src/routes/*"],
+      "@context/*": ["./src/contexts/*"]
+    },
+    
+    /* Additional Options */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
   },
-  
-  // Include and Exclude
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
@@ -63,6 +48,4 @@
     "dist",
     "build"
   ]
-  
-  // IMPORTANT: Remove the references section completely to resolve the TS6310 error
 }
