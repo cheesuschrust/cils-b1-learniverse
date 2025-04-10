@@ -1,7 +1,10 @@
 
 // Recharts adapter for improved TypeScript compatibility
-import React from 'react';
-import {
+import * as React from 'react';
+import * as RechartsModule from 'recharts';
+
+// Re-export components separately to make TypeScript happy
+export const {
   LineChart,
   Line,
   BarChart,
@@ -22,35 +25,11 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ScatterChart,
-  Scatter
-} from 'recharts';
+  Scatter,
+  Cell
+} = RechartsModule;
 
-// Re-export all Recharts components with fixed props
-export {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ScatterChart,
-  Scatter
-};
-
-// Helper wrapper components with proper types
+// Helper wrapper components with simplified types
 export const ChartWrapper: React.FC<{
   children: React.ReactNode;
   height?: number | string;
@@ -60,3 +39,6 @@ export const ChartWrapper: React.FC<{
     {children}
   </ResponsiveContainer>
 );
+
+// Re-export all Recharts
+export default RechartsModule;

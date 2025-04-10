@@ -17,22 +17,22 @@ export type KnownTables =
   | 'content'
   | 'content_categories';
 
-// Generic table access - use with caution
+// Generic table access - use with caution and any type
 export const getTable = (tableName: string) => {
-  return supabase.from(tableName);
+  return supabase.from(tableName as any);
 };
 
-// Type-safe table access for known tables
+// Type-safe table access for known tables (with any type for now to avoid complex typings)
 export const getKnownTable = (tableName: KnownTables) => {
-  return supabase.from(tableName);
+  return supabase.from(tableName as any);
 };
 
-// Helper for RPC calls
+// Helper for RPC calls (with any type for now)
 export const callRPC = (
   functionName: string,
   params?: Record<string, any>
 ) => {
-  return supabase.rpc(functionName, params);
+  return supabase.rpc(functionName as any, params);
 };
 
 // Helper functions for common database operations
