@@ -1,41 +1,40 @@
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
+{  
+  "compilerOptions": {  
+    // Core Compilation Settings  
+    "target": "ES2022",  
+    "module": "ESNext",  
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true,
+    
+    // Module Handling  
+    "esModuleInterop": true,  
+    "allowSyntheticDefaultImports": true,  
+    "resolveJsonModule": true,  
+    "allowImportingTsExtensions": true,  
+    "moduleDetection": "force",  
 
-    /* Linting */
-    "strict": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": false,
-    "exactOptionalPropertyTypes": false,
-    
-    /* Additional settings to handle type issues */
-    "noPropertyAccessFromIndexSignature": false,
-    "useUnknownInCatchVariables": false,
-    "allowUmdGlobalAccess": true,
-    
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"]
-  },
-  "include": ["src", "cypress"]
+    // Type Checking  
+    "strict": true,  
+    "skipLibCheck": true,  
+    "noUnusedLocals": true,  
+    "noUnusedParameters": false,  
+    "noImplicitReturns": true,  
+    "noFallthroughCasesInSwitch": true,  
+    "forceConsistentCasingInFileNames": true,  
+
+    // Output Control  
+    "isolatedModules": true,  
+    "noEmit": true,
+
+    // Library Support  
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]  
+  },  
+  "include": [  
+    "vite.config.ts",   
+    "cypress.config.ts",  
+    "*.config.ts"  // Catch any other config files  
+  ],  
+  "exclude": [  
+    "node_modules",  
+    "dist"  
+  ]  
 }
