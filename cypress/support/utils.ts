@@ -34,8 +34,7 @@ export const checkA11y = (context?: string): void => {
         values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
       },
     },
-    null,
-    true
+    null
   );
 };
 

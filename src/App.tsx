@@ -1,5 +1,4 @@
 
-import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -7,6 +6,7 @@ import HomePage from '@/pages/Home';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import NotFoundPage from '@/pages/NotFound';
+import React from 'react';
 
 function App() {
   return (
@@ -17,33 +17,33 @@ function App() {
           <Route 
             path="/" 
             element={
-              <Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<div>Loading...</div>}>
                 <HomePage />
-              </Suspense>
+              </React.Suspense>
             } 
           />
           <Route 
             path="/about" 
             element={
-              <Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<div>Loading...</div>}>
                 <AboutPage />
-              </Suspense>
+              </React.Suspense>
             } 
           />
           <Route 
             path="/contact" 
             element={
-              <Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<div>Loading...</div>}>
                 <ContactPage />
-              </Suspense>
+              </React.Suspense>
             } 
           />
           <Route 
             path="*" 
             element={
-              <Suspense fallback={<div>Loading...</div>}>
+              <React.Suspense fallback={<div>Loading...</div>}>
                 <NotFoundPage />
-              </Suspense>
+              </React.Suspense>
             } 
           />
         </Routes>

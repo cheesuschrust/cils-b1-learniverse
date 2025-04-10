@@ -72,3 +72,7 @@ export interface ReviewSchedule {
   dueByDate: Record<string, number>;
   overdue: number;
 }
+
+export interface SupportTicketExtension {
+  assignedTo?: string;
+}

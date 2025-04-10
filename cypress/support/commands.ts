@@ -1,4 +1,3 @@
-
 // ***********************************************
 // This example commands.js shows you how to
 // create various custom commands and overwrite
@@ -53,7 +52,7 @@ Cypress.Commands.add('checkAccessibility', (options = {}) => {
 Cypress.Commands.add('tab', () => {
   const keyboardEventOptions = { keyCode: 9, which: 9, key: 'Tab', code: 'Tab', bubbles: true };
   cy.focused().trigger('keydown', keyboardEventOptions);
-  return cy.document().trigger('keydown', keyboardEventOptions);
+  return cy.focused(); // Return the currently focused element instead of the document
 });
 
 // Add custom command for visual regression testing
