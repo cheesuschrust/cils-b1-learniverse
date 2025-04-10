@@ -42,4 +42,27 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@componen
+      "@components/*": ["./src/components/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@context/*": ["./src/contexts/*"],
+      "@routes/*": ["./src/routes/*"]
+    }
+  },
+  
+  // Include and Exclude
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "cypress/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
+  
+  // IMPORTANT: Remove the references section completely to resolve the TS6310 error
+}
