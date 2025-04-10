@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import DatabasePerformanceDashboard from '@/components/admin/DatabasePerformanceDashboard';
@@ -365,19 +364,19 @@ const DatabasePerformancePage: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <div className="text-xs text-muted-foreground">Queries / Second</div>
-                        <div className="text-lg font-medium">458.6</div>
+                        <span className="text-lg font-medium">{value > 1000 ? `${Math.round(value / 1000)}k` : value}</span>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground">Avg. Response Time</div>
-                        <div className="text-lg font-medium">24ms</div>
+                        <span className="text-lg font-medium">24ms</span>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground">Slow Queries (>500ms)</div>
-                        <div className="text-lg font-medium">3</div>
+                        <span className="text-lg font-medium">3</span>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground">Failed Queries</div>
-                        <div className="text-lg font-medium">0</div>
+                        <span className="text-lg font-medium">0</span>
                       </div>
                     </div>
                   </div>

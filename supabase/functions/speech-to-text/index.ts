@@ -3,8 +3,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 // Process base64 in chunks to prevent memory issues
@@ -38,15 +38,15 @@ function processBase64Chunks(base64String: string, chunkSize = 32768) {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { audio, language } = await req.json();
+    const { audio, language = 'it' } = await req.json();
     
     if (!audio) {
-      throw new Error("No audio data provided");
+      throw new Error('No audio data provided');
     }
 
     // Process audio in chunks
@@ -54,42 +54,44 @@ serve(async (req) => {
     
     // Prepare form data
     const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: "audio/webm" });
-    formData.append("file", blob, "audio.webm");
-    formData.append("model", "whisper-1");
+    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
+    formData.append('file', blob, 'audio.webm');
+    formData.append('model', 'whisper-1');
+    formData.append('language', language);
     
-    // Add language if provided
-    if (language) {
-      formData.append("language", language);
-    }
-
     // Send to OpenAI
-    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
       },
       body: formData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${errorText}`);
+      console.error(`OpenAI API error (${response.status}):`, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
 
     return new Response(
-      JSON.stringify({ text: result.text }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        text: result.text,
+        confidence: result.confidence || 0.9, // OpenAI doesn't always provide confidence
+        language: language
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
-    console.error("Speech-to-text error:", error.message);
+    console.error('Error in speech-to-text function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error in speech recognition' }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
