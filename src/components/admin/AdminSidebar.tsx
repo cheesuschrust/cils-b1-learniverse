@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   LayoutDashboard,
@@ -40,6 +41,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/components/ui/link";
 
 interface AdminSidebarProps {
   className?: string;
@@ -218,7 +221,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
       </div>
       <div className="flex-1 space-y-1">
         {navigationItems.map((item) => (
-          <Link
+          <LinkItem
             key={item.title}
             href={item.href}
             icon={item.icon}
@@ -238,7 +241,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
   );
 };
 
-interface LinkProps {
+interface LinkItemProps {
   href: string;
   icon: React.ReactNode;
   title: string;
@@ -246,25 +249,25 @@ interface LinkProps {
   bgColor: string;
 }
 
-const Link: React.FC<LinkProps> = ({ href, icon, title, color, bgColor }) => {
+const LinkItem: React.FC<LinkItemProps> = ({ href, icon, title, color, bgColor }) => {
   const navigate = useNavigate();
-  const isActive = (pathname: string) => pathname === href;
+  const isActive = window.location.pathname === href;
 
   return (
     <Button
       variant="ghost"
       className={cn(
         "justify-start px-3 py-2",
-        isActive(window.location.pathname)
+        isActive
           ? "font-semibold"
           : "text-muted-foreground hover:text-foreground",
-        isActive(window.location.pathname) ? color : "",
-        isActive(window.location.pathname) ? bgColor : ""
+        isActive ? color : "",
+        isActive ? bgColor : ""
       )}
       onClick={() => navigate(href)}
     >
       {icon}
-      <span>{title}</span>
+      <span className="ml-2">{title}</span>
     </Button>
   );
 };

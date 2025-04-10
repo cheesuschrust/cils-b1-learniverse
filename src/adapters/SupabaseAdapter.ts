@@ -1,8 +1,7 @@
 
 import { supabase } from '@/lib/supabase-client';
-import { Database } from '@/types/supabase';
 
-// Get table names from the Database type definition
+// Define known table types
 export type KnownTables = 
   | 'flashcard_sets' 
   | 'flashcards' 
@@ -18,20 +17,19 @@ export type KnownTables =
   | 'content'
   | 'content_categories';
 
-// This adapter handles type-safe access to tables
-export const getTable = <T extends string>(tableName: T) => {
-  // This is a safe cast since we're wrapping the actual Supabase call
+// Generic table access - use with caution
+export const getTable = (tableName: string) => {
   return supabase.from(tableName);
 };
 
-// For specific tables that we know the types of
-export const getKnownTable = <T extends KnownTables>(tableName: T) => {
+// Type-safe table access for known tables
+export const getKnownTable = (tableName: KnownTables) => {
   return supabase.from(tableName);
 };
 
-// Helper for RPC calls with type safety
-export const callRPC = <T extends string>(
-  functionName: T,
+// Helper for RPC calls
+export const callRPC = (
+  functionName: string,
   params?: Record<string, any>
 ) => {
   return supabase.rpc(functionName, params);
@@ -49,7 +47,7 @@ export const fetchUserProfile = async (userId: string) => {
 };
 
 export const fetchUserProgress = async (userId: string) => {
-  const { data, error } = await getTable('user_progress')
+  const { data, error } = await getKnownTable('user_progress')
     .select('*')
     .eq('user_id', userId);
     
@@ -99,7 +97,7 @@ export const addUserXP = async (
 
 // User achievements helpers
 export const fetchUserAchievements = async (userId: string) => {
-  const { data, error } = await getTable('user_achievements')
+  const { data, error } = await getKnownTable('user_achievements')
     .select('*')
     .eq('user_id', userId);
     
@@ -114,7 +112,7 @@ export const addUserAchievement = async (
   description: string,
   metadata?: object
 ) => {
-  const { data, error } = await getTable('user_achievements').insert({
+  const { data, error } = await getKnownTable('user_achievements').insert({
     user_id: userId,
     achievement_name: achievementName,
     achievement_type: achievementType,

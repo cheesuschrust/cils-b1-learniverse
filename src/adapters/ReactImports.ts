@@ -1,24 +1,14 @@
 
-// Import React properly with synthetic default imports
-import React, { 
-  useState, 
-  useEffect, 
-  useCallback, 
-  useRef, 
-  useContext,
-  useMemo,
-  Component,
-  createContext,
-  forwardRef
-} from 'react';
+import React from 'react';
 
-// Export all React hooks and types
+// Re-export React and its hooks
+export default React;
 export const {
   useState,
   useEffect,
   useCallback,
-  useContext,
   useRef,
+  useContext,
   useMemo,
   Component,
   createContext,
@@ -36,6 +26,3 @@ export type MouseEvent<T = Element> = React.MouseEvent<T>;
 export type CSSProperties = React.CSSProperties;
 export type ReactElement = React.ReactElement;
 export type PropsWithChildren<P = {}> = React.PropsWithChildren<P>;
-
-// Default export
-export default React;

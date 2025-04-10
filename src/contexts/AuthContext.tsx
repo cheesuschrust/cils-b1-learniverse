@@ -1,146 +1,159 @@
 
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/lib/auth-helpers';
-import * as authHelpers from '@/lib/auth-helpers';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase-client';
+
+export interface User {
+  id: string;
+  email: string;
+  avatarUrl?: string;
+  isPremiumUser?: boolean;
+}
 
 interface AuthContextType {
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: User | null;
-  login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>;
-  register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean, error?: string }>;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
+  user: null,
   isAuthenticated: false,
   isLoading: true,
-  user: null,
-  login: async () => ({ success: false }),
-  register: async () => ({ success: false }),
+  login: async () => false,
+  signup: async () => false,
   logout: async () => {},
-  updateProfile: async () => false,
 });
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const loadUser = async () => {
+    // Check for active session on load
+    const checkSession = async () => {
+      setIsLoading(true);
       try {
-        const currentUser = await authHelpers.getCurrentUser();
-        setUser(currentUser);
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          return;
+        }
+        
+        if (data?.session?.user) {
+          const userData = {
+            id: data.session.user.id,
+            email: data.session.user.email || 'unknown',
+            avatarUrl: data.session.user.user_metadata?.avatar_url || undefined,
+          };
+          setUser(userData);
+        }
       } catch (error) {
-        console.error('Error loading user:', error);
+        console.error('Error checking session:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadUser();
-  }, []);
+    checkSession();
+
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || 'unknown',
+            avatarUrl: session.user.user_metadata?.avatar_url || undefined,
+          });
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          navigate('/auth/login');
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     try {
-      setIsLoading(true);
-      await authHelpers.signOut(); // Clear any existing session
-      const { error } = await authHelpers.signInWithEmail(email, password);
-      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) {
-        return { success: false, error: error.message };
+        console.error('Login error:', error.message);
+        return false;
       }
-      
-      const currentUser = await authHelpers.getCurrentUser();
-      setUser(currentUser);
-      return { success: true };
+      return true;
     } catch (error) {
-      console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'An unknown error occurred' 
-      };
-    } finally {
-      setIsLoading(false);
+      console.error('Login exception:', error);
+      return false;
     }
   };
 
-  const register = async (email: string, password: string, firstName?: string, lastName?: string) => {
+  const signup = async (
+    email: string, 
+    password: string, 
+    firstName?: string, 
+    lastName?: string
+  ) => {
     try {
-      setIsLoading(true);
-      // Implementation depends on your auth provider, but generally similar to login
-      // For now, let's simulate a successful registration
-      
-      // In a real implementation, we would store first name, last name, etc.
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return { success: true };
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Signup error:', error.message);
+        return false;
+      }
+      return true;
     } catch (error) {
-      console.error('Registration error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'An unknown error occurred' 
-      };
-    } finally {
-      setIsLoading(false);
+      console.error('Signup exception:', error);
+      return false;
     }
   };
 
   const logout = async () => {
     try {
-      setIsLoading(true);
-      await authHelpers.signOut();
-      setUser(null);
-      toast({
-        title: "Logged out successfully",
-        description: "Come back soon!",
-      });
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Logout error:', error);
-      toast({
-        title: "Logout failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateProfile = async (data: Partial<User>) => {
-    try {
-      // Implementation depends on your auth provider
-      // For now, let's simulate a successful profile update
-      setUser(user => user ? { ...user, ...data } : null);
-      return true;
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return false;
     }
   };
 
   return (
     <AuthContext.Provider
       value={{
+        user,
         isAuthenticated: !!user,
         isLoading,
-        user,
         login,
-        register,
+        signup,
         logout,
-        updateProfile
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);
 
 export default AuthContext;

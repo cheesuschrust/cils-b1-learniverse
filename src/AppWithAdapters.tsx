@@ -7,13 +7,13 @@ import App from './App';
 
 const AppWithAdapters: React.FC = () => {
   return (
-    <HelmetProvider>
-      <Router>
+    <Router>
+      <HelmetProvider>
         <AuthProvider>
           <App />
         </AuthProvider>
-      </Router>
-    </HelmetProvider>
+      </HelmetProvider>
+    </Router>
   );
 };
 

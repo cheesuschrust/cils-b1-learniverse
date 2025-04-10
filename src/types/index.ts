@@ -1,136 +1,71 @@
 
-// Import and re-export all types from specific type files
-import { User, UserRole, UserPreferences, normalizeUser, normalizeUserRecords } from './unified-user';
-import { 
-  NotificationType, 
-  NotificationPriority, 
-  NotificationAction, 
-  Notification,
-  NotificationItemProps,
-  NotificationCenterProps,
-  GlobalNotificationCenterProps,
-  NotificationsContextType 
-} from './notification';
-import { 
-  Flashcard, 
-  FlashcardSet, 
-  ReviewPerformance, 
-  ReviewSchedule,
-  FlashcardStats,
-  normalizeFlashcard,
-  calculateReviewPerformance
-} from './flashcard-unified';
-import { 
-  ContentType, 
-  ContentFeatures,
-  formatContentType,
-  getContentTypeColor
-} from './contentType';
-import {
-  AISettings,
-  AISettingsProps
-} from './ai-settings';
-import {
-  ItalianTestSection,
-  ItalianLevel,
-  AIQuestion,
-  AIGeneratedQuestion,
-  ItalianQuestionGenerationParams,
-  QuestionGenerationParams,
-  VoiceOptions,
-  VoicePreference,
-  AIUtilsContextType,
-  UseAIReturn,
-  AIProcessingOptions
-} from './ai-types';
-import {
-  Achievement,
-  WeeklyChallenge,
-  UserGamification,
-  Level,
-  LevelProgressBarProps,
-  LevelBadgeProps
-} from './gamification';
+// Common types used across the application
 
-// Export all types
-export type {
-  // User types
-  User,
-  UserRole,
-  UserPreferences,
-  
-  // Notification types
-  NotificationType,
-  NotificationPriority,
-  NotificationAction,
-  Notification,
-  NotificationItemProps,
-  NotificationCenterProps,
-  GlobalNotificationCenterProps,
-  NotificationsContextType,
-  
-  // Flashcard types
-  Flashcard,
-  FlashcardSet,
-  ReviewPerformance,
-  ReviewSchedule,
-  FlashcardStats,
-  
-  // Content types
-  ContentType,
-  ContentFeatures,
-  
-  // AI types
-  AISettings,
-  AISettingsProps,
-  ItalianTestSection,
-  ItalianLevel,
-  AIQuestion,
-  AIGeneratedQuestion,
-  ItalianQuestionGenerationParams,
-  QuestionGenerationParams,
-  VoiceOptions,
-  VoicePreference,
-  AIUtilsContextType,
-  UseAIReturn,
-  AIProcessingOptions,
-  
-  // Gamification types
-  Achievement,
-  WeeklyChallenge,
-  UserGamification,
-  Level,
-  LevelProgressBarProps,
-  LevelBadgeProps
-};
-
-export {
-  normalizeUser,
-  normalizeUserRecords,
-  normalizeFlashcard,
-  calculateReviewPerformance,
-  formatContentType,
-  getContentTypeColor
-};
-
-// Define additional interface props for components
-export interface SpeakableWordProps {
-  word: string;
-  language?: string;
-  className?: string;
-  showTooltip?: boolean;
-  tooltipContent?: string;
-  onPlayComplete?: () => void;
-  autoPlay?: boolean;
-  size?: string; // Optional size for better flexibility
-  onClick?: () => void;
-  iconOnly?: boolean;
+// Navigation item interface
+export interface NavItem {
+  title: string;
+  href: string;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+  external?: boolean;
+  description?: string;
+  badge?: string;
+  color?: string;
+  bgColor?: string;
 }
 
-export interface BadgeProps {
-  text: string;
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'citizenship';
+// Basic content item structure
+export interface ContentItem {
+  id: string;
+  title: string;
+  description?: string;
+  content?: string | Record<string, any>;
+  createdAt: string;
+  updatedAt?: string;
+  status?: 'draft' | 'published' | 'archived';
+  authorId?: string;
+  authorName?: string;
+  tags?: string[];
+  metadata?: Record<string, any>;
+}
+
+// User type
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  role?: 'user' | 'admin' | 'moderator';
+  isVerified?: boolean;
+  isPremiumUser?: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+// Base component props that most components extend
+export interface BaseComponentProps {
   className?: string;
-  icon?: React.ReactNode;
-  size?: 'sm' | 'default' | 'lg';
+  id?: string;
+  style?: React.CSSProperties;
+  'data-testid'?: string;
+}
+
+// Shared Pagination props
+export interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  showNextPrev?: boolean;
+  showFirstLast?: boolean;
+}
+
+// Common form field props
+export interface FormFieldProps extends BaseComponentProps {
+  label?: string;
+  name: string;
+  required?: boolean;
+  disabled?: boolean;
+  error?: string;
+  description?: string;
+  hideLabel?: boolean;
 }

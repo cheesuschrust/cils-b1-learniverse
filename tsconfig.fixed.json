@@ -27,13 +27,7 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@types/*": ["./src/types/*"],
-      "@routes/*": ["./src/routes/*"],
-      "@context/*": ["./src/contexts/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "cypress"]
