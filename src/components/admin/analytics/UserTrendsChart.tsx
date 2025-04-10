@@ -9,7 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer
-} from 'recharts';
+} from '@/adapters/RechartsAdapter';
 
 interface UserTrendsChartProps {
   data: {
@@ -55,3 +55,5 @@ export const UserTrendsChart: React.FC<UserTrendsChartProps> = ({ data }) => {
     </div>
   );
 };
+
+export default UserTrendsChart;

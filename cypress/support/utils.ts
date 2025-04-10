@@ -33,8 +33,7 @@ export const checkA11y = (context?: string): void => {
         type: 'tag',
         values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
       },
-    },
-    null
+    }
   );
 };
 

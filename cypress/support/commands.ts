@@ -52,7 +52,7 @@ Cypress.Commands.add('checkAccessibility', (options = {}) => {
 Cypress.Commands.add('tab', () => {
   const keyboardEventOptions = { keyCode: 9, which: 9, key: 'Tab', code: 'Tab', bubbles: true };
   cy.focused().trigger('keydown', keyboardEventOptions);
-  return cy.focused(); // Return the currently focused element instead of the document
+  return cy.focused(); // Return the element that received focus
 });
 
 // Add custom command for visual regression testing
@@ -73,10 +73,7 @@ Cypress.Commands.add('testKeyboardNavigation', () => {
     cy.log(`Found ${focusableElements.length} focusable elements`);
     
     for (let i = 0; i < Math.min(focusableElements.length, 10); i++) {
-      cy.tab().then(() => {
-        const focused = Cypress.$(document.activeElement);
-        expect(focused.length).to.equal(1);
-      });
+      cy.tab().should('exist');
     }
   });
 });
