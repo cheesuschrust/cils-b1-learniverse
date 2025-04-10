@@ -1,144 +1,91 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-client';
 
 interface NewsletterSubscriptionProps {
-  compact?: boolean;
-  darkMode?: boolean;
+  className?: string;
 }
 
-const NewsletterSubscription: React.FC<NewsletterSubscriptionProps> = ({ 
-  compact = false,
-  darkMode = false 
-}) => {
-  const { toast } = useToast();
+const NewsletterSubscription: React.FC<NewsletterSubscriptionProps> = ({ className }) => {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const handleSubscribe = async (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
+    if (!email || !email.includes('@')) {
       toast({
-        title: "Email required",
-        description: "Please enter your email address.",
-        variant: "destructive",
+        variant: 'destructive',
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address.',
       });
       return;
     }
     
-    // Email validation regex
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setLoading(true);
+    setIsLoading(true);
     
     try {
-      // Store the subscription in Supabase
+      // Insert into the newsletter_subscriptions table
       const { error } = await supabase
         .from('newsletter_subscriptions')
-        .insert([
-          { 
-            email,
-            status: 'pending',
-            source: window.location.pathname
-          }
-        ]);
-        
-      if (error) throw error;
+        .insert([{ email, status: 'pending', source: 'website' }]);
       
-      toast({
-        title: "Subscription successful!",
-        description: "You'll start receiving our Italian learning tips soon.",
-      });
-      
-      setEmail('');
+      if (error) {
+        if (error.code === '23505') { // Unique violation
+          toast({
+            title: 'Already Subscribed',
+            description: 'This email is already on our newsletter list.',
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: 'Subscription Successful',
+          description: 'Thank you for subscribing to our newsletter!',
+        });
+        setEmail('');
+      }
     } catch (error) {
-      console.error('Newsletter subscription error:', error);
+      console.error('Error subscribing to newsletter:', error);
       toast({
-        title: "Subscription failed",
-        description: "There was a problem subscribing to the newsletter. Please try again.",
-        variant: "destructive",
+        variant: 'destructive',
+        title: 'Subscription Failed',
+        description: 'There was a problem subscribing you. Please try again.',
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-  
-  if (compact) {
-    return (
-      <form onSubmit={handleSubscribe} className="flex max-w-sm">
-        <Input
-          type="email"
-          placeholder="Enter your email"
-          className={`rounded-r-none ${darkMode ? 'bg-gray-800 border-gray-700' : ''}`}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          aria-label="Email for newsletter subscription"
-        />
-        <Button 
-          type="submit" 
-          className="rounded-l-none" 
-          size="icon"
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
-      </form>
-    );
-  }
-  
+
   return (
-    <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-      <h3 className={`text-xl font-semibold mb-2 ${darkMode ? 'text-white' : ''}`}>
-        Get Italian Citizenship Tips
-      </h3>
-      <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-        Subscribe to our newsletter for CILS preparation tips, language learning resources, and citizenship information.
+    <div id="newsletter-subscription" className={`w-full max-w-md mx-auto ${className}`}>
+      <h3 className="text-xl font-semibold mb-2">Stay Updated</h3>
+      <p className="text-muted-foreground mb-4">
+        Subscribe to our newsletter to get the latest updates on our Italian language learning resources.
       </p>
-      
-      <form onSubmit={handleSubscribe} className="space-y-3">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
         <Input
           type="email"
-          placeholder="Enter your email"
-          className={darkMode ? 'bg-gray-700 border-gray-600' : ''}
+          placeholder="Your email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="sm:flex-1"
           required
         />
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? (
-            <span className="flex items-center">
-              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-              Subscribing...
-            </span>
-          ) : (
-            <span className="flex items-center">
-              <Send className="mr-2 h-4 w-4" />
-              Subscribe Now
-            </span>
-          )}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Subscribing...' : 'Subscribe'}
         </Button>
-        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          We respect your privacy. Unsubscribe at any time.
-        </p>
       </form>
+      <p className="text-xs text-muted-foreground mt-2">
+        By subscribing, you agree to our <Link to="/privacy">Privacy Policy</Link>. 
+        You can unsubscribe at any time.
+      </p>
     </div>
   );
 };

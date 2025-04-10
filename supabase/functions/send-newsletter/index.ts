@@ -65,8 +65,21 @@ serve(async (req) => {
     // 2. Log the email sending in a database
     // 3. Handle rate limits and batching for large subscriber lists
     
-    // For this example, we'll just log the request and return success
-    console.log(`Would send email with subject "${subject}" to ${recipients.length} recipients`);
+    // Record the campaign in the database
+    const { data: campaign, error: campaignError } = await supabase
+      .from('newsletter_campaigns')
+      .insert({
+        subject,
+        content,
+        recipient_count: recipients.length,
+        status: 'sent'
+      })
+      .select()
+      .single();
+    
+    if (campaignError) {
+      console.error('Error recording campaign:', campaignError);
+    }
     
     // Update the last_email_sent timestamp for all recipients
     const now = new Date().toISOString();

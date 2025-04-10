@@ -10,6 +10,7 @@ import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AIProvider } from '@/contexts/AIContext';
 import ContentManagement from './pages/admin/ContentManagement';
+import NewsletterManagement from './pages/admin/NewsletterManagement';
 
 const HomePage = lazy(() => import('@/pages/Home'));
 const PricingPage = lazy(() => import('@/pages/Pricing'));
@@ -222,7 +223,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Reading Section */}
         <Route path="/reading" element={<ReadingPage />} />
         <Route path="/reading/exercise/:exerciseId" element={<ReadingExercise />} />
         <Route path="/reading/practice" element={<ReadingPractice />} />
@@ -287,18 +287,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/*<Route
-          path="/learning"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout>
-                <Suspense fallback={<div>Loading...</div>}>
-                  <LearningPage />
-                </Suspense>
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />*/}
         <Route
           path="/practice"
           element={
@@ -362,6 +350,18 @@ function App() {
         <Route
           path="/admin/content-management"
           element={<ContentManagement />}
+        />
+        <Route
+          path="/admin/newsletter"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <DashboardLayout>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <NewsletterManagement />
+                </Suspense>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
         />
         <Route
           path="*"
