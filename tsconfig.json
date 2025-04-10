@@ -32,7 +32,7 @@
       "@utils/*": ["./src/utils/*"],
       "@types/*": ["./src/types/*"],
       "@routes/*": ["./src/routes/*"],
-      "@context/*": ["./src/contexts/*"]
+      "@context/*": ["./src/contexts/*"],
       "@adapters/*": ["./src/adapters/*"]
     }
   },
