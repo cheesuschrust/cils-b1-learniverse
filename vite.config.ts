@@ -1,11 +1,10 @@
-
 /// <reference types="vite/client" />  
 import { defineConfig } from 'vite';  
 import react from '@vitejs/plugin-react';  
 import * as path from 'path';  
 
 export default defineConfig(({ mode }) => {
-  const config = {
+  return {
     plugins: [
       react({
         jsxRuntime: 'automatic',
@@ -17,8 +16,8 @@ export default defineConfig(({ mode }) => {
     server: {  
       port: 8080,  
       host: true,  
-      open: true, // Automatically open browser  
-      strictPort: true, // Exit if port is in use  
+      open: true, 
+      strictPort: true,
     },  
     
     // Resolve Aliases  
@@ -30,7 +29,7 @@ export default defineConfig(({ mode }) => {
         '@utils': path.resolve(__dirname, 'src/utils'),  
         '@types': path.resolve(__dirname, 'src/types'),  
         '@routes': path.resolve(__dirname, 'src/routes'),  
-        '@context': path.resolve(__dirname, 'src/context'),  
+        '@context': path.resolve(__dirname, 'src/contexts'),  // Fixed path from context to contexts
       }  
     },  
     
@@ -44,7 +43,8 @@ export default defineConfig(({ mode }) => {
         'class-variance-authority',  
         'clsx',  
         'lucide-react',
-        // Removed 'shadcn-ui' as it's not actually a package
+        'tailwind-merge',
+        'react-hook-form',
       ],  
       force: true  
     },  
@@ -59,27 +59,30 @@ export default defineConfig(({ mode }) => {
       },  
       rollupOptions: {  
         output: {  
-          manualChunks(id: string) {  
+          manualChunks(id) {  
             if (id.includes('node_modules')) {  
               return 'vendor';  
             }
-            return undefined; // Add explicit return for non-matching paths
+            return undefined;
           }
         }  
       }  
     },  
     
+    // CSS Configuration - Added to ensure Tailwind is processed correctly
+    css: {
+      postcss: './postcss.config.cjs',
+    },
+    
     // Testing Configuration  
     test: {  
       globals: true,  
       environment: 'jsdom',
-      setupFiles: ['./src/tests/setup.ts'], // Fixed path to look in tests folder
+      setupFiles: ['./src/tests/setup.ts'],
       coverage: {  
         provider: 'v8',  
         reporter: ['text', 'json', 'html']  
       }  
     }  
   };
-  
-  return config;
 });
