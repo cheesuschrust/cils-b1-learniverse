@@ -1,23 +1,10 @@
 
-// Add any global setup needed for Jest tests
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
 
-// Mock IntersectionObserver which isn't available in test environment
-global.IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  takeRecords() { return []; }
-  unobserve() {}
-};
-
-// Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  unobserve() {}
-};
+// Mock global objects
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -34,32 +21,142 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Suppress console errors and warnings during tests
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
+// Mock window.scrollTo
+global.scrollTo = jest.fn();
 
-console.error = (...args) => {
-  // Check if this is a React-specific warning/error that we want to suppress during tests
-  if (
-    args[0]?.includes?.('Warning:') ||
-    args[0]?.includes?.('Error:') ||
-    (typeof args[0] === 'string' && args[0].includes('test'))
-  ) {
-    return;
-  }
-  originalConsoleError(...args);
-};
+// Mock localStorage
+const localStorageMock = (function() {
+  let store = {};
+  return {
+    getItem: jest.fn(key => store[key] || null),
+    setItem: jest.fn((key, value) => {
+      store[key] = value.toString();
+    }),
+    removeItem: jest.fn(key => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
+    key: jest.fn(index => Object.keys(store)[index] || null),
+    get length() {
+      return Object.keys(store).length;
+    }
+  };
+})();
 
-console.warn = (...args) => {
-  // Check if this is a warning we want to suppress during tests
-  if (args[0]?.includes?.('Warning:')) {
-    return;
-  }
-  originalConsoleWarn(...args);
-};
-
-// Clean up after all tests are done
-afterAll(() => {
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock
 });
+
+// Mock SpeechSynthesis API
+const mockSpeechSynthesis = {
+  speak: jest.fn(),
+  cancel: jest.fn(),
+  pause: jest.fn(),
+  resume: jest.fn(),
+  getVoices: jest.fn().mockReturnValue([
+    {
+      voiceURI: 'native',
+      name: 'English Voice',
+      lang: 'en-US',
+      localService: true,
+      default: true,
+    },
+    {
+      voiceURI: 'native-italian',
+      name: 'Italian Voice',
+      lang: 'it-IT',
+      localService: true,
+      default: false,
+    }
+  ]),
+  onvoiceschanged: null,
+  pending: false,
+  speaking: false,
+  paused: false,
+};
+
+global.SpeechSynthesisUtterance = jest.fn().mockImplementation(() => ({
+  text: '',
+  voice: null,
+  rate: 1,
+  pitch: 1,
+  volume: 1,
+  lang: '',
+  onstart: null,
+  onend: null,
+  onerror: null,
+  onpause: null,
+  onresume: null,
+  onmark: null,
+  onboundary: null,
+}));
+
+Object.defineProperty(window, 'speechSynthesis', {
+  value: mockSpeechSynthesis,
+});
+
+// Add ResizeObserver mock
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Add IntersectionObserver mock
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+  takeRecords: jest.fn(),
+  root: null,
+  rootMargin: '',
+  thresholds: [],
+}));
+
+// Suppress console errors in tests
+jest.spyOn(console, 'error').mockImplementation(() => {});
+
+// Add custom matchers to expect for Jest
+expect.extend({
+  toBeInTheDocument(received) {
+    const pass = received !== null && received !== undefined;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to be in the document`,
+    };
+  },
+  toHaveClass(received, className) {
+    const pass = received && received.classList && received.classList.contains(className);
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have class ${className}`,
+    };
+  },
+  toHaveAttribute(received, attr, value) {
+    const hasAttr = received && received.hasAttribute && received.hasAttribute(attr);
+    const pass = value !== undefined ? hasAttr && received.getAttribute(attr) === value : hasAttr;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have attribute ${attr}${value !== undefined ? ` with value ${value}` : ''}`,
+    };
+  },
+  toBeDisabled(received) {
+    const pass = received && received.disabled === true;
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to be disabled`,
+    };
+  },
+  toHaveTextContent(received, text) {
+    const pass = received && received.textContent && received.textContent.includes(text);
+    return {
+      pass,
+      message: () => `expected ${received} ${pass ? 'not ' : ''}to have text content ${text}`,
+    };
+  },
+});
+
+// Enable more verbose logging for test environment
+console.debug('Jest test environment setup completed');
