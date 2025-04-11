@@ -17,6 +17,11 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        'inter': ['Inter', 'sans-serif'],
+        'playfair': ['Playfair Display', 'serif'],
+        'lato': ['Lato', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -51,11 +56,22 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Italian-inspired colors
+        // Sidebar colors needed by components
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          'primary-foreground': "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          'accent-foreground': "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))"
+        },
+        // Italian-inspired colors - updated to match existing Italian colors
         'italian': {
-          'green': '#008C45',  // Italian flag green
-          'white': '#F4F5F0',  // Italian flag white
-          'red': '#CD212A',    // Italian flag red
+          'green': '#009246',  // Updated to match existing Italian green
+          'white': '#ffffff',  // Updated to match existing Italian white
+          'red': '#ce2b37',    // Updated to match existing Italian red
           'blue': '#0E3880',   // Italian blue (azure)
           'gold': '#FFCC33',   // Mediterranean gold
           'terracotta': '#E27D60', // Terracotta/clay
@@ -80,24 +96,47 @@ module.exports = {
           to: { height: "0" },
         },
         "fade-in": {
-          from: { opacity: "0" },
-          to: { opacity: "1" },
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(10px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "slide-in-right": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" }
+        },
+        "slide-in-left": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" }
+        },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.8" }
+        },
+        "card-flip": {
+          "0%": { transform: "rotateY(0deg)" },
+          "100%": { transform: "rotateY(180deg)" }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out",
         "fade-up": "fade-up 0.5s ease-out",
+        "slide-in-right": "slide-in-right 0.5s ease-out",
+        "slide-in-left": "slide-in-left 0.5s ease-out",
+        "pulse-soft": "pulse-soft 2s infinite",
+        "card-flip": "card-flip 0.5s ease-out forwards"
       },
-      fontFamily: {
-        'playfair': ['Playfair Display', 'serif'],
-        'lato': ['Lato', 'sans-serif'],
+      boxShadow: {
+        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+        'neo': '5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff'
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))'
+      }
     },
   },
   plugins: [require("tailwindcss-animate")],
