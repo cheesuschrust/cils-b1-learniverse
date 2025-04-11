@@ -21,7 +21,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-// Wrapper components with correct React typing
+// Properly wrapped components with React functional component patterns
 export const BarChart: React.FC<React.ComponentProps<typeof RBarChart>> = (props) => 
   <RBarChart {...props} />;
 

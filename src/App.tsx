@@ -1,6 +1,6 @@
 
 import { Routes, Route } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from '@/adapters/ReactImports';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';

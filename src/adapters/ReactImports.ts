@@ -12,6 +12,8 @@ export const useContext = ReactModule.useContext;
 export const Component = ReactModule.Component;
 export const createContext = ReactModule.createContext;
 export const forwardRef = ReactModule.forwardRef;
+export const lazy = ReactModule.lazy;
+export const Suspense = ReactModule.Suspense;
 export const ErrorInfo = ReactModule.ErrorInfo;
 export type ReactNode = ReactModule.ReactNode;
 

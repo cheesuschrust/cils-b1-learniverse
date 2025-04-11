@@ -1,143 +1,107 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase-client';
+import { Session, User } from '@supabase/supabase-js';
+import { useToast } from '@/adapters/ToastAdapter';
 
-type AuthContextType = {
-  user: User | null;
+interface AuthContextType {
   session: Session | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
-};
+  logout: () => Promise<void>;
+  signup: (email: string, password: string, metadata?: any) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<boolean>;
+}
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  isAuthenticated: false,
-  isLoading: true,
-  login: async () => ({ success: false }),
-  signup: async () => ({ success: false }),
-  logout: async () => {},
-  loginWithGoogle: async () => {},
-});
-
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-      }
-    );
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    });
 
-    // Then check for existing session
-    const initializeAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    });
 
-    initializeAuth();
-
-    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) {
         toast({
-          title: 'Login failed',
+          title: "Login failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
-        return { success: false, error: error.message };
+        return false;
       }
-      
+
       toast({
-        title: 'Login successful',
-        description: 'Welcome back to CILS B1 Prep!',
+        title: "Login successful",
+        description: "Welcome back!",
       });
-      
-      return { success: true };
+      return true;
     } catch (error: any) {
       toast({
-        title: 'Login error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Login error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
       });
-      return { success: false, error: error.message };
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, firstName?: string, lastName?: string) => {
+  const loginWithGoogle = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      
-      // Include first/last name in the metadata
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
-      
+
       if (error) {
         toast({
-          title: 'Signup failed',
+          title: "Login failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
-        return { success: false, error: error.message };
       }
-      
-      toast({
-        title: 'Account created',
-        description: 'Check your email for the confirmation link',
-      });
-      
-      return { success: true };
     } catch (error: any) {
       toast({
-        title: 'Signup error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Login error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
       });
-      return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
@@ -146,64 +110,154 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out',
-      });
+      if (error) {
+        toast({
+          title: "Logout failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+      }
     } catch (error: any) {
       toast({
-        title: 'Logout error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Logout error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loginWithGoogle = async (): Promise<void> => {
+  const signup = async (email: string, password: string, metadata?: any): Promise<boolean> => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
+      });
+
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      toast({
+        title: "Signup successful",
+        description: "Please check your email to verify your account.",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Signup error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) {
         toast({
-          title: 'Google login failed',
+          title: "Password reset failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Password reset email sent",
+          description: "Check your email for the password reset link.",
         });
       }
     } catch (error: any) {
       toast({
-        title: 'Google login error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Password reset error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        signup,
-        logout,
-        loginWithGoogle,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const updatePassword = async (newPassword: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      
+      if (error) {
+        toast({
+          title: "Password update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Password update error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const value = {
+    session,
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    loginWithGoogle,
+    logout,
+    signup,
+    resetPassword,
+    updatePassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export default AuthContext;
