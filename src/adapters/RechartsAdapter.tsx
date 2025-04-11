@@ -21,7 +21,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-// Properly wrapped components with React functional component patterns
+// Properly wrap components with functional component patterns and explicit typing
 export const BarChart: React.FC<React.ComponentProps<typeof RBarChart>> = (props) => 
   <RBarChart {...props} />;
 
@@ -47,31 +47,31 @@ export const CartesianGrid: React.FC<React.ComponentProps<typeof RCartesianGrid>
   <RCartesianGrid {...props} />;
 
 export const Tooltip: React.FC<React.ComponentProps<typeof RTooltip>> = (props) => 
-  <RTooltip {...props as any} />;
+  <RTooltip {...props} />;
 
 export const Legend: React.FC<React.ComponentProps<typeof RLegend>> = (props) => 
-  <RLegend {...props as any} />;
+  <RLegend {...props} />;
 
 export const Bar: React.FC<React.ComponentProps<typeof RBar>> = (props) => 
-  <RBar {...props as any} />;
+  <RBar {...props} />;
 
 export const Line: React.FC<React.ComponentProps<typeof RLine>> = (props) => 
-  <RLine {...props as any} />;
+  <RLine {...props} />;
 
 export const Pie: React.FC<React.ComponentProps<typeof RPie>> = (props) => 
-  <RPie {...props as any} />;
+  <RPie {...props} />;
 
 export const Area: React.FC<React.ComponentProps<typeof RArea>> = (props) => 
-  <RArea {...props as any} />;
+  <RArea {...props} />;
 
 export const PolarAngleAxis: React.FC<React.ComponentProps<typeof RPolarAngleAxis>> = (props) => 
-  <RPolarAngleAxis {...props as any} />;
+  <RPolarAngleAxis {...props} />;
 
 export const PolarRadiusAxis: React.FC<React.ComponentProps<typeof RPolarRadiusAxis>> = (props) => 
-  <RPolarRadiusAxis {...props as any} />;
+  <RPolarRadiusAxis {...props} />;
 
 export const Radar: React.FC<React.ComponentProps<typeof RRadar>> = (props) => 
-  <RRadar {...props as any} />;
+  <RRadar {...props} />;
 
 // Re-export ResponsiveContainer as it doesn't need wrapping
 export { ResponsiveContainer };

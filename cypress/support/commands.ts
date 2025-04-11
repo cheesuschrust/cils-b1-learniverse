@@ -1,3 +1,4 @@
+
 // ***********************************************
 // This example commands.js shows you how to
 // create various custom commands and overwrite
@@ -49,7 +50,7 @@ Cypress.Commands.add('checkAccessibility', (options = {}) => {
 });
 
 // Add custom command for tab key press
-Cypress.Commands.add('tab', () => {
+Cypress.Commands.add('tab', { prevSubject: 'optional' }, () => {
   const keyboardEventOptions = { keyCode: 9, which: 9, key: 'Tab', code: 'Tab', bubbles: true };
   cy.focused().trigger('keydown', keyboardEventOptions);
   return cy.focused(); // Return the element that received focus
@@ -95,7 +96,7 @@ Cypress.Commands.add('testFormValidation', (formSelector: string) => {
   });
 });
 
-// Declare the Cypress namespace for custom commands
+// Declare global Cypress namespace for Typescript support
 declare global {
   namespace Cypress {
     interface Chainable {

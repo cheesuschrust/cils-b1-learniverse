@@ -6,7 +6,7 @@
 declare namespace Cypress {
   interface Chainable<Subject = any> {
     // Custom commands
-    tab(): Chainable<Element>;
+    tab(): Chainable<JQuery<HTMLElement>>;
     checkAllLinks(): Chainable<Element>;
     checkAccessibility(options?: any): Chainable<Element>;
     captureAndCompare(name: string): Chainable<Element>;
@@ -53,12 +53,12 @@ declare namespace Cypress {
     log(message: string): Chainable<null>;
     task(event: string, arg?: any, options?: Partial<Cypress.Loggable & Cypress.Timeoutable>): Chainable<any>;
     
-    // Missing methods that caused the errors
+    // Methods that caused errors
     should(chainer: string, value?: any): Chainable<Subject>;
     should(chainers: string, value: any, match: any): Chainable<Subject>;
     should(chainers: string, match: RegExp): Chainable<Subject>;
     should(chainers: string, value: any, match: string): Chainable<Subject>;
-    should(fn: (currentSubject: Subject) => void): Chainable<Subject>;
+    should<S = any>(fn: (currentSubject: Subject) => void): Chainable<Subject>;
     
     click(options?: Partial<Cypress.ClickOptions>): Chainable<Subject>;
     type(text: string, options?: Partial<Cypress.TypeOptions>): Chainable<Subject>;
@@ -71,9 +71,6 @@ declare namespace Cypress {
     each(fn: (currentElement: JQuery<HTMLElement>, index: number, elements: JQuery<HTMLElement>[]) => void): Chainable<JQuery<HTMLElement>>;
     wrap<E>(element: E, options?: Partial<Cypress.Loggable>): Chainable<E>;
     trigger(eventName: string, options?: object): Chainable<Subject>;
-    
-    // For React component testing
-    mount(component: React.ReactNode, options?: any): Chainable<Element>;
   }
 
   interface Cookies {

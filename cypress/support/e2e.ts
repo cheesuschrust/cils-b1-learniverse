@@ -83,8 +83,8 @@ beforeEach(() => {
 // Report test results
 afterEach(() => {
   const test = Cypress.currentTest;
-  // Check if test exists and has the required property
-  if (test && typeof test === 'object') {
+  // Check if test exists and has properties
+  if (test && test.title) {
     const testState = test.state || 'unknown';
     const message = testState === 'passed' 
       ? `✅ TEST PASSED: ${test.title}` 

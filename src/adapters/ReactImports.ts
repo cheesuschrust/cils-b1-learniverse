@@ -2,8 +2,8 @@
 // Create proper typed exports for React
 import React from 'react';
 
-// Re-export everything from React
-const {
+// Re-export everything from React with proper typing
+export const {
   useState,
   useEffect,
   useCallback,
@@ -18,24 +18,17 @@ const {
 } = React;
 
 // Also export types as needed
-type ReactNode = React.ReactNode;
-type ErrorInfo = React.ErrorInfo;
+export type ReactNode = React.ReactNode;
+export type ErrorInfo = React.ErrorInfo;
+export type CSSProperties = React.CSSProperties;
+export type SyntheticEvent = React.SyntheticEvent;
+export type FormEvent = React.FormEvent;
+export type ReactElement = React.ReactElement;
+export type FC<P = {}> = React.FC<P>;
+export type ComponentProps<T> = React.ComponentProps<T>;
+export type ComponentType<P = {}> = React.ComponentType<P>;
+export type JSXElementConstructor<P> = React.JSXElementConstructor<P>;
+export type PropsWithChildren<P = {}> = React.PropsWithChildren<P>;
 
-export {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  useContext,
-  Component,
-  createContext,
-  forwardRef,
-  lazy,
-  Suspense,
-  type ReactNode,
-  type ErrorInfo
-};
-
-// Export default React as a fallback
+// Default export for direct React imports
 export default React;
