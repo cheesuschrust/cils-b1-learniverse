@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getTables, getKnownTable } from '@/adapters/SupabaseAdapter';
 import { User } from '@/types/auth';
 
 type QuestionType = 'flashcards' | 'multiple-choice' | 'speaking' | 'writing' | 'listening';
@@ -40,8 +40,8 @@ export function useQuestionLimits(questionType: QuestionType) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
-        .from('usage_tracking')
+      // Use the type-safe function to access the table
+      const { data, error } = await getTables.usageTracking()
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -90,9 +90,8 @@ export function useQuestionLimits(questionType: QuestionType) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      // First, check if there's a record for today
-      const { data: existingData, error: fetchError } = await supabase
-        .from('usage_tracking')
+      // First, check if there's a record for today using the type-safe accessor
+      const { data: existingData, error: fetchError } = await getTables.usageTracking()
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -104,8 +103,7 @@ export function useQuestionLimits(questionType: QuestionType) {
       
       if (fetchError && fetchError.code === 'PGRST116') {
         // No record exists for today, insert new record
-        const { error: insertError } = await supabase
-          .from('usage_tracking')
+        const { error: insertError } = await getTables.usageTracking()
           .insert({
             user_id: user.id,
             question_type: questionType,
@@ -120,8 +118,7 @@ export function useQuestionLimits(questionType: QuestionType) {
         newCount = existingData.count + 1;
         
         if (newCount <= dailyLimit || isPremium) {
-          const { error: updateError } = await supabase
-            .from('usage_tracking')
+          const { error: updateError } = await getTables.usageTracking()
             .update({
               count: newCount,
               last_updated: new Date().toISOString()

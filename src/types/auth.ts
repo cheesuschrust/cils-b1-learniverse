@@ -14,7 +14,7 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
-  user: any;
+  user: User;
   token?: string;
 }
 
@@ -55,6 +55,7 @@ export enum AuthErrorCode {
   EMAIL_NOT_VERIFIED = 'auth/email-not-verified'
 }
 
+// Unified User interface to prevent inconsistencies
 export interface User {
   id: string;
   email: string;
@@ -63,6 +64,7 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   isPremium?: boolean;
+  isPremiumUser?: boolean; // For backward compatibility
   subscription?: string;
   isAdmin?: boolean;
   createdAt?: Date;
