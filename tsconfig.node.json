@@ -27,8 +27,8 @@
 
     // Output Control  
     "isolatedModules": true,  
-    "noEmit": false,  
-    "emitDeclarationOnly": true, 
+    "noEmit": true,  // Changed from false to true to match main tsconfig
+    "emitDeclarationOnly": false,  // Changed from true to false
     "outDir": "./dist",
 
     // Library Support  
