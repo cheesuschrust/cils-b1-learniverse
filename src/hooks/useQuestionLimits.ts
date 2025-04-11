@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase-client';
+import { getUsageTracking } from '@/adapters/SupabaseAdapter';
+import { User } from '@/types/auth';
 
 type QuestionType = 'flashcards' | 'multiple-choice' | 'speaking' | 'writing' | 'listening';
 
@@ -27,7 +28,7 @@ export function useQuestionLimits(questionType: QuestionType) {
     lastUpdated: new Date(),
   });
 
-  const isPremium = user?.subscription === 'premium';
+  const isPremium = user?.subscription === 'premium' || user?.isPremium;
   const dailyLimit = isPremium ? 999 : 10; // Unlimited for premium users, 10 for free users
 
   const loadUsageData = useCallback(async () => {
@@ -39,8 +40,7 @@ export function useQuestionLimits(questionType: QuestionType) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
-        .from('usage_tracking')
+      const { data, error } = await getUsageTracking()
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -90,8 +90,7 @@ export function useQuestionLimits(questionType: QuestionType) {
       today.setHours(0, 0, 0, 0);
       
       // First, check if there's a record for today
-      const { data: existingData, error: fetchError } = await supabase
-        .from('usage_tracking')
+      const { data: existingData, error: fetchError } = await getUsageTracking()
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -103,8 +102,7 @@ export function useQuestionLimits(questionType: QuestionType) {
       
       if (fetchError && fetchError.code === 'PGRST116') {
         // No record exists for today, insert new record
-        const { error: insertError } = await supabase
-          .from('usage_tracking')
+        const { error: insertError } = await getUsageTracking()
           .insert({
             user_id: user.id,
             question_type: questionType,
@@ -119,8 +117,7 @@ export function useQuestionLimits(questionType: QuestionType) {
         newCount = existingData.count + 1;
         
         if (newCount <= dailyLimit || isPremium) {
-          const { error: updateError } = await supabase
-            .from('usage_tracking')
+          const { error: updateError } = await getUsageTracking()
             .update({
               count: newCount,
               last_updated: new Date().toISOString()

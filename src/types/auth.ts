@@ -54,3 +54,19 @@ export enum AuthErrorCode {
   ACCOUNT_SUSPENDED = 'auth/account-suspended',
   EMAIL_NOT_VERIFIED = 'auth/email-not-verified'
 }
+
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  photoURL?: string;
+  isPremium?: boolean;
+  subscription?: string;
+  isAdmin?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  lastLogin?: Date;
+  metadata?: Record<string, any>;
+}

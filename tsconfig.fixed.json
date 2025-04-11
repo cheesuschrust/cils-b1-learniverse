@@ -36,5 +36,6 @@
       "@context/*": ["./src/contexts/*"]
     }
   },
-  "include": ["src", "cypress"]
+  "include": ["src", "cypress"],
+  "references": []
 }
