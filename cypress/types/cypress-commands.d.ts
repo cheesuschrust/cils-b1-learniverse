@@ -51,6 +51,6 @@ declare namespace Cypress {
   interface CurrentTest {
     title: string
     titlePath: string[]
-    state: string
+    state?: string
   }
 }

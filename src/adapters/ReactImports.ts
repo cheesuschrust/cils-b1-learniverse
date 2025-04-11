@@ -1,21 +1,37 @@
 
 // Re-export React imports to fix TypeScript errors
-import * as ReactModule from 'react';
+import React, { 
+  useState, 
+  useEffect, 
+  useCallback, 
+  useMemo, 
+  useRef, 
+  useContext, 
+  Component, 
+  createContext, 
+  forwardRef, 
+  lazy, 
+  Suspense, 
+  type ReactNode,
+  type ErrorInfo
+} from 'react';
 
 // Create proper typed exports
-export const useState = ReactModule.useState;
-export const useEffect = ReactModule.useEffect;
-export const useCallback = ReactModule.useCallback;
-export const useMemo = ReactModule.useMemo;
-export const useRef = ReactModule.useRef;
-export const useContext = ReactModule.useContext;
-export const Component = ReactModule.Component;
-export const createContext = ReactModule.createContext;
-export const forwardRef = ReactModule.forwardRef;
-export const lazy = ReactModule.lazy;
-export const Suspense = ReactModule.Suspense;
-export const ErrorInfo = ReactModule.ErrorInfo;
-export type ReactNode = ReactModule.ReactNode;
+export { 
+  useState, 
+  useEffect, 
+  useCallback, 
+  useMemo, 
+  useRef, 
+  useContext, 
+  Component, 
+  createContext, 
+  forwardRef, 
+  lazy, 
+  Suspense, 
+  type ReactNode,
+  type ErrorInfo
+};
 
 // Export default React as a fallback
-export default ReactModule;
+export default React;
