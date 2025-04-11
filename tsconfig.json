@@ -46,4 +46,5 @@
   },
   "include": ["src", "cypress", "./src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
+  // IMPORTANT: Remove the "references" section if it exists
 }
