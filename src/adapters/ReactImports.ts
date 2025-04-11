@@ -1,34 +1,38 @@
 
-// Re-export React imports to fix TypeScript errors
-import React, { 
-  useState, 
-  useEffect, 
-  useCallback, 
-  useMemo, 
-  useRef, 
-  useContext, 
-  Component, 
-  createContext, 
-  forwardRef, 
-  lazy, 
-  Suspense, 
-  type ReactNode,
-  type ErrorInfo
-} from 'react';
+// Create proper typed exports for React
+import React from 'react';
 
-// Create proper typed exports
-export { 
-  useState, 
-  useEffect, 
-  useCallback, 
-  useMemo, 
-  useRef, 
-  useContext, 
-  Component, 
-  createContext, 
-  forwardRef, 
-  lazy, 
-  Suspense, 
+// Re-export everything from React
+const {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  useContext,
+  Component,
+  createContext,
+  forwardRef,
+  lazy,
+  Suspense
+} = React;
+
+// Also export types as needed
+type ReactNode = React.ReactNode;
+type ErrorInfo = React.ErrorInfo;
+
+export {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  useContext,
+  Component,
+  createContext,
+  forwardRef,
+  lazy,
+  Suspense,
   type ReactNode,
   type ErrorInfo
 };

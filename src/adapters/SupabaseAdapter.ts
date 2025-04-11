@@ -1,6 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabase-client';
+import type { Database } from '@/types/supabase';
 
 // Define a union type of known tables for type safety
 export type KnownTables = 'flashcard_sets' | 'flashcards' | 'user_flashcard_progress' | 'user_profiles' | 'user_stats' | 'usage_tracking';

@@ -26,15 +26,12 @@ export const waitForAnimations = (): void => {
 
 // Helper to check accessibility on the current page
 export const checkA11y = (context?: any): void => {
-  cy.checkA11y(
-    context,
-    {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
-      },
-    }
-  );
+  cy.checkA11y(context, {
+    runOnly: {
+      type: 'tag',
+      values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
+    },
+  });
 };
 
 // Helper to fetch data from fixture and use it

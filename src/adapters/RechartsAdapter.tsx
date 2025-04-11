@@ -22,56 +22,56 @@ import {
 } from 'recharts';
 
 // Properly wrapped components with React functional component patterns
-export const BarChart = (props: React.ComponentProps<typeof RBarChart>) => 
+export const BarChart: React.FC<React.ComponentProps<typeof RBarChart>> = (props) => 
   <RBarChart {...props} />;
 
-export const LineChart = (props: React.ComponentProps<typeof RLineChart>) => 
+export const LineChart: React.FC<React.ComponentProps<typeof RLineChart>> = (props) => 
   <RLineChart {...props} />;
 
-export const PieChart = (props: React.ComponentProps<typeof RPieChart>) => 
+export const PieChart: React.FC<React.ComponentProps<typeof RPieChart>> = (props) => 
   <RPieChart {...props} />;
 
-export const RadarChart = (props: React.ComponentProps<typeof RRadarChart>) => 
+export const RadarChart: React.FC<React.ComponentProps<typeof RRadarChart>> = (props) => 
   <RRadarChart {...props} />;
 
-export const AreaChart = (props: React.ComponentProps<typeof RAreaChart>) => 
+export const AreaChart: React.FC<React.ComponentProps<typeof RAreaChart>> = (props) => 
   <RAreaChart {...props} />;
 
-export const XAxis = (props: React.ComponentProps<typeof RXAxis>) => 
+export const XAxis: React.FC<React.ComponentProps<typeof RXAxis>> = (props) => 
   <RXAxis {...props} />;
 
-export const YAxis = (props: React.ComponentProps<typeof RYAxis>) => 
+export const YAxis: React.FC<React.ComponentProps<typeof RYAxis>> = (props) => 
   <RYAxis {...props} />;
 
-export const CartesianGrid = (props: React.ComponentProps<typeof RCartesianGrid>) => 
+export const CartesianGrid: React.FC<React.ComponentProps<typeof RCartesianGrid>> = (props) => 
   <RCartesianGrid {...props} />;
 
-export const Tooltip = (props: React.ComponentProps<typeof RTooltip>) => 
-  <RTooltip {...props} />;
+export const Tooltip: React.FC<React.ComponentProps<typeof RTooltip>> = (props) => 
+  <RTooltip {...props as any} />;
 
-export const Legend = (props: React.ComponentProps<typeof RLegend>) => 
-  <RLegend {...props} />;
+export const Legend: React.FC<React.ComponentProps<typeof RLegend>> = (props) => 
+  <RLegend {...props as any} />;
 
-export const Bar = (props: React.ComponentProps<typeof RBar>) => 
-  <RBar {...props} />;
+export const Bar: React.FC<React.ComponentProps<typeof RBar>> = (props) => 
+  <RBar {...props as any} />;
 
-export const Line = (props: React.ComponentProps<typeof RLine>) => 
-  <RLine {...props} />;
+export const Line: React.FC<React.ComponentProps<typeof RLine>> = (props) => 
+  <RLine {...props as any} />;
 
-export const Pie = (props: React.ComponentProps<typeof RPie>) => 
-  <RPie {...props} />;
+export const Pie: React.FC<React.ComponentProps<typeof RPie>> = (props) => 
+  <RPie {...props as any} />;
 
-export const Area = (props: React.ComponentProps<typeof RArea>) => 
-  <RArea {...props} />;
+export const Area: React.FC<React.ComponentProps<typeof RArea>> = (props) => 
+  <RArea {...props as any} />;
 
-export const PolarAngleAxis = (props: React.ComponentProps<typeof RPolarAngleAxis>) => 
-  <RPolarAngleAxis {...props} />;
+export const PolarAngleAxis: React.FC<React.ComponentProps<typeof RPolarAngleAxis>> = (props) => 
+  <RPolarAngleAxis {...props as any} />;
 
-export const PolarRadiusAxis = (props: React.ComponentProps<typeof RPolarRadiusAxis>) => 
-  <RPolarRadiusAxis {...props} />;
+export const PolarRadiusAxis: React.FC<React.ComponentProps<typeof RPolarRadiusAxis>> = (props) => 
+  <RPolarRadiusAxis {...props as any} />;
 
-export const Radar = (props: React.ComponentProps<typeof RRadar>) => 
-  <RRadar {...props} />;
+export const Radar: React.FC<React.ComponentProps<typeof RRadar>> = (props) => 
+  <RRadar {...props as any} />;
 
 // Re-export ResponsiveContainer as it doesn't need wrapping
 export { ResponsiveContainer };
