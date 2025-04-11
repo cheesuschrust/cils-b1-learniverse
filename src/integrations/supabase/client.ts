@@ -15,4 +15,29 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+// Authentication helper functions
+export async function signInWithEmail(email: string, password: string) {
+  return await supabase.auth.signInWithPassword({ email, password });
+}
+
+export async function signUp(email: string, password: string, metadata = {}) {
+  return await supabase.auth.signUp({ 
+    email, 
+    password,
+    options: { data: metadata }
+  });
+}
+
+export async function signOut() {
+  return await supabase.auth.signOut();
+}
+
+export async function getCurrentUser() {
+  return await supabase.auth.getUser();
+}
+
+export async function getUserSession() {
+  return await supabase.auth.getSession();
+}
+
 export default supabase;

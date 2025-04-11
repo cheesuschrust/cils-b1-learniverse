@@ -1,33 +1,32 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  isAdmin?: boolean;
-}
+import { supabase, getCurrentUser, getUserSession } from '@/integrations/supabase/client';
+import { User } from '@/types/auth';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName?: string) => Promise<void>;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, displayName?: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  loading: boolean;
+  loginWithGoogle: () => Promise<void>;
   error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   isAuthenticated: false,
   isAdmin: false,
-  login: async () => {},
-  signup: async () => {},
+  isLoading: true,
+  login: async () => false,
+  signup: async () => false,
   logout: async () => {},
-  loading: false,
+  loginWithGoogle: async () => {},
   error: null,
 });
 
@@ -39,80 +38,158 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Check if there's a user session on init
+  // Setup auth state listener and check for existing session
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Failed to parse stored user:', err);
-        localStorage.removeItem('user');
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        setSession(newSession);
+        if (newSession?.user) {
+          const userData: User = {
+            id: newSession.user.id,
+            email: newSession.user.email || '',
+            firstName: newSession.user.user_metadata?.first_name,
+            lastName: newSession.user.user_metadata?.last_name,
+            displayName: newSession.user.user_metadata?.display_name,
+            photoURL: newSession.user.user_metadata?.avatar_url,
+            isPremium: newSession.user.user_metadata?.is_premium,
+            subscription: newSession.user.user_metadata?.subscription_tier || 'free',
+            isAdmin: newSession.user.user_metadata?.role === 'admin',
+          };
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
       }
-    }
-    setLoading(false);
+    );
+
+    // Check for existing session
+    const checkSession = async () => {
+      try {
+        const { data } = await getUserSession();
+        setSession(data.session);
+        if (data.session?.user) {
+          const userData: User = {
+            id: data.session.user.id,
+            email: data.session.user.email || '',
+            firstName: data.session.user.user_metadata?.first_name,
+            lastName: data.session.user.user_metadata?.last_name,
+            displayName: data.session.user.user_metadata?.display_name,
+            photoURL: data.session.user.user_metadata?.avatar_url,
+            isPremium: data.session.user.user_metadata?.is_premium,
+            subscription: data.session.user.user_metadata?.subscription_tier || 'free',
+            isAdmin: data.session.user.user_metadata?.role === 'admin',
+          };
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
       
-      // Mock login for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        displayName: email.split('@')[0],
-        isAdmin: email.includes('admin'),
-      };
+        password,
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Login failed. Please check your credentials and try again.');
+      if (error) {
+        setError(error.message);
+        return false;
+      }
+      
+      return !!data.session;
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
       console.error('Login error:', err);
+      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, displayName?: string) => {
+  const signup = async (email: string, password: string, displayName?: string): Promise<boolean> => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
       
-      // Mock signup for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
+      const { data, error } = await supabase.auth.signUp({
         email,
-        displayName: displayName || email.split('@')[0],
-        isAdmin: false,
-      };
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+          },
+        },
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Signup failed. Please try again later.');
+      if (error) {
+        setError(error.message);
+        return false;
+      }
+      
+      return !!data.user;
+    } catch (err: any) {
+      setError(err.message || 'Signup failed. Please try again.');
       console.error('Signup error:', err);
+      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
-      setLoading(true);
-      // Clear user from state and localStorage
-      setUser(null);
-      localStorage.removeItem('user');
-    } catch (err) {
-      setError('Logout failed. Please try again.');
+      setIsLoading(true);
+      setError(null);
+      await supabase.auth.signOut();
+    } catch (err: any) {
+      setError(err.message || 'Logout failed. Please try again.');
       console.error('Logout error:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google login failed. Please try again.');
+      console.error('Google login error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,12 +199,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user,
+      session,
       isAuthenticated,
       isAdmin,
+      isLoading,
       login,
       signup,
       logout,
-      loading,
+      loginWithGoogle,
       error,
     }}>
       {children}

@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUsageTracking } from '@/adapters/SupabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/auth';
 
 type QuestionType = 'flashcards' | 'multiple-choice' | 'speaking' | 'writing' | 'listening';
@@ -40,7 +40,8 @@ export function useQuestionLimits(questionType: QuestionType) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await getUsageTracking()
+      const { data, error } = await supabase
+        .from('usage_tracking')
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -90,7 +91,8 @@ export function useQuestionLimits(questionType: QuestionType) {
       today.setHours(0, 0, 0, 0);
       
       // First, check if there's a record for today
-      const { data: existingData, error: fetchError } = await getUsageTracking()
+      const { data: existingData, error: fetchError } = await supabase
+        .from('usage_tracking')
         .select('*')
         .eq('user_id', user.id)
         .eq('question_type', questionType)
@@ -102,7 +104,8 @@ export function useQuestionLimits(questionType: QuestionType) {
       
       if (fetchError && fetchError.code === 'PGRST116') {
         // No record exists for today, insert new record
-        const { error: insertError } = await getUsageTracking()
+        const { error: insertError } = await supabase
+          .from('usage_tracking')
           .insert({
             user_id: user.id,
             question_type: questionType,
@@ -117,7 +120,8 @@ export function useQuestionLimits(questionType: QuestionType) {
         newCount = existingData.count + 1;
         
         if (newCount <= dailyLimit || isPremium) {
-          const { error: updateError } = await getUsageTracking()
+          const { error: updateError } = await supabase
+            .from('usage_tracking')
             .update({
               count: newCount,
               last_updated: new Date().toISOString()

@@ -1,11 +1,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/auth';
+import { Session } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
@@ -17,6 +19,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   isAuthenticated: false,
   isLoading: true,
   login: async () => false,
@@ -30,24 +33,26 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session?.user) {
+      (event, newSession) => {
+        setSession(newSession);
+        if (newSession?.user) {
           const userData: User = {
-            id: session.user.id,
-            email: session.user.email ?? '',
-            firstName: session.user.user_metadata?.first_name,
-            lastName: session.user.user_metadata?.last_name,
-            displayName: session.user.user_metadata?.display_name,
-            photoURL: session.user.user_metadata?.avatar_url,
-            isPremium: session.user.user_metadata?.is_premium,
-            subscription: session.user.user_metadata?.subscription_tier || 'free',
-            isAdmin: session.user.user_metadata?.role === 'admin',
+            id: newSession.user.id,
+            email: newSession.user.email ?? '',
+            firstName: newSession.user.user_metadata?.first_name,
+            lastName: newSession.user.user_metadata?.last_name,
+            displayName: newSession.user.user_metadata?.display_name,
+            photoURL: newSession.user.user_metadata?.avatar_url,
+            isPremium: newSession.user.user_metadata?.is_premium,
+            subscription: newSession.user.user_metadata?.subscription_tier || 'free',
+            isAdmin: newSession.user.user_metadata?.role === 'admin',
           };
           setUser(userData);
         } else {
@@ -61,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        setSession(data.session);
         if (data.session?.user) {
           const userData: User = {
             id: data.session.user.id,
@@ -252,6 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        session,
         isAuthenticated: !!user,
         isLoading,
         login,

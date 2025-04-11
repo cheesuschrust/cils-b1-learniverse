@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/types/supabase';
 
 // Create a type-safe wrapper for Supabase table access
@@ -7,8 +7,7 @@ export type KnownTables = 'flashcard_sets' | 'flashcards' | 'user_flashcard_prog
 
 // This adapter handles the type mismatch when trying to access tables not in the current type definitions
 export const getTable = <T extends KnownTables | string>(tableName: T) => {
-  // This is a safe cast since we're wrapping the actual Supabase call
-  return supabase.from(tableName as any);
+  return supabase.from(tableName);
 };
 
 // For specific tables that we know the types of
@@ -24,4 +23,14 @@ export const getUserProgress = () => {
 // Helper function for usage tracking specifically
 export const getUsageTracking = () => {
   return getTable('usage_tracking');
+};
+
+// Add typed accessors for our known tables
+export const getTables = {
+  flashcardSets: () => supabase.from('flashcard_sets'),
+  flashcards: () => supabase.from('flashcards'),
+  userFlashcardProgress: () => supabase.from('user_flashcard_progress'),
+  userProfiles: () => supabase.from('user_profiles'),
+  userStats: () => supabase.from('user_stats'),
+  usageTracking: () => supabase.from('usage_tracking')
 };
