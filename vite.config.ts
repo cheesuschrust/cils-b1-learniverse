@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => {
         'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
         'recharts': path.resolve(__dirname, 'node_modules/recharts')
       },
+      // Add mainFields to prioritize ESM versions
+      mainFields: ['module', 'jsnext:main', 'jsnext', 'browser', 'main'],
       extensions: ['.mjs', '.js', '.jsx', '.ts', '.tsx', '.json']
     },
     
@@ -59,7 +61,8 @@ export default defineConfig(({ mode }) => {
         'lucide-react',
         'tailwind-merge',
         'react-hook-form',
-        '@tailwindcss/postcss',
+        'tailwindcss',
+        'autoprefixer',
         'recharts',
         '@radix-ui/react-toast',
         'zod'
@@ -98,8 +101,6 @@ export default defineConfig(({ mode }) => {
             return undefined;
           }
         },
-        // Fix for module resolution
-        external: [],
         // Careful handling of mixed modules
         preserveEntrySignatures: 'strict'
       }  
@@ -128,7 +129,6 @@ export default defineConfig(({ mode }) => {
     esbuild: {
       logOverride: { 
         'this-is-undefined-in-esm': 'silent',
-        // Silence other common warnings
         'commonjs-variable-in-esm': 'silent'
       },
       // Add JSX factory configuration
@@ -140,9 +140,12 @@ export default defineConfig(({ mode }) => {
     // Additional configuration for type checking
     define: {
       // Polyfills and environment variables
-      'process.env': process.env,
+      'process.env': {},
       'process.env.NODE_ENV': JSON.stringify(mode),
-      '__VUE_OPTIONS_API__': false
+      // Ensure global Node.js variables are defined
+      'global': {},
+      '__dirname': JSON.stringify('/'),
+      '__filename': JSON.stringify('index.js')
     }
   };
 });
