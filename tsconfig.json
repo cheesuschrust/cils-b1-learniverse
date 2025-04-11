@@ -45,5 +45,5 @@
     }
   },
   "include": ["src", "cypress", "./src/types/**/*.d.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "exclude": ["node_modules", "dist"]
 }
