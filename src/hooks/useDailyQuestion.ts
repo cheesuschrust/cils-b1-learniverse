@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/adapters/ToastAdapter';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase-client';
-import { getTable, getKnownTable, checkIsPremiumUser, callRPC } from '@/adapters/SupabaseAdapter';
 import { format, isAfter, isSameDay, addDays, differenceInDays } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
@@ -76,7 +75,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
         const isPremium = await checkIsPremiumUser(user.id);
         
         // Get count of questions answered today
-        const { count, error: countError } = await getTable('user_progress')
+        const { count, error: countError } = await supabase
+          .from('user_progress')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .gte('last_activity', `${today}T00:00:00`)
@@ -102,7 +102,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       
       if (user) {
         // Get user performance across categories
-        const { data: progressData } = await getTable('user_progress')
+        const { data: progressData } = await supabase
+          .from('user_progress')
           .select('content_id, score')
           .eq('user_id', user.id)
           .order('last_activity', { ascending: false })
@@ -111,7 +112,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
         if (progressData && progressData.length > 0) {
           // Get content details for these progress entries
           const contentIds = progressData.map(p => p.content_id);
-          const { data: contentData } = await getTable('learning_content')
+          const { data: contentData } = await supabase
+            .from('learning_content')
             .select('category_id, difficulty')
             .in('id', contentIds);
             
@@ -147,7 +149,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
             
             if (lowestCategory) {
               // Get category name from category_id
-              const { data: categoryData } = await getTable('content_categories')
+              const { data: categoryData } = await supabase
+                .from('content_categories')
                 .select('name')
                 .eq('id', lowestCategory)
                 .single();
@@ -167,7 +170,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       }
 
       // Fetch today's question from the database with adaptive difficulty and category
-      const { data: questionData, error: questionError } = await getTable('daily_questions')
+      const { data: questionData, error: questionError } = await supabase
+        .from('daily_questions')
         .select('*')
         .eq('question_date', today)
         .eq('category', questionCategory)
@@ -178,7 +182,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
 
       if (questionError && questionError.code !== 'PGRST116') {
         // If no exact match for today, get a question from any date that matches category and difficulty
-        const { data: fallbackData, error: fallbackError } = await getTable('daily_questions')
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('daily_questions')
           .select('*')
           .eq('category', questionCategory)
           .eq('difficulty', difficulty)
@@ -194,7 +199,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
           setTodaysQuestion({ ...fallbackData, question_date: today });
         } else {
           // If still no match, get any question
-          const { data: anyData, error: anyError } = await getTable('daily_questions')
+          const { data: anyData, error: anyError } = await supabase
+            .from('daily_questions')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(1)
@@ -216,7 +222,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
 
       // If user is logged in, check if they have already completed today's question
       if (user && todaysQuestion) {
-        const { data: userStatsData, error: userStatsError } = await getKnownTable('user_stats')
+        const { data: userStatsData, error: userStatsError } = await supabase
+          .from('user_stats')
           .select('streak_days, last_activity_date')
           .eq('user_id', user.id)
           .single();
@@ -242,7 +249,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
 
         // If there's a today's question, check if the user has already answered it
         if (todaysQuestion) {
-          const { data: userAnswersData, error: userAnswersError } = await getTable('user_progress')
+          const { data: userAnswersData, error: userAnswersError } = await supabase
+            .from('user_progress')
             .select('*')
             .eq('user_id', user.id)
             .eq('content_id', todaysQuestion.id)
@@ -264,12 +272,24 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'Failed to load today\'s question. Please try again later.',
-        variant: 'error',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   }, [user, toast, userTimezone, todaysQuestion]);
+
+  // Helper to check if user is premium
+  const checkIsPremiumUser = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('is_premium_user', { user_id: userId });
+      if (error) throw error;
+      return !!data;
+    } catch (e) {
+      console.error('Error checking premium status:', e);
+      return false;
+    }
+  };
 
   // Load the question on component mount and when user or timezone changes
   useEffect(() => {
@@ -282,7 +302,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'You must be logged in to submit an answer.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return false;
     }
@@ -293,7 +313,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
 
     try {
       // Save user's answer
-      const { error: progressError } = await getTable('user_progress')
+      const { error: progressError } = await supabase
+        .from('user_progress')
         .upsert({
           user_id: user.id,
           content_id: todaysQuestion.id,
@@ -314,7 +335,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
 
       // Update user stats
       const today = new Date();
-      const { data: userStatsData, error: statsGetError } = await getKnownTable('user_stats')
+      const { data: userStatsData, error: statsGetError } = await supabase
+        .from('user_stats')
         .select('streak_days, last_activity_date')
         .eq('user_id', user.id)
         .single();
@@ -366,7 +388,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       }
 
       // Update user stats in database
-      const { error: statsUpdateError } = await getKnownTable('user_stats')
+      const { error: statsUpdateError } = await supabase
+        .from('user_stats')
         .upsert({
           user_id: user.id,
           streak_days: newStreak,
@@ -392,7 +415,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
         description: isAnswerCorrect 
           ? 'Great job! You got the correct answer.' 
           : `The correct answer was: ${todaysQuestion.correct_answer}`,
-        variant: isAnswerCorrect ? 'default' : 'error',
+        variant: isAnswerCorrect ? 'default' : 'destructive',
       });
 
       // Show streak increase notification if streak increased
@@ -416,7 +439,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'Failed to submit your answer. Please try again.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return false;
     }
@@ -435,7 +458,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       const totalXp = baseXp + bonusXp;
       
       // Update user's XP in the database
-      await callRPC('add_user_xp', { 
+      await supabase.rpc('add_user_xp', { 
         user_id: userId, 
         xp_amount: totalXp, 
         activity_type: 'daily_question'
@@ -465,7 +488,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       for (const milestone of streakMilestones) {
         if (currentStreak === milestone.days) {
           // Check if achievement already exists
-          const { data: existingAchievement } = await getTable('user_achievements')
+          const { data: existingAchievement } = await supabase
+            .from('user_achievements')
             .select('*')
             .eq('user_id', userId)
             .eq('achievement_name', milestone.name)
@@ -473,7 +497,8 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
             
           if (!existingAchievement) {
             // Award new achievement
-            await getTable('user_achievements')
+            await supabase
+              .from('user_achievements')
               .insert({
                 user_id: userId,
                 achievement_name: milestone.name,
@@ -483,7 +508,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
               });
               
             // Award XP
-            await callRPC('add_user_xp', { 
+            await supabase.rpc('add_user_xp', { 
               user_id: userId, 
               xp_amount: milestone.xp, 
               activity_type: 'achievement'
@@ -509,7 +534,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'You must be logged in to reset the question.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -520,7 +545,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Premium Feature',
         description: 'Reset daily question is only available for premium users.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
@@ -529,14 +554,15 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'No question available to reset.',
-        variant: 'error',
+        variant: 'destructive',
       });
       return;
     }
 
     try {
       // Delete the user's progress for today's question
-      const { error: deleteError } = await getTable('user_progress')
+      const { error: deleteError } = await supabase
+        .from('user_progress')
         .delete()
         .eq('user_id', user.id)
         .eq('content_id', todaysQuestion.id);
@@ -562,7 +588,7 @@ export const useDailyQuestion = (): UseDailyQuestionReturn => {
       toast({
         title: 'Error',
         description: 'Failed to reset the question. Please try again.',
-        variant: 'error',
+        variant: 'destructive',
       });
     }
   };
