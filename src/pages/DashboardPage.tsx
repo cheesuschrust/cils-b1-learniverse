@@ -1,97 +1,70 @@
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, List, User, Settings, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const DashboardPage = () => {
+const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
-  
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Welcome, {user.firstName || 'User'}!</h1>
-        <Button variant="ghost" onClick={logout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+    <>
+      <Helmet>
+        <title>Dashboard | CILS B1 Italian Citizenship Test</title>
+      </Helmet>
+      
+      <div className="container mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-6">Welcome to Your Dashboard</h1>
+        
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Profile</CardTitle>
+              <CardDescription>Your account information</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-2"><strong>Email:</strong> {user?.email}</p>
+              <p className="mb-4"><strong>User ID:</strong> {user?.id.substring(0, 8)}...</p>
+              <Button variant="outline" onClick={handleLogout}>Sign Out</Button>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Study Progress</CardTitle>
+              <CardDescription>Your learning journey</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>You haven't started any courses yet.</p>
+              <Button className="mt-4" onClick={() => navigate('/courses')}>
+                Browse Courses
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Challenge</CardTitle>
+              <CardDescription>Test your knowledge daily</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>Complete today's challenge to maintain your streak!</p>
+              <Button className="mt-4">
+                Start Today's Challenge
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BookOpen className="h-5 w-5 mr-2 text-italian-green" />
-              Italian Language
-            </CardTitle>
-            <CardDescription>Practice your Italian language skills</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Build vocabulary and grammar skills required for the CILS B1 exam.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Start Learning</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <List className="h-5 w-5 mr-2 text-italian-red" />
-              Citizenship Test
-            </CardTitle>
-            <CardDescription>Prepare for your citizenship test</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Learn about Italian culture, history, and civic knowledge needed for citizenship.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Practice Tests</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <User className="h-5 w-5 mr-2 text-italian-blue" />
-              My Progress
-            </CardTitle>
-            <CardDescription>Track your learning journey</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>View your progress, achievements, and areas for improvement.</p>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">View Progress</Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">No recent activity found. Start learning to see your progress!</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-8 flex justify-center">
-        <Button variant="outline" className="flex items-center">
-          <Settings className="h-4 w-4 mr-2" />
-          Settings
-        </Button>
-      </div>
-    </div>
+    </>
   );
 };
 

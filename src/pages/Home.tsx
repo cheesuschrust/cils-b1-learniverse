@@ -1,216 +1,121 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import NewsletterSubscription from '@/components/marketing/NewsletterSubscription';
-import { CheckCircle, BookOpen, Award, Users, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/contexts/EnhancedAuthContext';
 
 const HomePage: React.FC = () => {
-  const features = [
-    {
-      title: "Comprehensive Study Materials",
-      description: "Access a complete library of CILS B1 study materials, including practice tests, vocabulary lists, and grammar exercises.",
-      icon: <BookOpen className="h-12 w-12 text-primary" />
-    },
-    {
-      title: "AI-Powered Learning",
-      description: "Our intelligent system adapts to your learning style and identifies areas where you need more practice.",
-      icon: <Award className="h-12 w-12 text-primary" />
-    },
-    {
-      title: "Community Support",
-      description: "Connect with other learners preparing for the CILS B1 citizenship exam and share your journey.",
-      icon: <Users className="h-12 w-12 text-primary" />
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "Thanks to CILS B1 Prep, I passed my citizenship exam on the first try! The practice exercises were incredibly similar to the actual test.",
-      author: "Marco D., Rome",
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=256&q=80"
-    },
-    {
-      quote: "The speaking practice modules helped me overcome my anxiety about the oral portion of the exam. I'm so grateful for this platform!",
-      author: "Sofia B., Milan",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=256&q=80"
-    },
-    {
-      quote: "I studied with CILS B1 Prep for just 3 months and was able to pass the exam with confidence. The structured approach made all the difference.",
-      author: "Alessandro T., Florence",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=256&q=80"
-    }
-  ];
+  const { isAuthenticated } = useAuth();
 
   return (
     <>
       <Helmet>
-        <title>CILS B1 Prep | Italian Citizenship Language Test Preparation</title>
-        <meta name="description" content="Prepare for your Italian CILS B1 citizenship exam with our comprehensive online learning platform. Practice tests, lessons, and personalized feedback." />
+        <title>CILS B1 Italian Citizenship Test Prep</title>
+        <meta name="description" content="Prepare for your Italian CILS B1 citizenship test with our comprehensive study materials and practice tests." />
       </Helmet>
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 mb-12 md:mb-0">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Master Italian for Your Citizenship Test
+      <section className="relative py-20 md:py-32 bg-gray-50 dark:bg-gray-900">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+                Master Your CILS B1 Italian Citizenship Test
               </h1>
-              <p className="text-xl md:text-2xl mb-8 text-blue-100">
-                Comprehensive preparation for the CILS B1 Italian language exam required for citizenship.
+              <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
+                Comprehensive study materials, practice tests, and personalized learning paths to help you succeed.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" asChild className="bg-white text-blue-700 hover:bg-blue-50">
-                  <Link to="/pricing">Get Started</Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-white/10">
-                  <Link to="/about">Learn More</Link>
-                </Button>
-              </div>
             </div>
-            <div className="md:w-1/2">
-              <img 
-                src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1769&q=80" 
-                alt="Italian language learning" 
-                className="rounded-lg shadow-xl"
-              />
+            <div className="space-x-4">
+              {isAuthenticated ? (
+                <Button asChild size="lg">
+                  <Link to="/dashboard">Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button asChild size="lg">
+                    <Link to="/auth/register">Get Started</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg">
+                    <Link to="/auth/login">Sign In</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Why Choose CILS B1 Prep?</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our platform is specifically designed to help you pass the CILS B1 Italian language exam required for citizenship.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-12">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="flex justify-center mb-4">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+      <section className="py-12 md:py-24 bg-white dark:bg-gray-950">
+        <div className="container px-4 md:px-6">
+          <div className="grid gap-6 lg:grid-cols-3 lg:gap-12">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <svg
+                  className="h-6 w-6 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  ></path>
+                </svg>
               </div>
-            ))}
-          </div>
-          
-          <div className="mt-16 text-center">
-            <ul className="inline-block text-left">
-              {["Realistic practice exams", "Personalized study plans", "Speaking exercise with feedback", "Grammar and vocabulary builders", "Cultural knowledge preparation"].map((item, index) => (
-                <li key={index} className="flex items-center mb-4">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              A simple, effective process to prepare you for citizenship exam success
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              {
-                step: "1",
-                title: "Assessment",
-                description: "Take a diagnostic test to identify your current Italian language level."
-              },
-              {
-                step: "2",
-                title: "Personalized Plan",
-                description: "Receive a customized study plan based on your strengths and weaknesses."
-              },
-              {
-                step: "3",
-                title: "Practice & Learn",
-                description: "Work through guided exercises, lessons, and mock tests."
-              },
-              {
-                step: "4",
-                title: "Master the Exam",
-                description: "Gain confidence and skills to pass your CILS B1 citizenship exam."
-              }
-            ].map((step, index) => (
-              <div key={index} className="relative">
-                <div className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-4">
-                  {step.step}
-                </div>
-                <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-                <p className="text-gray-600">{step.description}</p>
-                {index < 3 && (
-                  <ArrowRight className="hidden md:block absolute top-10 -right-6 text-gray-300 h-6 w-6" />
-                )}
+              <h3 className="text-xl font-bold">Comprehensive Study Materials</h3>
+              <p className="text-muted-foreground">
+                Access a complete library of study materials covering all aspects of the CILS B1 test.
+              </p>
+            </div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <svg
+                  className="h-6 w-6 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  ></path>
+                </svg>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Success Stories</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Hear from students who achieved their citizenship dreams with our help
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center mb-4">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.author} 
-                    className="w-16 h-16 rounded-full mr-4 object-cover"
-                  />
-                  <div>
-                    <p className="font-medium">{testimonial.author}</p>
-                  </div>
-                </div>
-                <p className="italic text-gray-600">"{testimonial.quote}"</p>
+              <h3 className="text-xl font-bold">Practice Tests</h3>
+              <p className="text-muted-foreground">
+                Take realistic practice tests that simulate the actual CILS B1 citizenship examination.
+              </p>
+            </div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <svg
+                  className="h-6 w-6 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  ></path>
+                </svg>
               </div>
-            ))}
+              <h3 className="text-xl font-bold">Personalized Learning</h3>
+              <p className="text-muted-foreground">
+                Get a customized study plan based on your strengths and areas for improvement.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-blue-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Begin Your Journey?</h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto">
-            Join thousands of successful applicants who have achieved their Italian citizenship dreams.
-          </p>
-          <Button size="lg" asChild className="bg-white text-blue-700 hover:bg-blue-50">
-            <Link to="/auth/register">Start Free Trial</Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <NewsletterSubscription className="max-w-3xl mx-auto" />
         </div>
       </section>
     </>
