@@ -1,66 +1,136 @@
 
+export interface UserSettings {
+  theme: string;
+  language: string;
+  notifications: boolean;
+  emailNotifications: boolean;
+  streak: number;
+  lastLogin: Date;
+  firstLogin: Date;
+  prefersDarkMode: boolean;
+  contentFilters: string[];
+}
+
+export interface UserPerformance {
+  totalQuestions: number;
+  correctAnswers: number;
+  quizzesTaken: number;
+  averageScore: number;
+  totalTimeSpent: number;
+  lastActivityDate: Date;
+  streakDays: number;
+  topicScores: Record<string, number>;
+}
+
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+  TEACHER = 'teacher',
+  PREMIUM = 'premium'
+}
+
+export interface LegacyFields {
+  username?: string;
+  avatar?: string;
+  lastActive?: Date;
+  loginCount?: number;
+}
+
 export interface User {
   id: string;
-  email?: string;
+  email: string;
   firstName?: string;
   lastName?: string;
   displayName?: string;
   photoURL?: string;
-  isVerified?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-  lastLogin?: Date;
-  lastActive?: Date;
-  preferredLanguage?: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+  isVerified: boolean;
+  isPremiumUser: boolean;
+  settings?: UserSettings;
+  performance?: UserPerformance;
+  metadata?: Record<string, any>;
+  legacy?: LegacyFields;
 }
 
-export interface UserSession {
-  user: User | null;
-  isLoggedIn: boolean;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-}
-
-// Helper function to normalize user data from different sources
 export function normalizeUser(user: any): User {
-  if (!user) return {} as User;
-  
   return {
-    id: user.id || user.uid || '',
+    id: user.id,
     email: user.email || '',
     firstName: user.firstName || user.first_name || '',
     lastName: user.lastName || user.last_name || '',
-    displayName: user.displayName || user.display_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || '',
-    photoURL: user.photoURL || user.photo_url || user.avatar_url || '',
+    displayName: user.displayName || user.display_name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+    photoURL: user.photoURL || user.photo_url || user.avatar || '',
+    role: user.role || UserRole.USER,
+    createdAt: user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt || Date.now()),
+    updatedAt: user.updatedAt instanceof Date ? user.updatedAt : new Date(user.updatedAt || Date.now()),
     isVerified: user.isVerified || user.is_verified || false,
-    createdAt: user.createdAt || user.created_at ? new Date(user.createdAt || user.created_at) : undefined,
-    updatedAt: user.updatedAt || user.updated_at ? new Date(user.updatedAt || user.updated_at) : undefined,
-    lastLogin: user.lastLogin || user.last_login ? new Date(user.lastLogin || user.last_login) : undefined,
-    lastActive: user.lastActive || user.last_active ? new Date(user.lastActive || user.last_active) : undefined,
-    preferredLanguage: user.preferredLanguage || user.preferred_language || 'en',
+    isPremiumUser: user.isPremiumUser || user.is_premium_user || false,
+    settings: user.settings || {},
+    performance: user.performance || {},
+    metadata: user.metadata || {},
+    legacy: {
+      username: user.username,
+      avatar: user.avatar,
+      lastActive: user.lastActive instanceof Date ? user.lastActive : 
+                  user.lastActive ? new Date(user.lastActive) : undefined,
+      loginCount: user.loginCount || 0
+    }
   };
 }
 
-// Helper function to convert array of user records
 export function normalizeUserRecords(users: any[]): User[] {
-  if (!users || !Array.isArray(users)) return [];
-  return users.map(normalizeUser);
+  return users.map(user => normalizeUser(user));
 }
 
-// Handle legacy user format conversion
 export function convertLegacyUser(legacyUser: any): User {
-  return normalizeUser({
-    id: legacyUser.uid,
-    first_name: legacyUser.first_name,
-    last_name: legacyUser.last_name,
-    photo_url: legacyUser.photo_url,
-    display_name: legacyUser.display_name,
-    is_verified: legacyUser.is_verified,
-    created_at: legacyUser.created_at,
-    updated_at: legacyUser.updated_at,
-    last_login: legacyUser.last_login,
-    last_active: legacyUser.last_active,
-    preferred_language: legacyUser.preferred_language,
-  });
+  return {
+    id: legacyUser.id || '',
+    email: legacyUser.email || '',
+    firstName: legacyUser.firstName || legacyUser.first_name || '',
+    lastName: legacyUser.lastName || legacyUser.last_name || '',
+    displayName: legacyUser.displayName || legacyUser.display_name || 
+                legacyUser.username || `${legacyUser.firstName || ''} ${legacyUser.lastName || ''}`.trim(),
+    photoURL: legacyUser.photoURL || legacyUser.photo_url || legacyUser.avatar || '',
+    role: legacyUser.role || UserRole.USER,
+    createdAt: legacyUser.createdAt instanceof Date ? legacyUser.createdAt : 
+              new Date(legacyUser.createdAt || legacyUser.created_at || Date.now()),
+    updatedAt: legacyUser.updatedAt instanceof Date ? legacyUser.updatedAt :
+              new Date(legacyUser.updatedAt || legacyUser.updated_at || Date.now()),
+    isVerified: legacyUser.isVerified || legacyUser.is_verified || false,
+    isPremiumUser: legacyUser.isPremiumUser || legacyUser.is_premium_user || false,
+    settings: {
+      theme: legacyUser.theme || 'light',
+      language: legacyUser.language || 'en',
+      notifications: legacyUser.notifications !== undefined ? legacyUser.notifications : true,
+      emailNotifications: legacyUser.emailNotifications !== undefined ? legacyUser.emailNotifications : true,
+      streak: legacyUser.streak || 0,
+      lastLogin: legacyUser.lastLogin instanceof Date ? legacyUser.lastLogin : 
+                new Date(legacyUser.lastLogin || legacyUser.last_login || Date.now()),
+      firstLogin: legacyUser.firstLogin instanceof Date ? legacyUser.firstLogin :
+                new Date(legacyUser.firstLogin || legacyUser.first_login || Date.now()),
+      prefersDarkMode: legacyUser.prefersDarkMode || legacyUser.prefers_dark_mode || false,
+      contentFilters: legacyUser.contentFilters || legacyUser.content_filters || []
+    },
+    performance: {
+      totalQuestions: legacyUser.totalQuestions || 0,
+      correctAnswers: legacyUser.correctAnswers || 0,
+      quizzesTaken: legacyUser.quizzesTaken || 0,
+      averageScore: legacyUser.averageScore || 0,
+      totalTimeSpent: legacyUser.totalTimeSpent || 0,
+      lastActivityDate: legacyUser.lastActivityDate instanceof Date ? legacyUser.lastActivityDate :
+                      new Date(legacyUser.lastActivityDate || legacyUser.last_activity_date || Date.now()),
+      streakDays: legacyUser.streakDays || 0,
+      topicScores: legacyUser.topicScores || {}
+    },
+    metadata: legacyUser.metadata || {},
+    legacy: {
+      username: legacyUser.username,
+      avatar: legacyUser.avatar,
+      lastActive: legacyUser.lastActive instanceof Date ? legacyUser.lastActive : 
+                legacyUser.lastActive ? new Date(legacyUser.lastActive) : undefined,
+      loginCount: legacyUser.loginCount || 0
+    }
+  };
 }

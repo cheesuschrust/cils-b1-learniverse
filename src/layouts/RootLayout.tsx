@@ -1,34 +1,29 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import AppHeader from '@/components/layout/AppHeader';
-import AppSidebar from '@/components/layout/AppSidebar';
-import { Footer } from '@/components/common/Footer';
-import { Toaster } from '@/components/ui/toaster';
+import { useAuth } from '@/hooks/useAuth';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import { Loader2 } from 'lucide-react';
 
-const RootLayout = () => {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <div className="flex flex-1">
-        {/* Sidebar for authenticated users */}
-        <AppSidebar />
-        
-        <div className="flex flex-col flex-1">
-          {/* App Header with user info, notifications, etc. */}
-          <AppHeader />
-          
-          {/* Main Content */}
-          <main className="flex-1 p-4 md:p-6">
-            <Outlet />
-          </main>
-          
-          {/* Footer */}
-          <Footer />
-        </div>
+const RootLayout: React.FC = () => {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
-      
-      {/* Toast Notifications */}
-      <Toaster />
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
     </div>
   );
 };

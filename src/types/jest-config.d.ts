@@ -1,4 +1,3 @@
-
 declare module "jest" {
   export interface Config {
     preset?: string;

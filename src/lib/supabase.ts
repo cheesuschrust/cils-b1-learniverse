@@ -1,365 +1,84 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { Provider } from '@supabase/supabase-js';  
+import { supabase } from './supabase-client';  
 
-// Define mock database schema
-export type Database = {
-  Tables: {
-    flashcard_sets: {
-      Row: {
-        id: string;
-        name: string;
-        description: string | null;
-        language: string;
-        category: string | null;
-        is_public: boolean;
-        is_favorite: boolean;
-        tags: string[] | null;
-        user_id: string | null;
-        created_at: string;
-        updated_at: string;
+console.log('Using configured Supabase credentials.');
+
+export { supabase };
+
+export async function signInWithOAuth(provider: Provider, options: any = {}) {  
+  return await supabase.auth.signInWithOAuth({  
+    provider,  
+    ...options  
+  });  
+}  
+
+export async function signInWithEmail(email: string, password: string) {  
+  // Attempt actual sign in with Supabase
+  return await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+}  
+
+export async function signUp(email: string, password: string) {
+  // Attempt actual sign up with Supabase
+  return await supabase.auth.signUp({
+    email,
+    password
+  });
+}
+
+export async function resetPassword(email: string) {
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+}
+
+export async function updatePassword(newPassword: string) {
+  return await supabase.auth.updateUser({ 
+    password: newPassword 
+  });
+}
+
+export async function signOut() {  
+  return await supabase.auth.signOut();  
+}  
+
+export async function getSession() {
+  return await supabase.auth.getSession();
+}
+
+export function getCurrentUser() {  
+  return supabase.auth.getUser().then(({ data }) => {
+    if (data?.user) {
+      return {
+        id: data.user.id,
+        email: data.user.email,
+        firstName: data.user.user_metadata?.first_name || '',
+        lastName: data.user.user_metadata?.last_name || '',
+        isPremiumUser: data.user.user_metadata?.is_premium_user || false
       };
-      Insert: {
-        id?: string;
-        name: string;
-        description?: string | null;
-        language: string;
-        category?: string | null;
-        is_public?: boolean;
-        is_favorite?: boolean;
-        tags?: string[] | null;
-        user_id?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        name?: string;
-        description?: string | null;
-        language?: string;
-        category?: string | null;
-        is_public?: boolean;
-        is_favorite?: boolean;
-        tags?: string[] | null;
-        user_id?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "flashcard_sets_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "user_profiles"
-          referencedColumns: ["id"]
-        }
-      ]
-    },
-    flashcards: {
-      Row: {
-        id: string;
-        set_id: string;
-        front: string;
-        back: string;
-        hint: string | null;
-        tags: string[] | null;
-        difficulty: number;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        set_id: string;
-        front: string;
-        back: string;
-        hint?: string | null;
-        tags?: string[] | null;
-        difficulty?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        set_id?: string;
-        front?: string;
-        back?: string;
-        hint?: string | null;
-        tags?: string[] | null;
-        difficulty?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "flashcards_set_id_fkey"
-          columns: ["set_id"]
-          isOneToOne: false
-          referencedRelation: "flashcard_sets"
-          referencedColumns: ["id"]
-        }
-      ]
-    },
-    user_flashcard_progress: {
-      Row: {
-        id: string;
-        user_id: string;
-        flashcard_id: string;
-        confidence: number;
-        last_reviewed: string;
-        next_review: string;
-        review_count: number;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        user_id: string;
-        flashcard_id: string;
-        confidence?: number;
-        last_reviewed?: string;
-        next_review?: string;
-        review_count?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        user_id?: string;
-        flashcard_id?: string;
-        confidence?: number;
-        last_reviewed?: string;
-        next_review?: string;
-        review_count?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "user_flashcard_progress_flashcard_id_fkey"
-          columns: ["flashcard_id"]
-          isOneToOne: false
-          referencedRelation: "flashcards"
-          referencedColumns: ["id"]
-        },
-        {
-          foreignKeyName: "user_flashcard_progress_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "user_profiles"
-          referencedColumns: ["id"]
-        }
-      ]
-    },
-    user_profiles: {
-      Row: {
-        id: string;
-        auth_id: string;
-        first_name: string | null;
-        last_name: string | null;
-        display_name: string | null;
-        avatar_url: string | null;
-        language_level: string | null;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        auth_id: string;
-        first_name?: string | null;
-        last_name?: string | null;
-        display_name?: string | null;
-        avatar_url?: string | null;
-        language_level?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        auth_id?: string;
-        first_name?: string | null;
-        last_name?: string | null;
-        display_name?: string | null;
-        avatar_url?: string | null;
-        language_level?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: []
-    },
-    user_stats: {
-      Row: {
-        id: string;
-        user_id: string;
-        cards_studied: number;
-        study_streak: number;
-        last_studied: string | null;
-        total_study_time: number;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        user_id: string;
-        cards_studied?: number;
-        study_streak?: number;
-        last_studied?: string | null;
-        total_study_time?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        user_id?: string;
-        cards_studied?: number;
-        study_streak?: number;
-        last_studied?: string | null;
-        total_study_time?: number;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "user_stats_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: true
-          referencedRelation: "user_profiles"
-          referencedColumns: ["id"]
-        }
-      ]
-    },
-    content: {
-      Row: {
-        id: string;
-        title: string;
-        description: string;
-        content_type: string;
-        difficulty: string;
-        language: string;
-        tags: string[];
-        created_by: string;
-        is_published: boolean;
-        raw_content: string | null;
-        file_url: string | null;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        title: string;
-        description: string;
-        content_type: string;
-        difficulty: string;
-        language: string;
-        tags?: string[];
-        created_by: string;
-        is_published?: boolean;
-        raw_content?: string | null;
-        file_url?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        title?: string;
-        description?: string;
-        content_type?: string;
-        difficulty?: string;
-        language?: string;
-        tags?: string[];
-        created_by?: string;
-        is_published?: boolean;
-        raw_content?: string | null;
-        file_url?: string | null;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "content_created_by_fkey"
-          columns: ["created_by"]
-          isOneToOne: false
-          referencedRelation: "user_profiles"
-          referencedColumns: ["id"]
-        }
-      ]
-    },
-    questions: {
-      Row: {
-        id: string;
-        content_id: string;
-        question: string;
-        question_type: string;
-        difficulty: string;
-        language: string;
-        created_by: string;
-        options?: string[];
-        correct_answer: string;
-        explanation?: string;
-        created_at: string;
-        updated_at: string;
-      };
-      Insert: {
-        id?: string;
-        content_id: string;
-        question: string;
-        question_type: string;
-        difficulty: string;
-        language: string;
-        created_by: string;
-        options?: string[];
-        correct_answer: string;
-        explanation?: string;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Update: {
-        id?: string;
-        content_id?: string;
-        question?: string;
-        question_type?: string;
-        difficulty?: string;
-        language?: string;
-        created_by?: string;
-        options?: string[];
-        correct_answer?: string;
-        explanation?: string;
-        created_at?: string;
-        updated_at?: string;
-      };
-      Relationships: [
-        {
-          foreignKeyName: "questions_content_id_fkey"
-          columns: ["content_id"]
-          isOneToOne: false
-          referencedRelation: "content"
-          referencedColumns: ["id"]
-        },
-        {
-          foreignKeyName: "questions_created_by_fkey"
-          columns: ["created_by"]
-          isOneToOne: false
-          referencedRelation: "user_profiles"
-          referencedColumns: ["id"]
-        }
-      ]
     }
-  };
-  Views: {};
-  Functions: {};
-  Enums: {};
-  CompositeTypes: {};
-};
+    return null;
+  });
+}  
 
-// Default Supabase URL and key for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://example.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-api-key';
+export function isPremiumUser(user: any): boolean {  
+  return !!user?.isPremiumUser;  
+}  
 
-// Create and export the Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export function hasReachedDailyLimit(user: any): boolean {  
+  return !isPremiumUser(user);  
+}
 
-export default supabase;
+export async function trackQuestionUsage(userId: string, questionType: string): Promise<void> {
+  console.log(`Tracking question usage for user ${userId}, type: ${questionType}`);
+  // In a real implementation, this would update a usage_tracking table
+}
+
+export async function updateUserSubscription(userId: string, subscriptionType: string): Promise<boolean> {
+  console.log(`Updating subscription for user ${userId} to ${subscriptionType}`);
+  // In a real implementation, this would update the user's subscription
+  return true;
+}

@@ -1,54 +1,94 @@
 
-import { Flashcard } from '@/types/interface-fixes';
+// Re-export all types and utilities from the specialized modules
+// Import needed utilities and types
+export { isValidDate } from './voice';
+export { normalizeFields } from './utils';
 
-// Utility function to normalize flashcard data
-export function normalizeFlashcard(data: any): Flashcard {
-  return {
-    id: data.id || Math.random().toString(36).substring(2, 15),
-    front: data.front || data.question || '',
-    back: data.back || data.answer || '',
-    hint: data.hint || null,
-    tags: data.tags || [],
-    difficulty: data.difficulty || 1,
-    created_at: data.created_at || new Date().toISOString(),
-    updated_at: data.updated_at || new Date().toISOString(),
-  };
+// Export specific types from the specialized modules
+export type {
+  VoicePreference,
+  TextToSpeechOptions,
+  VoiceOptions,
+  SpeechState
+} from './voice';
+
+export type {
+  AIOptions,
+  AIModel,
+  AIStatus,
+  AIFeedbackSettings,
+  AIModelSize,
+  AIProcessingOptions,
+  QuestionGenerationParams
+} from './ai';
+
+export type {
+  User,
+  UserSettings,
+  UserPerformance,
+  UserRole,
+  LegacyFields
+} from './user-types';
+
+export {
+  normalizeUser,
+  normalizeUserRecords,
+  convertLegacyUser
+} from './user-types';
+
+export type {
+  ReviewPerformance,
+  ReviewHistory,
+  FlashcardMetadata,
+  Flashcard
+} from './flashcard-types';
+
+export {
+  calculateReviewPerformance,
+  normalizeFlashcard
+} from './flashcard-types';
+
+export interface AIGeneratedQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+  type: string;
+  difficulty: string;
+  questionType: string;
+  isCitizenshipRelevant: boolean;
 }
 
-// Utility function for safely handling unknown types
-export function safelyUnwrapUnknown<T>(value: unknown, defaultValue: T): T {
-  if (value === null || value === undefined) {
-    return defaultValue;
-  }
-  
-  try {
-    return value as T;
-  } catch (err) {
-    console.error('Error unwrapping unknown value:', err);
-    return defaultValue;
-  }
+export type ItalianLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ItalianTestSection = 'reading' | 'writing' | 'listening' | 'speaking' | 'grammar' | 'vocabulary' | 'culture' | 'citizenship';
+
+export interface ItalianQuestionGenerationParams extends QuestionGenerationParams {
+  topics: string[];
+  contentTypes: ItalianTestSection[];
+  difficulty: ItalianLevel;
+  count: number;
+  isCitizenshipFocused?: boolean;
 }
 
-// Type guard for checking if a value is an object
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+export interface UseAIReturn {
+  processContent: (content: string, options?: AIProcessingOptions) => Promise<{label: string, score: number}[]>;
+  generateQuestions: (params: ItalianQuestionGenerationParams) => Promise<AIGeneratedQuestion[]>;
+  analyzeGrammar: (text: string, language?: string) => Promise<any>;
+  translateText: (text: string, targetLanguage?: string) => Promise<string>;
+  generateText: (prompt: string, options?: AIServiceOptions) => Promise<string>;
+  evaluateWriting: (text: string, level?: string) => Promise<any>;
+  recognizeSpeech: (audioData: Blob) => Promise<{text: string, confidence: number}>;
+  isProcessing: boolean;
 }
 
-// Type guard for checking if a value is an array
-export function isArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
-// Utility for converting form data to typed objects
-export function convertFormData<T>(data: Record<string, any>, defaultValues: T): T {
-  const result = { ...defaultValues };
-  
-  for (const key in data) {
-    if (key in defaultValues) {
-      // Type assertion is safe here because we check that the key exists in defaultValues
-      (result as any)[key] = data[key];
-    }
-  }
-  
-  return result;
-}
+// Export as default object for backwards compatibility
+export default {
+  normalizeUser,
+  normalizeUserRecords,
+  normalizeFlashcard,
+  convertLegacyUser,
+  normalizeFields,
+  calculateReviewPerformance,
+  isValidDate
+};

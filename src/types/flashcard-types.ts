@@ -1,112 +1,57 @@
 
-export interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  hint?: string;
-  examples?: string[];
-  tags?: string[];
-  difficulty?: 'easy' | 'medium' | 'hard';
-  createdAt: Date;
-  updatedAt?: Date;
-  audioUrl?: string;
-  imageUrl?: string;
-  setId: string;
-}
-
-export interface FlashcardSet {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  tags?: string[];
-  language: string;
-  isPublic: boolean;
-  isFavorite: boolean;
-  userId?: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  cardCount?: number;
-  masteredCount?: number;
-}
-
-export interface FlashcardProgress {
-  id: string;
-  userId: string;
-  flashcardId: string;
-  status: 'new' | 'learning' | 'reviewing' | 'mastered';
-  easeFactor: number;
+interface ReviewResult {
   interval: number;
-  dueDate: Date;
-  lastReviewDate?: Date;
-  streak: number;
-  createdAt: Date;
-  updatedAt?: Date;
+  easeFactor: number;
+  status: 'new' | 'learning' | 'reviewing' | 'mastered';
 }
 
-export interface ReviewResult {
-  flashcardId: string;
-  quality: 0 | 1 | 2 | 3 | 4 | 5; // 0=failed, 5=perfect
-  timeToAnswer: number; // in milliseconds
-  reviewedAt: Date;
+interface ReviewParams {
+  quality: number; // 0-4 scale where 0 = completely forgot, 4 = perfect recall
+  previousInterval: number; // in days
+  previousEaseFactor: number; // usually starts at 2.5
+  isNew: boolean; // whether this is the first review
 }
 
-// Calculate next review date and ease factor based on SM-2 algorithm
-export function calculateReviewPerformance(
-  progress: FlashcardProgress,
-  quality: 0 | 1 | 2 | 3 | 4 | 5
-): Partial<FlashcardProgress> {
-  // SM-2 algorithm implementation
-  let { easeFactor, interval, streak } = progress;
-  let newStatus = progress.status;
+// Spaced repetition algorithm (SM-2 inspired)
+export function calculateReviewPerformance(params: ReviewParams): ReviewResult {
+  const { quality, previousInterval, previousEaseFactor, isNew } = params;
   
-  // Update ease factor - minimum is 1.3
-  const newEaseFactor = Math.max(
-    1.3,
-    easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-  );
+  // Calculate easeFactor
+  let easeFactor = previousEaseFactor;
+  if (!isNew) {
+    // SM-2 formula: EF := EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    easeFactor = Math.max(
+      1.3, // minimum ease factor
+      previousEaseFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    );
+  }
   
-  // Calculate new interval based on quality
-  let newInterval = interval;
+  // Calculate next interval
+  let interval = 0;
+  let status: 'new' | 'learning' | 'reviewing' | 'mastered' = 'new';
   
-  if (quality < 3) {
-    // Failed, reset progress but don't go below 1 day
-    newInterval = 1;
-    streak = 0;
-    newStatus = 'learning';
+  if (quality < 2) {
+    // Poor recall, reset to first interval
+    interval = 1;
+    status = 'learning';
+  } else if (isNew || previousInterval === 0) {
+    // First successful recall
+    interval = 1;
+    status = 'learning';
+  } else if (previousInterval === 1) {
+    // Second successful recall
+    interval = 6;
+    status = 'reviewing';
   } else {
-    // Successful recall
-    streak += 1;
+    // Subsequent successful recalls
+    interval = Math.round(previousInterval * easeFactor);
     
-    if (progress.status === 'new') {
-      newInterval = 1;
-      newStatus = 'learning';
-    } else if (progress.status === 'learning') {
-      newInterval = 3;
-      newStatus = 'reviewing';
+    if (interval > 30) {
+      status = 'mastered';
     } else {
-      // Already in reviewing status, increase interval
-      newInterval = Math.round(interval * newEaseFactor);
-      
-      // Cap at 180 days (6 months)
-      if (newInterval > 180) {
-        newInterval = 180;
-        newStatus = 'mastered';
-      }
+      status = 'reviewing';
     }
   }
   
-  // Calculate next due date
-  const nextDueDate = new Date();
-  nextDueDate.setDate(nextDueDate.getDate() + newInterval);
-  
-  return {
-    easeFactor: newEaseFactor,
-    interval: newInterval,
-    dueDate: nextDueDate,
-    status: newStatus,
-    streak,
-    lastReviewDate: new Date(),
-    updatedAt: new Date()
-  };
+  return { interval, easeFactor, status };
 }

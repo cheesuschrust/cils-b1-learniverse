@@ -1,124 +1,209 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase-client';
-import { getKnownTable } from '@/adapters/SupabaseAdapter';
 
-interface UserProfile {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  display_name?: string;
-  bio?: string;
-  avatar_url?: string;
-  created_at?: string;
-}
-
-interface EnhancedAuthContextType {
-  user: any | null;
-  profile: UserProfile | null;
+type AuthContextType = {
+  user: User | null;
+  session: Session | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  isAdmin: boolean;
-  updateProfile: (data: Partial<UserProfile>) => Promise<{ success: boolean; error?: any }>;
-  refreshProfile: () => Promise<void>;
-}
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+};
 
-const EnhancedAuthContext = createContext<EnhancedAuthContextType>({
+const AuthContext = createContext<AuthContextType>({
   user: null,
-  profile: null,
+  session: null,
+  isAuthenticated: false,
   isLoading: true,
-  isAdmin: false,
-  updateProfile: async () => ({ success: false, error: new Error('Not implemented') }),
-  refreshProfile: async () => {},
+  login: async () => ({ success: false }),
+  signup: async () => ({ success: false }),
+  logout: async () => {},
+  loginWithGoogle: async () => {},
 });
 
-export const useAuth = () => useContext(EnhancedAuthContext);
+export const useAuth = () => useContext(AuthContext);
 
-export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const auth = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await getKnownTable('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-
-      return data as UserProfile;
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-      return null;
-    }
-  };
+  const { toast } = useToast();
 
   useEffect(() => {
-    const loadProfile = async () => {
-      if (auth.user?.id) {
-        setIsLoading(true);
-        const userProfile = await fetchUserProfile(auth.user.id);
-        setProfile(userProfile);
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
         setIsLoading(false);
-      } else {
-        setProfile(null);
-        setIsLoading(auth.isLoading);
+      }
+    );
+
+    // Then check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadProfile();
-  }, [auth.user, auth.isLoading]);
+    initializeAuth();
 
-  const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!auth.user?.id) {
-      return { success: false, error: new Error('User not authenticated') };
-    }
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
+  const login = async (email: string, password: string) => {
     try {
-      const { error } = await getKnownTable('user_profiles').upsert({
-        id: auth.user.id,
-        ...data,
-        updated_at: new Date().toISOString(),
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-
+      
       if (error) {
-        return { success: false, error };
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { success: false, error: error.message };
       }
-
-      await refreshProfile();
+      
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back to CILS B1 Prep!',
+      });
+      
       return { success: true };
-    } catch (error) {
-      return { success: false, error };
+    } catch (error: any) {
+      toast({
+        title: 'Login error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const refreshProfile = async () => {
-    if (auth.user?.id) {
-      const userProfile = await fetchUserProfile(auth.user.id);
-      setProfile(userProfile);
+  const signup = async (email: string, password: string, firstName?: string, lastName?: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Include first/last name in the metadata
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          }
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: 'Signup failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { success: false, error: error.message };
+      }
+      
+      toast({
+        title: 'Account created',
+        description: 'Check your email for the confirmation link',
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      toast({
+        title: 'Signup error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Check if user is admin - simple implementation for now
-  const isAdmin = auth.user?.email?.includes('admin') || false;
+  const logout = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      
+      toast({
+        title: 'Logged out',
+        description: 'You have been successfully logged out',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Logout error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      
+      if (error) {
+        toast({
+          title: 'Google login failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Google login error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
-    <EnhancedAuthContext.Provider
+    <AuthContext.Provider
       value={{
-        user: auth.user,
-        profile,
-        isLoading: isLoading || auth.isLoading,
-        isAdmin,
-        updateProfile,
-        refreshProfile,
+        user,
+        session,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        signup,
+        logout,
+        loginWithGoogle,
       }}
     >
       {children}
-    </EnhancedAuthContext.Provider>
+    </AuthContext.Provider>
   );
 };
+
+export default AuthContext;

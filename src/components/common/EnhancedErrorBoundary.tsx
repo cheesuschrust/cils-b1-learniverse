@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { Component, ErrorInfo } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -9,10 +9,10 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: React.ErrorInfo | null;
+  errorInfo: ErrorInfo | null;
 }
 
-class EnhancedErrorBoundary extends React.Component<Props, State> {
+class EnhancedErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { 
@@ -30,7 +30,7 @@ class EnhancedErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log the error to an error reporting service
     console.error('Error caught by error boundary:', error, errorInfo);
     

@@ -1,10 +1,11 @@
 
 import { useContext } from 'react';
-import AuthContext from '@/contexts/AuthContext';
+import AuthContext from '@/contexts/AuthProvider';
 
+// This hook allows components to easily access auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

@@ -2,6 +2,7 @@
 // Import commands.js using ES2015 syntax:
 import './commands';
 import 'cypress-axe';
+import '@cypress/code-coverage/support';
 
 // Disable specific console errors in the Cypress browser to reduce noise in test output
 Cypress.on('window:before:load', (win) => {
@@ -82,12 +83,11 @@ beforeEach(() => {
 // Report test results
 afterEach(() => {
   const test = Cypress.currentTest;
-  if (test) {
-    const testTitle = test.title || 'unknown';
-    const testResult = test.titlePath ? 'passed' : 'failed';
-    const message = testResult === 'passed' 
-      ? `✅ TEST PASSED: ${testTitle}` 
-      : `❌ TEST FAILED: ${testTitle}`;
+  // Check if test exists and has the required property
+  if (test && typeof test === 'object') {
+    const message = test.state === 'passed' 
+      ? `✅ TEST PASSED: ${test.title}` 
+      : `❌ TEST FAILED: ${test.title}`;
     cy.task('log', message);
   }
 });

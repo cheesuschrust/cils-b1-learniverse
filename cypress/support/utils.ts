@@ -27,13 +27,14 @@ export const waitForAnimations = (): void => {
 // Helper to check accessibility on the current page
 export const checkA11y = (context?: string): void => {
   cy.checkA11y(
-    context, 
+    context,
     {
       runOnly: {
         type: 'tag',
         values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
       },
-    }
+    },
+    null
   );
 };
 

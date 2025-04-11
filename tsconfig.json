@@ -32,8 +32,7 @@
       "@utils/*": ["./src/utils/*"],
       "@types/*": ["./src/types/*"],
       "@routes/*": ["./src/routes/*"],
-      "@context/*": ["./src/contexts/*"],
-      "@adapters/*": ["./src/adapters/*"]
+      "@context/*": ["./src/contexts/*"]
     }
   },
   "include": ["src", "cypress"],
