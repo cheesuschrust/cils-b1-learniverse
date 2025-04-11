@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LineChart, 
+  LineChart as RechartsLineChart, 
   Line, 
   XAxis, 
   YAxis, 
@@ -9,11 +9,11 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  BarChart,
+  BarChart as RechartsBarChart,
   Bar,
-  AreaChart,
+  AreaChart as RechartsAreaChart,
   Area
-} from '@/adapters/RechartsAdapter';
+} from 'recharts';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -71,7 +71,7 @@ const AdPerformanceChart: React.FC = () => {
       case 'line':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -80,13 +80,13 @@ const AdPerformanceChart: React.FC = () => {
               <Line type="monotone" dataKey="impressions" stroke="#8884d8" strokeWidth={2} />
               <Line type="monotone" dataKey="clicks" stroke="#82ca9d" strokeWidth={2} />
               <Line type="monotone" dataKey="conversions" stroke="#ff7300" strokeWidth={2} />
-            </LineChart>
+            </RechartsLineChart>
           </ResponsiveContainer>
         );
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <RechartsBarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -95,13 +95,13 @@ const AdPerformanceChart: React.FC = () => {
               <Bar dataKey="impressions" fill="#8884d8" />
               <Bar dataKey="clicks" fill="#82ca9d" />
               <Bar dataKey="conversions" fill="#ff7300" />
-            </BarChart>
+            </RechartsBarChart>
           </ResponsiveContainer>
         );
       case 'area':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <RechartsAreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -109,7 +109,7 @@ const AdPerformanceChart: React.FC = () => {
               <Legend />
               <Area type="monotone" dataKey="ctr" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />
               <Area type="monotone" dataKey="revenue" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />
-            </AreaChart>
+            </RechartsAreaChart>
           </ResponsiveContainer>
         );
       default:
