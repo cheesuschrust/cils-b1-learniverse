@@ -1,138 +1,158 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  isAdmin?: boolean;
-}
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase-client';
+import type { User } from '@/types/user';
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName?: string) => Promise<void>;
-  logout: () => Promise<void>;
   loading: boolean;
-  error: string | null;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  isAuthenticated: false,
-  isAdmin: false,
-  login: async () => {},
-  signup: async () => {},
-  logout: async () => {},
-  loading: false,
-  error: null,
+  loading: true,
+  signIn: async () => ({ error: null }),
+  signOut: async () => {},
+  signUp: async () => ({ error: null }),
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Check if there's a user session on init
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    // Check for active session
+    const getSession = async () => {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Failed to parse stored user:', err);
-        localStorage.removeItem('user');
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data.session) {
+          const userData = data.session.user;
+          
+          // Shape user data to match our User type
+          setUser({
+            id: userData.id,
+            email: userData.email || '',
+            firstName: '',
+            lastName: '',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            preferences: {
+              theme: 'system',
+              language: 'english',
+              notifications: true,
+              onboardingCompleted: false,
+              difficulty: 'beginner'
+            },
+            dailyQuestionCounts: {
+              flashcards: 0,
+              multipleChoice: 0,
+              speaking: 0,
+              writing: 0,
+              listening: 0
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error checking auth session:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    getSession();
+
+    // Subscribe to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            firstName: '',
+            lastName: '',
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            preferences: {
+              theme: 'system',
+              language: 'english',
+              notifications: true,
+              onboardingCompleted: false,
+              difficulty: 'beginner'
+            },
+            dailyQuestionCounts: {
+              flashcards: 0,
+              multipleChoice: 0,
+              speaking: 0,
+              writing: 0,
+              listening: 0
+            }
+          });
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Mock login for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        displayName: email.split('@')[0],
-        isAdmin: email.includes('admin'),
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Login failed. Please check your credentials and try again.');
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('Error signing in:', error);
+      return { error };
     }
   };
 
-  const signup = async (email: string, password: string, displayName?: string) => {
+  const signOut = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Mock signup for now - would be replaced with Supabase authentication
-      const mockUser: User = {
-        id: '1',
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
         email,
-        displayName: displayName || email.split('@')[0],
-        isAdmin: false,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (err) {
-      setError('Signup failed. Please try again later.');
-      console.error('Signup error:', err);
-    } finally {
-      setLoading(false);
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('Error signing up:', error);
+      return { error };
     }
   };
 
-  const logout = async () => {
-    try {
-      setLoading(true);
-      // Clear user from state and localStorage
-      setUser(null);
-      localStorage.removeItem('user');
-    } catch (err) {
-      setError('Logout failed. Please try again.');
-      console.error('Logout error:', err);
-    } finally {
-      setLoading(false);
-    }
+  const value = {
+    user,
+    loading,
+    signIn,
+    signOut,
+    signUp,
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = !!(user?.isAdmin);
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isAdmin,
-      login,
-      signup,
-      logout,
-      loading,
-      error,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

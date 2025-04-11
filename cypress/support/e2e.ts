@@ -85,9 +85,11 @@ afterEach(() => {
   const test = Cypress.currentTest;
   // Check if test exists and has the required property
   if (test && typeof test === 'object') {
-    const message = test.state === 'passed' 
-      ? `✅ TEST PASSED: ${test.title}` 
-      : `❌ TEST FAILED: ${test.title}`;
+    const testTitle = test.title || 'unknown';
+    const testState = test.state || 'unknown';
+    const message = testState === 'passed' 
+      ? `✅ TEST PASSED: ${testTitle}` 
+      : `❌ TEST FAILED: ${testTitle}`;
     cy.task('log', message);
   }
 });

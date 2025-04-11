@@ -1,100 +1,93 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Volume2, Volume1, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Volume } from 'lucide-react';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useAIUtils } from '@/contexts/AIUtilsContext';
-import { SpeakableWordProps } from '@/types';
 
-export const SpeakableWord: React.FC<SpeakableWordProps> = ({
-  word,
-  language = 'italian',
-  className = '',
-  showTooltip = true,
-  tooltipContent = 'Listen to pronunciation',
-  onPlayComplete,
+interface SpeakableWordProps {
+  word: string;
+  language?: string;
+  autoPlay?: boolean;
+  className?: string;
+}
+
+const SpeakableWord: React.FC<SpeakableWordProps> = ({ 
+  word, 
+  language = 'it-IT', 
   autoPlay = false,
-  size = 'default',
-  onClick,
-  iconOnly = false,
+  className = ''
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const { speak, isAIEnabled } = useAIUtils();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = async () => {
-    if (onClick) {
-      onClick();
-      return;
-    }
-    
-    if (!isPlaying && word && speak) {
-      setIsPlaying(true);
-      try {
-        await speak({ text: word, language });
-        if (onPlayComplete) {
-          onPlayComplete();
-        }
-      } catch (error) {
-        console.error('Error playing audio:', error);
-      } finally {
-        setIsPlaying(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (autoPlay && word && speak) {
-      handleClick();
+  React.useEffect(() => {
+    if (autoPlay) {
+      speakWord();
     }
   }, [word, autoPlay]);
 
-  const buttonSizeClass = 
-    size === 'small' ? 'h-7 w-7 p-0' : 
-    size === 'large' ? 'h-10 w-10 p-0' : 
-    'h-9 w-9 p-0';
-  
-  const iconSizeClass = 
-    size === 'small' ? 'h-3.5 w-3.5' : 
-    size === 'large' ? 'h-5 w-5' : 
-    'h-4 w-4';
+  const speakWord = () => {
+    if (!window.speechSynthesis) {
+      console.error('Speech synthesis not supported');
+      return;
+    }
+    
+    // Don't try to speak if already speaking
+    if (isPlaying) return;
+    
+    setIsLoading(true);
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(word);
+    
+    // Set language - use 'it-IT' for Italian, 'en-US' for English, etc.
+    const langCode = language === 'it' ? 'it-IT' : language === 'en' ? 'en-US' : language;
+    utterance.lang = langCode;
+    
+    // Set voice (optional - will use default if not found)
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+    };
+    
+    utterance.onend = () => {
+      setIsPlaying(false);
+    };
+    
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsLoading(false);
+      console.error('Error speaking word');
+    };
+    
+    // Speak the word
+    window.speechSynthesis.speak(utterance);
+  };
 
-  const button = (
-    <Button
-      type="button"
-      variant="ghost"
-      className={`${buttonSizeClass} rounded-full ${className}`}
-      onClick={handleClick}
-      disabled={isPlaying || !isAIEnabled}
-    >
-      <Volume className={`${iconSizeClass} ${isPlaying ? 'animate-pulse' : ''}`} />
-      <span className="sr-only">Play pronunciation</span>
-    </Button>
-  );
-
-  if (iconOnly) {
-    return button;
-  }
-
-  return showTooltip ? (
-    <div className="flex items-center">
-      {!iconOnly && <span className="mr-1">{word}</span>}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{button}</TooltipTrigger>
-          <TooltipContent>{tooltipContent}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  ) : (
-    <div className="flex items-center">
-      {!iconOnly && <span className="mr-1">{word}</span>}
-      {button}
-    </div>
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      <span>{word}</span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="ml-1 h-6 w-6 rounded-full"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          speakWord();
+        }}
+        title={`Speak ${word}`}
+      >
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : isPlaying ? (
+          <Volume2 className="h-4 w-4" />
+        ) : (
+          <Volume1 className="h-4 w-4" />
+        )}
+      </Button>
+    </span>
   );
 };
 
