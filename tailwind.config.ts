@@ -67,10 +67,18 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				italian: {
-					green: '#009246',
-					white: '#ffffff',
-					red: '#ce2b37'
+				// Italian-inspired colors - updated to match existing Italian colors
+				'italian': {
+					'green': '#009246',  // Updated to match existing Italian green
+					'white': '#ffffff',  // Updated to match existing Italian white
+					'red': '#ce2b37',    // Updated to match existing Italian red
+					'blue': '#0E3880',   // Italian blue (azure)
+					'gold': '#FFCC33',   // Mediterranean gold
+					'terracotta': '#E27D60', // Terracotta/clay
+					'olive': '#6B8E23',  // Olive green
+					'cream': '#FFFDD0',  // Cream/parchment
+					'navy': '#1A2653',   // Deep navy blue
+					'ochre': '#CC7722',  // Ochre/earth tone
 				}
 			},
 			borderRadius: {
