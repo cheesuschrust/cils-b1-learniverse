@@ -1,21 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  LineChart as RechartsLineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  BarChart as RechartsBarChart,
-  Bar,
-  AreaChart as RechartsAreaChart,
-  Area
-} from 'recharts';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  ChartContainer,
+  LineChartWrapper,
+  BarChartWrapper,
+  AreaChartWrapper,
+  LineComponent,
+  BarComponent,
+  AreaComponent,
+  XAxisComponent,
+  YAxisComponent,
+  CartesianGridComponent,
+  TooltipComponent,
+  LegendComponent
+} from '@/adapters/RechartsAdapter';
 
 const AdPerformanceChart: React.FC = () => {
   const [timeRange, setTimeRange] = useState<string>('30d');
@@ -70,47 +70,47 @@ const AdPerformanceChart: React.FC = () => {
     switch (chartType) {
       case 'line':
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="impressions" stroke="#8884d8" strokeWidth={2} />
-              <Line type="monotone" dataKey="clicks" stroke="#82ca9d" strokeWidth={2} />
-              <Line type="monotone" dataKey="conversions" stroke="#ff7300" strokeWidth={2} />
-            </RechartsLineChart>
-          </ResponsiveContainer>
+          <ChartContainer>
+            <LineChartWrapper data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGridComponent strokeDasharray="3 3" stroke="#ccc" />
+              <XAxisComponent dataKey="date" />
+              <YAxisComponent />
+              <TooltipComponent />
+              <LegendComponent />
+              <LineComponent type="monotone" dataKey="impressions" stroke="#8884d8" strokeWidth={2} />
+              <LineComponent type="monotone" dataKey="clicks" stroke="#82ca9d" strokeWidth={2} />
+              <LineComponent type="monotone" dataKey="conversions" stroke="#ff7300" strokeWidth={2} />
+            </LineChartWrapper>
+          </ChartContainer>
         );
       case 'bar':
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="impressions" fill="#8884d8" />
-              <Bar dataKey="clicks" fill="#82ca9d" />
-              <Bar dataKey="conversions" fill="#ff7300" />
-            </RechartsBarChart>
-          </ResponsiveContainer>
+          <ChartContainer>
+            <BarChartWrapper data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGridComponent strokeDasharray="3 3" stroke="#ccc" />
+              <XAxisComponent dataKey="date" />
+              <YAxisComponent />
+              <TooltipComponent />
+              <LegendComponent />
+              <BarComponent dataKey="impressions" fill="#8884d8" />
+              <BarComponent dataKey="clicks" fill="#82ca9d" />
+              <BarComponent dataKey="conversions" fill="#ff7300" />
+            </BarChartWrapper>
+          </ChartContainer>
         );
       case 'area':
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsAreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="ctr" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />
-              <Area type="monotone" dataKey="revenue" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />
-            </RechartsAreaChart>
-          </ResponsiveContainer>
+          <ChartContainer>
+            <AreaChartWrapper data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGridComponent strokeDasharray="3 3" stroke="#ccc" />
+              <XAxisComponent dataKey="date" />
+              <YAxisComponent />
+              <TooltipComponent />
+              <LegendComponent />
+              <AreaComponent type="monotone" dataKey="ctr" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />
+              <AreaComponent type="monotone" dataKey="revenue" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />
+            </AreaChartWrapper>
+          </ChartContainer>
         );
       default:
         return null;

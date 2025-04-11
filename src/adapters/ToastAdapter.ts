@@ -1,38 +1,23 @@
 
-import { useToast as useOriginalToast } from '@/hooks/use-toast';
+// Map between different toast variant naming conventions
+export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'destructive' | 'info';
+export type StandardToastVariant = 'default' | 'success' | 'error' | 'warning';
 
-// The original toast variants
-type OriginalVariant = 'default' | 'destructive' | 'success' | 'warning' | 'outline' | 'secondary';
-
-// The expected toast variants in some components
-type ExpectedVariant = 'default' | 'success' | 'error' | 'warning' | undefined;
-
-// Map destructive to error for compatibility and vice versa
-const mapVariant = (variant: OriginalVariant | ExpectedVariant | undefined): OriginalVariant | undefined => {
-  if (variant === 'error') return 'destructive';
-  if (variant === 'destructive') return 'destructive'; // Already correct format
-  return variant as OriginalVariant;
-};
-
-// Create an adapter for the toast function
-export const useToast = () => {
-  const originalToast = useOriginalToast();
+// Convert any toast variant to a standard one
+export const normalizeToastVariant = (variant: ToastVariant | undefined): StandardToastVariant => {
+  if (!variant) return 'default';
   
-  return {
-    ...originalToast,
-    toast: (props: any) => {
-      return originalToast.toast({
-        ...props,
-        variant: mapVariant(props.variant),
-      });
-    },
-  };
+  switch (variant) {
+    case 'destructive':
+      return 'error';
+    case 'info':
+      return 'default';
+    case 'success':
+    case 'error':
+    case 'warning':
+    case 'default':
+      return variant;
+    default:
+      return 'default';
+  }
 };
-
-// Add direct destructive -> error mapping for components
-export const mapToastVariant = (variant: string): string => {
-  if (variant === 'destructive') return 'error';
-  return variant;
-};
-
-export default { useToast, mapToastVariant };

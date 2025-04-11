@@ -3,7 +3,7 @@ import * as React from 'react';
 
 // Re-export all React hooks and components
 export {
-  React as default,
+  default as React,
   useState,
   useEffect,
   useCallback,
