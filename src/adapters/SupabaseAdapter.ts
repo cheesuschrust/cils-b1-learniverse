@@ -11,10 +11,7 @@ export function isKnownTable(tableName: string): tableName is KnownTables {
 }
 
 // Type-safe wrapper for Supabase table access
-export const getTable = <T extends string>(tableName: T) => {
-  if (!isKnownTable(tableName)) {
-    console.warn(`Warning: Accessing table '${tableName}' which is not in the known tables list`);
-  }
+export const getTable = <T extends KnownTables>(tableName: T) => {
   return supabase.from(tableName);
 };
 
